@@ -268,7 +268,7 @@ function renderTop() {
   if (hRank) hRank.textContent = S.prestigePoints;
   if (hRp) hRp.textContent = fmt(S.rp);
   if (hEs) hEs.textContent = fmt(S.es);
-  if (hFaith) hFaith.textContent = S.faith || 0;
+  if (hFaith) hFaith.textContent = (S.faith || 0).toFixed(2); // v2.6.4 ③：信仰精确 2 位小数
   if (hPt) hPt.textContent = Math.floor(S.pt || 0);
   if (hDm) hDm.textContent = (S.dm || 0).toFixed(2); // v2.4.2：DM 累计精确到小数
   if (hBuff) hBuff.innerHTML = buffTag;
@@ -339,6 +339,23 @@ function renderHero() {
   if (bigEp) bigEp.textContent = fmt(S.ep);
   if (clickPower) clickPower.textContent = fmt(clickMult());
   if (staffCount) staffCount.textContent = S.cultists.length;
+  // v2.6.4 ⑧：每秒薪资显示（消耗优化购买后立即可感知）
+  const salaryEl = document.getElementById('staff-salary');
+  if (salaryEl) salaryEl.textContent = staffSalaryPerSec().toFixed(2) + '/s';
+  // v2.6.4 ②：深入裂隙状态置顶显示
+  const expStatus = document.getElementById('rift-exp-status');
+  if (expStatus) {
+    const ex = S.riftExpedition;
+    if (ex) {
+      const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
+      expStatus.style.display = '';
+      expStatus.className = 'rift-exp-hero';
+      expStatus.textContent = `🌌 深入裂隙 Lv.${ex.level} · 剩余 ${left}s · 已获 DM ${ex.gainedDm.toFixed(1)} · 腐化 ${S.corruption.toFixed(1)}%`;
+    } else {
+      expStatus.style.display = 'none';
+      expStatus.textContent = '';
+    }
+  }
   if (staffStatus) {
     // v1.3 C：四态徽章 + 迁移倒计时 + tooltip（替代 staffUnhappy 的「资源耗尽!」）
     const w = S.wageState || {};

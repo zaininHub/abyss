@@ -95,10 +95,10 @@ function mkState(extra = {}) {
 // ========== V4 圣所产出 ==========
 {
   Object.assign(S, mkState({ ep: 1e9, upgrades: { storage: 1 }, religion: { unlocked: true, branch: 'sun', sun: true, temple: 2 } }));
-  rec('V4 圣所 Lv.2 信仰产出 0.30/s', Math.abs(templeFaithPerSec() - 0.30) < 1e-9, `rate=${templeFaithPerSec()}`);
+  rec('V4 圣所 Lv.2 信仰产出 0.10/s（v2.6.4 ③：0.05/级减缓）', Math.abs(templeFaithPerSec() - 0.10) < 1e-9, `rate=${templeFaithPerSec()}`);
   const f0 = S.faith;
   relMod.tickReligion(10);
-  rec('V4 tickReligion(10s) 产出 +3 信仰', Math.abs(S.faith - (f0 + 3)) < 1e-9, `faith ${f0}→${S.faith}`);
+  rec('V4 tickReligion(10s) 产出 +1 信仰（v2.6.4 ③ 减缓口径）', Math.abs(S.faith - (f0 + 1)) < 1e-9, `faith ${f0}→${S.faith}`);
   const cost1 = templeCost();
   const t1 = relMod.buyTemple();
   rec('V4 圣所购买升 3 级（EP 扣减）', t1.ok === true && S.religion.temple === 3 && S.ep === 1e9 - cost1, t1.reason || '');

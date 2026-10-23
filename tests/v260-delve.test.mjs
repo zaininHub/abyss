@@ -85,7 +85,7 @@ function mkState(extra = {}) {
   rec('V3 深渊共鸣圣印上限 +6（10+6=16）', relData.sealMaxLevel() === 16, `max=${relData.sealMaxLevel()}`);
   Object.assign(S, mkState({ es: 3, vs: 50000, faith: 100, religion: { unlocked: true, branch: 'sun', sun: true, temple: 2 }, resDiscovered: { dm: true }, delve: { unlocked: true, depth: 5, active: false, up: { resonance: 3 } } }));
   const fpr = relData.templeFaithPerSec();
-  rec('V3 深渊共鸣信仰产出 ×1.5^3（0.30→1.0125）', Math.abs(fpr - 0.3 * Math.pow(1.5, 3)) < 1e-9, `faithRate=${fpr}`);
+  rec('V3 深渊共鸣信仰产出 ×1.5^3（0.10→0.3375，v2.6.4 ③ 基数 0.05）', Math.abs(fpr - 0.1 * Math.pow(1.5, 3)) < 1e-9, `faithRate=${fpr}`);
   // ember 离线上限突破 3.0：构造高 m（混合宠 offline ×10.2 + moon ×1.5 → 7.65）→ clamp 到 4.8
   Object.assign(S, mkState({ es: 3, vs: 50000, resDiscovered: { dm: true }, religion: { unlocked: true, branch: 'sun', sun: true, moon: true },
     pets: { fused1: { icon: '✨', name: '外神之影', level: 1, exp: 0, gen: 1, mixed: { global: 1, click: 1, offline: 10, event: 1 } } },

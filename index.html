@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.6.3</title>
+<title>深渊效能工作台 v2.6.4</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -85,6 +85,12 @@
         <div id="focus-bar" class="focus-bar" title="专注：提升点击产出（每级 +50% 点击产出）。成本随等级按 30×1.6^n 增长，点击此处购买">
           <span>专注等级: <b id="focus-lv">0</b></span>
           <span class="cost mono" id="focus-cost">50</span>
+        </div>
+        <!-- v2.6.4 ②：深入裂隙状态置顶显示 -->
+        <div id="rift-exp-status" style="display:none"></div>
+        <!-- v2.6.4 ⑧：每秒薪资显示（能量合剂等消耗优化购买后可见） -->
+        <div class="hero-row">
+          <span>薪资: <b id="staff-salary" class="mono">0/s</b></span>
         </div>
         <!-- v2.0 EP 容量提示 -->
         <div id="ep-cap-hint" class="ep-cap-hint" style="display:none"></div>
@@ -220,21 +226,27 @@
   <!-- v2.5.3 反馈③：深渊鱼缸触手（购买鱼缸后工作台底部缓慢摆动） -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
     <svg viewBox="0 0 200 120" width="200" height="120" preserveAspectRatio="xMaxYMax meet">
-      <!-- v2.6.2 触手重绘：三端渐变粗细（基座→尖端递减）+ 加密阶梯折点 + 深色描边，像素克苏鲁感保留但更细腻 -->
+      <!-- v2.6.4 章鱼触手：锥形阶梯折线 + 吸盘圆点 + 赛博霓虹（青紫描边 / 吸盘亮青），像素克苏鲁赛博风 -->
       <g class="tentacle tentacle-a">
-        <path d="M30 120 L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6" fill="none" stroke="#4a148c" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M30 120 L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6" fill="none" stroke="#3d1d6e" stroke-width="13" stroke-linecap="square" stroke-linejoin="miter"/>
         <path d="M30 120 L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6" fill="none" stroke="#9c27b0" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M32 116 L32 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12" fill="none" stroke="#ce93d8" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" opacity="0.5"/>
+        <path d="M32 116 L32 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12" fill="none" stroke="#4dd0e1" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" opacity="0.55"/>
+        <g fill="#311b92"><circle cx="44" cy="96" r="3"/><circle cx="53" cy="68" r="2.6"/><circle cx="59" cy="38" r="2.2"/><circle cx="65" cy="16" r="1.8"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><circle cx="44" cy="96" r="1.2"/><circle cx="53" cy="68" r="1.1"/><circle cx="59" cy="38" r="1"/><circle cx="65" cy="16" r="0.8"/></g>
       </g>
       <g class="tentacle tentacle-b">
-        <path d="M95 120 L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10 L127 4" fill="none" stroke="#4a148c" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M95 120 L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10 L127 4" fill="none" stroke="#3d1d6e" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter"/>
         <path d="M95 120 L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10 L127 4" fill="none" stroke="#7b1fa2" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M97 116 L97 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10" fill="none" stroke="#e1bee7" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" opacity="0.4"/>
+        <path d="M97 116 L97 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10" fill="none" stroke="#4dd0e1" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" opacity="0.5"/>
+        <g fill="#311b92"><circle cx="109" cy="94" r="3"/><circle cx="118" cy="64" r="2.6"/><circle cx="122" cy="36" r="2.2"/><circle cx="126" cy="13" r="1.8"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><circle cx="109" cy="94" r="1.2"/><circle cx="118" cy="64" r="1.1"/><circle cx="122" cy="36" r="1"/><circle cx="126" cy="13" r="0.8"/></g>
       </g>
       <g class="tentacle tentacle-c">
-        <path d="M165 120 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8 L196 3" fill="none" stroke="#4a148c" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M165 120 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8 L196 3" fill="none" stroke="#3d1d6e" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
         <path d="M165 120 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8 L196 3" fill="none" stroke="#6a1b9a" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
-        <path d="M167 116 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8" fill="none" stroke="#f3e5f5" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" opacity="0.4"/>
+        <path d="M167 116 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8" fill="none" stroke="#4dd0e1" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" opacity="0.5"/>
+        <g fill="#311b92"><circle cx="179" cy="92" r="3"/><circle cx="187" cy="60" r="2.6"/><circle cx="191" cy="30" r="2.2"/><circle cx="195" cy="10" r="1.8"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><circle cx="179" cy="92" r="1.2"/><circle cx="187" cy="60" r="1.1"/><circle cx="191" cy="30" r="1"/><circle cx="195" cy="10" r="0.8"/></g>
       </g>
     </svg>
   </div>

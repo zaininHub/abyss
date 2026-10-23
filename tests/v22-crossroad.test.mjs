@@ -52,9 +52,9 @@ t('CROSSROAD_TO_LINE 与 LINE_TO_CROSSROAD 双射：柱→秩序/锚→深渊/�
   assert.deepEqual(BALANCE.crossroadToLine, { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' });
   assert.deepEqual(BALANCE.lineToCrossroad, { line_order: 'order_pillar', line_abyss: 'abyss_anchor', line_faith: 'faith_shrine' });
 });
-t('定向建筑注册进统一建筑表（getAllBuildings 61）且与其余栋 ID 无冲突', () => {
+t('定向建筑注册进统一建筑表（getAllBuildings 55）且与其余栋 ID 无冲突', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 61);
+  assert.equal(all.length, 55);
   for (const b of BALANCE.crossroadBuildings) assert.ok(all.some(x => x.id === b.id), `${b.id} 未注册`);
 });
 

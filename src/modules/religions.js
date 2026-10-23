@@ -4,6 +4,7 @@ import { epStorageCap, fmt } from './economy.js';
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
+  ORACLE, CRUSADE, oracleLevel, crusadeLevel, oracleCost, crusadeCost,
 } from '../data/religions.js';
 
 let logFn = null;
@@ -69,8 +70,38 @@ export function buyTemple() {
   S.ep -= cost;
   S.religion.temple = lv + 1;
   save(S);
-  rlog(`信仰圣所升至 Lv.${lv + 1}（-${fmt(cost)} EP）：信仰产出 +${TEMPLE.faithPerSec}/s`, 'good');
+  rlog(`信仰圣所升至 Lv.${lv + 1}（-${fmt(cost)} EP）：信仰产出 +${TEMPLE.faithPerSec.toFixed(2)}/s（当前合计 ${templeFaithPerSec().toFixed(2)}/s）`, 'good');
   return { ok: true };
+}
+
+// v2.6.4 ⑤：神谕塔升级（消耗信仰，后期信仰深耕）
+export function buyOracle() {
+  if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
+  const lv = oracleLevel();
+  if (lv >= ORACLE.cap) return { ok: false, reason: '神谕塔已满级' };
+  if (sealLevel() < 3) return { ok: false, reason: '神谕塔需圣印 ≥3 级（信仰深耕前置）' };
+  const cost = oracleCost();
+  if ((S.faith || 0) < cost) return { ok: false, reason: `信仰不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
+  S.faith -= cost;
+  S.religion.oracle = lv + 1;
+  save(S);
+  rlog(`神谕塔升至 Lv.${lv + 1}（-${cost} 信仰）：信仰产出 ×${(1 + ORACLE.effect * (lv + 1)).toFixed(2)}`, 'good');
+  return { ok: true, level: lv + 1 };
+}
+
+// v2.6.4 ⑤：圣战军升级（消耗信仰，终局全局军势）
+export function buyCrusade() {
+  if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
+  const lv = crusadeLevel();
+  if (lv >= CRUSADE.cap) return { ok: false, reason: '圣战军已满级' };
+  if (((S.religion && S.religion.temple) || 0) < 5) return { ok: false, reason: '圣战军需信仰圣所 ≥5 级（信仰根基前置）' };
+  const cost = crusadeCost();
+  if ((S.faith || 0) < cost) return { ok: false, reason: `信仰不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
+  S.faith -= cost;
+  S.religion.crusade = lv + 1;
+  save(S);
+  rlog(`圣战军升至 Lv.${lv + 1}（-${cost} 信仰）：全局产出 ×${(1 + CRUSADE.effect * (lv + 1)).toFixed(2)}`, 'good');
+  return { ok: true, level: lv + 1 };
 }
 
 // 每帧信仰产出（圣所确定性产出；神龛/万神殿/远征/晋升为既有源，不重复处理）
@@ -116,7 +147,7 @@ export function renderReligionPanel(container) {
   const tCost = templeLv >= TEMPLE.cap ? null : templeCost();
   container.innerHTML = `
     <div class="religion-desc">${r.icon} 已信奉 <b>${r.name}</b>：${r.effect}（+圣印全局产出）</div>
-    <div class="off-stat"><span>信仰余额</span><b>${fmt(S.faith || 0)}</b></div>
+    <div class="off-stat"><span>信仰余额</span><b>${(S.faith || 0).toFixed(2)}</b></div>
     <div class="off-stat"><span>信仰产出</span><b>+${templeFaithPerSec().toFixed(2)}/s（圣所）</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 圣印（全局产出 +8%/级）</div>
     <div class="religion-seal-row">
@@ -124,13 +155,24 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec} 信仰/s）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s）</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
     </div>
-    <div style="font-size:11px;color:var(--text-2);margin-top:8px">全流程：仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ 圣印与圣所升级 → 章节「神格」与终局共振。</div>`;
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 信仰深耕（超长线，消耗信仰）</div>
+    <div class="religion-seal-row">
+      <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（信仰产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
+      <button class="btn ${oracleLevel() >= ORACLE.cap || sealLevel() < 3 || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
+        title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} 信仰）`}</button>
+    </div>
+    <div class="religion-seal-row">
+      <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ×${(1 + CRUSADE.effect * crusadeLevel()).toFixed(2)}）</span>
+      <button class="btn ${crusadeLevel() >= CRUSADE.cap || ((S.religion && S.religion.temple) || 0) < 5 || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
+        title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} 信仰）`}</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-2);margin-top:8px">全流程：仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ 圣印/圣所 → 神谕塔（圣印≥3）与圣战军（圣所≥5）深耕 → 章节「神格」与终局共振。</div>`;
 }
 
 export function bindReligionPanel(container) {
@@ -146,6 +188,20 @@ export function bindReligionPanel(container) {
     const bEl = e.target.closest('[data-religion-branch]');
     if (bEl) {
       const r = selectBranch(bEl.dataset.religionBranch);
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    const oEl = e.target.closest('[data-religion-oracle]');
+    if (oEl) {
+      const r = buyOracle();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    const cEl = e.target.closest('[data-religion-crusade]');
+    if (cEl) {
+      const r = buyCrusade();
       if (!r.ok && toastFn) toastFn(r.reason);
       renderReligionPanel(container);
       return;

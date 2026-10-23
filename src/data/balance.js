@@ -40,7 +40,7 @@ export const BALANCE = {
   buildings: {
     canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 免疫'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
-    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['流失概率 10%/min → 0'] },
+    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程流失免疫：流失预警触发概率 10%/min → 0（拥有即永久免疫线程流失）'] },
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%（触手在缸中缓慢摆动）', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
   },

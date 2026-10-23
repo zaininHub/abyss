@@ -40,7 +40,7 @@ export function sealUpgradeCost(level) {
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级
-export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 1e5, growth: 1.25, cap: 10, faithPerSec: 0.15 };
+export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 1e5, growth: 1.25, cap: 10, faithPerSec: 0.05 }; // v2.6.4 ③：0.15 → 0.05（信仰超长线，缓慢累计）
 export function templeCost() {
   const lv = (S.religion && S.religion.temple) || 0;
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));
@@ -49,8 +49,19 @@ export function templeFaithPerSec() {
   let r = TEMPLE.faithPerSec * ((S.religion && S.religion.temple) || 0);
   // v2.6.0 深潜：深渊共鸣——信仰产出 ×1.5/级
   if (S.delve && S.delve.up && S.delve.up.resonance > 0) r *= Math.pow(1.5, S.delve.up.resonance);
+  // v2.6.4 ⑤：神谕塔——信仰产出 ×1.15/级（超长线后期升级，消耗信仰）
+  const olv = oracleLevel();
+  if (olv > 0) r *= Math.pow(1 + ORACLE.effect, olv);
   return r;
 }
+
+// ===== v2.6.4 ⑤ 信仰超长线：神谕塔 / 圣战军（消耗信仰的后期升级点） =====
+export const ORACLE = { id: 'oracle', name: '神谕塔', base: 10, growth: 1.5, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级（后期信仰深耕）' };
+export const CRUSADE = { id: 'crusade', name: '圣战军', base: 20, growth: 1.6, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级（信仰驱动的终局军势）' };
+export function oracleLevel() { return (S.religion && S.religion.oracle) || 0; }
+export function crusadeLevel() { return (S.religion && S.religion.crusade) || 0; }
+export function oracleCost() { const lv = oracleLevel(); return Math.round(ORACLE.base * Math.pow(ORACLE.growth, lv)); }
+export function crusadeCost() { const lv = crusadeLevel(); return Math.round(CRUSADE.base * Math.pow(CRUSADE.growth, lv)); }
 
 export function religionUnlocked() { return !!(S.religion && S.religion.unlocked); }
 export function branchOf() { return S.religion && S.religion.branch ? S.religion.branch : null; }

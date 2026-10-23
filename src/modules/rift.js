@@ -122,7 +122,9 @@ function settleRiftExpedition(dt) {
     S.riftExpedition = null;
     save(S);
     dirty.rift = true;
+    dirty.hero = true; // v2.6.4 ②：顶部深入状态即时清除
   }
+  dirty.hero = true; // v2.6.4 ②：探索中顶部状态实时刷新
 }
 
 // ---- 主 tick ----
@@ -295,11 +297,22 @@ export function renderRiftPanel(container) {
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(id);
+    // v2.6.4 ⑦：哨站动态文案（当前间隔 → 下一级间隔 → 下限）
+    let desc = u.desc;
+    if (id === 'sentinel') {
+      const cur = Math.round(riftSpawnSec() / 60);
+      if (lv < u.cap) {
+        const next = Math.round(Math.max(360, BALANCE.rift.spawnSec * Math.pow(0.75, lv + 1)) / 60);
+        desc = `裂隙出现间隔缩短 25%/级：当前 ${cur} 分钟 → 下一级 ${next} 分钟（下限 6 分钟）`;
+      } else {
+        desc = `裂隙出现间隔 -25%/级：已达下限 ${cur} 分钟`;
+      }
+    }
     html += `
       <div class="rift-upg-row" data-rift-upg="${id}">
         <div style="flex:1">
           <div style="font-size:13px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:11px">Lv.${lv}/${u.cap}</span></div>
-          <div style="font-size:11px;color:var(--text-3)">${u.desc}</div>
+          <div style="font-size:11px;color:var(--text-3)">${desc}</div>
         </div>
         <button class="btn ${cost === null || (S.riftEmber || 0) < cost ? 'disabled' : ''}" ${cost === null ? 'disabled' : ''}>${cost === null ? '满级' : `${cost} 余烬`}</button>
       </div>`;

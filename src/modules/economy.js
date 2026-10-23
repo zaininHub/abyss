@@ -120,6 +120,8 @@ export function globalMult() {
   if (rlSeal > 0) m *= (1 + 0.08 * rlSeal);
   // v2.6.0 深潜：虚空强化——全局 EP ×1.10/级（终局乘区，软上限前生效）
   if (S.delve && S.delve.up && S.delve.up.void > 0) m *= Math.pow(1.10, S.delve.up.void);
+  // v2.6.4 ⑤：圣战军——全局产出 ×1.12/级（信仰驱动的终局军势）
+  if (S.religion && S.religion.crusade > 0) m *= Math.pow(1 + 0.12, S.religion.crusade);
   if (!isFinite(m)) m = 1;
   // v2.0 §1.3 软上限：m > 5000 → 5000 + sqrt(m - 5000) * 70
   if (m > B.softCapThreshold) {

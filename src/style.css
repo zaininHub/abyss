@@ -112,7 +112,7 @@ body {
 
 .btn:hover { background: #30363d; }
 
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; background: #14161c !important; color: #555 !important; border-color: #2a2e3a !important; } /* v2.6.4 ④：未达标按钮整体暗色 */
 
 .btn.on {
   background: var(--accent);
