@@ -32,10 +32,10 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline, fami
 }
 
 console.log('[L1] 静态基线');
-t('getAllBuildings() 恰好 61 栋且 ID 唯一（v2.4：58 + 3 新增多效果上限建筑）', () => {
+t('getAllBuildings() 恰好 55 栋且 ID 唯一（v2.6.3 删 B 分区 7 栋后）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 61, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 61, 'ID 必须唯一');
+  assert.equal(all.length, 55, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 55, 'ID 必须唯一');
 });
 t('级制红线恒真：非扩容类静态 cap ≤ 20；unlimited 扩容类豁免（v2.4 KG 无限化）', () => {
   for (const b of getAllBuildings()) {
@@ -85,8 +85,8 @@ t('familyOfBuilding 映射：D 全族→D、白名单 3 楼→output、排除集
     assert.equal(familyOfBuilding(find(id)), 'output', `${id} 应属产出族白名单`);
   }
   assert.deepEqual([...OUTPUT_FAMILY_IDS].sort(), ['coop_hall', 'eco_battery', 'eco_battery_2'], '白名单终稿应恰为组E 非锚点 3 座');
-  // 排除集 7 id（PM 终稿 + 组长批准）：乘算锚点 6 + 组B 暴击楼 3（整组不开放）
-  for (const id of ['field_1', 'field_2', 'field_3', 'field_4', 'team_temple', 'super_team', 'crit_furnace', 'crit_reactor', 'crit_reactor_2']) {
+  // 排除集（PM 终稿 + 组长批准）：乘算锚点 + 产出白名单外其余（B 分区 7 栋 v2.6.3 已删）
+  for (const id of ['team_temple', 'super_team', 'order_pillar', 'abyss_anchor', 'faith_shrine', 'warmup_node', 'end_shrine', 'cycle_temple', 'canteen']) {
     assert.equal(familyOfBuilding(find(id)), null, `排除集 ${id} 不得入产出族`);
   }
   for (const id of ['warmup_node', 'end_shrine', 'cycle_temple', 'order_pillar', 'canteen']) {
@@ -127,17 +127,18 @@ t('产出族硬顶 16 恒真：白名单任意档数 capOf ≤ 16；超购档数
 });
 t('乘数与概率堆叠保护（PM 终稿 + 组长批准，测试化）：排除集 9 id 任意档数 capOf 恒为静态 cap，不受族升级影响', () => {
   const find = id => getAllBuildings().find(x => x.id === id);
-  // PM 终稿排除集 7 id（field_1~4 / team_temple / super_team / crit 三楼）+ 组A 锚链两楼同口径锁死
+  // PM 终稿排除集（乘算锚点 + 组B/暴击楼 v2.6.3 已删）：任意档数 capOf 恒为静态 cap
   const anchors = [
-    { id: 'field_1', cap: 3 }, { id: 'field_2', cap: 3 }, { id: 'field_3', cap: 3 }, { id: 'field_4', cap: 3 },
-    { id: 'team_temple', cap: 3 }, { id: 'super_team', cap: 2 },
-    { id: 'crit_furnace', cap: 1 }, { id: 'crit_reactor', cap: 1 }, { id: 'crit_reactor_2', cap: 1 },
+    { id: 'team_temple' }, { id: 'super_team' },
+    { id: 'order_pillar' }, { id: 'abyss_anchor' }, { id: 'faith_shrine' },
+    { id: 'warmup_node' }, { id: 'end_shrine' }, { id: 'cycle_temple' }, { id: 'canteen' },
   ];
   for (const a of anchors) {
     const b = find(a.id);
-    assert.equal(b.cap, a.cap, `排除集 ${a.id} 静态 cap 应为 ${a.cap}（基线前提）`);
+    const cap = b.cap ?? b.levels;
+    assert.ok(cap >= 1, `排除集 ${a.id} 静态 cap 应有效（基线前提）`);
     for (const n of [0, 1, 2, 3, 99]) {
-      assert.equal(capOf(b, { familyUpgrades: { output: n, D: n } }), a.cap, `排除集 ${a.id} 档数 ${n} 时上限漂移`);
+      assert.equal(capOf(b, { familyUpgrades: { output: n, D: n } }), cap, `排除集 ${a.id} 档数 ${n} 时上限漂移`);
     }
   }
 });

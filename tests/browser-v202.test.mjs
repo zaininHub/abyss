@@ -346,7 +346,7 @@ console.log('\n[G] http 子路径部署');
     const vc = await page.$eval('#vehicle-collect', el => el.textContent);
     rec('G1 http 子路径启动零错误 + 上限 2000', errs.length === 0 && Math.abs(st.cap - 2000) < 1,
       `ep/cap="${st.ep}/${st.cap}" bg=${bg}`);
-    rec('G2 http 下探采页头显示当前 DM', vc.includes('当前 DM:'), `text="${vc}"`);
+    rec('G2 http 新档无裂隙：探采页头门控隐藏（v2.5 裂隙门控）', vc === '', `text="${vc}"`);
     await page.screenshot({ path: SHOT_DIR + 'G_http部署.png' });
     await page.close();
   } finally {

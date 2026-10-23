@@ -13,9 +13,9 @@ const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
 
 // ===== ① 触手 =====
-rec('V1 触手三端渐变粗细（基座 10/11/12 三条 + 尖端 6/7/8 + 高光 2/3 细线）', (html.match(/stroke-width="1[012]"/g) || []).length === 3 && (html.match(/stroke-width="[678]"/g) || []).length === 3 && html.includes('stroke-width="3"') && html.includes('opacity="0.5"') && html.includes('opacity="0.4"'), '');
-rec('V1 触手加密折点（每条 ≥9 段 L 命令）', html.includes('L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6') && html.includes('L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10') && html.includes('L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8'), '');
-rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#4a148c"') && html.includes('stroke-width="12"'), '');
+rec('V1 触手平滑贝塞尔曲线 + 多层描边（基座粗 12 → 主 6.5 → 高光 2.6，圆头端帽）', html.includes('C38 114 34 102 42 90') && html.includes('stroke-linecap="round"') && html.includes('stroke-width="6.5"') && html.includes('stroke-width="2.6"'), '');
+rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
+rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#3d1d6e"') && html.includes('stroke-width="12"'), '');
 rec('V1 动画六帧抽摆（steps(6) + 6 keyframes）', css.includes('steps(6, end)') && css.includes('15% { transform: rotate(-4deg); }') && css.includes('70% { transform: rotate(8deg); }'), '');
 
 // ===== ② AI 激活按钮 =====

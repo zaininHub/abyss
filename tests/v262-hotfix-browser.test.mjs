@@ -25,12 +25,12 @@ try {
       const deco = document.getElementById('tentacle-deco');
       const anim = deco ? getComputedStyle(deco.querySelector('.tentacle-a')).animationTimingFunction : 'none';
       const segs = deco ? deco.querySelectorAll('.tentacle-a path').length : 0;
-      const dark = deco ? !!deco.querySelector('path[stroke="#4a148c"]') : false;
+      const dark = deco ? !!deco.querySelector('path[stroke="#3d1d6e"]') : false;
       return { shown: deco && deco.style.display !== 'none', anim, segs, dark };
     });
     rec('V1 触手显示（鱼缸 ≥1 级）', tentacle.shown === true, `shown=${tentacle.shown}`);
     rec('V1 触手动画 steps(6)', tentacle.anim === 'steps(6)' || tentacle.anim === 'steps(6, end)', tentacle.anim);
-    rec('V1 触手三端渐变段（3 段 path/条 + 深色描边）', tentacle.segs === 3 && tentacle.dark === true, `segs=${tentacle.segs}`);
+    rec('V1 触手多层描边段（4 段 path/条 + 深色描边）', tentacle.segs === 4 && tentacle.dark === true, `segs=${tentacle.segs}`);
     await page.close();
   }
 

@@ -43,12 +43,12 @@ function mkState(extra = {}) {
   Object.assign(S, mkState());
   rec('V2 无宗教/深潜时 globalMult = 1（不污染）', Math.abs(econ.globalMult() - 1) < 1e-9, `globalMult=${econ.globalMult()}`);
   rec('V2 无深潜时圣印上限 base（3）', relData.sealMaxLevel() === 3, `max=${relData.sealMaxLevel()}`);
-  rec('V2 无深潜时离线效率 base（50%）', Math.abs(econ.offlineRate() - 0.5) < 1e-9, `rate=${econ.offlineRate()}`);
+  rec('V2 无深潜时离线效率 base（25%，v2.6.5 离线低收益）', Math.abs(econ.offlineRate() - 0.25) < 1e-9, `rate=${econ.offlineRate()}`);
   rec('V2 无深潜时离线上限 base（8h）', econ.offlineCap() === 8 * 3600, `cap=${econ.offlineCap()}`);
   // 深潜升级单点生效：只有 void 时只有全局变，离线不变
   Object.assign(S, mkState({ religion: { unlocked: true, branch: 'sun', sun: true }, delve: { unlocked: true, up: { void: 2 } }, resDiscovered: { dm: true } }));
   rec('V2 void 2 级全局 ×1.21（sun ×2 叠加 = 2.42）', Math.abs(econ.globalMult() - 2 * Math.pow(1.1, 2)) < 1e-9, `globalMult=${econ.globalMult()}`);
-  rec('V2 void 不影响离线效率', Math.abs(econ.offlineRate() - 0.5) < 1e-9, `rate=${econ.offlineRate()}`);
+  rec('V2 void 不影响离线效率（仍 25%）', Math.abs(econ.offlineRate() - 0.25) < 1e-9, `rate=${econ.offlineRate()}`);
 }
 
 // ========== V3 深潜升级树数值回算 ==========

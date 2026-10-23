@@ -59,7 +59,6 @@ const fs = await import('node:fs');
 {
   const shopSrc = fs.readFileSync('src/modules/shop.js', 'utf-8');
   const balSrc = fs.readFileSync('src/data/balance.js', 'utf-8');
-  rec('V2 field_1 定义存在（指尖力场·初，需钥匙 click_up）', /id: 'field_1'.*unlockTech: 'click_up'/.test(balSrc), 'unlockTech=click_up');
   rec('V2 前置未满足（钥匙/里程碑）→ 卡加 locked 类', /if \(gate\) div\.classList\.add\('locked'\)/.test(shopSrc), 'locked add');
   rec('V2 点击 locked 卡直接不响应（不进入解锁流程）', /el\.classList\.contains\('locked'\)\) return;/.test(shopSrc), 'click guard');
   // 仅差 RP（gate 为空）不 locked——解锁入口保留
@@ -71,7 +70,7 @@ const fs = await import('node:fs');
   const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromium', args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
   const mkSave = (extra = {}) => JSON.stringify({
     _version: 6, chapter: '4', storyline: 'default', ep: 1e9, rp: 99, runEarned: 5e6, prestige: 0,
-    upgrades: {}, buildings: {}, tech: {}, milesDone: {}, unlockedBuildings: { bargain_shop: true, warmup_node: true },
+    upgrades: {}, buildings: {}, tech: {}, milesDone: {}, unlockedBuildings: { warmup_node: true },
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false },
     lastSeen: Date.now(), startTime: Date.now(), ...extra,
   }).replace(/</g, '\\u003c');
@@ -80,29 +79,31 @@ const fs = await import('node:fs');
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
 
-  // ② 建筑卡禁点：升级商店 tab（默认开启）。未研究钥匙时窗口内 locked 卡（议价坊 unlockTech=cheap_start）
-  // 应整体锁定禁点（cursor=not-allowed、点击不进入解锁流程）；已研究钥匙后同卡仅差 RP → 可点解锁
+  // ② 建筑卡禁点：升级商店 tab（默认开启）。v2.6.7 链窗口架构下「前置未满足（钥匙/里程碑）不渲染」——
+  // 未研究 offline1 时 beacon_1 不进入链窗口（揭示停在可 RP 解锁的 lock-card）；已研究钥匙后链推进揭示
   await sleep(400);
-  const lockedCard = await page.evaluate(() => {
-    const el = document.querySelector('#v21-building-list [data-v21].locked');
-    if (!el) return { found: false };
-    const cs = getComputedStyle(el);
-    return { found: true, id: el.dataset.v21, locked: el.classList.contains('locked'), cursor: cs.cursor, gate: (el.textContent || '').includes('需钥匙') };
+  const chainState = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('#v21-building-list [data-v21]')].map(c => c.dataset.v21);
+    const bg = document.querySelector('#v21-building-list [data-v21="bargain_shop"]');
+    const bgLocked = bg ? bg.classList.contains('locked') : null;
+    const bgCls = bg ? bg.className : null;
+    return { ids, bgLocked, bgCls };
   });
-  rec('V3 未研究钥匙：建筑卡整体 locked（需钥匙 gate，field_1 场景）', lockedCard.found && lockedCard.locked && lockedCard.gate, JSON.stringify(lockedCard));
-  rec('V3 locked 卡 cursor=not-allowed（不可点视觉）', lockedCard.cursor === 'not-allowed', `cursor=${lockedCard.cursor}`);
-  await page.click('#v21-building-list [data-v21].locked');
-  await sleep(200);
-  const afterClick = await page.evaluate(() => {
-    const el = document.querySelector('#v21-building-list [data-v21].locked');
-    return el ? 'still-locked' : 'changed';
+  rec('V3 未研究钥匙：前置未满足的 beacon_1 不进入链窗口（揭示停在 lock-card）', !chainState.ids.includes('beacon_1') && chainState.ids.includes('bargain_shop'), JSON.stringify(chainState.ids));
+  rec('V3 lock-card 仅差 RP 不 locked（可点击解锁入口保留）', chainState.bgLocked === false && chainState.bgCls.includes('lock-card'), `bg=${chainState.bgCls}`);
+  // 点击 lock-card（bargain_shop，RP 充足）→ 解锁成功进入 unlockedBuildings
+  await page.click('#v21-building-list [data-v21="bargain_shop"]');
+  await sleep(300);
+  const unlockAfter = await page.evaluate(() => {
+    const a = JSON.parse(localStorage.getItem('abyss_idle_v2'));
+    return !!(a.unlockedBuildings && a.unlockedBuildings.bargain_shop);
   });
-  rec('V3 点击 locked 建筑卡无响应（不解锁/不购买）', afterClick === 'still-locked', afterClick);
+  rec('V3 点击仅差 RP 的 lock-card 可解锁（RP 充足）', unlockAfter === true, `unlocked=${unlockAfter}`);
 
   // 已研究钥匙（click_up）+ 议价坊已解锁 → 窗口 locked 区露 field_1（仅差 RP）→ 可点解锁
   await page.evaluate((raw) => {
     const o = JSON.parse(raw);
-    o.tech.click_up = true;
+    o.tech.cheap_start = true;
     o.unlockedBuildings = { bargain_shop: true, warmup_node: true };
     localStorage.setItem('abyss_idle_v2', JSON.stringify(o));
   }, JSON.stringify(JSON.parse(JSON.stringify({ _version: 6, chapter: '4', storyline: 'default', ep: 1e9, rp: 99, runEarned: 5e6, prestige: 0, upgrades: {}, buildings: {}, tech: {}, milesDone: {}, unlockedBuildings: {}, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }))));
@@ -164,7 +165,7 @@ const fs = await import('node:fs');
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
   rec('V3 源码：流失预警 tooltip 已补「维修坞 → 0，免疫」', mainSrc.includes('（维修坞 → 0，免疫）'), 'tooltip 源码');
   const dockDesc = fs.readFileSync('src/data/balance.js', 'utf-8');
-  rec('V3 源码：维修坞卡描述含「流失概率 10%/min → 0」', /流失概率 10%\/min → 0/.test(dockDesc), 'dock desc');
+  rec('V3 源码：维修坞卡描述含「流失预警触发概率 10%/min → 0」', /流失预警触发概率 10%\/min → 0/.test(dockDesc), 'dock desc');
   await page.close();
   await browser.close();
 }

@@ -39,9 +39,9 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   rec('B 新档设施分区整节隐藏（v2.3.1 ②）', blds.length === 0, `卡片数=${blds.length}`);
   const bldTitleHidden = await page.$eval('#bld-title', el => el.style.display === 'none');
   rec('B 新档设施分区标题隐藏（bld-title display:none）', bldTitleHidden);
-  // 探采平台：v2.4.2 无载具时页头显示当前 DM 持有（小数精确）
-  const vcEmpty = await page.$eval('#vehicle-collect', el => el.textContent === '当前 DM: 0.00');
-  rec('D 无载具采集页头显示当前 DM: 0.00', vcEmpty);
+  // 探采平台：v2.5 裂隙门控——新档未触发裂隙时页头隐藏；裂隙触发后无载具显示「当前 DM: 0.00」
+  const vcHidden = await page.$eval('#vehicle-collect', el => getComputedStyle(el).display === 'none');
+  rec('D 新档无裂隙：探采页头门控隐藏（v2.5 裂隙门控）', vcHidden);
   // 科技树：可见科技卡均带 RP 成本；ai_core 未达里程碑不可见
   await page.click('#btn-tech');
   await new Promise(r => setTimeout(r, 300));

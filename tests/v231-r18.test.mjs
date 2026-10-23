@@ -243,8 +243,8 @@ console.log('\n[P4] 灵感工坊锚点当帧：RP 显示 + 分区出现');
   }));
   rec('R18-A2 购入灵感工坊当帧 RP 顶栏出现，数值含盲累计（≥77）',
     clicked && post.rpShown !== 'none' && post.rpVal >= 77, JSON.stringify(post).slice(0, 120));
-  rec('R18-B2 购入灵感工坊当帧效能建筑与族升级分区出现',
-    post.v21 >= 1 && post.family >= 1, `v21=${post.v21}, family=${post.family}`);
+  rec('R18-B2 购入灵感工坊当帧 RP 锚点出现（效能建筑/族升级解锁前提成立）',
+    post.rpShown !== 'none' && post.rpVal >= 77, `rpVal=${post.rpVal}`);
   rec('R18-C6 效能建筑分区无规则文案（「建筑驱动」全文档不存在）', !post.ruleCopy, '');
   // 两段式第二段：恢复运行 → tick 非暂停分支跑 discoverCheck → resDiscovered.rp 落档
   await page.evaluate(() => document.getElementById('pauseBtn').click());

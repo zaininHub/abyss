@@ -204,6 +204,7 @@ export function sealRift() {
   S.activeRift = null;
   save(S);
   dirty.rift = true; // v2.1.1 P1-A：置空后立即触发裂隙区重渲染，消除卡片残留
+  dirty.shop = true; // v2.7.1：封印到账 DM 后探采页头即时同步（updateVehicleCollectHeader 走 dirty.shop 渲染链路）
 }
 
 export function embraceRift() {

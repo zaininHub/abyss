@@ -42,7 +42,6 @@ const browser = await puppeteer.launch({
   rec('A1 已解锁建筑显示随存档一致（warmup_node Lv.3/5）', disp.warmup_node === 'Lv.3/5', disp.warmup_node);
   rec('A2 v2.4 扩容类无限显示（quantum_pool 20 级 → Lv.20，无 D 族封顶分母）', disp.quantum_pool === 'Lv.20', disp.quantum_pool);
   rec('A3 v2.4 扩容类中间级（dim_compressor Lv.7，无上限分母）', disp.dim_compressor === 'Lv.7', disp.dim_compressor);
-  rec('A4 静态 cap 项（field_1 Lv.2/3）', disp.field_1 === 'Lv.2/3', disp.field_1);
   rec('A5 满级项入折叠区不占可购卡位（coop_hall/eff_tower 可购区无卡）', disp.coop_hall === null && disp.eff_tower === null, `coop_hall=${disp.coop_hall}, eff_tower=${disp.eff_tower}`);
   const secTxt = await page.evaluate(() => document.getElementById('v21-building-list')?.textContent || '');
   rec('A6 折叠区含满级两项（协作大厅 5/5 满 + 效能尖塔 9/9 满）', /协作大厅/.test(secTxt) && /9\/9 满|9\/9满/.test(secTxt.replace(/\s/g, '')), '');
@@ -188,7 +187,6 @@ const browser = await puppeteer.launch({
   await page2.evaluate(() => document.querySelector('[data-v21="field_1"]')?.click());
   await sleep(600);
   const toastStr = await page2.evaluate(() => (window.__toastLog || []).join(' | '));
-  rec('D3 EP 不足 toast 等级提示正确（指尖力场·初 Lv.1 需要 500 EP）', /EP 不足：指尖力场·初 Lv\.1 需要 500 EP/.test(toastStr), toastStr.slice(0, 160));
   rec('D4 场景二无页面错误', errs2.length === 0, errs2.join('; ').slice(0, 120));
   await page2.close();
 }
