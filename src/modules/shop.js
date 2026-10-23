@@ -46,6 +46,7 @@ export function buyUpgrade(u) {
   S.ep -= cost;
   S.upgrades[u.id] = owned + n;
   S.totalBuys += n;
+  S.lazySince = null; // v2.7.1：任意升级/购买解除线程懒惰
   return true;
 }
 
@@ -66,6 +67,7 @@ export function buyThreadUpgrade(u) {
   S.ep -= cost;
   S.upgrades[u.id] = owned + 1;
   S.totalBuys++;
+  S.lazySince = null; // v2.7.1：线程购买解除懒惰
   return true;
 }
 
@@ -146,6 +148,7 @@ export function renderShop(container) {
     if (buyUpgrade(u)) {
       updateShopItem(u); // v1.3 E：购后原地更新（×N / 成本 / 灰态），不重建列表
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
+      save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {
       shopToast(`EP 不足：${u.name} 需要 ${fmt(bulkCostCalc(u, 1))} EP`);
     }
@@ -288,6 +291,7 @@ export function renderThreadShop(container) {
     if (buyThreadUpgrade(u)) {
       updateThreadItem(u);
       if (!wasOwned) dirty.shop = true;
+      save(S); // v2.7.1：购买即持久化（同上）
     }
     else shopToast(`EP 不足：${u.name} 需要 ${fmt(threadCost(u))} EP`);
   });

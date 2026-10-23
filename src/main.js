@@ -7,6 +7,7 @@ import {
   offlineRate, offlineCap, addEp,
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
+  isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
 } from './modules/economy.js';
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
@@ -370,6 +371,10 @@ function renderHero() {
     const salary = staffSalaryPerSec();
     let txt = '满薪', color = 'var(--good)';
     if (S.cultists.length === 0) { txt = '待招募'; color = 'var(--text-2)'; }
+    else if (isLazy()) { // v2.7.1：懒惰态（EP 满上限惩罚）——消耗 > 产出
+      txt = `懒惰 · 产出 ×${lazyProdMult()} 消耗 ×${lazyCostMult()}`;
+      color = 'var(--warn)';
+    }
     else if (w.state === 'debt') {
       if ((w.bufferSec || 0) > 0) { txt = `欠薪 ×${wageDebtMult()} · 恢复缓冲 ${Math.ceil(w.bufferSec)}s`; }
       else { txt = `欠薪 ×${wageDebtMult()} · 休眠还剩 ${Math.ceil(Math.max(0, W.dormantAfterSec - (w.debtSec || 0)))}s`; }
@@ -388,6 +393,7 @@ function renderHero() {
       `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ×${wageDebtMult()}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
       `· 强制休眠（橙）：产出 ×0，保命成本 = 薪资 ×${wageKeepCostMult()}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
       `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程（维修坞 → 0，免疫）\n` +
+      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
       `恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）`;
   }
   if (staffCostEl) staffCostEl.textContent = fmt(staffCost());
@@ -651,6 +657,17 @@ function bindEvents() {
   document.getElementById('btn-pets')?.addEventListener('click', () => switchTab('pets'));
   document.getElementById('btn-prestige')?.addEventListener('click', () => switchTab('prestige'));
   document.getElementById('btn-offline')?.addEventListener('click', () => switchTab('offline'));
+  // v2.7.1：触手交互动画——点击拍打 + 日志反馈（hover 蠕动走 CSS）
+  document.getElementById('tentacle-deco')?.addEventListener('click', () => {
+    const deco = document.getElementById('tentacle-deco');
+    if (!deco) return;
+    deco.classList.remove('tap');
+    void deco.offsetWidth; // 重排以重启动画
+    deco.classList.add('tap');
+    clearTimeout(S._tentacleTapTimer);
+    S._tentacleTapTimer = setTimeout(() => deco.classList.remove('tap'), 600);
+    log('触手回应了你的触碰', 'good');
+  });
   document.getElementById('btn-expedition')?.addEventListener('click', () => switchTab('expedition'));
   document.getElementById('btn-storyline')?.addEventListener('click', () => switchTab('storyline'));
   document.getElementById('btn-religion')?.addEventListener('click', () => switchTab('religion'));
@@ -874,7 +891,7 @@ function openTalentModal() {
     el.addEventListener('click', () => {
       const tid = el.dataset.talent;
       doPrestige(tid);
-      modal.style.display = 'none';
+      save(S); // v2.7.1：转生立即持久化（消除 5s 保存窗口 → 选天赋后刷新不再回滚）
       modal.removeEventListener('click', onModalClose);
       S._prestigeSkips = 0; // 选择了天赋，重置跳过计数
       dirty.shop = true; dirty.tech = true; dirty.pets = true;
@@ -903,6 +920,7 @@ function hireCultist() {
   const cost = staffCost();
   if (S.ep < cost) return;
   S.ep -= cost;
+  S.lazySince = null; // v2.7.1：招募操作解除线程懒惰
   S._lastActionAt = Date.now();
   const names = ['外勤干员 A','斥候','深潜者','观测员','渗透单元','信使','无面者','印斯茅斯节点','沙丘行者','门之侍者'];
   // v2.0：线程基础产出由 BALANCE.thread 定义（3 + 随机 0~3），不再硬编码
@@ -1152,6 +1170,16 @@ function tick(now) {
         }
       }
     }
+  }
+
+  // v2.7.1：线程懒惰态计时——EP 持续近满（≥98% cap）开始计时；进入懒惰后
+  // 即使 EP 跌破近满线也保持（懒惰中消耗>产出自然下滑），直到 EP 跌到 0 或任意升级/购买解除
+  if (isLazy()) {
+    if (S.ep <= 0) S.lazySince = null;
+  } else if (S.ep >= capNow * 0.98) {
+    if (!S.lazySince) S.lazySince = now;
+  } else {
+    S.lazySince = null;
   }
 
   // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），

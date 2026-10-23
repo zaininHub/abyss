@@ -20,7 +20,8 @@ try {
   // V1 暂停结算按 25% 离线效率
   {
     const page = await browser.newPage();
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, JSON.stringify(base));
+    // V1 离线结算场景：ep 注入需低于 cap（≈33.7K）留出余量，否则离线收益被上限截断为 0
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, JSON.stringify({ ...base, ep: 30000 }));
     await page.goto(fileUrl, { waitUntil: 'load' });
     await sleep(6000);
     const pre = await page.evaluate(() => ({ ep: parseFloat(document.getElementById('h-ep').textContent.split('/')[0].replace(/,/g, '')), cps: parseFloat(document.getElementById('h-cps').textContent.replace(/,/g, '')) }));
@@ -42,7 +43,7 @@ try {
     await page.goto(fileUrl, { waitUntil: 'load' });
     await sleep(6000);
     const svg = await page.evaluate(() => { const g = document.querySelector('.tentacle-deco svg'); return g ? g.innerHTML : ''; });
-    rec('V2 触手 SVG 渲染为平滑曲线（贝塞尔+圆头）', svg.includes('C38 114') && svg.includes('stroke-linecap="round"') && svg.includes('<ellipse'), '');
+    rec('V2 触手 SVG 渲染为平滑曲线（贝塞尔+圆头）', svg.includes('C42 114') && svg.includes('stroke-linecap="round"') && svg.includes('<ellipse'), '');
     await page.close();
   }
   // V3 混沌心智购建筑日志（注入已解锁可购建筑，等待混沌直觉触发）

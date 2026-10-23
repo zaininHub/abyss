@@ -30,7 +30,7 @@ try {
     });
     rec('V1 触手显示（鱼缸 ≥1 级）', tentacle.shown === true, `shown=${tentacle.shown}`);
     rec('V1 触手动画 steps(6)', tentacle.anim === 'steps(6)' || tentacle.anim === 'steps(6, end)', tentacle.anim);
-    rec('V1 触手多层描边段（4 段 path/条 + 深色描边）', tentacle.segs === 4 && tentacle.dark === true, `segs=${tentacle.segs}`);
+    rec('V1 触手多层描边段（5 段 path/条：底 16/主 10/亮 4.5/霓虹 1.6/光晕 4 + 深色描边）', tentacle.segs === 5 && tentacle.dark === true, `segs=${tentacle.segs}`);
     await page.close();
   }
 

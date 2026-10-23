@@ -24,6 +24,9 @@ export const BALANCE = {
       restBonusSec: 60,
     },
   },
+  // v2.7.1：线程懒惰态（EP 满上限惩罚）——持续满上限后线程怠工：产出降、消耗升，
+  // 使消耗 > 产出（鼓励玩家持续投入 EP 而非囤满挂机）；EP 跌到 0 或任意升级/购买解除
+  lazy: { afterSec: 60, prodMult: 0.25, costMult: 2.5 }, // v2.7.1：怠工幅度保证任意阶段消耗>产出（单线程 3/s×0.25 < 薪资 0.5/s×2.5）
   // v1.3 模块 D：探采平台联动数值
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],

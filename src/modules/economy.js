@@ -251,6 +251,18 @@ export function wageKeepCostMult() {
   return bld('dorm') >= 1 ? 0.15 : BALANCE.thread.wages.keepCostMult;
 }
 // 流失预警期流失概率/分钟（维修坞 → 0）
+// v2.7.1：线程懒惰态（EP 满上限惩罚）——持续满上限 afterSec 后进入；
+// 懒惰中消耗 > 产出，EP 跌到 0 或任意升级/线程购买/招募解除
+export function isLazy() {
+  return !!S.lazySince && Date.now() - S.lazySince >= (B.lazy?.afterSec || 60) * 1000;
+}
+export function lazyProdMult() {
+  return isLazy() ? (B.lazy?.prodMult || 1) : 1;
+}
+export function lazyCostMult() {
+  return isLazy() ? (B.lazy?.costMult || 1) : 1;
+}
+
 export function wageLoseChance() {
   return bld('dock') >= 1 ? 0 : BALANCE.thread.wages.loseChancePerMin;
 }
@@ -340,7 +352,7 @@ export function staffSalaryPerSec() {
   let total = 0;
   for (let i = 0; i < S.cultists.length; i++) total += 0.5 * Math.pow(base, i);
   total *= tideMult('salary'); // 潮汐：涨潮薪资 +50% / 退潮 -20% / 乱流 +30%
-  return total * m;
+  return total * m * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }
 
 export function staffOutputPerSec() {
@@ -363,7 +375,7 @@ export function staffNetPerSec() {
   // v2.1 R1：净收益 = 线程产出 × 全局乘数（单次） − 薪资
   // v1.3：纳入薪资状态机产出系数与数据中心加成（AI 自动招募判定同口径）
   return staffOutputPerSec() * globalMult() * corruptionPenalty() * tideMult('ep')
-    * wageOutputMult() * datacenterMult() - staffSalaryPerSec();
+    * wageOutputMult() * lazyProdMult() * datacenterMult() - staffSalaryPerSec(); // v2.7.1：懒惰态产出/消耗同口径
 }
 
 // ========== 升级成本 ==========
@@ -436,6 +448,7 @@ export function computeCps() {
   let m = globalMult();
   // v1.3 模块 C：四态薪资状态机产出系数（替代隐藏 staffUnhappy 计数器，旧字段保留读兼容）
   m *= wageOutputMult();
+  m *= lazyProdMult(); // v2.7.1：懒惰态线程产出 ×0.4
   // v1.3 模块 B：数据中心（每 10 线程全局产出加成）
   m *= datacenterMult();
   if (Date.now() < S.buffUntil) m *= S.buffMult;

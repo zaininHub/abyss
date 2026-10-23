@@ -13,9 +13,9 @@ const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
 
 // ===== ① 触手 =====
-rec('V1 触手平滑贝塞尔曲线 + 多层描边（基座粗 12 → 主 6.5 → 高光 2.6，圆头端帽）', html.includes('C38 114 34 102 42 90') && html.includes('stroke-linecap="round"') && html.includes('stroke-width="6.5"') && html.includes('stroke-width="2.6"'), '');
+rec('V1 触手平滑贝塞尔曲线 + 多层描边（基座粗 16 → 主 10 → 高光 4.5 → 霓虹 1.6，圆头端帽）', html.includes('C42 114 32 100 44 88') && html.includes('stroke-linecap="round"') && html.includes('stroke-width="10"') && html.includes('stroke-width="4.5"'), '');
 rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
-rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#3d1d6e"') && html.includes('stroke-width="12"'), '');
+rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#3d1d6e"') && html.includes('stroke-width="10"'), '');
 rec('V1 动画六帧抽摆（steps(6) + 6 keyframes）', css.includes('steps(6, end)') && css.includes('15% { transform: rotate(-4deg); }') && css.includes('70% { transform: rotate(8deg); }'), '');
 
 // ===== ② AI 激活按钮 =====
