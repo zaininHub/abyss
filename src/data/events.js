@@ -1,0 +1,36 @@
+// 随机事件 31 个（v2.0：奖励由 balance.js 驱动；新增深渊净化）
+import { BALANCE } from './balance.js';
+export const EVENTS = [
+  {id:'idea',name:'好点子',desc:'立即 300 秒产出',minCps:0,type:'ep',amount:300},
+  {id:'inspire',name:'灵感爆发',desc:'60 秒产出 ×3',minCps:0,type:'buff',mult:3,dur:60},
+  {id:'flow',name:'心流',desc:'60 秒产出 ×2',minCps:0,type:'buff',mult:2,dur:60},
+  {id:'boss_insp',name:'系统巡检',desc:'30 秒产出 ×0.5',minCps:0,type:'debuff',mult:0.5,dur:30},
+  {id:'maintain',name:'系统维护',desc:'30 秒产出 ×0.7',minCps:0,type:'debuff',mult:0.7,dur:30},
+  {id:'coffee',name:'咖啡时间',desc:'60 秒点击 ×10',minCps:0,type:'clickbuff',mult:10,dur:60},
+  {id:'lunch',name:'午休',desc:'立即 180 秒产出',minCps:0,type:'ep',amount:180},
+  {id:'overtime',name:'加班加成',desc:'30 秒产出 ×5',minCps:0,type:'buff',mult:5,dur:30},
+  {id:'brainstorm',name:'头脑风暴',desc:`+${BALANCE.brainstormRp} RP`,minCps:0,type:'rp',amount:BALANCE.brainstormRp},
+  {id:'breakthrough',name:'技术突破',desc:'随机升级 +1',minCps:0,type:'freelevel'},
+  {id:'morale',name:'团队士气',desc:'120 秒 ×1.5',minCps:100,type:'buff',mult:1.5,dur:120},
+  {id:'bug',name:'线上故障',desc:'30 秒 ×0.5',minCps:100,type:'debuff',mult:0.5,dur:30},
+  {id:'ride',name:'顺风车',desc:'600 秒产出',minCps:1e3,type:'ep',amount:600},
+  {id:'epiphany',name:'顿悟',desc:`+${BALANCE.epiphanyRp} RP`,minCps:1e3,type:'rp',amount:BALANCE.epiphanyRp},
+  {id:'chain',name:'连锁反应',desc:'60 秒 ×4',minCps:1e3,type:'buff',mult:4,dur:60},
+  {id:'rewind',name:'时光倒流',desc:'4 小时产出',minCps:1e5,type:'ep',amount:14400},
+  {id:'focus5',name:'双倍专注',desc:'专注 +15',minCps:1e5,type:'focus',amount:15},
+  {id:'miracle',name:'神迹',desc:'60 秒 ×10',minCps:1e6,type:'buff',mult:10,dur:60,rare:true},
+  {id:'downtime',name:'降级风暴',desc:'30 秒 ×0.3',minCps:1e6,type:'debuff',mult:0.3,dur:30,rare:true},
+  {id:'cosmic',name:'宇宙彩蛋',desc:'3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
+  {id:'happy_pet',name:'异兽开心',desc:'异兽经验 ×2 60 秒',minCps:100,type:'petxp'},
+  {id:'offrush',name:'离线冲刺',desc:'立即 12 小时离线收益',minCps:1e4,type:'offrush'},
+  {id:'redpacket',name:'红包',desc:'+100K EP',minCps:1e3,type:'ep',amount:0},
+  {id:'rift',name:'时空裂缝',desc:'60 秒 ×20',minCps:1e6,type:'buff',mult:20,dur:60,rare:true},
+  {id:'fuse_luck',name:'融合灵感',desc:'融合成本 -50% 5 分钟',minCps:1e5,type:'fuse_luck'},
+  // 负面事件
+  {id:'audit',name:'合规审计',desc:'审计抽走 5% EP',minCps:100,type:'lose_ep',amount:0.05},
+  {id:'bug_ep',name:'线上 Bug',desc:'回滚损失 10% EP',minCps:1e3,type:'lose_ep',amount:0.1},
+  {id:'dinner',name:'系统损耗',desc:'维护开销 -3% EP',minCps:10,type:'lose_ep',amount:0.03},
+  {id:'fine',name:'罚单',desc:'巨额罚单 -15% EP',minCps:1e4,type:'lose_ep',amount:0.15,rare:true},
+  // v2.0 新增
+  {id:'purify',name:'深渊净化',desc:'立即清除全部腐化',minCps:0,type:'purify',rare:true},
+];

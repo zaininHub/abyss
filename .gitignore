@@ -1,0 +1,6 @@
+node_modules/
+# 浏览器测试截图目录（如存在）
+tests/EV/
+tests/*.png
+*.log
+.DS_Store

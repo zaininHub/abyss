@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>深渊效能工作台 v2.6.1</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 顶部栏（v2.1 P1：全部图标配文字标签 + hover 说明，hover 覆盖率 100%） -->
+  <div class="topbar">
+    <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「存储节点/缓存优化」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
+    <div class="stat" title="每秒 EP 产出：已含全局乘数、腐化惩罚、潮汐相位等全部修正后的实际值。"><b>产出/s</b><span id="h-cps">0</span></div>
+    <div class="stat" title="每秒 EP 消耗：当前全部线程薪资支出合计（负面效果），已计入上方「产出/s」净额。"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span></div>
+    <div class="stat" title="本局累计获得 EP：从上次晋升（转生）起计算，晋升收益按此结算；晋升后清零。"><b>本局</b><span id="h-run">0</span></div>
+    <div class="stat" title="职级（晋升点数）：晋升获得的永久点数，每点全局产出 +10%。"><b>职级</b><span id="h-rank">0</span></div>
+    <div class="stat" title="RP（研究点）：科技树货币。完成任务、达成里程碑、灵感工坊产出获得。"><b>🔬RP</b><span id="h-rp">0</span></div>
+    <div class="stat" title="ES（永恒碎片）：永恒矩阵货币，晋升时按本局累计结算，购买永久强化。"><b>💎ES</b><span id="h-es">0</span></div>
+    <div class="stat" title="信仰：神龛/万神殿随机产出，用于开启宗教路线。"><b>🙏信仰</b><span id="h-faith">0</span></div>
+    <div class="stat" title="宠物饼干（PT）：喂养异兽的经验资源，宠物乐园等建筑产出。"><b>🍪饼干</b><span id="h-pt">0</span></div>
+    <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
+    <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
+    <!-- v2.0 潮汐状态 -->
+    <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
+  </div>
+
+  <!-- 主线剧情 -->
+  <div id="chapter-bar" class="ch-bar"></div>
+
+  <!-- v2.1 P1：图例面板（默认折叠；覆盖潮汐/腐化/心情/职级/五种货币） -->
+  <details id="legend-panel" class="legend-panel">
+    <summary>📖 图例 / 名词说明（点击展开）</summary>
+    <div class="legend-body">
+      <div class="legend-sec"><b>五种货币</b>
+        <span>⚡ <b>EP</b> 能量点：主资源，有存储上限（购买存储节点/缓存优化、达成里程碑扩容）</span>
+        <span>🔬 <b>RP</b> 研究点：科技树货币（任务/里程碑/灵感工坊）</span>
+        <span>💎 <b>ES</b> 永恒碎片：晋升结算，永恒矩阵专用</span>
+        <span>🍪 <b>PT</b> 宠物饼干：喂养异兽</span>
+        <span>🌀 <b>DM</b> 深渊物质：封印裂隙获得，深渊商店专用</span>
+      </div>
+      <div class="legend-sec"><b>深渊潮汐</b>（150s/相位 × 4 循环）
+        <span>🌊 涨潮：产出 +30%，薪资 +50%，正面事件时长 ×1.5</span>
+        <span>🌀 平潮：无修正</span>
+        <span>⛰️ 退潮：产出 −30%，薪资 −20%，科技成本 −20%</span>
+        <span>⚡ 乱流：薪资 +30%，负面事件权重 ×2</span>
+      </div>
+      <div class="legend-sec"><b>矩阵腐化</b>
+        <span>EP 超过存储上限会按溢出比例累积腐化；腐化每 1% 全局产出 −0.3%（下限 −30%）</span>
+        <span>对策：主动净化按钮（每次最多清 50%）、净化节点建筑、控制 EP 不溢出</span>
+      </div>
+      <div class="legend-sec"><b>线程薪资四态</b>
+        <span>🟢 满薪：EP ≥ 10s 薪资，无惩罚</span>
+        <span>🟡 欠薪降效：产出 ×0.7，连续 60s 进入休眠</span>
+        <span>🟠 强制休眠：产出 ×0，仅扣保命成本（薪资 ×0.3）</span>
+        <span>🔴 流失预警：休眠 300s 后每 60s 10% 概率流失 1 线程（维修坞可免疫）</span>
+        <span>恢复：EP ≥ 60s 薪资即逐级恢复（休眠恢复经 30s 缓冲）；设施建筑可缓解各态惩罚</span>
+      </div>
+      <div class="legend-sec"><b>线程心情</b>
+        <span>超频 ×2.0 / 优化 ×1.5 / 高效 ×1.2 / 正常 ×1.0 / 阻塞 ×0.5 / 死锁 ×0.1（与薪资四态正交叠加）</span>
+      </div>
+      <div class="legend-sec"><b>职级 / 晋升</b>
+        <span>本局累计达标可晋升：重置升级但获得职级点数（每点全局 +10%）与永恒碎片，并可三选一天赋</span>
+      </div>
+    </div>
+  </details>
+
+  <!-- 主网格 -->
+  <div class="grid">
+    <!-- 左列：英雄 + 离线 + 任务 + 日志 -->
+    <div class="left-col">
+      <!-- 英雄面板 -->
+      <div class="panel">
+        <div id="hero" class="hero-click" title="点击此处产出 EP（点击产出受专注等级、全局乘数、腐化惩罚影响）">
+          <div class="big" id="big-ep">0</div>
+          <div style="text-align:center;color:var(--dim);font-size:11px">点击产出 <span id="click-power">1</span></div>
+        </div>
+        <div class="hero-row">
+          <span>线程: <b id="staff-count">0</b></span>
+          <span id="staff-status" title="线程运转状态：EP 不足以支付薪资时会积累不满，严重时线程死锁或退出">运行中</span>
+          <span class="hero-cost">消耗: <span id="staff-cost" class="mono">50</span></span>
+          <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增）">招募线程</button>
+        </div>
+        <div id="focus-bar" class="focus-bar" title="专注：提升点击产出（每级 +50% 点击产出）。成本随等级按 30×1.6^n 增长，点击此处购买">
+          <span>专注等级: <b id="focus-lv">0</b></span>
+          <span class="cost mono" id="focus-cost">50</span>
+        </div>
+        <!-- v2.0 EP 容量提示 -->
+        <div id="ep-cap-hint" class="ep-cap-hint" style="display:none"></div>
+        <!-- v1.3 A：AI 助手面板（研究「AI 管理核心」后显示） -->
+        <div id="ai-card" class="panel ai-card" style="display:none">
+          <h3>🤖 AI 助手</h3>
+          <div id="ai-panel"></div>
+        </div>
+        <!-- v2.0 矩阵腐化进度条 -->
+        <div id="corruption-bar" class="corruption-bar" style="display:none">
+          <div class="corruption-row">
+            <span class="corruption-label">🧪 矩阵腐化</span>
+            <span class="corruption-num mono" id="corruption-num">0%</span>
+            <button class="btn-mini" id="corruption-purge" title="主动释放溢出 EP，归零部分腐化">主动净化</button>
+          </div>
+          <div class="corruption-track">
+            <div class="corruption-fill" id="corruption-fill" style="width:0%"></div>
+          </div>
+          <div class="corruption-pen">产出惩罚 <span id="corruption-pen">-0%</span></div>
+        </div>
+      </div>
+
+      <!-- 深渊裂隙 -->
+      <div class="panel" id="rift-card" style="display:none">
+        <h3 style="color:var(--purple)">深渊裂隙</h3>
+        <div id="rift-panel"></div>
+      </div>
+
+      <!-- 任务版 -->
+      <div class="panel">
+        <h3>任务版</h3>
+        <div id="projects"></div>
+      </div>
+
+      <!-- 日志 -->
+      <div class="panel log-panel">
+        <h3>系统日志</h3>
+        <div id="log-content" class="log-content"></div>
+      </div>
+    </div>
+
+    <!-- 右列：标签页 -->
+    <div class="right-col">
+      <div class="tabs">
+        <button class="btn on" id="btn-shop">升级商店</button>
+        <button class="btn" id="btn-tech">科技树</button>
+        <button class="btn" id="btn-rp">研究点</button>
+        <button class="btn" id="btn-pets">异兽</button>
+        <button class="btn" id="btn-prestige">晋升</button>
+        <button class="btn" id="btn-offline">离线</button>
+        <button class="btn" id="btn-expedition">星图</button>
+        <button class="btn" id="btn-storyline">故事线</button>
+        <button class="btn" id="btn-religion" style="display:none">宗教</button>
+        <button class="btn" id="btn-delve" style="display:none">深潜</button>
+        <button class="btn" id="btn-rift-tab" style="display:none">裂隙</button>
+      </div>
+
+      <div class="tab-content">
+        <!-- 商店 -->
+        <div class="tab-pane on" id="tab-shop">
+          <!-- v2.3.1 ⑥（rev18 9.4）：bulk-bar 倍率条整节移除，购买固定 ×1 -->
+          <div id="shop-list" class="shop-grid"></div>
+          <h3 style="margin-top:12px">线程强化</h3>
+          <div id="thread-shop" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="vehicle-title">探采平台 <span id="v21-overflow-stat" style="font-size:12px;font-weight:400;color:var(--text-2)"></span></h3>
+          <div id="vehicle-collect" class="vehicle-collect" title=""></div>
+          <div id="vehicle-shop" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="dm-shop-title">深渊商店</h3>
+          <div id="dm-shop" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="v21-title">效能建筑</h3>
+          <div id="v21-building-list" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="crossroad-title">命运的岔路口 <span style="font-size:12px;font-weight:400;color:var(--text-2)">三选一立誓 · 亦可保持中立（不买不锁，可走到终章）</span></h3>
+          <div id="crossroad-list" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="family-upgrade-title">族升级 <span style="font-size:12px;font-weight:400;color:var(--text-2)">RP 购买 · 扩容族与产出族的等级上限扩展 · 跨转生保留</span></h3>
+          <div id="family-upgrade-list" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="bld-title">设施</h3>
+          <div id="building-list" class="shop-grid"></div>
+        </div>
+
+        <!-- 科技树 -->
+        <div class="tab-pane" id="tab-tech">
+          <h3>科技树（RP 购买）· 当前 <span id="tech-rp" class="mono" style="color:var(--cyan)">0</span> RP</h3>
+          <div id="tech-tree" class="tech-grid"></div>
+          <h3 style="margin-top:12px">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES</h3>
+          <div id="eternal-list" class="tech-grid"></div>
+        </div>
+
+        <!-- v2.5 ④：研究点（RP 独立栏目，EP 首次溢出解锁） -->
+        <div class="tab-pane" id="tab-rp">
+          <div id="rp-panel"></div>
+        </div>
+
+        <!-- 异兽 -->
+        <div class="tab-pane" id="tab-pets">
+          <div id="pet-grid" class="pet-grid"></div>
+        </div>
+
+        <!-- 晋升 -->
+        <div class="tab-pane" id="tab-prestige">
+          <div id="prestige-panel"></div>
+        </div>
+
+        <!-- 离线 -->
+        <div class="tab-pane" id="tab-offline">
+          <div id="offline-panel"></div>
+        </div>
+
+        <!-- 星图 -->
+        <div class="tab-pane" id="tab-expedition">
+          <div id="expedition-panel"></div>
+        </div>
+
+        <!-- v2.0 故事线 -->
+        <div class="tab-pane" id="tab-religion">
+          <div id="religion-panel"></div>
+        </div>
+        <div class="tab-pane" id="tab-delve">
+          <div id="delve-panel"></div>
+        </div>
+        <div class="tab-pane" id="tab-rift-tab">
+          <div id="rift-tab-panel"></div>
+        </div>
+        <div class="tab-pane" id="tab-storyline">
+          <div id="storyline-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮动异兽 -->
+  <div id="pet-float" class="pet-float"></div>
+
+  <!-- v2.5.3 反馈③：深渊鱼缸触手（购买鱼缸后工作台底部缓慢摆动） -->
+  <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
+    <svg viewBox="0 0 200 120" width="200" height="120" preserveAspectRatio="xMaxYMax meet">
+      <!-- v2.5.9 像素克苏鲁检查：平滑贝塞尔曲线 → 阶梯折线（像素触手），颜色保留克苏鲁紫 -->
+      <path class="tentacle tentacle-a" d="M30 118 L30 102 L48 94 L42 74 L58 58 L52 36 L60 14" fill="none" stroke="#9c27b0" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
+      <path class="tentacle tentacle-b" d="M95 118 L94 102 L112 94 L106 76 L122 60 L114 42 L122 24" fill="none" stroke="#7b1fa2" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
+      <path class="tentacle tentacle-c" d="M165 118 L164 100 L182 92 L176 72 L190 56 L184 36 L190 28" fill="none" stroke="#6a1b9a" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter"/>
+    </svg>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 天赋模态框 -->
+  <div id="talent-modal" class="modal">
+    <div class="modal-box">
+      <div id="talent-options"></div>
+    </div>
+  </div>
+
+  <!-- v2.5 ⑥：暂停 / 离线恢复模态框 -->
+  <div id="pause-modal" class="modal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;color:var(--red)">系统暂停 · 模拟离线</h3>
+      <div id="pause-info" style="font-size:13px;line-height:2;margin:8px 0 14px"></div>
+      <button class="btn" id="pause-resume" style="width:100%">恢复并结算</button>
+    </div>
+  </div>
+
+  <!-- v2.5.4 ①：快照存档模态框（最多 3 槽，可覆盖当前本地游戏 / 被新快照覆盖） -->
+  <div id="snap-modal" class="modal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;color:var(--accent)">快照存档</h3>
+      <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">最多保存 3 个快照。可将任意快照作为本地游戏（覆盖当前进度）；保存新快照时若槽位已满，会覆盖最早的快照。</p>
+      <button class="btn" id="snap-save" style="width:100%;margin-bottom:10px">保存当前进度为快照</button>
+      <div id="snap-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn" id="snap-close" style="width:100%;margin-top:10px">关闭</button>
+    </div>
+  </div>
+
+  <!-- v2.5.4 ①：通用二级确认模态框 -->
+  <div id="confirm-modal" class="modal">
+    <div class="modal-box">
+      <h3 id="confirm-title" style="margin-top:0;color:var(--red)">确认</h3>
+      <div id="confirm-text" style="font-size:13px;line-height:1.9;margin:8px 0 14px;white-space:pre-line"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="confirm-cancel" style="flex:1">取消</button>
+        <button class="btn" id="confirm-ok" style="flex:1;background:var(--red);border-color:var(--red)">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 系统按钮 -->
+  <div class="sys-btns">
+    <button class="btn" id="pauseBtn">暂停</button>
+    <button class="btn" id="export-btn">导出存档</button>
+    <button class="btn" id="import-btn">导入存档</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+    <button class="btn" id="snap-btn">快照存档</button>
+    <button class="btn" id="reset-btn">清档</button>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

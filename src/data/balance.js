@@ -1,0 +1,259 @@
+// v2.0 数值配置中心：所有平衡常量集中于此（设计方案 §4.1）
+export const BALANCE = {
+  // 初始与前期
+  initialEp: 50,
+  scribble: { base: 10, cps: 0.3 },
+  script: { base: 80, cps: 2 },
+  parallel: { base: 900, cps: 8 },
+  atrium: { base: 5e4, rate: 0.15 },
+  oracle: { base: 5e11, rate: 2 },
+  dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
+  thread: {
+    firstCost: 40, baseOutput: 3, baseOutputJitter: 3, salaryBase: 1.08,
+    // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
+    wages: {
+      warnSec: 8,           // v2.5.3：黄线预跨度 10s→8s（更早提示欠薪，休眠路径更快出现）
+      debtMult: 0.7,        // 欠薪产出系数
+      dormantAfterSec: 15,  // v2.5.3：连续欠薪 30s→15s（原阈值仍偏长；配合休眠期产出，形成「欠薪→休眠→补偿」节奏）
+      keepCostMult: 0.3,    // 休眠期保命成本 = 薪资 ×0.3
+      loseAfterSec: 300,    // 休眠持续 300s → 流失预警
+      loseChancePerMin: 0.1,// 流失预警期每 60s 10% 概率流失 1 线程
+      recoverSec: 60,       // 恢复线：EP ≥ 60s 薪资
+      bufferSec: 20,        // v2.5.2 反馈①：休眠恢复缓冲 30s→20s（更早回到满薪）
+      restBonusMult: 1.5,   // v2.5.2 反馈①：休眠 ≥60s 恢复后补偿——产出 ×1.5 持续 60s
+      restBonusSec: 60,
+    },
+  },
+  // v1.3 模块 D：探采平台联动数值
+  vehicles: {
+    ids: ['scooter', 'convoy', 'orbital', 'submersible'],
+    dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位）
+    collectInterval: 60,                     // 采集 roll 周期（秒）
+    tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
+    embraceBonusSec: 5,                     // 拥抱裂隙爆发时长加成（秒 × 档位）
+    protocolMult: 1.5,                      // 载具协议：全载具 CPS ×1.5
+    protocolDmCost: 20,
+  },
+  // v1.3 模块 B：功能建筑（一次性多级，效果经读侧修饰 wages 生效值）
+  // v2.1：数据中心随 RESCALE 重标定——原 base 1e6 growth 10 在终局上限（≈3.7e11）下远期失衡，
+  // 重标为 base 8e4 growth 4（三档 8e4 / 3.2e5 / 1.28e6），并纳入 30% 防死锁钳制（组长硬性要求：DC 三档成本随 cap 曲线重标定）
+  buildings: {
+    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 免疫'] },
+    dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
+    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['流失概率 10%/min → 0'] },
+    datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
+    abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%（触手在缸中缓慢摆动）', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
+  },
+  // ===== v2.1 建筑驱动转向（PM 设计文档 §2.2 + 终章 RESCALE 价梯，唯一数值基准）=====
+  // 级制红线：重复购买即升级（KG 工坊模式），effect = value × level；效果类 ≤9 级、乘算锚点 ≤3 级、扩容类 ≤20 级，禁止无限堆叠
+  // 价格 = base × growth^当前级 × costMult()（沿用 v1.3 模块 B 公式）
+  // unlockTech = 原 52 科技 ID（作 RP 解锁定价基准：原 RP × buildingUnlockRatio）；保留钥匙（click_up 等 6 项）另作族门控
+  buildingsV21: [
+    // ---- 组 A · 全局乘数（10 座）----
+    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 100,  growth: 1.15, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%（满 5 级 +10%）' },
+    { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 2000, growth: 1.18, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%（满 9 级 +90%）' },
+    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 8000, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.25 },  desc: '每级全局产出 ×1.25（乘算，满 9 级 ×7.45）' },
+    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.50 },  desc: '每级全局产出 +50%（满 9 级 +450%）' },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点，满 3 级 ×3.375）' },
+    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.8 },   desc: '每级全局产出 ×1.8（乘算锚点，满 3 级 ×5.83）' },
+    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点）' },
+    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点）' },
+    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.6 },   desc: '每级全局产出 ×1.6（乘算锚点）' },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.8 },   desc: '每级全局产出 ×1.8（终局顶配；1 级解锁终章条件）' },
+    // ---- 组 B · 点击乘数（7 座）----
+    { id: 'field_1',        name: '指尖力场·初',cat: 'B', cap: 3, base: 500,  growth: 1.15, unlockTech: 'click_up',   fx: { key: 'clickMul', value: 1.5 },    desc: '每级点击产出 ×1.5（满 3 级 ×3.375）' },
+    { id: 'field_2',        name: '指尖力场·中',cat: 'B', cap: 3, base: 5e4,  growth: 1.20, unlockTech: 'click10',    fx: { key: 'clickMul', value: 2 },      desc: '每级点击产出 ×2（满 3 级 ×8）' },
+    { id: 'field_3',        name: '指尖力场·深',cat: 'B', cap: 3, base: 1e5,  growth: 1.26, unlockTech: 'mega_click', fx: { key: 'clickMul', value: 3 },      desc: '每级点击产出 ×3（满 3 级 ×27）' },
+    { id: 'field_4',        name: '指尖力场·极',cat: 'B', cap: 3, base: 1.5e5,growth: 1.28, unlockTech: 'grand_click',fx: { key: 'clickMul', value: 5 },      desc: '每级点击产出 ×5（满 3 级 ×125）' },
+    { id: 'crit_furnace',   name: '会心反应炉', cat: 'B', cap: 1, base: 8000, growth: 1.20, unlockTech: 'crit_click', fx: { key: 'clickCrit', value: { chance: 0.01, mult: 5 } }, desc: '点击 1% 概率 ×5（1 级即生效）' },
+    { id: 'crit_reactor',   name: '暴击反应堆', cat: 'B', cap: 1, base: 6e4,  growth: 1.25, unlockTech: 'cps_crit',   fx: { key: 'autoCrit', value: { chance: 0.01, mult: 10 } }, desc: '自动产出期望 +9%（1% 概率 ×10 的期望值）' },
+    { id: 'crit_reactor_2', name: '暴击反应堆·锐',cat:'B',cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'crit2',      fx: { key: 'autoCrit', value: { chance: 0.05, mult: 10 } }, desc: '自动产出期望 +45%（5% 概率 ×10 的期望值）' },
+    // ---- 组 C · 成本折扣（6 座）----
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 300,  growth: 1.15, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98（满 5 级 ×0.90）' },
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 2000, growth: 1.18, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96（满 3 级 ×0.88）' },
+    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 1e4,  growth: 1.20, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95（满 3 级 ×0.86）' },
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 6e4,  growth: 1.26, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92（满 2 级 ×0.85）' },
+    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 1.5e5,growth: 1.28, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88（1 级即生效）' },
+    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5000, growth: 1.20, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75（1 级即生效）' },
+    // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
+    // v2.4 KG 模式改造：扩容类全部无限升级（unlimited），成本指数递增 + 30% 钳制 → 后期性价比自然递减；
+    // 新增 3 座「多效果上限建筑」（EP 上限 + DM 采集效率 / 全局产出），先开放者后期性价比递减（数据见 PM v2.4）
+    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: '每级 EP 上限 +50,000（无限升级）' },
+    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: '每级 EP 上限 +5,000,000（无限升级）' },
+    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: '每级 EP 上限 +5,000,000,000（无限升级）' },
+    // v2.4 新增多效果上限建筑（unlimited；多键效果经 effectEngine fx 数组聚合，DM 采集效率加成作用于载具采集）
+    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: '每级 EP 上限 +1,000,000，DM 采集效率 +15%（无限升级）' },
+    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: '每级 EP 上限 +100,000,000，全局产出 +3%（无限升级）' },
+    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: '每级 EP 上限 +10,000,000,000，DM 采集效率 +30%（无限升级）' },
+    // ---- 组 E · 线程产出（5 座）----
+    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.10 }, desc: '每级线程产出 +10%（满 5 级 +50%）' },
+    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.5 },  desc: '每级线程产出 ×1.5（满 3 级 ×3.375）' },
+    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 2 },    desc: '每级线程产出 ×2（满 2 级 ×4）' },
+    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90（满 5 级 ×0.59）' },
+    { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85（满 3 级 ×0.61）' },
+    // ---- 组 F · RP 加成（5 座）----
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%（满 3 级 +90%）' },
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP +50%（满 3 级 +150%）' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%（满 2 级 +300%）' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
+    // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
+    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%（1 级即生效）' },
+    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%（1 级即生效）' },
+    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 2.0 }, desc: '离线效率 → 200%（1 级即生效）' },
+    { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 1e5,  growth: 1.25, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时（1 级即生效）' },
+    { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 1.3e5,growth: 1.27, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时（1 级即生效）' },
+    // ---- 组 H · 事件/项目（6 座）----
+    { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 1500, growth: 1.18, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%（满 3 级 +90%）' },
+    { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 8000, growth: 1.22, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%（满 2 级 +100%）' },
+    { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 1e5,  growth: 1.24, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%（满 2 级 +100%）' },
+    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 1.5e5,growth: 1.28, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2（1 级即生效）' },
+    { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 6000, growth: 1.20, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%（满 2 级 +100%）' },
+    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 1.4e5,growth: 1.28, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目（1 级即生效）' },
+    // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径）----
+    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2（满 2 级 ×2）' },
+    { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3（1 级即生效）' },
+    // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
+    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级）' },
+    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e5, growth: 1.15, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +5,000（线程强化区购买，无限升级）' },
+  ],
+  // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
+  buildingUnlockRatio: 1.5,
+  legacyTechRp: {
+    warmup: 5, cheap_start: 4, lean: 5, cost_opt: 5, click_up: 5, offline1: 8, offline_s: 6,
+    focus_opt: 8, eff2: 10, crit_click: 10, patience: 10, extra_click: 6,
+    speed2: 15, remote: 15, rp_boost: 15, click10: 20, cheap2: 20, offline16: 20, cps_crit: 25,
+    morale2: 25, teamwork: 12, fuel_eff: 14, rp_first: 18, event_boost: 22,
+    quantum2: 40, offline24: 40, prestige2: 50, singular: 80, mega_click: 60, cost3: 60, rp2: 70,
+    luck: 50, auto2: 35, team2: 45, fuel2: 55, rp3: 65,
+    transcend: 100, ascend: 150, eternity: 200, grand_cost: 150, grand_off: 120, deep_space: 180,
+    grand_pp: 180, grand_rp: 180, project2: 100, crit2: 150, grand_click: 200, true_end: 500,
+    event3: 110, team3: 160, entropy_reduce: 75, ai_core: 50,
+  },
+  // v2.1：保留科技（解锁钥匙）——仅 6 项，其余 46 项效果全部迁移到建筑
+  v21KeyTechs: ['click_up', 'offline1', 'focus_opt', 'entropy_reduce', 'deep_space', 'ai_core'],
+  // v2.1：组 D 扩容建筑防死锁钳制（与 storageAntiDeadlockRatio 同口径）
+  // v2.4：新增多效果上限建筑（abyss_reservoir/resonance_chamber/dm_condenser）同步纳入 30% 钳制
+  v21CapClampIds: ['quantum_pool', 'dim_compressor', 'overlimit_store', 'abyss_reservoir', 'resonance_chamber', 'dm_condenser'],
+  // v2.2 岔路口重设计：三栋互斥定向建筑（PM §2——资产持有即走向；纯走向声明，无数值效果，
+  // 不混入 buildingsV21 表以便族升级断言圈定范围；先例 abyss_fishbowl / compiler_temple 风味建筑）
+  crossroadBuildings: [
+    { id: 'order_pillar', name: '秩序奠基塔', cat: 'X', cap: 1, base: 3e5, growth: 1, unlockTech: null, fx: null, desc: '立誓秩序：本局与转生均走向秩序重构者线（购买后其余两栋封印）' },
+    { id: 'abyss_anchor', name: '裂隙共鸣锚', cat: 'X', cap: 1, base: 3e5, growth: 1, unlockTech: null, fx: null, desc: '立誓深渊：本局与转生均走向深渊行者线（购买后其余两栋封印）' },
+    { id: 'faith_shrine', name: '信仰圣龛',   cat: 'X', cap: 1, base: 3e5, growth: 1, unlockTech: null, fx: null, desc: '立誓信仰：本局与转生均走向信仰传播者线（购买后其余两栋封印）' },
+  ],
+  // v2.2：定向建筑 ↔ 故事线 双射
+  crossroadToLine: { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' },
+  lineToCrossroad: { line_order: 'order_pillar', line_abyss: 'abyss_anchor', line_faith: 'faith_shrine' },
+  // v2.4：族升级仅保留产出族（组E 非锚点 3 座）。扩容族（组D）随 KG 模式改造整体移除——
+  // 扩容类建筑已无限升级（unlimited），族升级的「等级上限扩展」失去钳制对象，档位删除（历史 v2.2 规划 20→25→30→35 废止）。
+  familyUpgradeTiers: {
+    output: {      // 产出族（PM 终稿 7698334831112899877 白名单口径：组E 非锚点 3 座，组B 整组不开放）
+      cats: ['B', 'E'],
+      tiers: [
+        { rp: 350000,  milestone: 9, addCap: 3 },   // 9→12；反解见 artifacts/v22-rp-recalb.py（12.5h 可达，两档合计 1.25M ≤ 60%×终态结余 2.13M）
+        { rp: 900000,  milestone: 9, addCap: 4 },   // 12→16（硬顶 16 钳制）；17.8h 可达
+      ],
+      hardCap: 16,
+    },
+  },
+
+  // v1.3 模块 A：AI 助手
+  ai: {
+    interval: 5,                    // 决策周期（秒）
+    reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
+    defaultReserve: 0.3,
+    // v2.5.5：AI 自动购建（全部资源点解锁后可激活）
+    aiAutoBuild: {
+      activateCost: 2e6,            // 激活消耗（大量 EP，一次性）
+      rateOptions: [5, 10, 30, 60], // 购买间隔档位（秒）
+      defaultRate: 10,              // 默认间隔
+      minRate: 5,                   // 硬下限：即使改存档也不低于 5s（严格限速）
+      perTickMax: 1,                // 每个决策周期至多购买 1 栋（严格防竞争）
+    },
+  },
+  subsist1: 0.25,
+  subsist2: 0.35,
+  // v2.1 专注成本（评审 D5 拍板：30 × 1.6^n，进 balance 统一管理）
+  focus: { base: 30, growth: 1.6 },
+  // v2.0.2 数值重设计（有限级制，用户硬约束「建筑数量受控」）：
+  // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
+  // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
+  // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
+  storage: { base: 150, growth: 1.25, capPer: 2000, capGrowth: 1.12, maxLevel: 20 },
+  storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
+  // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
+  datacenterCapBonus: [0, 10000, 25000, 50000],
+  // v2.0.2：防死锁硬约束——扩容项价格 ≤ 当前 EP 上限 ×30%（KG 谷仓模式：扩容永远只是存量的一小部分）
+  storageAntiDeadlockRatio: 0.3,
+  // v2.1 R3-D 裂隙封印成本改为当前上限的 30%~50%（脱离 log10(cps) 曲线）
+  rift: {
+    sealRatioMin: 0.3, sealRatioMax: 0.5,
+    spawnSec: 1200,                 // 基础出现间隔（20 分钟；哨站升级逐级 -25%，下限 360s）
+    levelNames: ['浅层裂隙', '中层裂隙', '深层裂隙', '深渊裂隙', '虚空之隙'],
+    rpPerLevel: 0.5,                // 封印 RP 奖励（/级；RP 锚点解锁后生效）
+    vsChance: 0.25,                 // 封印/拥抱 VS 概率（深潜解锁后）
+    faithChance: 0.20,              // 封印/拥抱信仰概率（宗教解锁后）
+    // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
+    delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
+    delveCorruptPerLevel: 1.0,      // 每秒腐化累积 %/级
+    delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
+    delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）
+    delveBonusDm: 3,                // 完成额外 DM ×级
+    // 裂隙余烬（跨转生保留）
+    emberSeal: 10, emberEmbrace: 8, emberDelve: 5,
+    upgBase: 20, upgGrowth: 1.6,
+    upgrades: {
+      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔 -25%/级（20 分钟 → 下限 6 分钟）' },
+      lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
+      charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级（下限 50%）' },
+      echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片（VS）奖励 +50%/级（深潜联动）' },
+    },
+  },
+  // 里程碑（v2.3 奖励校准，PM §5.1 两锚点）：
+  // 前 3 档（cps 5/10/100→RP 1/2/4）合并为 1 档（cps 100→RP 8）——低档零散供给无感，合并提升单次获得感；
+  // 中段 3 档维持；后 3 档锚定「钥匙科技 326 RP 达成曲线 / 族升级首档 260k 达成时点」大幅上调（25/40/60→1000/5000/20000），
+  // 使里程碑成为中后期 RP 供给主力。锚点核验：ΣRP=26039 ≥ 326×60%≈196（钥匙总需求 60% 下限）；
+  // 单档最大 20000 ≤ 终局结余 2.1M×5%=105k。milesDone 以 cps 值为键：旧档已领 {5,10} 保留不重发，已领 100 不补发 8。
+  miles: [
+    { cps: 100, rp: 8 }, { cps: 1e3, rp: 6 },
+    { cps: 1e4, rp: 10 }, { cps: 1e5, rp: 15 }, { cps: 1e6, rp: 1000 }, { cps: 1e7, rp: 5000 },
+    { cps: 1e8, rp: 20000 },
+  ],
+  // 科技乘数压缩（v2.0 §1.3）
+  techMult: {
+    speed2: 2, quantum2: 2.5, singular: 6, transcend: 12,
+    ascend: 20, eternity: 40, true_end: 100,
+  },
+  // 全局乘数软上限（v2.0 §1.3：m > 5000 → 5000 + sqrt(m-5000)*70）
+  softCapThreshold: 5e3,
+  softCapFactor: 70,
+  // 项目奖励
+  projRpMin: 3, projRpMax: 8,
+  // 事件奖励
+  brainstormRp: 35, epiphanyRp: 80,
+  // 线程补贴科技
+  fuelEff: 0.2, fuel2: 0.25,
+  // 深渊潮汐（v2.0 §2：4 相位 × 150s 循环）
+  tide: {
+    phaseDuration: 150,
+    phases: [
+      { id: 0, name: '涨潮', icon: '🌊', epMult: 1.3, salaryMult: 1.5, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1.5, cssClass: 'tide-flood' },
+      { id: 1, name: '平潮', icon: '🌀', epMult: 1, salaryMult: 1, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-calm' },
+      { id: 2, name: '退潮', icon: '⛰️', epMult: 0.7, salaryMult: 0.8, techCostMult: 0.8, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-ebb' },
+      { id: 3, name: '乱流', icon: '⚡', epMult: 1, salaryMult: 1.3, techCostMult: 1, eventBadWeight: 2, eventGoodDur: 1, cssClass: 'tide-chaos' },
+    ],
+  },
+  // 矩阵腐化（v2.0 §3）
+  corruption: {
+    accumulateRate: 0.1,       // 每秒按溢出比例累积
+    penaltyPerPercent: 0.003,  // 每 1% 腐化 -0.3% 产出
+    penaltyFloor: 0.7,         // 惩罚下限 30%
+    max: 100,
+    purifiers: [
+      { id: 'purifier1', name: '净化节点 I', base: 5e4, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
+      { id: 'purifier2', name: '净化节点 II', base: 5e6, rate: 2, desc: '每秒清除 2% 腐化' },
+      { id: 'purifier3', name: '净化节点 III', base: 5e8, rate: 5, desc: '每秒清除 5% 腐化' },
+    ],
+  },
+};
