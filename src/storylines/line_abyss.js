@@ -10,7 +10,7 @@ export default {
     techs: {
       append: [
         { id: 'chaos_born', col: 3, cost: 60, name: '混沌之子', desc: '全局 ×3；每 300 秒随机触发一次混沌涌动（全局 ×0.5~×5 持续 30s）', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
-        { id: 'chaos_mind', col: 3, cost: 80, name: '混沌心智', desc: 'AI 禁用，但每 10 秒"混沌直觉"随机购买一个最便宜的未拥有升级', req: ['ai_core'] },
+        { id: 'chaos_mind', col: 3, cost: 80, name: '混沌心智', desc: '永久生效不可取消：AI 全面禁用（自动购建/升级/招募全部关闭），混沌直觉接管——每 10 秒随机购入一个最便宜的未拥有升级', req: ['ai_core'] },
         { id: 'abyss_heart', col: 4, cost: 120, name: '深渊之心', desc: '腐化上限 150%；腐化 >100% 后每 10% 转化 +5% 全局产出', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
         // v2.5.1 反馈④：深渊行者线专属特殊升级（深渊主题强化）
         { id: 'tentacle_protocol', col: 3, cost: 100, name: '触手协议', desc: '每 60 秒，缸中触手自动轻点一次工作台（一次点击产出）', req: [] },

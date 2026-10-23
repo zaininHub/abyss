@@ -128,8 +128,12 @@ export function refreshTechState() {
     el.classList.toggle('on', on);
     el.classList.toggle('locked', !on && (!reqOk || !afford));
     // v1.3 L1：价格文本随潮汐相位与 RP 余额原地刷新
+    // v2.6.5 ③：防抖——文本不变则跳过 DOM 写入，消除每秒文本节点重写导致的 hover 抖动/闪烁
     const c = el.querySelector('.c');
-    if (c && !on) c.textContent = techCostText(t);
+    if (c && !on) {
+      const txt = techCostText(t);
+      if (c.textContent !== txt) c.textContent = txt;
+    }
   }
 }
 

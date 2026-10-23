@@ -209,7 +209,7 @@ export function renderAiPanel(container) {
   if (S.tech && S.tech.chaos_mind) {
     container.innerHTML = `
       <div style="font-size:13px;line-height:1.9;color:var(--text-2)">
-        <b style="color:var(--red,#f85149)">混沌心智已接管</b>：AI 自动化全面禁用，混沌直觉每 10 秒随机购入最便宜的未拥有升级（深渊行者科技线）。若需恢复 AI，可前往深渊行者科技勾销混沌心智。</div>`;
+        <b style="color:var(--red,#f85149)">混沌心智已接管</b>：AI 自动化全面禁用，混沌直觉每 10 秒随机购入最便宜的未拥有升级（深渊行者科技线）。<b style="color:var(--warn,#c8a24a)">永久生效，不可取消</b>——勾选混沌心智后 AI 无法恢复，请谨慎选择。</div>`;
     return;
   }
   const line = reserveLine();

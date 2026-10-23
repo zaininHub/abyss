@@ -106,6 +106,7 @@ export function buyCrusade() {
 
 // 每帧信仰产出（圣所确定性产出；神龛/万神殿/远征/晋升为既有源，不重复处理）
 export function tickReligion(dt) {
+  if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
   const r = templeFaithPerSec();
   if (r > 0) S.faith = (S.faith || 0) + r * dt;

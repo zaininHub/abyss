@@ -621,11 +621,13 @@ export function refreshShopAffordability() {
     if (!u) continue;
     if (maxedLevel(u)) continue; // v2.0.2 maxLevel：满级项不参与灰态与显示价刷新
     const cost = threadCost(u); // v2.0.2 复验 P0 修复：cache 走钳制口径，灰态与实扣一致
-    el.classList.toggle('cant', S.ep < cost);
+    // v2.6.5 ③：防抖——灰态不变则跳过 class 写入（消除 hover 抖动）
+    const cant = S.ep < cost;
+    if (el.classList.contains('cant') !== cant) el.classList.toggle('cant', cant);
     // 扩容项钳制价随上限动态变化：每秒同步显示价，保证显示价=实扣价恒成立
     if (CAP_EXPANSION_IDS.includes(id)) {
       const c = el.querySelector('.cost');
-      if (c) c.textContent = fmt(cost);
+      if (c && c.textContent !== fmt(cost)) c.textContent = fmt(cost);
     }
   }
   for (const [id, el] of vehicleItemEls) {
@@ -633,7 +635,9 @@ export function refreshShopAffordability() {
     if (!u) continue;
     const owned = S.upgrades[u.id] || 0;
     const cost = Math.ceil(u.base * Math.pow(u.growth || 1.15, owned) * costMult());
-    el.classList.toggle('cant', S.ep < cost);
+    // v2.6.5 ③：防抖
+    const vcant = S.ep < cost;
+    if (el.classList.contains('cant') !== vcant) el.classList.toggle('cant', vcant);
   }
   for (const [id, el] of dmItemEls) {
     const u = UPGRADES.find(x => x.id === id);

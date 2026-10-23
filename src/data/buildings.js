@@ -71,10 +71,18 @@ export function buildingMaxed(b, S) {
   return buildingLevel(b, S) >= b.levels;
 }
 
-// 当前级成本（base × growth^lv × costMult）
+// v2.6.5 ①：后期成本加速——基础产出升级超过 50 级后，每级额外 ×1.08
+// （防止单个建筑无限升级到几百级：200 级时成本再 ×1.08^150 ≈ ×13000）
+export function lateStageCost(lv, baseCost) {
+  if (lv <= 50) return baseCost;
+  return baseCost * Math.pow(1.08, lv - 50);
+}
+
+// 当前级成本（base × growth^lv × costMult；lv>50 套用后期加速）
 export function buildingCost(b, S, costMultVal) {
   const lv = buildingLevel(b, S);
-  return Math.ceil(b.base * Math.pow(b.growth, lv) * (costMultVal ?? 1));
+  const base = b.base * Math.pow(b.growth, lv);
+  return Math.ceil(lateStageCost(lv, base) * (costMultVal ?? 1));
 }
 
 // ========== v2.1 建筑聚合读侧 ==========
@@ -97,7 +105,8 @@ export function v21Maxed(b, S) {
 // v2.1 级价：base × growth^当前级 × costMult（沿用 v1.3 模块 B 公式；防死锁 30% 钳制在 economy.v21BuildingCost 统一施加）
 export function buildingCostV21(b, S, costMultVal) {
   const lv = v21Level(b.id, S);
-  return Math.ceil(b.base * Math.pow(b.growth, lv) * (costMultVal ?? 1));
+  const base = b.base * Math.pow(b.growth, lv);
+  return Math.ceil(lateStageCost(lv, base) * (costMultVal ?? 1)); // v2.6.5 ①：lv>50 后期成本加速
 }
 
 // RP 解锁定价：原科技 RP × 1.5（PM §1 设计要点 / §7.2 裁决：每座单独定价，RP 保持稀缺）
