@@ -18,9 +18,14 @@ import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
 import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { v21BuildingCost } from './economy.js';
+import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
 
 let logFn = null;
+let uiRefreshFn = null;
 export function setAiLogFn(fn) { logFn = fn; }
+// v2.6.6 ③：AI/混沌买入后单卡局部刷新（避免整面板重建导致 hover 闪烁/点击竞争）
+export function setAiUiRefreshFn(fn) { uiRefreshFn = fn; }
+function aiUiRefresh(pick) { if (uiRefreshFn) uiRefreshFn(pick); }
 function ailog(msg, cls) { if (logFn) logFn(`[AI] ${msg}`, cls); }
 
 const VEHICLE_IDS = BALANCE.vehicles.ids;
@@ -109,7 +114,10 @@ export function tickAI(dt) {
   ai.timer = (ai.timer || 0) + dt;
   // v2.6.0 深潜：拟态矩阵——决策间隔 -20%/级（下限 40% 原间隔）
   const matLv = (S.delve && S.delve.up && S.delve.up.matrix) || 0;
-  const interval = Math.max(BALANCE.ai.interval * 0.4, BALANCE.ai.interval * (1 - 0.2 * matLv));
+  let interval = Math.max(BALANCE.ai.interval * 0.4, BALANCE.ai.interval * (1 - 0.2 * matLv));
+  // v2.7.0 遗物：混沌触须——AI 决策间隔 -10%/级（下限 50% 原间隔）
+  const tentLv = relicLevel('tentacle');
+  if (tentLv > 0) interval = Math.max(BALANCE.ai.interval * 0.5, interval * (1 - 0.1 * tentLv));
   if (ai.timer < interval) return false;
   ai.timer -= interval;
 
@@ -123,6 +131,7 @@ export function tickAI(dt) {
       S.ep -= pick.cost;
       S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
       S.totalBuys++;
+      aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
       ailog(`自动升级：购入 ${pick.u.name}（-${fmt(pick.cost)} EP，回本约 ${pick.payback >= 100 ? fmt(Math.round(pick.payback)) + 's' : pick.payback.toFixed(1) + 's'}）`, 'good');
       acted = true;
     }
@@ -168,6 +177,7 @@ export function tickAI(dt) {
         S.buildings[b.id] = v21Level(b.id, S) + 1;
         S.totalBuys = (S.totalBuys || 0) + 1;
         const cap = capOf(b, S);
+        aiUiRefresh({ kind: 'building', b }); // v2.6.6 ③：单卡原地刷新
         ailog(`自动购建：${b.name} 升至 Lv.${v21Level(b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(cost)} EP）`, 'good');
         acted = true;
         break; // 每周期至多 1 栋（perTickMax）
@@ -200,10 +210,12 @@ function chaosIntuitionTick(dt) {
   S.ep -= pick.cost;
   if (pick.kind === 'upgrade') {
     S.upgrades[pick.u.id] = 1;
+    aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
     ailog(`混沌直觉：随机购入升级 ${pick.u.name}（-${fmt(pick.cost)} EP）`, 'bad');
   } else {
     S.buildings[pick.b.id] = v21Level(pick.b.id, S) + 1;
     const cap = capOf(pick.b, S);
+    aiUiRefresh({ kind: 'building', b: pick.b }); // v2.6.6 ③：单卡原地刷新
     ailog(`混沌直觉：随机购建建筑 ${pick.b.name} 升至 Lv.${v21Level(pick.b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(pick.cost)} EP）`, 'bad');
   }
   S.totalBuys = (S.totalBuys || 0) + 1;

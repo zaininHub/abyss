@@ -127,23 +127,77 @@ export function renderShop(container) {
   const sorted = items;
   // v2.3 渐进披露链：链序 = 定义序；窗口内渲染（K = p + 1），已购永不隐藏，链内下一项挂链提示
   const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
+  // v2.6.7：记录链窗口状态（供 refreshShopChain 增量揭示，避免整面板重建）
+  shopContainer._chain = {
+    ids: new Set(split.visible.map(u => u.id)),
+    split,
+    groups: [{ title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat }, { title: '存储与资源建筑', test: () => true }],
+  };
   // v2.3.1 ⑤（rev18 9.3 分组表）：基础产出在前、存储与资源建筑在后；分组纯显示不拆链
   renderChainedGroups(container, split, [
     { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
     { title: '存储与资源建筑', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el));
+
   bindDelegate(container, (id, el) => {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) return;
     const wasOwned = (S.upgrades[u.id] || 0) > 0; // v2.3：首次购入改变已购前缀 p → 链窗口/链提示结构性刷新
     if (buyUpgrade(u)) {
       updateShopItem(u); // v1.3 E：购后原地更新（×N / 成本 / 灰态），不重建列表
-      if (!wasOwned) dirty.shop = true; // v2.3：p 推进 → 下个 tick（≤100ms）整面板重入刷新链窗口
+      if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
     } else {
       shopToast(`EP 不足：${u.name} 需要 ${fmt(bulkCostCalc(u, 1))} EP`);
     }
   });
 }
+// v2.6.7：商店链窗口增量揭示——解锁数/已购前缀变化时只插入新可见卡，不整面板重建
+// （消除「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁 + 点击竞争」根因）
+export function refreshShopChain() {
+  if (!shopContainer || !shopContainer._chain) return;
+  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
+    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
+  const split = chainSplit('shop', items, u => (S.upgrades[u.id] || 0) > 0, S);
+  const prev = shopContainer._chain;
+  const newIds = new Set(split.visible.map(u => u.id));
+  const fresh = split.visible.filter(u => !prev.ids.has(u.id));
+  const groups = [
+    { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
+    { title: '存储与资源建筑', test: () => true },
+  ];
+  if (fresh.length) {
+    for (const u of fresh) {
+      const gi = groups.findIndex(g => g.test(u));
+      const giSafe = gi < 0 ? groups.length - 1 : gi;
+      const kids = [...shopContainer.children];
+      const gTitle = kids.find(k => k.className === 'group-title' && k.textContent === groups[giSafe].title);
+      const el = makeShopItem(u);
+      shopItemEls.set(u.id, el);
+      if (!gTitle) {
+        const h = document.createElement('div');
+        h.className = 'group-title';
+        h.textContent = groups[giSafe].title;
+        const firstItem = kids.find(k => k.className === 'item');
+        if (firstItem) shopContainer.insertBefore(h, firstItem);
+        else shopContainer.appendChild(h);
+        shopContainer.appendChild(el);
+        continue;
+      }
+      // 插到该组最后一个 item 之后（或组头后）
+      let anchor = null;
+      for (const k of kids) {
+        if (k.className === 'group-title' && k === gTitle) { anchor = null; continue; }
+        if (k.className === 'group-title' && k !== gTitle && anchor) break;
+        if (k.className === 'item') anchor = k;
+      }
+      if (anchor && anchor.nextSibling) shopContainer.insertBefore(el, anchor.nextSibling);
+      else if (gTitle.nextSibling) shopContainer.insertBefore(el, gTitle.nextSibling);
+      else shopContainer.appendChild(el);
+    }
+  }
+  shopContainer._chain = { ids: newIds, split, groups };
+}
+
 
 // v2.0.2：级制项（如存储节点）满级判定与展示辅助
 function maxedLevel(u) {
@@ -185,6 +239,8 @@ function makeShopItem(u) {
 }
 
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
+export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
+
 function updateShopItem(u) {
   const el = shopItemEls.get(u.id);
   if (!el) return;
@@ -748,6 +804,8 @@ function makeV21Item(b) {
   }
   return div;
 }
+
+export function refreshV21Item(b) { updateV21Item(b); } // v2.6.6 ③：AI/混沌购建后单卡原地刷新（不整面板重建）
 
 function updateV21Item(b) {
   const el = v21ItemEls.get(b.id);

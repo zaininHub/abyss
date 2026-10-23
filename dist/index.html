@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.6.6</title>
+<title>深渊效能工作台 v2.7.0</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-CKLQ0Wy_.js"></script>
-  <link rel="stylesheet" href="./assets/index-BjF_h4xt.css">
+  <script defer src="./assets/index-CN58qBbv.js"></script>
+  <link rel="stylesheet" href="./assets/index-DR2ziPsu.css">
 </head>
 <body>
 <div id="app">
@@ -139,6 +139,7 @@
         <button class="btn on" id="btn-shop">升级商店</button>
         <button class="btn" id="btn-tech">科技树</button>
         <button class="btn" id="btn-rp">研究点</button>
+        <button class="btn" id="btn-relics" style="display:none">遗物</button>
         <button class="btn" id="btn-pets">异兽</button>
         <button class="btn" id="btn-prestige">晋升</button>
         <button class="btn" id="btn-offline">离线</button>
@@ -185,6 +186,9 @@
         </div>
 
         <!-- 异兽 -->
+        <div class="tab-pane" id="tab-relics">
+          <div id="relics-panel"></div>
+        </div>
         <div class="tab-pane" id="tab-pets">
           <div id="pet-grid" class="pet-grid"></div>
         </div>
@@ -225,32 +229,32 @@
   <div id="pet-float" class="pet-float"></div>
 
   <!-- v2.5.3 反馈③：深渊鱼缸触手（购买鱼缸后工作台底部缓慢摆动） -->
+  <!-- v2.7.0 UI 优化：章鱼真实触手——基座粗圆润、S 形卷曲、尖端细卷、吸盘密集、赛博霓虹描边（像素克苏鲁） -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
     <svg viewBox="0 0 200 120" width="200" height="120" preserveAspectRatio="xMaxYMax meet">
-      <!-- v2.6.6 章鱼触手：平滑贝塞尔真实触手（无棱角线条）——基座粗圆润 → 尖端细卷曲，分段描边模拟渐变粗细，吸盘沿下缘，赛博霓虹描边 -->
       <g class="tentacle tentacle-a">
-        <path d="M30 122 C44 110 42 88 50 70 C58 52 42 42 56 28 C64 20 66 12 66 6" fill="none" stroke="#3d1d6e" stroke-width="11" stroke-linecap="round"/>
-        <path d="M30 122 C44 110 42 88 50 70 C58 52 42 42 56 28 C64 20 66 12 66 6" fill="none" stroke="#9c27b0" stroke-width="6" stroke-linecap="round"/>
-        <path d="M32 116 C44 104 42 86 50 70 C58 52 44 42 56 28 C63 21 66 12 66 7" fill="none" stroke="#ce93d8" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-        <path d="M30 122 C44 110 42 88 50 70 C58 52 42 42 56 28 C64 20 66 12 66 6" fill="none" stroke="#4dd0e1" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
-        <g fill="#311b92"><ellipse cx="45" cy="98" rx="3" ry="2.4"/><ellipse cx="49" cy="76" rx="2.7" ry="2.2"/><ellipse cx="49" cy="54" rx="2.3" ry="1.9"/><ellipse cx="59" cy="34" rx="1.9" ry="1.6"/></g>
-        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="45" cy="98" rx="1.1" ry="0.9"/><ellipse cx="49" cy="76" rx="1" ry="0.8"/><ellipse cx="49" cy="54" rx="0.9" ry="0.7"/><ellipse cx="59" cy="34" rx="0.8" ry="0.6"/></g>
+        <path d="M30 122 C38 114 34 102 42 90 C50 78 36 66 44 54 C52 44 46 32 50 20 C52 14 58 12 56 18 C54 24 48 22 52 14" fill="none" stroke="#3d1d6e" stroke-width="12" stroke-linecap="round"/>
+        <path d="M30 122 C38 114 34 102 42 90 C50 78 36 66 44 54 C52 44 46 32 50 20 C52 14 58 12 56 18 C54 24 48 22 52 14" fill="none" stroke="#9c27b0" stroke-width="6.5" stroke-linecap="round"/>
+        <path d="M31 118 C38 110 35 100 42 90 C49 80 37 68 44 56 C51 46 46 34 50 22 C52 15 57 13 55 18" fill="none" stroke="#ce93d8" stroke-width="2.6" stroke-linecap="round" opacity="0.6"/>
+        <path d="M30 122 C38 114 34 102 42 90 C50 78 36 66 44 54 C52 44 46 32 50 20" fill="none" stroke="#4dd0e1" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        <g fill="#311b92"><ellipse cx="43" cy="104" rx="3.2" ry="2.5"/><ellipse cx="41" cy="84" rx="2.8" ry="2.2"/><ellipse cx="47" cy="66" rx="2.4" ry="1.9"/><ellipse cx="43" cy="48" rx="2" ry="1.6"/><ellipse cx="51" cy="31" rx="1.6" ry="1.3"/><ellipse cx="55" cy="18" rx="1.2" ry="1"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="43" cy="104" rx="1.2" ry="0.9"/><ellipse cx="41" cy="84" rx="1" ry="0.8"/><ellipse cx="47" cy="66" rx="0.9" ry="0.7"/><ellipse cx="43" cy="48" rx="0.8" ry="0.6"/><ellipse cx="51" cy="31" rx="0.7" ry="0.5"/><ellipse cx="55" cy="18" rx="0.6" ry="0.5"/></g>
       </g>
       <g class="tentacle tentacle-b">
-        <path d="M95 122 C104 108 118 98 110 76 C102 54 124 48 118 28 C114 14 127 8 127 4" fill="none" stroke="#3d1d6e" stroke-width="11" stroke-linecap="round"/>
-        <path d="M95 122 C104 108 118 98 110 76 C102 54 124 48 118 28 C114 14 127 8 127 4" fill="none" stroke="#7b1fa2" stroke-width="6" stroke-linecap="round"/>
-        <path d="M97 116 C106 102 118 96 110 76 C102 54 124 48 118 28 C114 14 127 8 127 5" fill="none" stroke="#e1bee7" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-        <path d="M95 122 C104 108 118 98 110 76 C102 54 124 48 118 28 C114 14 127 8 127 4" fill="none" stroke="#4dd0e1" stroke-width="1.4" stroke-linecap="round" opacity="0.5"/>
-        <g fill="#311b92"><ellipse cx="110" cy="100" rx="3" ry="2.4"/><ellipse cx="111" cy="78" rx="2.7" ry="2.2"/><ellipse cx="113" cy="56" rx="2.3" ry="1.9"/><ellipse cx="119" cy="36" rx="1.9" ry="1.6"/></g>
-        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="110" cy="100" rx="1.1" ry="0.9"/><ellipse cx="111" cy="78" rx="1" ry="0.8"/><ellipse cx="113" cy="56" rx="0.9" ry="0.7"/><ellipse cx="119" cy="36" rx="0.8" ry="0.6"/></g>
+        <path d="M92 122 C100 112 106 100 102 86 C98 72 114 64 108 50 C102 36 118 26 114 12 C112 4 126 6 124 16 C122 26 108 24 118 10" fill="none" stroke="#3d1d6e" stroke-width="12" stroke-linecap="round"/>
+        <path d="M92 122 C100 112 106 100 102 86 C98 72 114 64 108 50 C102 36 118 26 114 12 C112 4 126 6 124 16 C122 26 108 24 118 10" fill="none" stroke="#7b1fa2" stroke-width="6.5" stroke-linecap="round"/>
+        <path d="M93 118 C101 108 105 98 102 86 C99 74 112 66 108 52 C103 38 116 28 114 14 C112 6 124 7 122 15" fill="none" stroke="#e1bee7" stroke-width="2.6" stroke-linecap="round" opacity="0.5"/>
+        <path d="M92 122 C100 112 106 100 102 86 C98 72 114 64 108 50 C102 36 118 26 114 12" fill="none" stroke="#4dd0e1" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        <g fill="#311b92"><ellipse cx="105" cy="104" rx="3.2" ry="2.5"/><ellipse cx="103" cy="84" rx="2.8" ry="2.2"/><ellipse cx="112" cy="66" rx="2.4" ry="1.9"/><ellipse cx="105" cy="48" rx="2" ry="1.6"/><ellipse cx="115" cy="31" rx="1.6" ry="1.3"/><ellipse cx="113" cy="15" rx="1.2" ry="1"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="105" cy="104" rx="1.2" ry="0.9"/><ellipse cx="103" cy="84" rx="1" ry="0.8"/><ellipse cx="112" cy="66" rx="0.9" ry="0.7"/><ellipse cx="105" cy="48" rx="0.8" ry="0.6"/><ellipse cx="115" cy="31" rx="0.7" ry="0.5"/><ellipse cx="113" cy="15" rx="0.6" ry="0.5"/></g>
       </g>
       <g class="tentacle tentacle-c">
-        <path d="M165 122 C172 108 190 100 178 76 C166 52 192 44 186 24 C182 12 196 8 196 3" fill="none" stroke="#3d1d6e" stroke-width="11" stroke-linecap="round"/>
-        <path d="M165 122 C172 108 190 100 178 76 C166 52 192 44 186 24 C182 12 196 8 196 3" fill="none" stroke="#6a1b9a" stroke-width="6" stroke-linecap="round"/>
-        <path d="M167 116 C174 102 190 98 178 76 C166 52 192 44 186 24 C182 12 196 8 196 4" fill="none" stroke="#f3e5f5" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
-        <path d="M165 122 C172 108 190 100 178 76 C166 52 192 44 186 24 C182 12 196 8 196 3" fill="none" stroke="#4dd0e1" stroke-width="1.4" stroke-linecap="round" opacity="0.5"/>
-        <g fill="#311b92"><ellipse cx="179" cy="100" rx="3" ry="2.4"/><ellipse cx="178" cy="78" rx="2.7" ry="2.2"/><ellipse cx="180" cy="56" rx="2.3" ry="1.9"/><ellipse cx="187" cy="34" rx="1.9" ry="1.6"/></g>
-        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="179" cy="100" rx="1.1" ry="0.9"/><ellipse cx="178" cy="78" rx="1" ry="0.8"/><ellipse cx="180" cy="56" rx="0.9" ry="0.7"/><ellipse cx="187" cy="34" rx="0.8" ry="0.6"/></g>
+        <path d="M160 122 C168 114 182 106 176 92 C170 78 190 68 184 54 C178 40 196 30 192 16 C190 8 204 10 202 20 C200 30 188 26 196 12" fill="none" stroke="#3d1d6e" stroke-width="12" stroke-linecap="round"/>
+        <path d="M160 122 C168 114 182 106 176 92 C170 78 190 68 184 54 C178 40 196 30 192 16 C190 8 204 10 202 20 C200 30 188 26 196 12" fill="none" stroke="#6a1b9a" stroke-width="6.5" stroke-linecap="round"/>
+        <path d="M161 118 C169 110 180 104 176 92 C172 80 188 70 184 56 C180 42 194 32 192 18 C190 10 202 11 201 19" fill="none" stroke="#f3e5f5" stroke-width="2.6" stroke-linecap="round" opacity="0.45"/>
+        <path d="M160 122 C168 114 182 106 176 92 C170 78 190 68 184 54 C178 40 196 30 192 16" fill="none" stroke="#4dd0e1" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        <g fill="#311b92"><ellipse cx="178" cy="104" rx="3.2" ry="2.5"/><ellipse cx="175" cy="84" rx="2.8" ry="2.2"/><ellipse cx="186" cy="66" rx="2.4" ry="1.9"/><ellipse cx="181" cy="48" rx="2" ry="1.6"/><ellipse cx="190" cy="31" rx="1.6" ry="1.3"/><ellipse cx="193" cy="16" rx="1.2" ry="1"/></g>
+        <g fill="#4dd0e1" opacity="0.9"><ellipse cx="178" cy="104" rx="1.2" ry="0.9"/><ellipse cx="175" cy="84" rx="1" ry="0.8"/><ellipse cx="186" cy="66" rx="0.9" ry="0.7"/><ellipse cx="181" cy="48" rx="0.8" ry="0.6"/><ellipse cx="190" cy="31" rx="0.7" ry="0.5"/><ellipse cx="193" cy="16" rx="0.6" ry="0.5"/></g>
       </g>
     </svg>
   </div>

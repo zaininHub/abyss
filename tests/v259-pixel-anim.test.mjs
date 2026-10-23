@@ -16,7 +16,7 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
   rec('V1 混沌潮汐 steps(2, end) 块状闪烁', css.includes('tide-chaos-anim .8s steps(2, end) infinite alternate'), 'css');
   rec('V1 触手六帧关键帧（15/30/50/70/85）', css.includes('15% { transform: rotate(-4deg); }') && css.includes('70% { transform: rotate(8deg); }') && css.includes('85% { transform: rotate(3deg); }'), 'css');
   const html = readFileSync('index.html', 'utf-8');
-  rec('V1 触手为平滑贝塞尔曲线（圆润真实触手，v2.6.6 ②）', html.includes('M30 122 C44 110 42 88 50 70') && html.includes('C64 20 66 12 66 6'), 'svg');
+  rec('V1 触手为平滑贝塞尔曲线（圆润真实触手，v2.7.0 ③ 优化：基座粗圆润、S 形卷曲、尖端细卷）', html.includes('M30 122 C38 114 34 102 42 90') && html.includes('C54 24 48 22 52 14'), 'svg');
   rec('V1 触手 stroke-linecap 圆头（圆润真实触手端帽）', html.includes('stroke-linecap="round"'), 'svg');
   rec('V1 克苏鲁紫配色保留（#9c27b0/#7b1fa2/#6a1b9a）', html.includes('#9c27b0') && html.includes('#7b1fa2') && html.includes('#6a1b9a'), 'svg');
   // 中性动画未误改：justBought / corruption-fill / transition 保持
@@ -68,7 +68,7 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
       const p = document.querySelector('#tentacle-deco svg path');
       return p ? p.getAttribute('d') : '';
     });
-    rec('V2 触手路径为平滑贝塞尔曲线（C 命令）', pathD.includes('C44 110 42 88 50 70'), pathD.slice(0, 40));
+    rec('V2 触手路径为平滑贝塞尔曲线（C 命令）', pathD.includes('C38 114 34 102 42 90'), pathD.slice(0, 40));
     // 鱼缸 3 级 → 三触手可见（tentacle-c opacity .8）
     const tentacleC = await page.evaluate(() => {
       const el = document.querySelector('#tentacle-deco .tentacle-c');

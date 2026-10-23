@@ -151,7 +151,7 @@ const COLLECT = () => {
   // 等待 5s 自动存档周期（main.js setInterval save 5000ms），使迁移后的运行态落盘后再断言
   await sleep(5800);
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}'));
-  rec('C1 v5 旧档全资源可见（rank/rp/es/faith/pt/dm）', st.rank !== 'none' && st.rp !== 'none' && st.es !== 'none' && st.faith !== 'none' && st.pt !== 'none' && st.dm !== 'none', JSON.stringify(st));
+  rec('C1 v5 旧档资源可见（rank/rp/es/faith/dm），异兽即时门控锁定（无宠物乐园）', st.rank !== 'none' && st.rp !== 'none' && st.es !== 'none' && st.faith !== 'none' && st.pt === 'none' && st.dm !== 'none', JSON.stringify(st));
   rec('C2 迁移 0 弹窗（无新资源/晋升 toast）', toasts.length === 0, toasts.join(' | ').slice(0, 120));
   rec('C3 存档版本升至 6', saved._version === 6, String(saved._version));
   const D = saved.resDiscovered || {};

@@ -6,6 +6,7 @@ import { MOOD_MULT } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import { fxValue, fxBest } from '../core/effectEngine.js';
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
+import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 
 const B = BALANCE;
 
@@ -122,6 +123,8 @@ export function globalMult() {
   if (S.delve && S.delve.up && S.delve.up.void > 0) m *= Math.pow(1.10, S.delve.up.void);
   // v2.6.4 ⑤：圣战军——全局产出 ×1.12/级（信仰驱动的终局军势）
   if (S.religion && S.religion.crusade > 0) m *= Math.pow(1 + 0.12, S.religion.crusade);
+  // v2.7.0 遗物：深渊古卷——全局产出 +8%/级（DM 超长线消费）
+  m *= relicMult('tome');
   if (!isFinite(m)) m = 1;
   // v2.0 §1.3 软上限：m > 5000 → 5000 + sqrt(m - 5000) * 70
   if (m > B.softCapThreshold) {
@@ -169,6 +172,8 @@ export function offlineRate() {
   if (S.offUpgrades.off_eff2) m += 0.3;
   m *= petMult('offline');
   if (S.religion && S.religion.moon) m *= 1.5;
+  // v2.7.0 遗物：虚空之眼——离线效率 +12%/级（DM 超长线消费）
+  m *= relicMult('eye');
   // v2.6.0 深潜：星辰余烬——离线上限 ×(1+20%/级)（终局突破 3.0 上限）
   const ember = (S.delve && S.delve.up && S.delve.up.ember) || 0;
   return Math.min(m, 3.0 * (1 + 0.2 * ember));
@@ -483,7 +488,8 @@ function accountEpOverflow(overflow) {
   // v2.5.2 反馈②：转换效率基础 1 RP = 20,000 溢出 EP（原 0.05/10000 = 200,000 EP/RP 过低，
   // 18.79K 溢出显示 5% 却转不出 1 RP）；每转生所需溢出 -500（下限 5,000）——后期获取速率加快
   const need = Math.max(5000, 20000 - 500 * (S.prestige || 0));
-  S._overflowRpAcc = (S._overflowRpAcc || 0) + overflow / need;
+  // v2.7.0 遗物：星渊罗盘——研究点转换效率 +10%/级（溢出 → RP 更快）
+  S._overflowRpAcc = (S._overflowRpAcc || 0) + overflow * relicMult('compass') / need;
   if (S._overflowRpAcc >= 1) {
     const rp = Math.floor(S._overflowRpAcc);
     S.rp += rp;

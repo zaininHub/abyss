@@ -953,3 +953,46 @@ body.paused .pet-grid .pet-card {
   33% { transform: rotate(-14deg); }
   66% { transform: rotate(10deg); }
 }
+
+/* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========
+   色板：深紫黑基调；强调色单一角色（紫=深渊主题、青=深渊能量、蓝=数据/交互、绿=正面、红=负面）
+   字阶：面板标题紫色字距上提，与正文形成层级；圆角：按钮/卡片小圆角像素感；留白随视口 */
+:root {
+  --bg: #0b0c14;
+  --panel: #12141e;
+  --border: #262c40;
+  --text: #cdd2e3;
+  --text-2: #8b94a8;
+  --text-3: #666e82;
+  --glow-purple: rgba(163, 113, 247, 0.32);
+  --glow-cyan: rgba(57, 197, 207, 0.35);
+}
+body {
+  background:
+    radial-gradient(1100px 520px at 72% -8%, rgba(163, 113, 247, 0.08), transparent 60%),
+    radial-gradient(900px 480px at 6% 110%, rgba(57, 197, 207, 0.05), transparent 55%),
+    var(--bg);
+}
+.topbar { box-shadow: 0 1px 0 rgba(163, 113, 247, 0.10), 0 10px 28px rgba(0, 0, 0, 0.35); }
+.tab-content { box-shadow: 0 2px 0 rgba(163, 113, 247, 0.06), 0 12px 30px rgba(0, 0, 0, 0.30); }
+.btn { font-weight: 500; letter-spacing: 0.3px; }
+.btn:not(:disabled):not(.tab-locked):hover {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 1px var(--glow-purple), 0 0 12px var(--glow-purple);
+  color: #fff;
+}
+.btn.on {
+  background: linear-gradient(135deg, #2757a6, #58a6ff);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(88, 166, 255, 0.30);
+}
+.btn:disabled { filter: saturate(0.45); }
+.panel h3 { color: var(--purple); letter-spacing: 1.2px; font-size: 11px; }
+.tech-grid .tech:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
+.tech-grid .tech .n { letter-spacing: 0.4px; }
+.group-title { color: var(--text-2); letter-spacing: 1px; font-size: 11px; }
+.item:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
+.modal { backdrop-filter: blur(2px); }
+.tentacle-deco { filter: drop-shadow(0 0 6px rgba(57, 197, 207, 0.35)); }
+.relic-card { transition: border-color .15s, box-shadow .15s; }
+.relic-card:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }

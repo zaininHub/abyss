@@ -18,12 +18,14 @@ import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProject
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn } from './modules/religions.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { religionUnlocked } from './data/religions.js';
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除
-import { EXPAND_KEY, anchorDone, anchorShown } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除
+import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
-import { tickAI, renderAiPanel, setAiLogFn, aiUnlocked } from './modules/ai.js'; // v1.3 A
+import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked } from './modules/ai.js'; // v1.3 A
+import { renderRelics, buyRelic, setRelicsLogFn, setRelicsToastFn } from './modules/relics.js'; // v2.7.0：深渊遗物
+import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds } from './modules/pets.js';
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { isStageUnlocked } from './core/progressive.js';
@@ -70,6 +72,7 @@ export const dirty = {
   rift: true, expedition: true,
   tide: true, corruption: true, // v2.0 新增：潮汐卡片 / 腐化条
   ai: true, // v1.3 A：AI 助手面板
+  relics: false, // v2.7.0：深渊遗物
 };
 
 // ========== v2.0 故事线面板（v2.2 只读状态卡：走向由定向建筑购买决定，面板不再提供任何选择按钮） ==========
@@ -165,6 +168,7 @@ function render() {
     const preEl = document.getElementById('prestige-panel');
     if (preEl) renderPrestige(preEl);
     dirty.prestige = false;
+    if (dirty.relics) { renderRelics(document.getElementById('relics-panel')); dirty.relics = false; } // v2.7.0：深渊遗物
   }
   if (dirty.projects) {
     renderProjects();
@@ -232,7 +236,10 @@ function renderTop() {
   const discAnchorKeys = ['es', 'rp', 'es', 'faith', 'pt', 'dm']; // rank 与 es 同锚点（首次晋升）
   for (let i = 0; i < discStatIds.length; i++) {
     const el = document.getElementById(discStatIds[i]);
-    if (el && el.parentElement) el.parentElement.style.display = anchorShown(discAnchorKeys[i], S) ? '' : 'none';
+    if (!el || !el.parentElement) continue;
+    // v2.7.0：PT（异兽饼干）顶栏显示同即时门控（本局购入宠物乐园才亮出；转生后隐藏直至重购）
+    const shown = discAnchorKeys[i] === 'pt' ? anchorDone('pt', S) : anchorShown(discAnchorKeys[i], S);
+    el.parentElement.style.display = shown ? '' : 'none';
   }
   const cps = computeCps();
   const now = Date.now();
@@ -538,6 +545,9 @@ function refreshTabVisibility() {
   // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后出现栏目入口
   const riftTabBtn = document.getElementById('btn-rift-tab');
   if (riftTabBtn) riftTabBtn.style.display = (S._riftSeen || (S.riftsSealed || 0) > 0) ? '' : 'none';
+  // v2.7.0：深渊遗物入口——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
+  const relicBtn = document.getElementById('btn-relics');
+  if (relicBtn) relicBtn.style.display = relicsUnlocked() ? '' : 'none';
 }
 
 // v2.5 ④：研究点（RP）独立栏目——EP 首次溢出解锁；展示余额 / 溢出转换 / 用途说明
@@ -574,14 +584,16 @@ function updateTabLocks() {
     { id: 'btn-storyline', stage: 'P4', label: '故事线' },
   ];
   // v2.3.1 ②（rev18 9.2）：科技树/异兽 tab 叠加锚点串联——章节门控 ∧ 锚点门控一条判定链：
-  // 科技树 = P1 ∧ RP 锚点（购入灵感工坊）、异兽 = P2 ∧ PT 锚点（购入宠物乐园）。
-  // anchorShown 双读：锚点完成后跨转生保留，不回锁。
-  const TAB_ANCHOR = { 'btn-tech': 'rp', 'btn-pets': 'pt' };
+  // 科技树 = P1 ∧ RP 锚点（购入灵感工坊，RP 跨转生保留）、异兽 = P2 ∧ PT 锚点（购入宠物乐园）。
+  // v2.7.0 异兽口径变更：PT/宠物为本局制（转生清空），pt 锚点改即时门控（本局购入宠物乐园才开放），
+  // 不再读 resDiscovered.pt 持久标记——修复「未购宠物乐园却解锁异兽」（旧档历史置位误放行）。
+  const TAB_ANCHOR = { 'btn-tech': 'rp' };
   for (const { id, stage, label } of locks) {
     const btn = document.getElementById(id);
     if (!btn) continue;
     const anchorKey = TAB_ANCHOR[id];
-    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
+    const petsPt = id === 'btn-pets' ? anchorDone('pt', S) : false;
+    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S)) && (id !== 'btn-pets' || petsPt);
     if (!unlocked) {
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';
@@ -634,6 +646,7 @@ function bindEvents() {
 
   document.getElementById('btn-shop')?.addEventListener('click', () => switchTab('shop'));
   document.getElementById('btn-tech')?.addEventListener('click', () => switchTab('tech'));
+  document.getElementById('btn-relics')?.addEventListener('click', () => switchTab('relics')); // v2.7.0：深渊遗物
   document.getElementById('btn-rp')?.addEventListener('click', () => switchTab('rp')); // v2.5 ④：研究点栏目
   document.getElementById('btn-pets')?.addEventListener('click', () => switchTab('pets'));
   document.getElementById('btn-prestige')?.addEventListener('click', () => switchTab('prestige'));
@@ -687,6 +700,15 @@ function bindEvents() {
   });
 
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）
+
+  // v2.7.0：深渊遗物购买（事件委托）
+  document.getElementById('relics-panel')?.addEventListener('click', (e) => {
+    const id = e.target && e.target.dataset ? e.target.dataset.relicBuy : null;
+    if (!id) return;
+    const r = buyRelic(id);
+    if (!r.ok && r.reason) { log(`[遗物] ${r.reason}`, 'bad'); toast(r.reason); }
+    renderRelics(document.getElementById('relics-panel'));
+  });
 
   // 晋升按钮
   document.getElementById('prestige-panel')?.addEventListener('click', (e) => {
@@ -1270,8 +1292,9 @@ function tick(now) {
   // 移除旧版无条件 dirty.projects —— 任务面板 100ms 全量重建是「奖励领不了」的根因
   dirty.top = true; dirty.hero = true; dirty.prestige = true; dirty.story = true;
 
-  // 每秒刷新商店可用状态
-  if (now - lastShopCheck > 1000) {
+  // v2.6.7：商店解锁检测降频至 5s，且解锁数变化只增量揭示新卡（refreshShopChain），
+  // 不再整面板重建——「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁/点击竞争」根因修复
+  if (now - lastShopCheck > 5000) {
     lastShopCheck = now;
     let n = 0;
     for (const u of UPGRADES) {
@@ -1281,7 +1304,7 @@ function tick(now) {
     if (lastUnlockedCount === -1) lastUnlockedCount = n;
     if (n !== lastUnlockedCount) {
       lastUnlockedCount = n;
-      dirty.shop = true;
+      refreshShopChain();
       toast('新升级模块已解锁');
     }
     refreshTechState();
@@ -1348,13 +1371,20 @@ function startApp() {
   setWageToastFn(toast);
   setVehicleLogFn(log);
   setAiLogFn(log);
+  setRelicsLogFn(log); // v2.7.0：深渊遗物
+  setRelicsToastFn(toast);
+  // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建，消除 hover 闪烁/点击竞争）
+  setAiUiRefreshFn((pick) => {
+    if (pick.kind === 'upgrade') refreshShopItem(pick.u);
+    else if (pick.kind === 'building') refreshV21Item(pick.b);
+  });
   setProjectLogFn(log); // v2.5.6 review：任务过期日志
   setReligionLogFn(log);
   setReligionToastFn(toast); // v2.5.7：宗教日志/toast
   setDelveLogFn(log);
   setDelveToastFn(toast); // v2.6.0：深潜日志/toast
 
-  dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true;
+  dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true; dirty.relics = true; // v2.7.0：深渊遗物
   dirty.pets = true; dirty.prestige = true; dirty.projects = true; dirty.story = true;
   dirty.rift = true; dirty.expedition = true; dirty.riftTab = true;
   dirty.tide = true; dirty.corruption = true; dirty.ai = true;

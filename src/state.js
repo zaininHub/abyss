@@ -43,6 +43,7 @@ export function defaultState() {
     milesDone: {},
     // v2.3 资源发现：顶栏首次持有才显示（开局四常显项直接 true，归零不回隐藏）
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false },
+    relics: {}, // v2.7.0：深渊遗物（DM 消费，跨转生保留）
     // 成就
     achievements: {},
     // 剧情
@@ -298,7 +299,7 @@ export function load() {
     const migrated = migrateSave(raw);
     const defs = defaultState();
     // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen'];
+    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen', 'relics']; // v2.7.0 遗物跨转生保留
     for (const k of crossRun) {
       if (migrated[k] !== undefined) defs[k] = migrated[k];
     }

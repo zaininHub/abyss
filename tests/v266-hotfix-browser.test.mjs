@@ -42,7 +42,7 @@ try {
     await page.goto(fileUrl, { waitUntil: 'load' });
     await sleep(6000);
     const svg = await page.evaluate(() => { const g = document.querySelector('.tentacle-deco svg'); return g ? g.innerHTML : ''; });
-    rec('V2 触手 SVG 渲染为平滑曲线（贝塞尔+圆头）', svg.includes('C44 110') && svg.includes('stroke-linecap="round"') && svg.includes('<ellipse'), '');
+    rec('V2 触手 SVG 渲染为平滑曲线（贝塞尔+圆头）', svg.includes('C38 114') && svg.includes('stroke-linecap="round"') && svg.includes('<ellipse'), '');
     await page.close();
   }
   // V3 混沌心智购建筑日志（注入已解锁可购建筑，等待混沌直觉触发）

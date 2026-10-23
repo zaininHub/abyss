@@ -4,6 +4,7 @@
 // 全流程衔接：新手期仓库解锁 → 中期 RP 解锁更多分支 → 后期 DM 解锁 → 终局 ES 解锁最强分支；
 // 章节 6「神格」条件（faith≥1 或 religion 非空）与 line_faith 故事线直接沿用。
 import { S } from '../state.js';
+import { relicMult } from './relics.js'; // v2.7.0：永暗祷文——信仰产出乘区
 
 // 分支定义（可见性随进度；选一锁定，跨转生保留——crossRun 含 religion）
 export const RELIGIONS = [
@@ -52,6 +53,8 @@ export function templeFaithPerSec() {
   // v2.6.4 ⑤：神谕塔——信仰产出 ×1.15/级（超长线后期升级，消耗信仰）
   const olv = oracleLevel();
   if (olv > 0) r *= Math.pow(1 + ORACLE.effect, olv);
+  // v2.7.0 遗物：永暗祷文——信仰产出 +15%/级（DM 超长线消费）
+  r *= relicMult('prayer');
   return r;
 }
 
