@@ -200,7 +200,7 @@ export function renderAiPanel(container) {
           ${resOk ? '' : '（未全部解锁，不可激活）'}
           <br>激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}
         </div>
-        <button class="btn ${resOk && epOk ? '' : 'disabled'}" data-ai-build-activate="1"
+        <button class="btn ${resOk && epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${resOk && epOk ? '' : 'disabled'}
           title="全部资源点解锁且 EP 充足后，消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活自动购建</button>
         <div style="font-size:11px;color:var(--text-2)">激活后 AI 将按设定速率自动购买建筑（EP 升级，不消耗 RP）；间隔下限 5 秒、每周期至多 1 栋，且不低于预留线，不会与手动操作抢资源。</div>
       </div>`;

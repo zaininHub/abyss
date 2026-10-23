@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.6.1</title>
+<title>深渊效能工作台 v2.6.2</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-xybI0I5J.js"></script>
-  <link rel="stylesheet" href="./assets/index-Bd_YkOzL.css">
+  <script defer src="./assets/index-DXTsiC_8.js"></script>
+  <link rel="stylesheet" href="./assets/index-BF7bnxV7.css">
 </head>
 <body>
 <div id="app">
@@ -221,10 +221,22 @@
   <!-- v2.5.3 反馈③：深渊鱼缸触手（购买鱼缸后工作台底部缓慢摆动） -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
     <svg viewBox="0 0 200 120" width="200" height="120" preserveAspectRatio="xMaxYMax meet">
-      <!-- v2.5.9 像素克苏鲁检查：平滑贝塞尔曲线 → 阶梯折线（像素触手），颜色保留克苏鲁紫 -->
-      <path class="tentacle tentacle-a" d="M30 118 L30 102 L48 94 L42 74 L58 58 L52 36 L60 14" fill="none" stroke="#9c27b0" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
-      <path class="tentacle tentacle-b" d="M95 118 L94 102 L112 94 L106 76 L122 60 L114 42 L122 24" fill="none" stroke="#7b1fa2" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
-      <path class="tentacle tentacle-c" d="M165 118 L164 100 L182 92 L176 72 L190 56 L184 36 L190 28" fill="none" stroke="#6a1b9a" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter"/>
+      <!-- v2.6.2 触手重绘：三端渐变粗细（基座→尖端递减）+ 加密阶梯折点 + 深色描边，像素克苏鲁感保留但更细腻 -->
+      <g class="tentacle tentacle-a">
+        <path d="M30 120 L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6" fill="none" stroke="#4a148c" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M30 120 L30 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12 L66 6" fill="none" stroke="#9c27b0" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M32 116 L32 106 L46 100 L41 84 L56 70 L51 52 L62 40 L57 24 L66 12" fill="none" stroke="#ce93d8" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" opacity="0.5"/>
+      </g>
+      <g class="tentacle tentacle-b">
+        <path d="M95 120 L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10 L127 4" fill="none" stroke="#4a148c" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M95 120 L95 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10 L127 4" fill="none" stroke="#7b1fa2" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M97 116 L97 104 L112 98 L106 80 L121 66 L114 50 L124 38 L119 22 L127 10" fill="none" stroke="#e1bee7" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" opacity="0.4"/>
+      </g>
+      <g class="tentacle tentacle-c">
+        <path d="M165 120 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8 L196 3" fill="none" stroke="#4a148c" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M165 120 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8 L196 3" fill="none" stroke="#6a1b9a" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
+        <path d="M167 116 L164 102 L181 95 L176 76 L190 62 L184 42 L193 30 L188 16 L196 8" fill="none" stroke="#f3e5f5" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" opacity="0.4"/>
+      </g>
     </svg>
   </div>
 

@@ -511,8 +511,10 @@ function refreshTabVisibility() {
   const expBtn = document.getElementById('btn-expedition');
   if (expBtn) expBtn.style.display = (S.expeditionsDone > 0 || S.expeditions.length > 0) ? '' : 'none';
   // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才出现入口，达成前不显示
+  // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
+  if (canUnlockReligion()) { S._religionHintSeen = true; }
   const relBtn = document.getElementById('btn-religion');
-  if (relBtn) relBtn.style.display = (religionUnlocked() || canUnlockReligion()) ? '' : 'none';
+  if (relBtn) relBtn.style.display = (religionUnlocked() || canUnlockReligion() || S._religionHintSeen) ? '' : 'none';
   // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才出现入口
   const dvBtn = document.getElementById('btn-delve');
   if (dvBtn) dvBtn.style.display = (delveUnlocked() || canUnlockDelve()) ? '' : 'none';

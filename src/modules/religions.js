@@ -91,7 +91,8 @@ export function renderReligionPanel(container) {
         仓库：${S.upgrades.storage || 0}/1 级 ${(S.upgrades.storage || 0) >= 1 ? '✓' : '（未达标）'}<br>
         EP 库存：${fmt(S.ep)} / ${fmt(epStorageCap())}（需 ≥ ${Math.round(epStorageCap() * 0.5)}）${ok ? '✓' : '（未达标）'}
       </div>
-      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" title="仓库有库存后解锁宗教系统">唤醒信仰</button>`;
+      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" ${ok ? '' : 'disabled'} title="仓库有库存后解锁宗教系统">唤醒信仰</button>
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：仓库（存储节点）≥1 级，且 EP 库存 ≥ 存储上限 50%（仓库有库存）。条件未达成时入口保持可见，达成后一键唤醒。</div>`;
     return;
   }
   const branch = branchOf();

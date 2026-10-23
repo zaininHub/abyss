@@ -12,11 +12,11 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
 {
   const css = readFileSync('src/style.css', 'utf-8');
   rec('V1 宠物浮标 steps(3, end)（弃 ease-in-out）', css.includes('animation: petFloat 2s steps(3, end) infinite'), 'css');
-  rec('V1 触手 steps(4, end) 痉挛式抽摆', css.includes('animation: tentacle-sway 5s steps(4, end) infinite'), 'css');
+  rec('V1 触手 steps(6, end) 细腻抽摆（v2.6.2 四帧→六帧）', css.includes('animation: tentacle-sway 5s steps(6, end) infinite'), 'css');
   rec('V1 混沌潮汐 steps(2, end) 块状闪烁', css.includes('tide-chaos-anim .8s steps(2, end) infinite alternate'), 'css');
-  rec('V1 触手四折点关键帧（25/50/75）', css.includes('25% { transform: rotate(-2deg); }') && css.includes('75% { transform: rotate(2deg); }'), 'css');
+  rec('V1 触手六帧关键帧（15/30/50/70/85）', css.includes('15% { transform: rotate(-4deg); }') && css.includes('70% { transform: rotate(8deg); }') && css.includes('85% { transform: rotate(3deg); }'), 'css');
   const html = readFileSync('index.html', 'utf-8');
-  rec('V1 触手改为阶梯折线（L 命令，非贝塞尔 C）', html.includes('M30 118 L30 102 L48 94') && html.includes('L60 14'), 'svg');
+  rec('V1 触手改为阶梯折线（L 命令，非贝塞尔 C）', html.includes('M30 120 L30 106 L46 100') && html.includes('L66 6'), 'svg');
   rec('V1 触手 stroke-linecap 方头（像素端帽）', html.includes('stroke-linecap="square"'), 'svg');
   rec('V1 克苏鲁紫配色保留（#9c27b0/#7b1fa2/#6a1b9a）', html.includes('#9c27b0') && html.includes('#7b1fa2') && html.includes('#6a1b9a'), 'svg');
   // 中性动画未误改：justBought / corruption-fill / transition 保持
@@ -61,14 +61,14 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
       };
     });
     rec('V2 宠物浮标 computed: petFloat steps(3, end)', !!anims.pet && anims.pet.name === 'petFloat' && anims.pet.timing.includes('steps(3'), JSON.stringify(anims.pet));
-    rec('V2 触手 computed: tentacle-sway steps(4, end)', !!anims.tentacle && anims.tentacle.name === 'tentacle-sway' && anims.tentacle.timing.includes('steps(4'), JSON.stringify(anims.tentacle));
+    rec('V2 触手 computed: tentacle-sway steps(6)', !!anims.tentacle && anims.tentacle.name === 'tentacle-sway' && anims.tentacle.timing.includes('steps(6'), JSON.stringify(anims.tentacle));
     rec('V2 三触手错峰（7s/9s 延迟）', anims.tentacleB && anims.tentacleB.dur === '7s' && anims.tentacleC && anims.tentacleC.dur === '9s', JSON.stringify({ b: anims.tentacleB && anims.tentacleB.dur, c: anims.tentacleC && anims.tentacleC.dur }));
     // 触手 DOM 路径为折线
     const pathD = await page.evaluate(() => {
       const p = document.querySelector('#tentacle-deco svg path');
       return p ? p.getAttribute('d') : '';
     });
-    rec('V2 触手路径为阶梯折线（L 命令）', pathD.includes('L30 102 L48 94'), pathD.slice(0, 40));
+    rec('V2 触手路径为阶梯折线（L 命令）', pathD.includes('L30 106 L46 100'), pathD.slice(0, 40));
     // 鱼缸 3 级 → 三触手可见（tentacle-c opacity .8）
     const tentacleC = await page.evaluate(() => {
       const el = document.querySelector('#tentacle-deco .tentacle-c');

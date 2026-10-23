@@ -51,6 +51,7 @@ export function defaultState() {
     abyssLevel: 0, abyssUnlocked: false,
     activeRift: null, riftsSealed: 0,
     riftEmber: 0, riftUpgrades: {}, riftExpedition: null,
+    _religionHintSeen: false,
     // v2.0 深渊潮汐
     tidePhase: 0,
     tideTimer: BALANCE.tide.phaseDuration,
@@ -297,7 +298,7 @@ export function load() {
     const migrated = migrateSave(raw);
     const defs = defaultState();
     // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades'];
+    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen'];
     for (const k of crossRun) {
       if (migrated[k] !== undefined) defs[k] = migrated[k];
     }
