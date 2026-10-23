@@ -23,7 +23,7 @@ try {
     const src = fs.readFileSync('src/data/upgrades.js', 'utf-8');
     rec('T1 能量合剂/循环供氧/生物打印餐/内存扩容 maxLevel:1（一次性，杜绝多购无效果）',
       src.includes("id:'subsist1'") && src.includes('maxLevel:1') && src.includes("id:'subsist2'") && src.includes("id:'subsist3'") && src.includes("id:'mem'") && src.includes("id:'cache'"), '');
-    rec('T1b 缓存优化文案明确一次性（存储上限仍每级 +5000）', src.includes('线程消耗 -25%（一次性）') && src.includes('+5000/级'), '');
+    rec('T1b 缓存优化消耗按级递减（Lv1 -25%，每级再 -3%，下限 -35%；存储上限仍每级 +5000）', src.includes('线程消耗 -25% 起，每级再 -3%（下限 -35%）') && src.includes('+5000/级'), '');
   }
   // T2 浏览器实测：购买能量合剂后每秒薪资下降（1.88→0.56 量级）、卡片转满级不可再购
   {

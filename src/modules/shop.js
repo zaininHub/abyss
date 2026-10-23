@@ -119,7 +119,8 @@ export function renderShop(container) {
   container.innerHTML = '';
   shopItemEls.clear();
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce'))); // v2.1 钥匙门控：净化节点族需「熵减协议」
+    && (u.cat !== 'purifier' || hasTech('entropy_reduce'))
+    && (u.id !== 'rp_distill' || anchorShown('rp', S))); // v2.1 钥匙门控：净化节点族需「熵减协议」；v2.7.4 ⑦：灵感蒸馏塔需 RP 解锁
   // v2.3.1 缺陷⑦修复：链序改定义序（与 eternal v2.3 修复同口径）。
   // 原 v1.3 E「已解锁按成本升序」在 v2.3 渐进披露链下失效：已购项成本上浮后
   // 与未购项按成本交错，chainSplit 的已购前缀 p 判定失真 → 链提示挂错对象
@@ -159,7 +160,8 @@ export function renderShop(container) {
 export function refreshShopChain() {
   if (!shopContainer || !shopContainer._chain) return;
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
+    && (u.cat !== 'purifier' || hasTech('entropy_reduce'))
+    && (u.id !== 'rp_distill' || anchorShown('rp', S)));
   const split = chainSplit('shop', items, u => (S.upgrades[u.id] || 0) > 0, S);
   const prev = shopContainer._chain;
   const newIds = new Set(split.visible.map(u => u.id));

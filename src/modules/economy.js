@@ -127,6 +127,11 @@ export function globalMult() {
   m *= relicMult('tome');
   if (!isFinite(m)) m = 1;
   // v2.0 §1.3 软上限：m > 5000 → 5000 + sqrt(m - 5000) * 70
+  // v2.7.4 ③：深渊之心实装——腐化峰值 >100% 后每 10% 转化 +5% 全局产出
+  // （峰值驱动：净化节点清除当前腐化不影响峰值，压制路线与腐化收益路线互不抵消）
+  if (hasTech('abyss_heart') && (S.corruptionPeak || 0) > 100) {
+    m *= 1 + Math.floor(((S.corruptionPeak || 0) - 100) / 10) * 0.05;
+  }
   // v2.7.3 ⑤：轮回回响全局乘区（每点 +5%，跨轮回保留；克制：来源有限、升级贵）
   m *= echoMult();
   if (m > B.softCapThreshold) {
@@ -143,6 +148,12 @@ export function echoMult() {
   return m;
 }
 // v2.7.3 ⑤：回响特殊升级等级（细分系统加成用）
+// v2.7.4 ⑦：RP 蒸馏效率——主动消耗 EP 转化 RP（主源）
+// 基础 1 RP = 15,000 EP；灵感蒸馏塔每级 ÷1.12（效率提升）；低于 20,000 溢出转换 → 蒸馏为主源
+export function rpDistillRate() {
+  const lv = S.upgrades['rp_distill'] || 0;
+  return 15000 / Math.pow(1.12, lv);
+}
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;
 }
@@ -359,7 +370,8 @@ export function staffSalaryPerSec() {
   if (S.upgrades.subsist2) m *= (1 - B.subsist2);
   if (S.upgrades.subsist3) m *= 0.5;
   if (S.upgrades.mem) m *= 0.85;
-  if (S.upgrades.cache) m *= 0.75;
+  // v2.7.4 ④：缓存优化消耗按级递减——Lv1 -25%，每级再 -3%（下限 -35%），升级持续生效
+  if (S.upgrades.cache) m *= Math.max(0.65, 0.75 * Math.pow(0.97, (S.upgrades.cache || 0) - 1));
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
   const base = BALANCE.thread.salaryBase;
@@ -485,6 +497,9 @@ export function epStorageCap() {
   // v2.4：cache 无限购买（原 v2.0.2 20 级封顶解除，旧档超 20 级数量仍全额计入）
   const cacheCount = S.upgrades['cache'] || 0;
   cap += cacheCount * 5000;
+  // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
+  cap += (S.upgrades['reserve_bin'] || 0) * 3000;
+  cap += (S.upgrades['deep_bin'] || 0) * 5e5;
   // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）
   const storageLv = S.upgrades['storage'] || 0;
   for (let i = 1; i <= storageLv; i++) cap += B.storage.capPer * Math.pow(B.storage.capGrowth, i - 1);

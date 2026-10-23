@@ -94,6 +94,8 @@ export const BALANCE = {
     { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
     { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%（满 2 级 +300%）' },
     { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
+    // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
+    { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%（消耗 EP 主动转化 RP；RP 首次溢出解锁）' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
     { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%（1 级即生效）' },
     { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%（1 级即生效）' },
@@ -111,8 +113,12 @@ export const BALANCE = {
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2（满 2 级 ×2）' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3（1 级即生效）' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
-    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级）' },
-    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e5, growth: 1.15, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +5,000（线程强化区购买，无限升级）' },
+    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级；成本曲线 v2.7.4 加陡）' },
+    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e5, growth: 1.4, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +5,000（线程强化区购买，无限升级；成本曲线 v2.7.4 加陡）' },
+    // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
+    // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 800, growth: 1.45, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 3000 }, desc: '每级 EP 上限 +3,000（中前期扩容，无限升级）' },
+    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000（后期扩容，无限升级）' },
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
@@ -263,9 +269,9 @@ export const BALANCE = {
     penaltyFloor: 0.7,         // 惩罚下限 30%
     max: 100,
     purifiers: [
-      { id: 'purifier1', name: '净化节点 I', base: 5e4, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
-      { id: 'purifier2', name: '净化节点 II', base: 5e6, rate: 2, desc: '每秒清除 2% 腐化' },
-      { id: 'purifier3', name: '净化节点 III', base: 5e8, rate: 5, desc: '每秒清除 5% 腐化' },
+      { id: 'purifier1', name: '净化节点 I', base: 5e4, rate: 0.5, desc: '每秒清除 0.5% 腐化（压制路线；深渊之心的腐化收益按峰值判定，不受净化抵消）' },
+      { id: 'purifier2', name: '净化节点 II', base: 5e6, rate: 2, desc: '每秒清除 2% 腐化（压制路线；深渊之心的腐化收益按峰值判定，不受净化抵消）' },
+      { id: 'purifier3', name: '净化节点 III', base: 5e8, rate: 5, desc: '每秒清除 5% 腐化（压制路线；深渊之心的腐化收益按峰值判定，不受净化抵消）' },
     ],
   },
 };

@@ -20,10 +20,12 @@ let lastSpawnAt = 0;
 export function spawnProject() {
   lastSpawnAt = Date.now();
   const now = Date.now();
-  // v2.5 ②：减少点击类任务——类型加权（EP 积累 80% / 手动激活 20%，原均匀 50/50）
-  const t = Math.random() < 0.2
+  // v2.7.4 ⑤：手动激活=新手任务——游戏刚开始（首次生成）必出一次，此后不再出现
+  // （替代 v2.5 ② 的 80/20 随机加权；click 任务仅保留新手引导价值）
+  const t = !S._clickTutorialDone
     ? PROJECT_TYPES.find(x => x.id === 'click')
     : PROJECT_TYPES.find(x => x.id === 'earn_ep');
+  if (t.id === 'click') S._clickTutorialDone = true;
   const duration = (1 + Math.random() * 7) * 3600000; // 1-8小时
   const cps = computeCps();
   // v2.4.1：任务目标/奖励基准时长钳制到 ≤10 分钟（原按全时长 1-8h 计算，前期也会出现百万级目标、

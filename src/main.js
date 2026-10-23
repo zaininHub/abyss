@@ -9,6 +9,7 @@ import {
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
+  rpDistillRate, // v2.7.4 ⑦：RP 蒸馏效率
 } from './modules/economy.js';
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
@@ -153,6 +154,8 @@ function render() {
   }
   if (dirty.tide) { renderTide(); dirty.tide = false; }
   if (dirty.corruption) { renderCorruption(); dirty.corruption = false; }
+  // v2.7.4 ③：腐化峰值记录（跨本局保留；深渊之心按峰值判定，净化节点不抵消）
+  if ((S.corruption || 0) > (S.corruptionPeak || 0)) { S.corruptionPeak = S.corruption; }
   if (dirty.shop) {
     const shopEl = document.getElementById('shop-list');
     if (shopEl) renderShop(shopEl);
@@ -172,6 +175,7 @@ function render() {
     if (famEl) renderFamilyUpgrades(famEl);
     dirty.shop = false;
   }
+  if (dirty.rp) { renderRpPanel(); dirty.rp = false; } // v2.7.4 ⑦：RP 蒸馏后面板刷新
   if (dirty.tech) {
     const techEl = document.getElementById('tech-tree');
     if (techEl) renderTech(techEl);
@@ -200,8 +204,10 @@ function render() {
       renderReincarn(preEl); // v2.7.3 ⑤：轮回区块（晋升面板底部）
     }
     dirty.prestige = false;
-    if (dirty.relics) { renderRelics(document.getElementById('relics-panel')); dirty.relics = false; } // v2.7.0：深渊遗物
   }
+  // v2.7.4 ①：遗物面板独立于晋升刷新（周期 gate/DM 状态更新；原嵌在 prestige 块内会导致
+  // dirty.relics 置位但 prestige 未脏时永不消费）
+  if (dirty.relics) { renderRelics(document.getElementById('relics-panel')); dirty.relics = false; } // v2.7.0：深渊遗物
   if (dirty.projects) {
     renderProjects();
     dirty.projects = false;
@@ -604,9 +610,13 @@ function renderRpPanel() {
     <h3 style="margin-top:0">🔬 研究点（RP）</h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>溢出累计</b><span class="mono">${fmt(S.epOverflowTotal || 0)} EP</span></div>
-    <div class="stat"><b>转换比例</b><span>20,000 溢出 EP → 1 RP（满 1 转出；每转生 -500，下限 5,000）</span></div>
+    <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP（灵感蒸馏塔每级 +12%）</span></div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="flex:1" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP → RP</button>
+      <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
+    </div>
     <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 用途：科技树购买（科技树 tab）、离线升级（离线 tab）、族升级（升级商店底部）。<br>
-    RP 获取：任务奖励、溢出转换（速率随转生递增：每轮 -500 溢出 EP，下限 5,000）、数据熔炉建筑（每秒 +0.5 RP）。<br>
+    RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP，主源；EP 满时点击可防溢出）、任务奖励、溢出转换（兜底：每轮 -500 溢出 EP，下限 5,000）、数据熔炉建筑。<br>
     本栏目独立于深渊裂隙：EP 首次溢出即觉醒，与裂隙无关。</p>
   </div>`;
 }
@@ -685,6 +695,19 @@ function bindEvents() {
   document.getElementById('btn-tech')?.addEventListener('click', () => switchTab('tech'));
   document.getElementById('btn-relics')?.addEventListener('click', () => switchTab('relics')); // v2.7.0：深渊遗物
   document.getElementById('btn-rp')?.addEventListener('click', () => switchTab('rp')); // v2.5 ④：研究点栏目
+  // v2.7.4 ⑦：RP 蒸馏——消耗 25% 当前 EP 转化 RP（主动消耗，防溢出）
+  document.getElementById('rp-panel')?.addEventListener('click', (e) => {
+    if (!e.target || e.target.id !== 'rp-distill-btn') return;
+    const spend = Math.floor((S.ep || 0) * 0.25);
+    const rate = rpDistillRate();
+    if (spend < rate) { if (toast) toast('EP 不足：需至少蒸馏出 1 RP'); return; }
+    const rp = Math.floor(spend / rate);
+    S.ep -= spend;
+    S.rp = (S.rp || 0) + rp;
+    S.epDistilledTotal = (S.epDistilledTotal || 0) + spend;
+    save(S); dirty.top = true; dirty.rp = true;
+    if (toast) toast(`蒸馏完成：-${fmt(spend)} EP → +${rp} RP`);
+  });
   document.getElementById('btn-pets')?.addEventListener('click', () => switchTab('pets'));
   document.getElementById('btn-prestige')?.addEventListener('click', () => switchTab('prestige'));
   document.getElementById('btn-offline')?.addEventListener('click', () => switchTab('offline'));
@@ -1174,7 +1197,9 @@ let corruptionCacheFloor = -1; // v2.0：腐化脏检查缓存
 let lastAiUnlocked = false;  // v1.3 A：AI 核心解锁变化检测
 let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 
+let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
 function tick(now) {
+  frame++;
   const dt = Math.min(1, (now - lastTick) / 1000);
   lastTick = now;
   if (S.paused) {
@@ -1373,6 +1398,10 @@ function tick(now) {
   // v2.1 R2：仅保留纯文本刷新的脏标记（top/hero 只更新 textContent，不重建可点击节点）；
   // 移除旧版无条件 dirty.projects —— 任务面板 100ms 全量重建是「奖励领不了」的根因
   dirty.top = true; dirty.hero = true; dirty.prestige = true; dirty.story = true;
+
+  // v2.7.4 ①：遗物 gate 状态周期刷新（DM 满足但进度不足时，进度推进后按钮状态及时更新，
+  // 避免刷新页面才可买）——独立于 5s 商店节流，每 2s 置位，render() 每 tick 消费
+  if ((frame % 20) === 0) dirty.relics = true;
 
   // v2.6.7：商店解锁检测降频至 5s，且解锁数变化只增量揭示新卡（refreshShopChain），
   // 不再整面板重建——「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁/点击竞争」根因修复

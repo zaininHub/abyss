@@ -66,7 +66,10 @@ export const UPGRADES = [
   {id:'cpu',name:'CPU 超频',base:1e4,cps:0,cat:'thread',desc:'所有线程产出 +50%'},
   {id:'mem',name:'内存扩容',base:1e5,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'},
   {id:'gpu',name:'GPU 加速',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 ×2'},
-  {id:'cache',name:'缓存优化',base:1e5,cps:0,cat:'thread',desc:'线程消耗 -25%（一次性），EP 存储上限 +5000/级（v2.4 无限升级）'},
+  {id:'cache',name:'缓存优化',base:1e5,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%（下限 -35%），EP 存储上限 +5000/级（v2.4 无限升级）'},
+  // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
+  {id:'reserve_bin',name:'备用粮仓',base:800,growth:1.45,cps:0,cat:'D',desc:'每级 EP 上限 +3,000（中前期扩容，无限升级）'},
+  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000（后期扩容，无限升级）'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:500,cps:5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:5e4,cps:50,desc:'重装地面采集'},

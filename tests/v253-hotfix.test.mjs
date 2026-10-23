@@ -60,7 +60,7 @@ function mkState(rawObj) {
 {
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
   rec('V2 顶栏文案：溢出累计按 20,000:1 转 RP（不再「5% 已转」）', !mainSrc.includes('5% 已转 RP') && mainSrc.includes('按 20,000:1 转 RP'), '顶栏文案');
-  rec('V2 面板说明：补 RP 获取途径（任务/溢出/数据熔炉）+ 速率加快（每轮 -500）', mainSrc.includes('数据熔炉建筑（每秒 +0.5 RP）') && mainSrc.includes('每轮 -500 溢出 EP，下限 5,000'), '面板说明');
+  rec('V2 面板说明：补 RP 获取途径（蒸馏主源/任务/溢出兜底/数据熔炉）+ 速率加快（每轮 -500）', mainSrc.includes('灵感蒸馏塔主动转化') && mainSrc.includes('数据熔炉建筑') && mainSrc.includes('每轮 -500 溢出 EP，下限 5,000'), '面板说明');
   // 转换公式：基础 20,000 / 转生递减 500（下限 5,000）
   const ecSrc = fs.readFileSync('src/modules/economy.js', 'utf-8');
   rec('V2 转换公式：1 RP = 20,000 溢出 EP（转生 -500，下限 5,000）', /Math\.max\(5000, 20000 - 500 \* \(S\.prestige \|\| 0\)\)/.test(ecSrc), '公式');
