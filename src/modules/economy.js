@@ -127,10 +127,24 @@ export function globalMult() {
   m *= relicMult('tome');
   if (!isFinite(m)) m = 1;
   // v2.0 §1.3 软上限：m > 5000 → 5000 + sqrt(m - 5000) * 70
+  // v2.7.3 ⑤：轮回回响全局乘区（每点 +5%，跨轮回保留；克制：来源有限、升级贵）
+  m *= echoMult();
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
   return m;
+}
+
+// v2.7.3 ⑤：轮回回响——全局倍率 = 1 + 0.05×回响 + 回响升级（echo_global，×1.3/级）
+export function echoMult() {
+  let m = 1 + (S.abyssEcho || 0) * 0.05;
+  const glv = (S.echoUpgrades && S.echoUpgrades.echo_global) || 0;
+  if (glv > 0) m *= Math.pow(1.3, glv);
+  return m;
+}
+// v2.7.3 ⑤：回响特殊升级等级（细分系统加成用）
+export function echoLv(id) {
+  return (S.echoUpgrades && S.echoUpgrades[id]) || 0;
 }
 
 export function costMult() {

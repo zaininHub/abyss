@@ -1,6 +1,6 @@
 // v2.6.0：终局层「深渊深潜」模块——解锁 / 下潜上浮 / 深潜产出与腐化 / 升级树 / 里程碑 / 面板
 import { S, save } from '../state.js';
-import { fmt } from './economy.js';
+import { fmt, echoLv } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：湮灭刻印——深潜产出乘区
 import {
@@ -74,7 +74,7 @@ export function tickDelve(dt) {
   if (!delveUnlocked() || !delveActive()) return;
   const depth = delveDepth() + 1; // 当前已下潜到的层（下潜时层数 = 成本对应层）
   const rate = vsPerSec(depth, delveUpgradeLv('diver')) * relicMult('brand'); // v2.7.0 遗物：湮灭刻印
-  if (rate > 0) S.vs = (S.vs || 0) + rate * dt;
+  if (rate > 0) S.vs = (S.vs || 0) + rate * dt * (1 + 0.5 * (echoLv('echo_delve') || 0)); // v2.7.3 ⑤：回响·深潜共振
   const cr = delveCorruptRate(depth, delveUpgradeLv('purge'));
   if (cr > 0) S.corruption = Math.min(100, (S.corruption || 0) + cr * dt);
   // 层深里程碑（一次性 VS 奖励）

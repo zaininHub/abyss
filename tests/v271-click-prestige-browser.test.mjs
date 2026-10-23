@@ -89,7 +89,7 @@ try {
       const st = document.querySelector('.prestige-status');
       return { disabled: b.disabled, hasNo: !!st && st.className.includes('no'), text: st ? st.textContent.trim() : null };
     });
-    rec('P4 未达标档：按钮暗置 + 红色「未达标：还差 N EP（%）」状态行', p.disabled && p.hasNo && p.text.includes('未达标：还差'), JSON.stringify(p));
+    rec('P4 未达标档：按钮可点暗置（非 disabled）+ 红色「未达标：还差 N EP（%）」状态行', !p.disabled && p.hasNo && p.text.includes('未达标：还差'), JSON.stringify(p));
     await page.close();
   }
 } catch (e) {

@@ -88,8 +88,8 @@ export function renderPrestige(container) {
     <div class="off-stat"><span>可获得 ES</span><b>${esg < 1 ? '0/1' : esg}</b></div>
     <div class="prestige-bar"><div style="width:${pct}%"></div></div>
     <div class="prestige-status ${ready ? 'ok' : 'no'}">${ready ? '已达标：可晋升转生' : '未达标：还差 ' + fmt(lack) + ' EP（' + pct.toFixed(0) + '%）'}</div>
-    <button class="btn" id="prestige-btn" ${ready ? '' : 'disabled'} title="${ready ? '转生：本局产出清零，保留跨转生资产' : '晋升需求未达标：还差 ' + fmt(lack) + ' EP 本局累计（1 PP 起步）'}">晋升转生</button>
-    <div style="margin-top:6px;font-size:11px;color:var(--text-3)">${ready ? '转生将获得 ' + reward + '，跨转生资产（职级/RP/ES/宗教/裂隙/深潜）保留。' : '晋升条件：本局累计 ≥ ' + fmt(need) + ' EP 换 1 PP；未达标时按钮暗置不可点。'}</div>
+    <button class="btn prestige-btn${ready ? '' : ' no'}" id="prestige-btn" title="${ready ? '转生：本局产出清零，保留跨转生资产' : '晋升需求未达标：还差 ' + fmt(lack) + ' EP 本局累计（1 PP 起步）'}">晋升转生</button>
+    <div style="margin-top:6px;font-size:11px;color:var(--text-3)">${ready ? '转生将获得 ' + reward + '，跨转生资产（职级/RP/ES/宗教/裂隙/深潜）保留。' : '晋升条件：本局累计 ≥ ' + fmt(need) + ' EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。'}</div>
     <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display">
       ${S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : ''}
     </div>`;

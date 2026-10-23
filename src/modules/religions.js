@@ -1,6 +1,6 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
-import { epStorageCap, fmt } from './economy.js';
+import { epStorageCap, fmt, echoLv } from './economy.js';
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
@@ -109,7 +109,7 @@ export function tickReligion(dt) {
   if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
   const r = templeFaithPerSec();
-  if (r > 0) S.faith = (S.faith || 0) + r * dt;
+  if (r > 0) S.faith = (S.faith || 0) + r * dt * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣
 }
 
 // ========== 面板 ==========

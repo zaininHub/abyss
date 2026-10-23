@@ -3,6 +3,7 @@ import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击�
 import {
   computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult,
+  prestigeNeed,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
   offlineRate, offlineCap, addEp,
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
@@ -29,6 +30,7 @@ import { renderRelics, buyRelic, setRelicsLogFn, setRelicsToastFn } from './modu
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds } from './modules/pets.js';
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
+import { renderReincarn } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent } from './modules/events.js';
@@ -97,6 +99,32 @@ function renderStorylinePanel() {
   // 已完成的故事线（多周目解锁）
   if (completed.length > 0) {
     html += `<div style="margin-top:12px;color:var(--text-2);font-size:11px">已完成：${completed.join('、')}</div>`;
+  }
+  // v2.7.3 ⑥：故事线图鉴——仅显示已解锁路线（当前路线 + 已完成路线）
+  const ALL_LINES = ['line_abyss', 'line_order', 'line_faith'];
+  const unlockedLines = ALL_LINES.filter(id => id === current || completed.includes(id));
+  if (unlockedLines.length > 0) {
+    html += `<div style="margin-top:14px"><div style="color:var(--accent);font-size:11px;margin-bottom:6px">故事线图鉴（仅显示已解锁路线，章节解锁即亮起）</div>`;
+    for (const id of unlockedLines) {
+      const pkg = getStorylinePackage(id);
+      if (!pkg) continue;
+      html += `<div class="codex-line"><div class="codex-line-name">${pkg.name}</div>`;
+      if (pkg.desc) html += `<div class="codex-desc">${pkg.desc}</div>`;
+      const chs = (pkg.chapters && pkg.chapters.append) || [];
+      if (chs.length > 0) {
+        html += `<div class="codex-chs">`;
+        for (const ch of chs) {
+          let ok = false;
+          try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
+          html += `<div class="codex-ch${ok ? ' on' : ' locked'}"><span class="codex-ch-name">${ok ? '✓' : '🔒'} ${ch.name}</span>`;
+          if (ok && ch.desc) html += `<div class="codex-ch-desc">${ch.desc}</div>`;
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
   }
   el.innerHTML = html;
 }
@@ -167,7 +195,10 @@ function render() {
   }
   if (dirty.prestige) {
     const preEl = document.getElementById('prestige-panel');
-    if (preEl) renderPrestige(preEl);
+    if (preEl) {
+      renderPrestige(preEl);
+      renderReincarn(preEl); // v2.7.3 ⑤：轮回区块（晋升面板底部）
+    }
     dirty.prestige = false;
     if (dirty.relics) { renderRelics(document.getElementById('relics-panel')); dirty.relics = false; } // v2.7.0：深渊遗物
   }
@@ -729,15 +760,34 @@ function bindEvents() {
 
   // 晋升按钮
   document.getElementById('prestige-panel')?.addEventListener('click', (e) => {
-    if (e.target.id === 'prestige-btn' && canPrestige()) {
-      openTalentModal();
-    }
+    if (e.target.id !== 'prestige-btn') return;
+    if (canPrestige()) { openTalentModal(); return; }
+    // v2.7.3：未达标点击有反馈（不再静默 disabled）——「没反应」观感根治
+    const need = prestigeNeed();
+    const lack = Math.max(0, need - S.runEarned);
+    if (toast) toast(`晋升未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   });
 
   // v2.5 ⑦：主面板离线栏已移除，离线入口保留「离线」tab 按钮（离线玩法不删）
 
   // 宠物浮动
-  document.getElementById('pet-float')?.addEventListener('click', () => switchTab('pets'));
+  // v2.7.3 ⑦：宠物交互动画——点击浮动宠物冒爱心 + 弹跳（不再切 tab，交互反馈即动画）
+  document.getElementById('pet-float')?.addEventListener('click', (e) => {
+    const item = e.target.closest('.pet-item');
+    if (!item) return;
+    const icon = item.textContent.trim() || '🐾';
+    const heart = document.createElement('div');
+    heart.className = 'pet-heart';
+    heart.textContent = icon;
+    item.style.animation = 'none';
+    void item.offsetWidth;
+    item.style.animation = '';
+    const r = item.getBoundingClientRect();
+    heart.style.left = r.left + r.width / 2 - 10 + 'px';
+    heart.style.top = r.top - 6 + 'px';
+    (document.getElementById('pet-float') || document.body).appendChild(heart);
+    setTimeout(() => heart.remove(), 900);
+  });
 
   // v2.0 腐化：主动净化按钮（每次清除最多 50%）
   document.getElementById('corruption-purge')?.addEventListener('click', () => {
@@ -1432,6 +1482,19 @@ function startApp() {
   render();
 
   setInterval(() => tick(performance.now()), 100);
+
+  // v2.7.3：文案选中复制——拖选/选中文本时不触发任何点击购买（capture 拦截 click）
+  // mousedown→mouseup 位移 >4px 视为拖选：停止该次 click 冒泡，选择文本保留可复制
+  let dragGuard = null;
+  document.addEventListener('mousedown', e => { dragGuard = { x: e.clientX, y: e.clientY }; }, true);
+  document.addEventListener('mouseup', e => {
+    if (dragGuard && (Math.abs(e.clientX - dragGuard.x) > 4 || Math.abs(e.clientY - dragGuard.y) > 4)) dragGuard = { drag: true };
+    else dragGuard = null;
+  }, true);
+  document.addEventListener('click', e => {
+    if (dragGuard && dragGuard.drag) { dragGuard = null; e.stopPropagation(); e.preventDefault(); return; }
+    dragGuard = null;
+  }, true);
   setInterval(() => { if (!resetGuard) save(S); }, 5000);
 }
 

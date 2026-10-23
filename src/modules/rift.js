@@ -6,7 +6,9 @@
 //       ④ 第三选项「深入裂隙」：持续 60s 探索（产出递增 + 腐化累积），结算时腐化超阈值损失 EP，可提前脱出。
 // 既有 sealDmReward / embraceDurMs / 封印与拥抱行为保持（v2.1/v2.4 断言依赖）。
 import { S, save } from '../state.js';
-import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier } from './economy.js';
+import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv } from './economy.js';
+// v2.7.3 ⑤：回响·裂隙共鸣（余烬 ×2/级）
+function emberMul() { return 1 + (echoLv('echo_rift') || 0); }
 import { BALANCE } from '../data/balance.js';
 import { log, toast, dirty } from '../main.js';
 
@@ -86,7 +88,7 @@ export function abortRiftExpedition() {
   const ex = S.riftExpedition;
   S.dm = (S.dm || 0) + ex.gainedDm;
   S.vs = (S.vs || 0) + (ex.gainedVs || 0);
-  S.riftEmber = (S.riftEmber || 0) + Math.max(1, Math.round(ex.level * 1));
+  S.riftEmber = (S.riftEmber || 0) + Math.max(1, Math.round(ex.level * 1)) * emberMul();
   log(`[裂隙] 紧急脱出：带走 ${ex.gainedDm.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}（+${Math.max(1, Math.round(ex.level))} 余烬）`, 'bad');
   S.riftExpedition = null;
   save(S);
@@ -115,7 +117,7 @@ function settleRiftExpedition(dt) {
       const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * lv;
       S.dm = (S.dm || 0) + dmTotal;
       if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
-      S.riftEmber = (S.riftEmber || 0) + BALANCE.rift.emberDelve * lv;
+      S.riftEmber = (S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul();
       log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${BALANCE.rift.emberDelve * lv} 余烬`, 'good');
       if (toast) toast('🌌 深入完成：裂隙深处之物已带回');
     }
@@ -189,7 +191,7 @@ function grantRiftRewards(r, emberGain, embrace) {
     S.faith = (S.faith || 0) + 1;
     log(`裂隙神谕：+1 信仰`, 'good');
   }
-  S.riftEmber = (S.riftEmber || 0) + emberGain;
+  S.riftEmber = (S.riftEmber || 0) + emberGain * emberMul();
   return dmGain;
 }
 
@@ -290,7 +292,7 @@ export function renderRiftPanel(container) {
     });
     return;
   }
-  let html = `<div class="rift-tab-desc">深渊裂隙：最深处连接着虚空之底。封印/拥抱/深入均积累裂隙余烬（跨转生保留），升级裂隙科技。</div>
+  let html = `<div class="rift-tab-desc">深渊裂隙：最深处连接着虚空之底。封印/拥抱/深入均积累裂隙余烬（跨转生保留，余烬获取与腐化状态无关——免疫腐化仅免除深入惩罚，不断余烬供给），升级裂隙科技。</div>
     <div class="off-stat"><span>裂隙余烬</span><b style="color:var(--accent)">${S.riftEmber || 0}</b></div>
     <div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${Math.round(riftSpawnSec() / 60)} 分钟</b></div>

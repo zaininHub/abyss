@@ -140,6 +140,21 @@ export const BALANCE = {
     { id: 'faith_shrine', name: '信仰圣龛',   cat: 'X', cap: 1, base: 3e5, growth: 1, unlockTech: null, fx: null, desc: '立誓信仰：本局与转生均走向信仰传播者线（购买后其余两栋封印）' },
   ],
   // v2.2：定向建筑 ↔ 故事线 双射
+  // v2.7.3 ⑤：轮回（终极重置）——回响获取克制：8×√(本局成就评分)，单次上限 100；
+  // 升级克制：基准 50 × 1.6^级，cap 3~5，回响池有限 → 自然克制增长
+  reincarn: {
+    echoBase: 8, echoCap: 100,
+    scoreWeights: { prestige: 2, delve: 0.5, ember: 0.1, faith: 0.05 },
+    needEp: 1e9, // 本局累计 EP ≥ 10 亿才可轮回（且本局 ≥ 1 次晋升）
+    upgBase: 50, upgGrowth: 1.6,
+    upgs: [
+      { id: 'echo_global', name: '回响增幅', cap: 5, desc: '回响全局倍率 ×1.3/级（叠乘）' },
+      { id: 'echo_rift', name: '裂隙共鸣', cap: 3, desc: '裂隙余烬获取 ×2/级' },
+      { id: 'echo_delve', name: '深潜共振', cap: 3, desc: '深潜产出 ×1.5/级' },
+      { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: '信仰产出 ×1.5/级' },
+      { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 ×2/级' },
+    ],
+  },
   crossroadToLine: { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' },
   lineToCrossroad: { line_order: 'order_pillar', line_abyss: 'abyss_anchor', line_faith: 'faith_shrine' },
   // v2.4：族升级仅保留产出族（组E 非锚点 3 座）。扩容族（组D）随 KG 模式改造整体移除——
@@ -201,7 +216,7 @@ export const BALANCE = {
     emberSeal: 10, emberEmbrace: 8, emberDelve: 5,
     upgBase: 20, upgGrowth: 1.6,
     upgrades: {
-      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔 -25%/级（20 分钟 → 下限 6 分钟）' },
+      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现更快：间隔缩短 25%/级（20 分钟 → 15 分钟 → 11 分钟 → 8 分钟 → 6 分钟，下限 6 分钟）' },
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级（下限 50%）' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片（VS）奖励 +50%/级（深潜联动）' },

@@ -25,7 +25,7 @@ rec('V3 顶栏信仰 2 位小数', main.includes("(S.faith || 0).toFixed(2)"), '
 rec('V3 宗教面板余额 2 位小数', relm.includes("(S.faith || 0).toFixed(2)"), 'panel');
 // ④ 晋升文案 + 暗色
 rec('V4 未达标按钮文案（晋升转生 暗置 + 独立状态行「未达标：还差 N EP（%）」）', prestige.includes('>晋升转生</button>') && prestige.includes('未达标：还差 ') && prestige.includes('prestige-status'), '');
-rec('V4 未达标原因行（还差 N EP）', prestige.includes('还差 ') && prestige.includes('未达标时按钮暗置不可点'), '');
+rec('V4 未达标原因行（还差 N EP + 点击会提示）', prestige.includes('还差 ') && prestige.includes('未达标时按钮暗置'), '');
 rec('V4 按钮暗色样式', css.includes('background: #14161c !important') && css.includes('.btn:disabled'), '');
 // ⑤ 信仰超长线
 rec('V5 神谕塔（信仰产出 ×1.15/级，需圣印≥3）', rel.includes('ORACLE') && relm.includes('sealLevel() < 3'), '');

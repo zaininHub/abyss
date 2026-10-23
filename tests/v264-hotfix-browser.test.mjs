@@ -42,9 +42,9 @@ try {
     const pre = await page.evaluate(() => {
       const btn = document.getElementById('prestige-btn');
       const st = document.querySelector('.prestige-status');
-      return { disabled: btn.disabled, txt: st ? st.textContent.trim() : '', note: document.querySelector('#prestige-panel') ? document.querySelector('#prestige-panel').textContent.includes('晋升条件') : false };
+      return { disabled: btn.disabled, noClass: btn.className.includes('no'), txt: st ? st.textContent.trim() : '', note: document.querySelector('#prestige-panel') ? document.querySelector('#prestige-panel').textContent.includes('晋升条件') : false };
     });
-    rec('V2 晋升未达标按钮 disabled + 状态行文案（未达标：还差 N EP（%））', pre.disabled === true && pre.txt.includes('未达标：还差') && pre.note === true, pre.txt);
+    rec('V2 晋升未达标按钮暗置（可点提示）+ 状态行文案（未达标：还差 N EP（%））', pre.disabled === false && pre.noClass === true && pre.txt.includes('未达标：还差') && pre.note === true, pre.txt);
     await page.close();
   }
   // V3 信仰超长线：神谕塔购买（圣印≥3、信仰充足）

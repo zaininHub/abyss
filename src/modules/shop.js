@@ -393,7 +393,9 @@ export function renderVehicles(container) {
     // 链首必须可购否则链永不推进（v2.3.2 §5.2 链提示废除，本判据保留不动）。
     const isNext = i === split.chainNextIdx;
     const el = (owned || isNext) ? makeVehicleItem(u) : makeVehicleLockedCard(u);
-    if (owned) vehicleItemEls.set(u.id, el);
+    // v2.7.3：链内下一项未购可购卡也入 vehicleItemEls——否则 refreshShopAffordability
+    // 灰态刷新覆盖不到它（EP 花掉后仍显示可点 → 点击才报 EP 不足）
+    if (owned || isNext) vehicleItemEls.set(u.id, el);
     container.appendChild(el);
   });
   // v2.3.1 ⑤：探采平台单组不拆分，「展开更多」交互移除（K = p + 1 窗口足够）

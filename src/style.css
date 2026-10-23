@@ -482,6 +482,7 @@ body {
   overflow: hidden;
 }
 
+.prestige-btn.no { opacity: .45; cursor: not-allowed; background: #14161c !important; border-color: var(--border) !important; color: var(--text-3) !important; } /* v2.7.3：晋升未达标暗置（可点击提示原因，非 disabled 静默） */
 .prestige-status { margin-top:8px; font-size:13px; font-weight:600; }
 .prestige-status.ok { color: var(--good); }
 .prestige-status.no { color: var(--bad); }
@@ -1013,3 +1014,22 @@ body {
 .tentacle-deco { filter: drop-shadow(0 0 6px rgba(57, 197, 207, 0.35)); }
 .relic-card { transition: border-color .15s, box-shadow .15s; }
 .relic-card:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
+
+/* v2.7.3 ⑥ 故事线图鉴 */
+.codex-line { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background: rgba(255,255,255,.02); }
+.codex-line-name { color: var(--accent); font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+.codex-desc { color: var(--text-2); font-size: 11px; margin-bottom: 6px; line-height: 1.5; }
+.codex-chs { display: flex; flex-direction: column; gap: 3px; }
+.codex-ch { padding: 4px 6px; border-left: 2px solid var(--border); font-size: 11px; }
+.codex-ch.on { border-left-color: var(--green, #3fb950); }
+.codex-ch.locked { border-left-color: var(--red, #f85149); opacity: .55; }
+.codex-ch-name { color: var(--text-1); }
+.codex-ch-desc { color: var(--text-2); margin-top: 2px; line-height: 1.5; }
+
+/* v2.7.3 ⑦ 宠物交互动画：点击冒爱心（上浮淡出）+ 点击弹跳 */
+.pet-float .pet-item:active { transform: scale(.88); transition: transform .1s; }
+.pet-heart { position: fixed; pointer-events: none; font-size: 20px; z-index: 999; animation: petHeart .9s ease-out forwards; }
+@keyframes petHeart {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-26px) scale(1.35); opacity: 0; }
+}

@@ -15,8 +15,12 @@ export function petMult(key) {
     const base = petBaseMult(id, key);
     if (base === 1 && !p.mixed) continue;
     const levelMult = 1 + p.level * 0.02;
+    // v2.7.3 ⑦：等级里程碑——25/50/80/100 级各解锁一档额外加成（玩法深度）
+    const MILESTONES = [[25, 1.25], [50, 1.5], [80, 1.8], [100, 2.2]];
+    let mileMult = 1;
+    for (const [lv, mv] of MILESTONES) if (p.level >= lv) mileMult *= mv;
     const genMult = 1 + (p.gen - 1) * 0.5 * (1 + elv('fuse') * 0.1);
-    let pm = (p.mixed ? (p.mixed[key] || 1) : base) * levelMult * genMult;
+    let pm = (p.mixed ? (p.mixed[key] || 1) : base) * levelMult * genMult * mileMult;
     if (S.runTalent === 'pet_master' && key === 'global') pm *= 2;
     pm *= (1 + elv('pet') * 0.08);
     if (S.religion && S.religion.nature) pm *= 2;
@@ -26,7 +30,8 @@ export function petMult(key) {
 }
 
 export function petExpNeed(level) {
-  return Math.floor(1000 * Math.pow(level, 2.5));
+  // v2.7.3 ⑦：升级减速——需求曲线抬高（1000×l^2.5 → 1200×l^2.8），防止后期产出爆炸导致宠物等级飞涨
+  return Math.floor(1200 * Math.pow(level, 2.8));
 }
 
 export function gainPetExp(dt) {
@@ -37,7 +42,7 @@ export function gainPetExp(dt) {
   for (const id of ids) {
     const p = S.pets[id];
     if (!p || p.level >= 100) continue;
-    p.exp += computeCps() * dt * 0.5 * mult;
+    p.exp += computeCps() * dt * 0.4 * mult; // v2.7.3 ⑦：获取速率 0.5→0.4（升级整体放缓）
     while (p.exp >= petExpNeed(p.level) && p.level < 100) {
       p.exp -= petExpNeed(p.level);
       p.level++;
@@ -159,7 +164,8 @@ export function renderPetFloat(container) {
     for (const id of ids) {
       const def = PETS.find(x => x.id === id);
       const p = S.pets[id];
-      html += `<div class="pet-item" title="${p.name} Lv.${p.level}">${def ? def.icon : p.icon}</div>`;
+      const mile = p.level >= 100 ? '神临' : p.level >= 80 ? '异化' : p.level >= 50 ? '觉醒' : p.level >= 25 ? '成长' : '';
+      html += `<div class="pet-item" title="${p.name} Lv.${p.level}${mile ? ` · ${mile}` : ''}${p.level >= 25 ? `（里程碑×${(([[25,1.25],[50,1.5],[80,1.8],[100,2.2]].find(m => p.level >= m[0]) || [0,1])[1]).toFixed(2)}）` : ''}">${def ? def.icon : p.icon}</div>`;
     }
   }
   // v2.5.7 检查修复：相同内容不重建——否则每帧重设 innerHTML 会不断重启浮动动画
