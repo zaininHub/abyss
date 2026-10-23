@@ -32,10 +32,10 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline, fami
 }
 
 console.log('[L1] 静态基线');
-t('getAllBuildings() 恰好 55 栋且 ID 唯一（v2.6.3 删 B 分区 7 栋后）', () => {
+t('getAllBuildings() 恰好 58 栋且 ID 唯一（v2.7.5 新增 3 仓库后）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 55, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 55, 'ID 必须唯一');
+  assert.equal(all.length, 58, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 58, 'ID 必须唯一');
 });
 t('级制红线恒真：非扩容类静态 cap ≤ 20；unlimited 扩容类豁免（v2.4 KG 无限化）', () => {
   for (const b of getAllBuildings()) {
@@ -69,7 +69,7 @@ t('不做清单交集空：族升级仅产出白名单(3)；扩容类（组D 全
   const crossIds = ['order_pillar', 'abyss_anchor', 'faith_shrine'];
   for (const id of crossIds) assert.ok(!inFam.includes(id), `定向建筑 ${id} 不得入族`);
   // 组D 建筑仍被 familyOfBuilding 映射为 'D'（capOf 对 unlimited 恒返回 Infinity，族档对其无钳制）
-  assert.equal(inFam.length, 11, `组D(8 含新增 3)+白名单(3) 应共 11 栋，实际 ${inFam.length}`);
+  assert.equal(inFam.length, 13, `组D(8 含新增 3)+白名单(3) 应共 13 栋，实际 ${inFam.length}`);
   for (const cat of ['A', 'B', 'C', 'F', 'G', 'H', 'I']) {
     assert.ok(!all.some(b => b.cat === cat && familyOfBuilding(b)), `组${cat} 不得入族（组B 整组不开放为 PM 终稿）`);
   }
@@ -169,6 +169,7 @@ t('unlimited 扩容类无硬顶：任意档数 capOf = Infinity（v2.4 替代原
 t('非族建筑（A/C/F/G/H/I/X、基础 4 栋与 B/E 乘算锚点）任意档数 capOf === 静态 cap（不被族升级抬升）', () => {
   for (const b of getAllBuildings()) {
     if (familyOfBuilding(b)) continue;
+    if (b.unlimited) continue; // unlimited 恒 Infinity，与下一条断言口径一致（非族抬升断言仅覆盖静态 cap 建筑）
     assert.equal(capOf(b, { familyUpgrades: { D: 3, output: 2 } }), b.cap ?? b.levels, `${b.id}(${b.cat}) 不得被族升级抬升`);
   }
 });

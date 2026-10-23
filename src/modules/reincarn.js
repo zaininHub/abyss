@@ -8,7 +8,7 @@
 import { S, save } from '../state.js';
 import { fmt } from './economy.js';
 import { BALANCE } from '../data/balance.js';
-import { toast, dirty } from '../main.js';
+import { toast, dirty, askConfirm } from '../main.js';
 import { spawnProject } from './projects.js';
 
 export function echoScore() {
@@ -99,51 +99,73 @@ export function buyEchoUpgrade(id) {
   return { ok: true };
 }
 
-// 渲染：晋升面板内轮回区块
+// 渲染：晋升面板内轮回区块（v2.7.5 ①：增量——结构一次构建，数值/状态/卡列表轻量更新）
 export function renderReincarn(container) {
   if (!container) return;
+  if (!container._echoBuilt) {
+    container._echoBuilt = true;
+    container.insertAdjacentHTML('beforeend', `<div id="echo-block" style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <b style="color:var(--accent);font-size:12px">轮回 · 第二层循环（晋升之上）</b>
+        <span style="font-size:11px;color:var(--text-2)" id="echo-stat">深渊回响 <b style="color:var(--accent)">0</b> · 已轮回 0 次</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-2);margin:6px 0;line-height:1.6" id="echo-desc">
+        结束当前发展：本轮成就结算为深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。
+        轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。回响获取与升级成本均严格克制。
+      </div>
+      <div style="font-size:11px;color:var(--red,#f85149);margin-bottom:6px" id="echo-status">未就绪</div>
+      <button class="btn reincarn-btn no" id="reincarn-btn" style="width:100%">轮回 · 结算回响（二次确认）</button>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-2)">回响商店（升级永久，跨轮回）</div>
+      <div id="echo-upg-list"></div>
+    </div>`);
+    container.querySelector('#reincarn-btn')?.addEventListener('click', () => {
+      // v2.7.5 ②：轮回二次确认弹窗（显示收益与重置范围，避免误触终局重置）
+      const ready2 = reincarnReady();
+      if (!ready2.ok) { if (toast) toast(ready2.reason); return; }
+      askConfirm('轮回 · 终极重置', `结算深渊回响 +${ready2.echo}（全局 +5%/点，跨轮回保留）。\n将清空本局（EP/升级/建筑/异兽/任务），保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。\n确认开始轮回？`, () => {
+        const r = doReincarn();
+        if (r.ok) {
+          if (toast) toast(`轮回完成：深渊回响 +${r.gain}（累计 ${r.total}）`);
+        } else if (toast) toast(r.reason);
+        dirty.prestige = true; dirty.top = true; dirty.shop = true;
+      });
+    });
+  }
   const ready = reincarnReady();
   const gain = echoGain();
-  let html = `<div style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <b style="color:var(--accent);font-size:12px">轮回（终极重置）</b>
-      <span style="font-size:11px;color:var(--text-2)">深渊回响 <b style="color:var(--accent)">${S.abyssEcho || 0}</b> · 已轮回 ${S.reincarned || 0} 次</span>
-    </div>
-    <div style="font-size:11px;color:var(--text-2);margin:6px 0;line-height:1.6">
-      结束当前发展：本轮成就结算为 <b style="color:var(--accent)">${gain}</b> 点深渊回响（单次上限 100），
-      回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。轮回清空本局（EP/升级/建筑/异兽），
-      保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。回响获取与升级成本均严格克制，不会失控增长。
-    </div>
-    <div style="font-size:11px;color:${ready.ok ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'};margin-bottom:6px">
-      ${ready.ok ? `可轮回：结算 +${gain} 回响（${fmt(S.runEarned || 0)} ≥ ${fmt(BALANCE.reincarn.needEp)} · 晋升 ${S.prestige || 0} ≥ 1）` : ready.reason}
-    </div>
-    <button class="btn reincarn-btn${ready.ok ? '' : ' no'}" id="reincarn-btn" style="width:100%">轮回 · 结算回响</button>
-    <div style="margin-top:10px;font-size:11px;color:var(--text-2)">回响商店（升级永久，跨轮回）</div>`;
-  for (const u of (BALANCE.reincarn.upgs || [])) {
-    const lv = (S.echoUpgrades && S.echoUpgrades[u.id]) || 0;
-    const cost = echoUpgradeCost(u.id);
-    const maxed = lv >= u.cap;
-    const afford = (S.abyssEcho || 0) >= cost;
-    html += `<div class="echo-upg ${maxed ? 'maxed' : ''}" data-echo-upg="${u.id}" style="cursor:pointer">
-      <div class="echo-upg-name">${u.name} <span class="echo-upg-lv">Lv.${lv}/${u.cap}</span></div>
-      <div class="echo-upg-desc">${u.desc}</div>
-      <div class="echo-upg-cost" style="color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 回响'}</div>
-    </div>`;
+  const st = container.querySelector('#echo-stat');
+  if (st) st.innerHTML = `深渊回响 <b style="color:var(--accent)">${S.abyssEcho || 0}</b> · 已轮回 ${S.reincarned || 0} 次`;
+  const ds = container.querySelector('#echo-desc');
+  if (ds) ds.innerHTML = `结束当前发展：本轮成就结算为 <b style="color:var(--accent)">${gain}</b> 点深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。`;
+  const sts = container.querySelector('#echo-status');
+  if (sts) {
+    sts.style.color = ready.ok ? 'var(--green,#3fb950)' : 'var(--red,#f85149)';
+    sts.textContent = ready.ok ? `可轮回：结算 +${gain} 回响（${fmt(S.runEarned || 0)} ≥ ${fmt(BALANCE.reincarn.needEp)} · 晋升 ${S.prestige || 0} ≥ 1）` : ready.reason;
   }
-  html += `</div>`;
-  container.insertAdjacentHTML('beforeend', html);
-  container.querySelector('#reincarn-btn')?.addEventListener('click', () => {
-    const r = doReincarn();
-    if (r.ok) {
-      if (toast) toast(`轮回完成：深渊回响 +${r.gain}（累计 ${r.total}）`);
-    } else if (toast) toast(r.reason);
-    dirty.prestige = true; dirty.top = true; dirty.shop = true;
-  });
-  container.querySelectorAll('[data-echo-upg]').forEach(el => {
-    el.addEventListener('click', () => {
-      const r = buyEchoUpgrade(el.dataset.echoUpg);
-      if (r.ok) { if (toast) toast('回响升级成功'); dirty.prestige = true; }
-      else if (toast) toast(r.reason);
+  const btn = container.querySelector('#reincarn-btn');
+  if (btn) btn.className = 'btn reincarn-btn' + (ready.ok ? '' : ' no');
+  // 回响商店卡列表局部重渲染（小范围 innerHTML，不影响按钮节点）
+  const list = container.querySelector('#echo-upg-list');
+  if (list) {
+    let html = '';
+    for (const u of (BALANCE.reincarn.upgs || [])) {
+      const lv = (S.echoUpgrades && S.echoUpgrades[u.id]) || 0;
+      const cost = echoUpgradeCost(u.id);
+      const maxed = lv >= u.cap;
+      const afford = (S.abyssEcho || 0) >= cost;
+      html += `<div class="echo-upg ${maxed ? 'maxed' : ''}" data-echo-upg="${u.id}" style="cursor:pointer">
+        <div class="echo-upg-name">${u.name} <span class="echo-upg-lv">Lv.${lv}/${u.cap}</span></div>
+        <div class="echo-upg-desc">${u.desc}</div>
+        <div class="echo-upg-cost" style="color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 回响'}</div>
+      </div>`;
+    }
+    list.innerHTML = html;
+    list.querySelectorAll('[data-echo-upg]').forEach(el => {
+      el.addEventListener('click', () => {
+        const r = buyEchoUpgrade(el.dataset.echoUpg);
+        if (r.ok) { if (toast) toast('回响升级成功'); dirty.prestige = true; }
+        else if (toast) toast(r.reason);
+      });
     });
-  });
+  }
 }

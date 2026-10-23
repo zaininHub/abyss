@@ -73,6 +73,22 @@ export function getTalentChoices() {
 
 export function renderPrestige(container) {
   if (!container) return;
+  // v2.7.5 ①：晋升面板增量渲染——结构一次构建，此后只更新数值 span/状态行/按钮，
+  // 不再整面板 innerHTML 重建（原每 2s 重建使按钮在慢速点击窗口被替换 → click 丢失）
+  if (!container._prgBuilt) {
+    container._prgBuilt = true;
+    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升转生</b>结算职级（第一层循环）→ 本局晋升 ≥1 且累计 EP ≥10 亿后可<b style="color:var(--purple)">轮回</b>（第二层循环），结算深渊回响（全局 +5%/点，跨轮回保留）。</div>
+      <div class="off-stat"><span>本局累计</span><b id="prg-run">0</b></div>
+      <div class="off-stat"><span>晋升需求</span><b id="prg-need">0</b></div>
+      <div class="off-stat"><span>可获得职级点</span><b id="prg-gain">0/1 PP</b></div>
+      <div class="off-stat"><span>可获得 RP</span><b id="prg-rpg">0/1</b></div>
+      <div class="off-stat"><span>可获得 ES</span><b id="prg-esg">0/1</b></div>
+      <div class="prestige-bar" id="prg-bar"><div id="prg-bar-fill" style="width:0%"></div></div>
+      <div class="prestige-status no" id="prg-status">未达标</div>
+      <button class="btn prestige-btn no" id="prestige-btn" title="">晋升转生</button>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-3)" id="prg-note"></div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display"></div>`;
+  }
   const need = prestigeNeed();
   const gain = prestigeGain();
   const rpg = prestigeRpGain();
@@ -81,18 +97,29 @@ export function renderPrestige(container) {
   const lack = Math.max(0, need - S.runEarned);
   const pct = Math.min(100, S.runEarned / need * 100);
   const reward = `${gain} PP · ${rpg} RP${esg >= 1 ? ' · ' + esg + ' ES' : ''}`;
-  container.innerHTML = `<div class="off-stat"><span>本局累计</span><b>${fmt(S.runEarned)}</b></div>
-    <div class="off-stat"><span>晋升需求</span><b>${fmt(need)}</b></div>
-    <div class="off-stat"><span>可获得职级点</span><b>${gain < 1 ? '0/1' : gain} PP</b></div>
-    <div class="off-stat"><span>可获得 RP</span><b>${rpg < 1 ? '0/1' : rpg}</b></div>
-    <div class="off-stat"><span>可获得 ES</span><b>${esg < 1 ? '0/1' : esg}</b></div>
-    <div class="prestige-bar"><div style="width:${pct}%"></div></div>
-    <div class="prestige-status ${ready ? 'ok' : 'no'}">${ready ? '已达标：可晋升转生' : '未达标：还差 ' + fmt(lack) + ' EP（' + pct.toFixed(0) + '%）'}</div>
-    <button class="btn prestige-btn${ready ? '' : ' no'}" id="prestige-btn" title="${ready ? '转生：本局产出清零，保留跨转生资产' : '晋升需求未达标：还差 ' + fmt(lack) + ' EP 本局累计（1 PP 起步）'}">晋升转生</button>
-    <div style="margin-top:6px;font-size:11px;color:var(--text-3)">${ready ? '转生将获得 ' + reward + '，跨转生资产（职级/RP/ES/宗教/裂隙/深潜）保留。' : '晋升条件：本局累计 ≥ ' + fmt(need) + ' EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。'}</div>
-    <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display">
-      ${S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : ''}
-    </div>`;
+  const run = container.querySelector('#prg-run');
+  if (run) run.textContent = fmt(S.runEarned);
+  const nd = container.querySelector('#prg-need');
+  if (nd) nd.textContent = fmt(need);
+  const g = container.querySelector('#prg-gain');
+  if (g) g.textContent = gain < 1 ? '0/1 PP' : gain + ' PP';
+  const rg = container.querySelector('#prg-rpg');
+  if (rg) rg.textContent = rpg < 1 ? '0/1' : rpg;
+  const eg = container.querySelector('#prg-esg');
+  if (eg) eg.textContent = esg < 1 ? '0/1' : esg;
+  const bar = container.querySelector('#prg-bar-fill');
+  if (bar) bar.style.width = pct + '%';
+  const st = container.querySelector('#prg-status');
+  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`; }
+  const btn = container.querySelector('#prestige-btn');
+  if (btn) {
+    btn.className = 'btn prestige-btn' + (ready ? '' : ' no');
+    btn.title = ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`;
+  }
+  const note = container.querySelector('#prg-note');
+  if (note) note.textContent = ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。`;
+  const td = container.querySelector('#talent-display');
+  if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
 }
 
 export function renderTalentModal(container) {

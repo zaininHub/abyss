@@ -46,7 +46,7 @@ try {
     const cs = getComputedStyle(el);
     return { name: cs.animationName, dur: cs.animationDuration, iter: cs.animationIterationCount };
   });
-  rec('浮标 petFloat 动画生效（2s infinite）', anim.name === 'petFloat' && anim.dur === '2s' && anim.iter === 'infinite', JSON.stringify(anim));
+  rec('浮标 petFloat 动画生效（2.2s infinite）', anim.name === 'petFloat' && anim.dur === '2.2s' && anim.iter === 'infinite', JSON.stringify(anim));
 
   // 真实鼠标 hover → animation none + transform scale(1.15)
   const box = await page.evaluate(() => {
@@ -60,7 +60,7 @@ try {
     const cs = getComputedStyle(el);
     return { name: cs.animationName, tr: cs.transform, cursor: getComputedStyle(document.getElementById('pet-float')).cursor };
   });
-  rec('hover 停动画 + scale(1.15) 生效', hover.name === 'none' && hover.tr.includes('1.15'), JSON.stringify(hover));
+  rec('hover 蠕动动画生效（petWrithe，v2.7.5 ③ 交互动画）', hover.name === 'petWrithe', JSON.stringify(hover));
   rec('浮标容器手型 cursor:pointer', hover.cursor === 'pointer', hover.cursor);
 
   // 鼠标移开（退出 hover，动画恢复）

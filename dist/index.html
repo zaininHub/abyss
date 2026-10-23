@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.7.4</title>
+<title>深渊效能工作台 v2.7.5</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-D8L4_kwU.js"></script>
-  <link rel="stylesheet" href="./assets/index-7dUV2PM9.css">
+  <script defer src="./assets/index-CA9vSHZl.js"></script>
+  <link rel="stylesheet" href="./assets/index-DjSL1heM.css">
 </head>
 <body>
 <div id="app">
@@ -22,6 +22,7 @@
     <div class="stat" title="信仰：神龛/万神殿随机产出，用于开启宗教路线。"><b>🙏信仰</b><span id="h-faith">0</span></div>
     <div class="stat" title="异兽饼干（PT）：喂养异兽的经验资源。来源：宠物乐园 / 伊甸花园 持续产出；解锁：在商店购入「宠物乐园」（PT 面板随之开启）。"><b>🍪异兽饼干</b><span id="h-pt">0</span></div>
     <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
+    <div class="stat" id="reincarn-stat" title="轮回：终极循环，结算深渊回响（全局 +5%/点）。鼠标悬停查看加成明细。" style="display:none"><b>♻️轮回</b><span id="h-reincarn">0</span></div>
     <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
     <!-- v2.0 潮汐状态 -->
     <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
@@ -157,17 +158,8 @@
           <div id="shop-list" class="shop-grid"></div>
           <h3 style="margin-top:12px">线程强化</h3>
           <div id="thread-shop" class="shop-grid"></div>
-          <h3 style="margin-top:12px" id="vehicle-title">探采平台 <span id="v21-overflow-stat" style="font-size:12px;font-weight:400;color:var(--text-2)"></span></h3>
-          <div id="vehicle-collect" class="vehicle-collect" title=""></div>
-          <div id="vehicle-shop" class="shop-grid"></div>
-          <h3 style="margin-top:12px" id="dm-shop-title">深渊商店</h3>
-          <div id="dm-shop" class="shop-grid"></div>
           <h3 style="margin-top:12px" id="v21-title">效能建筑</h3>
           <div id="v21-building-list" class="shop-grid"></div>
-          <h3 style="margin-top:12px" id="crossroad-title">命运的岔路口 <span style="font-size:12px;font-weight:400;color:var(--text-2)">三选一立誓 · 亦可保持中立（不买不锁，可走到终章）</span></h3>
-          <div id="crossroad-list" class="shop-grid"></div>
-          <h3 style="margin-top:12px" id="family-upgrade-title">族升级 <span style="font-size:12px;font-weight:400;color:var(--text-2)">RP 购买 · 扩容族与产出族的等级上限扩展 · 跨转生保留</span></h3>
-          <div id="family-upgrade-list" class="shop-grid"></div>
           <h3 style="margin-top:12px" id="bld-title">设施</h3>
           <div id="building-list" class="shop-grid"></div>
         </div>
@@ -183,11 +175,18 @@
         <!-- v2.5 ④：研究点（RP 独立栏目，EP 首次溢出解锁） -->
         <div class="tab-pane" id="tab-rp">
           <div id="rp-panel"></div>
+          <h3 style="margin-top:16px" id="family-upgrade-title">族升级 <span style="font-size:12px;font-weight:400;color:var(--text-2)">RP 购买 · 扩容族与产出族的等级上限扩展 · 跨转生保留</span></h3>
+          <div id="family-upgrade-list" class="shop-grid"></div>
         </div>
 
         <!-- 异兽 -->
         <div class="tab-pane" id="tab-relics">
           <div id="relics-panel"></div>
+          <h3 style="margin-top:16px" id="vehicle-title">探采平台 <span id="v21-overflow-stat" style="font-size:12px;font-weight:400;color:var(--text-2)"></span></h3>
+          <div id="vehicle-collect" class="vehicle-collect" title=""></div>
+          <div id="vehicle-shop" class="shop-grid"></div>
+          <h3 style="margin-top:16px" id="dm-shop-title">深渊商店</h3>
+          <div id="dm-shop" class="shop-grid"></div>
         </div>
         <div class="tab-pane" id="tab-pets">
           <div id="pet-grid" class="pet-grid"></div>
@@ -220,6 +219,8 @@
         </div>
         <div class="tab-pane" id="tab-storyline">
           <div id="storyline-panel"></div>
+          <h3 style="margin-top:16px" id="crossroad-title">命运的岔路口 <span style="font-size:12px;font-weight:400;color:var(--text-2)">三选一立誓 · 亦可保持中立（不买不锁，可走到终章）</span></h3>
+          <div id="crossroad-list" class="shop-grid"></div>
         </div>
       </div>
     </div>

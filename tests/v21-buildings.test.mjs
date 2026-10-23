@@ -21,13 +21,13 @@ function t(name, fn) {
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 console.log('[1] 61 栋注册表 & 级制红线（组长硬性要求：非扩容类静态 cap ≤ 20；v2.4 扩容类 unlimited 豁免）');
-t('getAllBuildings() 恰好 55 栋且 ID 唯一（v2.6.3 反馈①：B 分区移除 -7）', () => {
+t('getAllBuildings() 恰好 58 栋且 ID 唯一（v2.7.5 新增 3 仓库后）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 55, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 55, 'ID 必须唯一');
+  assert.equal(all.length, 58, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 58, 'ID 必须唯一');
 });
-t('既有 4 座 + v2.1 表 47 项 + 定向 3 栋 = 54（v2.6.3 反馈①：B 分区移除）', () => {
-  assert.equal(V21_BUILDINGS.length, 47);
+t('既有 4 座 + v2.1 表 50 项 + 定向 3 栋 = 57（v2.7.5 新增 3 仓库；存储/蒸馏经 via:upgrade 单独注册）', () => {
+  assert.equal(V21_BUILDINGS.length, 50);
 });
 t('级制红线：非扩容类静态 cap/levels ≤ 20 且 ≥ 1；unlimited 扩容类豁免（禁止无限堆叠仅限非扩容）', () => {
   for (const b of getAllBuildings()) {
@@ -69,6 +69,7 @@ t('价格曲线字段完整：base ≥1、growth ∈ [1.15, 1.5]（PM「价格�
 t('unlockRp 定价 = 原科技 RP × 1.5（向上取整）', () => {
   for (const b of V21_BUILDINGS) {
     if (!b.unlockTech) continue;
+    if (!BALANCE.legacyTechRp[b.unlockTech]) continue; // v2.7.4 阶段仓库解锁条件（storage3 等）非钥匙科技，无原 RP 定价
     const expect = Math.ceil((BALANCE.legacyTechRp[b.unlockTech] || 0) * BALANCE.buildingUnlockRatio);
     assert.equal(unlockRpV21(b), expect, `${b.id} 解锁 RP 定价不符`);
     assert.ok(expect > 0, `${b.id} 的 unlockTech=${b.unlockTech} 无原 RP 记录`);

@@ -40,7 +40,13 @@ try {
         return { x: rc.x + rc.width / 2, y: rc.y + rc.height / 2 };
       });
       await page.mouse.click(r.x, r.y);
-      await new Promise(r2 => setTimeout(r2, 500));
+      await new Promise(r2 => setTimeout(r2, 300));
+      // v2.7.5 ②：轮回二次确认——按钮点击先弹 confirm-modal，确认（#confirm-ok）后才执行
+      const okBtn = await page.evaluate(() => { const ok = document.getElementById('confirm-ok'); return !!ok; });
+      if (okBtn) {
+        await page.evaluate(() => document.getElementById('confirm-ok').click());
+        await new Promise(r2 => setTimeout(r2, 500));
+      }
       const s = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2')));
       out.reincarned = s.reincarned; out.echo = s.abyssEcho; out.ep = s.ep; out.runEarned = s.runEarned;
     }

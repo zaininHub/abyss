@@ -128,6 +128,13 @@ function renderStorylinePanel() {
     html += `</div>`;
   }
   el.innerHTML = html;
+  // v2.7.5 ⑤：命运的岔路口移入故事线 tab（原在建筑区）——状态/立誓跟随故事线叙事
+  const crEl = document.getElementById('crossroad-list');
+  if (crEl) {
+    const crTitle = document.getElementById('crossroad-title');
+    if (crTitle) crTitle.style.display = S.crossroad === 'inactive' ? 'none' : '';
+    renderCrossroadBuildings(crEl);
+  }
 }
 
 // ========== v2.2 岔路口状态机（替代 v2.0 弹窗触发：资产持有即走向，open 不买是合法中立路径） ==========
@@ -161,18 +168,20 @@ function render() {
     if (shopEl) renderShop(shopEl);
     const threadEl = document.getElementById('thread-shop');
     if (threadEl) renderThreadShop(threadEl);
-    const vehEl = document.getElementById('vehicle-shop');
-    if (vehEl) renderVehicles(vehEl);
-    const dmEl = document.getElementById('dm-shop');
-    if (dmEl) renderDmShop(dmEl);
     const bldEl = document.getElementById('building-list'); // v1.3 B：设施分区
     if (bldEl) renderBuildings(bldEl);
     const v21El = document.getElementById('v21-building-list'); // v2.1：效能建筑分区
     if (v21El) renderV21Buildings(v21El);
-    const crEl = document.getElementById('crossroad-list'); // v2.2：命运的岔路口分区
-    if (crEl) renderCrossroadBuildings(crEl);
-    const famEl = document.getElementById('family-upgrade-list'); // v2.2：族升级分区
-    if (famEl) renderFamilyUpgrades(famEl);
+    // v2.7.5 ⑦：探采/深渊商店移入遗物 tab、岔路口移入故事线、族升级移入研究点——
+    // 容器跨 tab 但渲染仍随 shop 周期执行（隐藏 tab 渲染无碍，保证全页 DOM 查询与门控标题一致）
+    const vehEl2 = document.getElementById('vehicle-shop');
+    if (vehEl2) renderVehicles(vehEl2);
+    const dmEl2 = document.getElementById('dm-shop');
+    if (dmEl2) renderDmShop(dmEl2);
+    const crEl2 = document.getElementById('crossroad-list');
+    if (crEl2) renderCrossroadBuildings(crEl2);
+    const famEl2 = document.getElementById('family-upgrade-list');
+    if (famEl2) renderFamilyUpgrades(famEl2);
     dirty.shop = false;
   }
   if (dirty.rp) { renderRpPanel(); dirty.rp = false; } // v2.7.4 ⑦：RP 蒸馏后面板刷新
@@ -306,6 +315,16 @@ function renderTop() {
   const hPt = document.getElementById('h-pt');
   const hDm = document.getElementById('h-dm');
   const hBuff = document.getElementById('h-buff');
+  // v2.7.5 ⑧：顶部轮回次数 + 悬停弹框显示回响加成（全局 +5%/点）
+  const hReincarn = document.getElementById('h-reincarn');
+  const reincarnStat = document.getElementById('reincarn-stat');
+  if (hReincarn && reincarnStat) {
+    const n = S.reincarned || 0;
+    const echo = S.abyssEcho || 0;
+    reincarnStat.style.display = n > 0 ? '' : 'none';
+    hReincarn.textContent = n;
+    reincarnStat.title = `轮回 ${n} 次 · 深渊回响 ${echo} · 全局产出 +${(echo * 5).toFixed(0)}%（每点回响 +5%，跨轮回保留）`;
+  }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
   if (hSalary) hSalary.textContent = fmt(staffSalaryPerSec()) + '/s'; // v2.4.1：薪资消耗（负面红，已含入 cps 净额）
@@ -545,7 +564,11 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') renderRpPanel(); // v2.5 ④：研究点独立栏目
+  if (id === 'rp') { renderRpPanel(); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④：研究点独立栏目 + v2.7.5 ④：族升级（RP 购买）并入研究点
+  if (id === 'relics') {
+    renderVehicles(document.getElementById('vehicle-shop'));
+    renderDmShop(document.getElementById('dm-shop'));
+  } // v2.7.5 ⑦：探采平台与深渊商店并入遗物 tab（DM 资源系统合一）
   if (id === 'pets') dirty.pets = true;
   if (id === 'prestige') dirty.prestige = true;
   if (id === 'offline') {
@@ -798,10 +821,11 @@ function bindEvents() {
   document.getElementById('pet-float')?.addEventListener('click', (e) => {
     const item = e.target.closest('.pet-item');
     if (!item) return;
-    const icon = item.textContent.trim() || '🐾';
+    const icon = item.textContent.trim() || '♥';
     const heart = document.createElement('div');
     heart.className = 'pet-heart';
-    heart.textContent = icon;
+    // v2.7.5 ③：爱心改用 ♥ 字符（emoji 在系统缺字体时渲染为蓝色方块）
+    heart.textContent = '♥';
     item.style.animation = 'none';
     void item.offsetWidth;
     item.style.animation = '';
@@ -850,7 +874,7 @@ function exportSave() {
 
 // v2.5.4 ①：通用二级确认弹框（title / 正文 / 取消-确认）
 let _confirmOk = null;
-function askConfirm(title, text, onYes) {
+export function askConfirm(title, text, onYes) {
   const m = document.getElementById('confirm-modal');
   const t = document.getElementById('confirm-title');
   const x = document.getElementById('confirm-text');
@@ -1397,7 +1421,12 @@ function tick(now) {
 
   // v2.1 R2：仅保留纯文本刷新的脏标记（top/hero 只更新 textContent，不重建可点击节点）；
   // 移除旧版无条件 dirty.projects —— 任务面板 100ms 全量重建是「奖励领不了」的根因
-  dirty.top = true; dirty.hero = true; dirty.prestige = true; dirty.story = true;
+  dirty.top = true; dirty.hero = true;
+  // v2.7.5 ①：晋升面板（含轮回区块）与故事线面板重建降频至每 2s——
+  // 原每 tick 无条件置位 → renderPrestige+renderReincarn+renderStorylinePanel 每 100ms innerHTML 重建
+  // → 晋升/轮回/岔路口按钮每帧被替换 → 慢速点击（mousedown/mouseup 间隔 >100ms）丢失（「大量点击才成功一次」）
+  // → 轮回卡/岔路口卡 hover 每帧替换闪烁。购买/转生等事件仍即时置位，此处仅降频兜底刷新
+  if ((frame % 20) === 0) { dirty.prestige = true; dirty.story = true; }
 
   // v2.7.4 ①：遗物 gate 状态周期刷新（DM 满足但进度不足时，进度推进后按钮状态及时更新，
   // 避免刷新页面才可买）——独立于 5s 商店节流，每 2s 置位，render() 每 tick 消费

@@ -427,35 +427,50 @@ body {
 /* ========== 浮动异兽 ========== */
 .pet-float {
   position: fixed;
-  bottom: 12px;
-  left: 12px;
+  bottom: 14px;
+  left: 14px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   z-index: 50;
   cursor: pointer;
 }
 
+/* v2.7.5 ③：宠物浮标像素克苏鲁化——紫黑深渊底 + 青霓虹环 + 像素描边，hover 光晕蠕动 */
 .pet-float .pet-item {
-  width: 36px;
-  height: 36px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  width: 38px;
+  height: 38px;
+  background: radial-gradient(circle at 35% 30%, #3a1f5c 0%, #241238 55%, #170c26 100%);
+  border: 2px solid #7b1fa2;
+  box-shadow: 0 0 0 1px #170c26, 0 0 10px rgba(0, 229, 255, .25), inset 0 0 8px rgba(0, 229, 255, .18);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  /* v2.5.9 像素克苏鲁检查：ease-in-out 平滑浮动 → steps(3) 三帧跳变（老像素帧动画手感） */
-  animation: petFloat 2s steps(3, end) infinite;
+  font-size: 19px;
+  filter: drop-shadow(0 0 4px rgba(123, 31, 162, .6));
+  /* v2.5.9 像素克苏鲁：离散步进浮动（老像素帧动画手感） */
+  animation: petFloat 2.2s steps(3, end) infinite;
   transition: transform .15s;
 }
 
-/* v2.5.7 检查修复：hover 停浮动动画直接放大——animation 的 transform 关键帧优先级高于
-   transition，原写法 scale 永不生效；暂停动画后 transition 接管 transform，反馈可见 */
-.pet-float .pet-item:hover { animation: none; transform: scale(1.15); }
+.pet-float .pet-item:hover {
+  animation: petWrithe .5s steps(3, end) infinite;
+  transform: scale(1.18);
+  box-shadow: 0 0 0 1px #170c26, 0 0 18px rgba(0, 229, 255, .55), inset 0 0 12px rgba(0, 229, 255, .35);
+}
+
+.pet-float .pet-item:active { animation: none; transform: scale(.9); transition: transform .1s; }
 
 .pet-float .pet-item:nth-child(2) { animation-delay: .3s; }
 .pet-float .pet-item:nth-child(3) { animation-delay: .6s; }
+
+/* v2.7.5 ③：hover 蠕动帧（像素克苏鲁触感：左右扭动 + 上下抽） */
+@keyframes petWrithe {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(-1.5px) translateY(-1px) rotate(-3deg); }
+  50% { transform: translateX(1.5px) translateY(0) rotate(3deg); }
+  75% { transform: translateX(-1px) translateY(1px) rotate(-2deg); }
+}
 
 @keyframes petFloat {
   0%, 100% { transform: translateY(0); }
@@ -1028,7 +1043,15 @@ body {
 
 /* v2.7.3 ⑦ 宠物交互动画：点击冒爱心（上浮淡出）+ 点击弹跳 */
 .pet-float .pet-item:active { transform: scale(.88); transition: transform .1s; }
-.pet-heart { position: fixed; pointer-events: none; font-size: 20px; z-index: 999; animation: petHeart .9s ease-out forwards; }
+.pet-heart {
+  position: fixed;
+  pointer-events: none;
+  font-size: 22px;
+  color: #ff3b6b;
+  text-shadow: 0 0 6px rgba(255, 59, 107, .8), 0 0 12px rgba(0, 229, 255, .4);
+  z-index: 999;
+  animation: petHeart 1s steps(4, end) forwards;
+}
 @keyframes petHeart {
   0% { transform: translateY(0) scale(1); opacity: 1; }
   100% { transform: translateY(-26px) scale(1.35); opacity: 0; }

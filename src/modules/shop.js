@@ -90,10 +90,15 @@ export function buyDmUpgrade(u) {
 }
 
 export function buyOfflineUpgrade(o) {
+  // v2.7.5 ⑥：离线升级改为 EP + RP 双消耗（EP 门槛随级提高，RP 主消耗不变）
+  const epCost = o.epCost || 0;
+  if (S.ep < epCost) return false;
   if (S.rp < o.cost) return false;
   if (o.req && !S.offUpgrades[o.req]) return false;
+  S.ep -= epCost;
   S.rp -= o.cost;
   S.offUpgrades[o.id] = true;
+  save(S); // v2.7.5 ⑥：购买即落盘（与主商店 v2.7.1 同口径，消除 5s 节流保存窗口）
   return true;
 }
 
@@ -540,7 +545,7 @@ export function renderOfflineUpgrades(container) {
   offSection.updateCount(owned.length);
   const renderAvail = (o, reqOk) => `<div class="off-upg" data-buy="${o.id}" style="${reqOk ? 'cursor:pointer' : 'opacity:.5;cursor:not-allowed'}">
     <span>${o.name}<br><span style="color:var(--text-3)">${o.desc}${!reqOk ? '（需先解锁前置）' : ''}</span></span>
-    <span class="cost">${o.cost} RP</span></div>`;
+    <span class="cost">${o.cost} RP + ${fmt(o.epCost || 0)} EP</span></div>`;
   for (const o of avail) container.insertAdjacentHTML('beforeend', renderAvail(o, true));
   for (const o of locked) container.insertAdjacentHTML('beforeend', renderAvail(o, false));
   // v1.3 修复：离线升级此前没有任何购买监听（不可购买的死 UI），补容器级委托

@@ -82,7 +82,7 @@ function mkState(extra = {}) {
 // ========== V4 hover 修复（源码断言：hover 停动画 + scale） ==========
 {
   const css = await import('node:fs').then(fs => fs.readFileSync('src/style.css', 'utf-8'));
-  rec('V4 hover 停浮动动画（animation:none + scale 1.15）', css.includes('.pet-float .pet-item:hover { animation: none; transform: scale(1.15); }'), 'css');
+  rec('V4 hover 蠕动动画（petWrithe + scale 1.18，v2.7.5 ③ 交互动画）', css.includes('animation: petWrithe .5s steps(3, end) infinite') && css.includes('transform: scale(1.18)'), 'css');
   const main = await import('node:fs').then(fs => fs.readFileSync('src/main.js', 'utf-8'));
   rec('V4 tick 5s 低频刷新宠物 UI', main.includes('S._petUiTimer = (S._petUiTimer || 0) + dt') && main.includes('>= 5'), 'main');
 }

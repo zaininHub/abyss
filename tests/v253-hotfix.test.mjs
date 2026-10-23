@@ -107,7 +107,7 @@ const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromiu
 // ========== V4 转生界面 0/1 ==========
 {
   const prestigeSrc = fs.readFileSync('src/modules/prestige.js', 'utf-8');
-  rec('V4 转生界面：PP/RP/ES 三行未达标显示 0/1', prestigeSrc.includes("gain < 1 ? '0/1' : gain") && prestigeSrc.includes("rpg < 1 ? '0/1' : rpg") && prestigeSrc.includes("esg < 1 ? '0/1' : esg"), '三行源码');
+  rec('V4 转生界面：PP/RP/ES 三行未达标显示 0/1', prestigeSrc.includes("gain < 1 ? '0/1 PP' : gain + ' PP'") && prestigeSrc.includes("rpg < 1 ? '0/1' : rpg") && prestigeSrc.includes("esg < 1 ? '0/1' : esg"), '三行源码');
   // 浏览器实跑：未达标档显示 0/1
   {
     const page = await browser.newPage();

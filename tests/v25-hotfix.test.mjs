@@ -104,7 +104,7 @@ const inject = (page, save) => {
 // ===== V2：减少点击类任务（类型加权） =====
 {
   const modSrc = readFileSync(new URL('../src/modules/projects.js', import.meta.url), 'utf8');
-  rec('V2 源码：任务类型加权（click 20% / EP 80%）', /Math\.random\(\) < 0\.2/.test(modSrc), '');
+  rec('V2 源码：click 为新手任务仅首出（_clickTutorialDone 门控，v2.7.4 ⑤）', /_clickTutorialDone/.test(modSrc), '');
   // 运行时采样：新档连续生成 30 个任务，click 占比应 < 40%（期望 ~20%）
   const page = await browser.newPage();
   await inject(page, saveBase({ ep: 50000, cultists: [{ name: 'T0', output: 3, mood: '正常', moodTimer: 999 }] }));
@@ -154,7 +154,7 @@ const inject = (page, save) => {
   await sleep(300);
   const open = await page2.evaluate(() => document.getElementById('rp-panel').textContent);
   rec('V4 溢出解锁：toast 出现「新资源：研究点 RP」', toastTxt.includes('研究点 RP'), `toast="${toastTxt}"`);
-  rec('V4 溢出解锁：研究点面板显示当前 RP 与转换比例（v2.5.3 文案：20,000 溢出 EP → 1 RP）', open.includes('当前 RP') && open.includes('20,000 溢出 EP → 1 RP'), `text="${open.slice(0, 40)}…"`);
+  rec('V4 溢出解锁：研究点面板显示当前 RP 与蒸馏效率（v2.7.4 ⑦ RP 蒸馏改造后文案）', open.includes('当前 RP') && open.includes('蒸馏效率'), `text="${open.slice(0, 40)}…"`);
   await page2.screenshot({ path: EV + '/v4-rp-open.png' });
   await page2.close();
 }
