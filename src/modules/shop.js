@@ -280,6 +280,7 @@ export function renderThreadShop(container) {
   const split = chainSplit('thread', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
   // v2.3.1 ⑤（rev18 9.3 分组表）：消耗优化在前（链首能量合剂在此组）、产出强化在后
   const COST_IDS = ['subsist1', 'subsist2', 'subsist3', 'mem', 'cache']; // 能量合剂/循环供氧/生物打印餐/内存扩容/缓存优化
+  // v2.7.2：subsist1/2/3/mem 一次性（maxLevel:1，效果按拥有判定，多购无效已封顶）；cache 无限（存储上限 +5000/级）消耗 -25% 一次性
   renderChainedGroups(container, split, [
     { title: '消耗优化', test: u => COST_IDS.includes(u.id) },
     { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速

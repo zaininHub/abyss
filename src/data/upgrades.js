@@ -60,13 +60,13 @@ export const UPGRADES = [
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:1e14,cps:0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
-  {id:'subsist1',name:'能量合剂',base:1e5,cps:0,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`},
-  {id:'subsist2',name:'循环供氧',base:1e7,cps:0,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`},
-  {id:'subsist3',name:'生物打印餐',base:1e9,cps:0,cat:'thread',desc:'线程消耗 -50%'},
+  {id:'subsist1',name:'能量合剂',base:1e5,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`},
+  {id:'subsist2',name:'循环供氧',base:1e7,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`},
+  {id:'subsist3',name:'生物打印餐',base:1e9,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'},
   {id:'cpu',name:'CPU 超频',base:1e4,cps:0,cat:'thread',desc:'所有线程产出 +50%'},
-  {id:'mem',name:'内存扩容',base:1e5,cps:0,cat:'thread',desc:'所有线程消耗 -15%'},
+  {id:'mem',name:'内存扩容',base:1e5,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'},
   {id:'gpu',name:'GPU 加速',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 ×2'},
-  {id:'cache',name:'缓存优化',base:1e5,cps:0,cat:'thread',desc:'线程消耗 -25%，EP 存储上限 +5000/级（v2.4 无限升级）'},
+  {id:'cache',name:'缓存优化',base:1e5,cps:0,cat:'thread',desc:'线程消耗 -25%（一次性），EP 存储上限 +5000/级（v2.4 无限升级）'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:500,cps:5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:5e4,cps:50,desc:'重装地面采集'},

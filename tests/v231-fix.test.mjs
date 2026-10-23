@@ -169,7 +169,7 @@ const saveBase = (over = {}) => ({
       hintCount: document.querySelectorAll('.chain-hint').length,
     };
   });
-  rec('⑦D1 thread 首项「能量合剂×1」（定义序，已购 subsist1 不漂移）', /能量合剂×1/.test(c.threadFirst || ''), String(c.threadFirst));
+  rec('⑦D1 thread 首项「能量合剂满」（定义序，已购 subsist1 不漂移；v2.7.2 消耗升级一次性 maxLevel:1 → Lv.1/1 满）', /能量合剂Lv\.1\/1 满/.test(c.threadFirst || ''), String(c.threadFirst));
   rec('⑦D2 thread 链内下一项在第 2 位（K=p+1=2；??? 预览卡承担锁定感）且链提示零残留', c.threadCount === 2 && c.threadNextBuy !== null && c.hintCount === 0, JSON.stringify({ count: c.threadCount, buy: c.threadNextBuy }));
   rec('⑦D3 vehicles 已购 scooter 首位 + 链内下一项为可购卡（??? 卡无购买入口）', c.vehFirstOwned === '外勤摩托队' && c.vehNextBuy !== null && c.vehNextLocked === false, JSON.stringify({ first: c.vehFirstOwned, next: c.vehNextName, buy: c.vehNextBuy }));
   rec('⑦D4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
