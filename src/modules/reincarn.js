@@ -144,7 +144,7 @@ export function renderReincarn(container) {
   }
   const btn = container.querySelector('#reincarn-btn');
   if (btn) btn.className = 'btn reincarn-btn' + (ready.ok ? '' : ' no');
-  // 回响商店卡列表局部重渲染（小范围 innerHTML，不影响按钮节点）
+  // 回响商店卡列表局部重渲染（v2.8：内容不变跳过 innerHTML 重建——hover 期间节点替换仍会闪/重置 :hover 状态）
   const list = container.querySelector('#echo-upg-list');
   if (list) {
     let html = '';
@@ -159,13 +159,16 @@ export function renderReincarn(container) {
         <div class="echo-upg-cost" style="color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 回响'}</div>
       </div>`;
     }
-    list.innerHTML = html;
-    list.querySelectorAll('[data-echo-upg]').forEach(el => {
-      el.addEventListener('click', () => {
-        const r = buyEchoUpgrade(el.dataset.echoUpg);
-        if (r.ok) { if (toast) toast('回响升级成功'); dirty.prestige = true; }
-        else if (toast) toast(r.reason);
+    if (list._lastHtml !== html) {
+      list._lastHtml = html;
+      list.innerHTML = html;
+      list.querySelectorAll('[data-echo-upg]').forEach(el => {
+        el.addEventListener('click', () => {
+          const r = buyEchoUpgrade(el.dataset.echoUpg);
+          if (r.ok) { if (toast) toast('回响升级成功'); dirty.prestige = true; }
+          else if (toast) toast(r.reason);
+        });
       });
-    });
+    }
   }
 }

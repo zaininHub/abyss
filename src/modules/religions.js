@@ -162,7 +162,7 @@ export function renderReligionPanel(container) {
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 信仰深耕</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
     <div class="religion-seal-row">
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（信仰产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
       <button class="btn ${oracleLevel() >= ORACLE.cap || sealLevel() < 3 || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"

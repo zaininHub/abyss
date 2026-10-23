@@ -23,7 +23,7 @@ export function buyRelic(id) {
   S.relics = S.relics || {};
   S.relics[id] = lv + 1;
   save(S);
-  rlog(`深渊遗物「${r.name}」升至 Lv.${lv + 1}/${r.cap}（-${fmt(cost)} DM）：${r.desc.replace('%','×' + (1 + r.effect * (lv + 1)).toFixed(2))}`, 'good');
+  rlog(`深渊遗物「${r.name}」升至 Lv.${lv + 1}/${r.cap}（-${fmt(cost)} DM）：${r.desc.replace('%','×' + (1 + (r.id === 'tentacle' ? -1 : 1) * r.effect * (lv + 1)).toFixed(2))}`, 'good');
   if (toastFn) toastFn(`🌀 遗物「${r.name}」苏醒 Lv.${lv + 1}`);
   return { ok: true, level: lv + 1 };
 }
@@ -48,8 +48,10 @@ export function renderRelics(container) {
     const cost = relicCost(r.id);
     const dmEnough = (S.dm || 0) >= cost;
     const canBuy = gateOk && !maxed && dmEnough;
-    const effNow = (1 + r.effect * lv).toFixed(2);
-    const effNext = gateOk && !maxed ? (1 + r.effect * (lv + 1)).toFixed(2) : null;
+    // v2.8：负向效果（混沌触须 = AI 决策间隔缩短）按 ×(1-effect·lv) 展示，避免「-10% 却显示 ×1.10 增益」语义矛盾
+    const dir = r.id === 'tentacle' ? -1 : 1;
+    const effNow = (1 + dir * r.effect * lv).toFixed(2);
+    const effNext = gateOk && !maxed ? (1 + dir * r.effect * (lv + 1)).toFixed(2) : null;
     html += `<div class="relic-card ${gateOk ? '' : 'relic-gated'}" data-relic="${r.id}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div style="flex:1">
         <div style="font-weight:600;color:${gateOk ? 'var(--purple)' : 'var(--text-3)'}">${r.name} <span style="font-size:11px;color:var(--text-2)">Lv.${lv}/${r.cap}</span></div>

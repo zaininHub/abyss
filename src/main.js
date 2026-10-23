@@ -99,7 +99,7 @@ function renderStorylinePanel() {
   }
   // 已完成的故事线（多周目解锁）
   if (completed.length > 0) {
-    html += `<div style="margin-top:12px;color:var(--text-2);font-size:11px">已完成：${completed.join('、')}</div>`;
+    html += `<div style="margin-top:12px;color:var(--text-2);font-size:11px">已完成：${completed.map(id => getStorylinePackage(id)?.name || id).join('、')}</div>`;
   }
   // v2.7.3 ⑥：故事线图鉴——仅显示已解锁路线（当前路线 + 已完成路线）
   const ALL_LINES = ['line_abyss', 'line_order', 'line_faith'];
@@ -638,7 +638,7 @@ function renderRpPanel() {
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="flex:1" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP → RP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
-    <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 用途：科技树购买（科技树 tab）、离线升级（离线 tab）、族升级（升级商店底部）。<br>
+    <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 用途：科技树购买（科技树 tab）、离线升级（离线 tab）、族升级（研究点 tab）。<br>
     RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP，主源；EP 满时点击可防溢出）、任务奖励、溢出转换（兜底：每轮 -500 溢出 EP，下限 5,000）、数据熔炉建筑。<br>
     本栏目独立于深渊裂隙：EP 首次溢出即觉醒，与裂隙无关。</p>
   </div>`;
