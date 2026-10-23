@@ -98,6 +98,12 @@ function aiHireOne() {
 // 返回本轮是否有动作（供脏标记）
 export function tickAI(dt) {
   if (!aiUnlocked()) return false;
+  // v2.6.3 反馈②：混沌心智——AI 全面禁用，混沌直觉接管（每 10s 随机购买最便宜的未拥有升级）
+  if (S.tech && S.tech.chaos_mind) {
+    // v2.6.3 反馈②：持有混沌心智 = AI 禁用 + 混沌直觉接管（直接生效，不再依赖额外开关）
+    chaosIntuitionTick(dt);
+    return true;
+  }
   const ai = S.ai;
   if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild)) return false;
   ai.timer = (ai.timer || 0) + dt;
@@ -171,12 +177,41 @@ export function tickAI(dt) {
   return acted;
 }
 
+// v2.6.3 反馈②：混沌直觉——每 10s 从「最便宜的一批未拥有升级」中随机选一个购买（EP 够即买）
+let chaosTimer = 0;
+const CHAOS_INT = 10; // 秒
+function chaosIntuitionTick(dt) {
+  chaosTimer += dt;
+  if (chaosTimer < CHAOS_INT) return;
+  chaosTimer = 0;
+  const cands = UPGRADES
+    .filter(u => !(S.upgrades[u.id] || 0))
+    .map(u => ({ u, cost: unitCost(u, 1) }))
+    .filter(c => S.ep >= c.cost)
+    .sort((a, b) => a.cost - b.cost)
+    .slice(0, 3); // 最便宜一批随机
+  if (!cands.length) return;
+  const pick = cands[Math.floor(Math.random() * cands.length)];
+  S.ep -= pick.cost;
+  S.upgrades[pick.u.id] = 1;
+  S.totalBuys = (S.totalBuys || 0) + 1;
+  save(S);
+  ailog(`混沌直觉：随机购入 ${pick.u.name}（-${fmt(pick.cost)} EP）`, 'bad');
+}
+
 // ========== 面板 ==========
 export function renderAiPanel(container) {
   if (!container) return;
   if (!aiUnlocked()) { container.innerHTML = ''; container.style.display = 'none'; return; }
   container.style.display = '';
   const ai = S.ai;
+  // v2.6.3 反馈②：混沌心智生效中 → 面板整体表达 AI 已禁用
+  if (S.tech && S.tech.chaos_mind) {
+    container.innerHTML = `
+      <div style="font-size:13px;line-height:1.9;color:var(--text-2)">
+        <b style="color:var(--red,#f85149)">混沌心智已接管</b>：AI 自动化全面禁用，混沌直觉每 10 秒随机购入最便宜的未拥有升级（深渊行者科技线）。若需恢复 AI，可前往深渊行者科技勾销混沌心智。</div>`;
+    return;
+  }
   const line = reserveLine();
   const sw = (key, name, desc) => `
     <div class="ai-switch ${ai[key] ? 'on' : ''}" data-ai-switch="${key}" title="${desc}">

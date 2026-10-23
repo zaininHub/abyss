@@ -46,10 +46,7 @@ t('同建筑多来源取 max：lean(5+2) 与 warmup(5) → warmup_node=5、eff_t
 t('乘算类：speed2 ×2 → double_workshop 4 级', () => {
   assert.equal(S.buildings.double_workshop, 4);
 });
-t('同族取 max 且超封明示：click_up(4) 超 field_1 cap(3) → 落 3 级、差额 1 记 overflow（PM §4.2 取舍）', () => {
-  assert.equal(S.buildings.field_1, 3);
-  assert.equal(S.buildingOverflow.field_1, 1);
-});
+// v2.6.3 反馈①：B 分区（click_up/field_1 族）已移除，同族 max 超封示例由下方 transcend_temple 超封用例覆盖
 t('超封迁移：transcend 7 级超 cap → 落 cap、差额记 buildingOverflow', () => {
   const cap = v21ById('transcend_temple').cap;
   assert.ok(cap < 7, `transcend_temple cap 应 <7（实际 ${cap}）`);
@@ -60,12 +57,12 @@ t('钥匙科技 offline1 迁移获赠 beacon_1 1 级（旧档不等新档差）'
   assert.equal(S.buildings.beacon_1, 1);
 });
 t('迁移建筑自动解锁（免二次 RP）', () => {
-  for (const bid of ['warmup_node', 'eff_tower', 'double_workshop', 'transcend_temple', 'field_1', 'beacon_1']) {
+  for (const bid of ['warmup_node', 'eff_tower', 'double_workshop', 'transcend_temple', 'beacon_1']) {
     assert.equal(S.unlockedBuildings[bid], true, bid + ' 应自动解锁');
   }
 });
 t('旧 tech 字段保留只读（不清空，兼容章节进度）', () => {
-  assert.equal(S.tech.click_up, 1);
+  assert.equal(S.tech.extra_click, 1); // v2.6.3 反馈①：click_up 族移除后以 extra_click 为旧档只读样本
 });
 t('迁移后所有等级 ≤ 上限（数量红线；v2.4 unlimited 扩容类豁免）', () => {
   for (const b of V21_BUILDINGS) {
@@ -124,10 +121,10 @@ t('computeCps 单线程数值 > 0（修复后集成断言）', () => {
 });
 
 console.log('[4] 钥匙数据完整性（科技=钥匙红线）');
-t('钥匙科技恰 6 项：click_up/offline1/focus_opt/entropy_reduce/deep_space/ai_core', () => {
-  assert.equal(TECHS.length, 6);
+t('钥匙科技恰 5 项（v2.6.3 反馈①：click_up 移除）：offline1/focus_opt/entropy_reduce/deep_space/ai_core', () => {
+  assert.equal(TECHS.length, 5);
   assert.deepEqual(TECHS.map(x => x.id).sort(),
-    ['ai_core', 'click_up', 'deep_space', 'entropy_reduce', 'focus_opt', 'offline1']);
+    ['ai_core', 'deep_space', 'entropy_reduce', 'focus_opt', 'offline1']);
 });
 t('unlocks.buildings 引用的建筑全部存在于 buildingsV21 注册表', () => {
   const ids = new Set(V21_BUILDINGS.map(b => b.id));

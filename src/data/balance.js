@@ -61,13 +61,7 @@ export const BALANCE = {
     { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.6 },   desc: '每级全局产出 ×1.6（乘算锚点）' },
     { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.8 },   desc: '每级全局产出 ×1.8（终局顶配；1 级解锁终章条件）' },
     // ---- 组 B · 点击乘数（7 座）----
-    { id: 'field_1',        name: '指尖力场·初',cat: 'B', cap: 3, base: 500,  growth: 1.15, unlockTech: 'click_up',   fx: { key: 'clickMul', value: 1.5 },    desc: '每级点击产出 ×1.5（满 3 级 ×3.375）' },
-    { id: 'field_2',        name: '指尖力场·中',cat: 'B', cap: 3, base: 5e4,  growth: 1.20, unlockTech: 'click10',    fx: { key: 'clickMul', value: 2 },      desc: '每级点击产出 ×2（满 3 级 ×8）' },
-    { id: 'field_3',        name: '指尖力场·深',cat: 'B', cap: 3, base: 1e5,  growth: 1.26, unlockTech: 'mega_click', fx: { key: 'clickMul', value: 3 },      desc: '每级点击产出 ×3（满 3 级 ×27）' },
-    { id: 'field_4',        name: '指尖力场·极',cat: 'B', cap: 3, base: 1.5e5,growth: 1.28, unlockTech: 'grand_click',fx: { key: 'clickMul', value: 5 },      desc: '每级点击产出 ×5（满 3 级 ×125）' },
-    { id: 'crit_furnace',   name: '会心反应炉', cat: 'B', cap: 1, base: 8000, growth: 1.20, unlockTech: 'crit_click', fx: { key: 'clickCrit', value: { chance: 0.01, mult: 5 } }, desc: '点击 1% 概率 ×5（1 级即生效）' },
-    { id: 'crit_reactor',   name: '暴击反应堆', cat: 'B', cap: 1, base: 6e4,  growth: 1.25, unlockTech: 'cps_crit',   fx: { key: 'autoCrit', value: { chance: 0.01, mult: 10 } }, desc: '自动产出期望 +9%（1% 概率 ×10 的期望值）' },
-    { id: 'crit_reactor_2', name: '暴击反应堆·锐',cat:'B',cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'crit2',      fx: { key: 'autoCrit', value: { chance: 0.05, mult: 10 } }, desc: '自动产出期望 +45%（5% 概率 ×10 的期望值）' },
+    // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
     { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 300,  growth: 1.15, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98（满 5 级 ×0.90）' },
     { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 2000, growth: 1.18, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96（满 3 级 ×0.88）' },

@@ -943,3 +943,13 @@ body.paused .pet-grid .pet-card {
 .rift-upg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; margin: 4px 0; }
 .rift-upg-row .btn { flex-shrink: 0; }
 #rift-tab-panel .btn.disabled { opacity: .45; cursor: not-allowed; }
+
+/* v2.6.3 反馈③：触手协议触发拍动动画（叠加于常驻摆动） */
+.tentacle-deco.tap .tentacle { animation: tentacle-tap .45s steps(3, end) infinite !important; }
+.tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
+.tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
+@keyframes tentacle-tap {
+  0%, 100% { transform: rotate(2deg); }
+  33% { transform: rotate(-14deg); }
+  66% { transform: rotate(10deg); }
+}

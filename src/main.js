@@ -1102,6 +1102,15 @@ function tick(now) {
       if (tap > 0) {
         addEp(tap);
         log('触手轻点工作台', 'good');
+        // v2.6.3 反馈③：触手协议要有动画——触发时触手拍动 + 工作台点击涟漪
+        const deco = document.getElementById('tentacle-deco');
+        if (deco) {
+          deco.classList.remove('tap');
+          void deco.offsetWidth; // 重排以重启动画
+          deco.classList.add('tap');
+          clearTimeout(S._tentacleTapTimer);
+          S._tentacleTapTimer = setTimeout(() => deco.classList.remove('tap'), 500);
+        }
       }
     }
   }

@@ -21,13 +21,13 @@ function t(name, fn) {
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 console.log('[1] 61 栋注册表 & 级制红线（组长硬性要求：非扩容类静态 cap ≤ 20；v2.4 扩容类 unlimited 豁免）');
-t('getAllBuildings() 恰好 62 栋且 ID 唯一（v2.4：58+3；v2.5.2：+1 深渊鱼缸入通用表）', () => {
+t('getAllBuildings() 恰好 55 栋且 ID 唯一（v2.6.3 反馈①：B 分区移除 -7）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 62, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 62, 'ID 必须唯一');
+  assert.equal(all.length, 55, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 55, 'ID 必须唯一');
 });
-t('既有 4 座 + v2.1 表 54 项 + 定向 3 栋 = 61', () => {
-  assert.equal(V21_BUILDINGS.length, 54);
+t('既有 4 座 + v2.1 表 47 项 + 定向 3 栋 = 54（v2.6.3 反馈①：B 分区移除）', () => {
+  assert.equal(V21_BUILDINGS.length, 47);
 });
 t('级制红线：非扩容类静态 cap/levels ≤ 20 且 ≥ 1；unlimited 扩容类豁免（禁止无限堆叠仅限非扩容）', () => {
   for (const b of getAllBuildings()) {
@@ -138,8 +138,8 @@ t('组I 晋升双楼：轮回圣殿 3e5×1.30（2 级 ×√2/级）、传奇职�
   assert.ok(Math.abs(fxValue('ppMul') - 6) < 1e-9, `满级 ppMul 应 ×6，实际 ${fxValue('ppMul')}`);
   S.buildings = {};
 });
-t('各组高端楼（B/C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、末级 ≤1.2e6', () => {
-  const high = ['field_4', 'crit_reactor_2', 'purchase_office_3', 'super_team', 'legend_institute', 'beacon_3', 'delay_cache_2', 'event_tide_lab', 'proj_parallel'];
+t('各组高端楼（C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、末级 ≤1.2e6（v2.6.3 反馈①：B 分区已移除）', () => {
+  const high = ['purchase_office_3', 'super_team', 'legend_institute', 'beacon_3', 'delay_cache_2', 'event_tide_lab', 'proj_parallel'];
   for (const id of high) {
     const b = V21_BUILDINGS.find(x => x.id === id);
     assert.ok(b.base <= 1.5e5, `${id} 基价 ${b.base} > 1.5e5`);
@@ -209,17 +209,13 @@ t('档位效果取最大不叠加：三档信号塔 60%/100%/200%', () => {
   assert.equal(fxValue('offlineRate'), 2.0);
   S.buildings = {};
 });
-t('暴击期望乘算：暴击反应堆(+9%) × 锐(+45%) = ×1.585', () => {
-  S.buildings = { crit_reactor: 1, crit_reactor_2: 1 };
-  assert.ok(Math.abs(fxValue('autoCrit') - (1.09 * 1.45)) < 1e-12);
-  assert.equal(fxBest('clickCrit'), null, '未购会心反应炉时点击暴击应为 null');
-  S.buildings = {};
-});
-t('掷骰参数：会心反应炉 1 级 → {chance:0.01, mult:5}', () => {
-  S.buildings = { crit_furnace: 1 };
-  const crit = fxBest('clickCrit');
-  assert.deepEqual(crit, { chance: 0.01, mult: 5 });
-  S.buildings = {};
+t('v2.6.3 反馈①：B「点击与暴击」分区移除——暴击/点击乘数建筑不再存在于数据表', () => {
+  const ids = ['field_1', 'field_2', 'field_3', 'field_4', 'crit_furnace', 'crit_reactor', 'crit_reactor_2'];
+  for (const id of ids) {
+    assert.ok(!V21_BUILDINGS.some(x => x.id === id), `${id} 应已移除`);
+  }
+  assert.equal(fxBest('clickCrit'), null, '点击暴击应恒为 null');
+  assert.equal(fxBest('autoCrit'), null, '自动暴击应恒为 null');
 });
 t('级制红线读侧：非扩容超封等级截断到 cap；unlimited 扩容类全额计入（v2.4）', () => {
   S.buildings = { warmup_node: 99, quantum_pool: 30 };
@@ -286,12 +282,12 @@ t('buildingUnlockedV21：RP 标记 + 里程碑门控 + 钥匙科技门控三重�
   assert.equal(buildingUnlockedV21(b, S), false, 'RP 已解锁但 m<5 不可购');
   for (let i = 0; i < 5; i++) S.milesDone['m' + i] = true;
   assert.equal(buildingUnlockedV21(b, S), true, 'm≥5 + RP 解锁 → 可购');
-  // 钥匙科技门控：field_1（click_up 族）
-  const f1 = V21_BUILDINGS.find(x => x.id === 'field_1');
-  S.unlockedBuildings = { field_1: true };
-  assert.equal(buildingUnlockedV21(f1, S), false, 'click_up 未购 → 不可购');
-  S.tech = { click_up: true };
-  assert.equal(buildingUnlockedV21(f1, S), true, 'click_up 已购 → 可购');
+  // 钥匙科技门控：focus_core（focus_opt 族，v2.6.3 后以非点击系钥匙为样本）
+  const fc = V21_BUILDINGS.find(x => x.id === 'focus_core');
+  S.unlockedBuildings = { focus_core: true };
+  assert.equal(buildingUnlockedV21(fc, S), false, 'focus_opt 未购 → 不可购');
+  S.tech = { focus_opt: true };
+  assert.equal(buildingUnlockedV21(fc, S), true, 'focus_opt 已购 → 可购');
   S.tech = {}; S.unlockedBuildings = {};
 });
 t('v21Level / v21Maxed / buildingCostV21 基础读侧', () => {
