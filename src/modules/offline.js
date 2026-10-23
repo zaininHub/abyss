@@ -1,6 +1,5 @@
 import { S } from '../state.js';
 import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp } from './economy.js';
-import { spawnProject } from './projects.js';
 
 export function applyOffline() {
   const now = Date.now();
@@ -16,28 +15,15 @@ export function applyOffline() {
     gain = addEp(raw);
     if (gain > 0) S.gotOffline = true;
   }
-  let projDone = 0;
-  if (S.projects.length > 0) {
-    const still = [];
-    for (const p of S.projects) {
-      if ((now - p.startsAt) >= (p.deadline - p.startsAt)) {
-        // v2.1 D1：项目 EP 奖励走统一入口
-        if (p.reward.kind === 'ep') addEp(p.reward.amount);
-        else if (p.reward.kind === 'rp') { S.rp += p.reward.amount; }
-        S.projectsDone++; projDone++;
-      } else still.push(p);
-    }
-    S.projects = still;
-  }
-  // v2.0：离线回归只补一个任务，不再把任务栏刷满（奖励链路由 tickProjects 驱动）
-  if (S.projects.length === 0) spawnProject();
+  // v2.6.6 ①：离线不增加任务进度——离线期间任务冻结（剩余时间不消耗、不到期结算、不补发新任务）
+  const projDone = 0;
   const hours = eff / 3600;
   let bonusRp = 0;
   if (hours >= 1) {
     bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
     if (bonusRp > 0) S.rp += bonusRp;
   }
-  if (gain < 1 && projDone === 0 && bonusRp === 0) return null;
+  if (gain < 1 && bonusRp === 0) return null;
   S.lastOfflineSec = Math.floor(eff);
   S.lastOfflineGain = gain;
   S.offHistory.unshift({ t: now, sec: Math.floor(eff), ep: gain });

@@ -169,11 +169,11 @@ const inject = (page, save) => {
   const gained = parseFloat((post.resumeLine.match(/\+([\d,.]+)\s*EP/) || [])[1]?.replace(/,/g, '')) || 0;
   const num = (s) => parseFloat(String(s).replace(/[KMGT]/g, '')) || 0;
   const cpsVal = num(pre.cps);
-  const expectGain = cpsVal * (pausedMs / 1000) * 0.5;
+  const expectGain = cpsVal * (pausedMs / 1000) * 0.25; // v2.6.6 ① 离线默认 25%
   rec('RP5 暂停>5s 恢复按离线结算入账（语义已在：暂停收益 +EP 落账）',
     gained >= 1 && post.resumeLine.includes('暂停恢复：离线'),
     JSON.stringify({ pausedSec: (pausedMs / 1000).toFixed(1), cps: pre.cps, gained, expectGain: expectGain.toFixed(1), epBefore: pre.ep, epAfter: post.ep }));
-  rec('RP5 离线口径对账：实发 ≈ cps × dt × offlineRate(0.5)（±40% 容差，含潮汐/腐化时变）',
+  rec('RP5 离线口径对账：实发 ≈ cps × dt × offlineRate(0.25)（±40% 容差，含潮汐/腐化时变）',
     gained >= 1 && Math.abs(gained - expectGain) <= Math.max(expectGain * 0.4, 2),
     `实发 ${gained} vs 期望 ${expectGain.toFixed(1)} EP`);
   await page.screenshot({ path: EV + '/rp5-pause-offline.png', fullPage: false });

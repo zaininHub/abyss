@@ -202,11 +202,11 @@ t('多建筑叠加：加法求和、乘算连乘', () => {
 });
 t('档位效果取最大不叠加：三档信号塔 60%/100%/200%', () => {
   S.buildings = { beacon_1: 1 };
-  assert.equal(fxValue('offlineRate'), 0.6);
+  assert.equal(fxValue('offlineRate'), 0.4); // v2.6.6 ① 离线整体下调
   S.buildings = { beacon_1: 1, beacon_2: 1 };
-  assert.equal(fxValue('offlineRate'), 1.0);
+  assert.equal(fxValue('offlineRate'), 0.6); // v2.6.6 ① 离线整体下调
   S.buildings = { beacon_1: 1, beacon_2: 1, beacon_3: 1 };
-  assert.equal(fxValue('offlineRate'), 2.0);
+  assert.equal(fxValue('offlineRate'), 1.0); // v2.6.6 ① 离线整体下调
   S.buildings = {};
 });
 t('v2.6.3 反馈①：B「点击与暴击」分区移除——暴击/点击乘数建筑不再存在于数据表', () => {

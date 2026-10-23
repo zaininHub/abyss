@@ -111,7 +111,7 @@ export function renderPetGrid(container) {
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
   if (buyable.length > 0) {
-    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">商店（异兽饼干 PT：${Math.floor(S.pt || 0)}）</div>`;
+    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）——来源：宠物乐园 / 伊甸花园 产出；解锁：商店购入「宠物乐园」</div>`;
     for (const p of buyable) {
       const afford = (S.pt || 0) >= p.price;
       html += `<div class="pet-card${!afford ? ' cant' : ''}" data-pet-buy="${p.id}">

@@ -158,8 +158,9 @@ export function clickMult() {
 }
 
 export function offlineRate() {
-  let m = 0.5;
-  if (hasTech('offline1')) m = 0.8; // 钥匙科技自带 80% 档（PM §1.1 保留为前置）
+  // v2.6.6 ①：离线收益整体下调——默认 25%（远低于在线），信号塔最高仅 100%（见 balance.js）
+  let m = 0.25;
+  if (hasTech('offline1')) m = 0.4; // 钥匙科技自带 40% 档（PM §1.1 保留为前置）
   m = Math.max(m, fxValue('offlineRate')); // v2.1 建筑驱动：三档信号塔 60%/100%/200% 取最大不叠加
   if (S.runTalent === 'longlife') m *= 1.5;
   if (S.runTalent === 'off_exp') m *= 2;

@@ -53,10 +53,10 @@ export const UPGRADES = [
   {id:'beyond',name:'超越',base:3e43,cps:1e33,desc:'基础产出+1Dc/s'},
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,cps:0,produces:{type:'rp',rate:B.atrium.rate},desc:`每秒 +${B.atrium.rate} RP`},
-  {id:'petland',name:'宠物乐园',base:1e6,cps:0,produces:{type:'pt',rate:1},desc:'每秒 +1 宠物饼干'},
+  {id:'petland',name:'宠物乐园',base:1e6,cps:0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干（异兽资源超长线，缓慢累计）'},
   {id:'shrine',name:'路边神龛',base:1e8,cps:0,produces:{type:'fa_chance',rate:0.001},desc:'每秒 0.1% 概率 +1 信仰'},
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,produces:B.dataForge.produces,desc:B.dataForge.desc},
-  {id:'garden',name:'伊甸花园',base:1e10,cps:0,produces:{type:'pt',rate:5},desc:'每秒 +5 宠物饼干'},
+  {id:'garden',name:'伊甸花园',base:1e10,cps:0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 异兽饼干（后期主要来源）'},
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:1e14,cps:0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）

@@ -184,19 +184,30 @@ function chaosIntuitionTick(dt) {
   chaosTimer += dt;
   if (chaosTimer < CHAOS_INT) return;
   chaosTimer = 0;
-  const cands = UPGRADES
+  // v2.6.6 ③：候选 = 未拥有的商店升级 + 已解锁未满级的 v21 建筑（混沌直觉也会购建，且每次买入都有日志）
+  const upgCands = UPGRADES
     .filter(u => !(S.upgrades[u.id] || 0))
-    .map(u => ({ u, cost: unitCost(u, 1) }))
+    .map(u => ({ kind: 'upgrade', u, cost: unitCost(u, 1) }));
+  const bldCands = V21_BUILDINGS
+    .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
+    .map(b => ({ kind: 'building', b, cost: v21BuildingCost(b) }));
+  const cands = [...upgCands, ...bldCands]
     .filter(c => S.ep >= c.cost)
     .sort((a, b) => a.cost - b.cost)
     .slice(0, 3); // 最便宜一批随机
   if (!cands.length) return;
   const pick = cands[Math.floor(Math.random() * cands.length)];
   S.ep -= pick.cost;
-  S.upgrades[pick.u.id] = 1;
+  if (pick.kind === 'upgrade') {
+    S.upgrades[pick.u.id] = 1;
+    ailog(`混沌直觉：随机购入升级 ${pick.u.name}（-${fmt(pick.cost)} EP）`, 'bad');
+  } else {
+    S.buildings[pick.b.id] = v21Level(pick.b.id, S) + 1;
+    const cap = capOf(pick.b, S);
+    ailog(`混沌直觉：随机购建建筑 ${pick.b.name} 升至 Lv.${v21Level(pick.b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(pick.cost)} EP）`, 'bad');
+  }
   S.totalBuys = (S.totalBuys || 0) + 1;
   save(S);
-  ailog(`混沌直觉：随机购入 ${pick.u.name}（-${fmt(pick.cost)} EP）`, 'bad');
 }
 
 // ========== 面板 ==========

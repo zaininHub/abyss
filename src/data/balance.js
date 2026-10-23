@@ -92,9 +92,9 @@ export const BALANCE = {
     { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%（满 2 级 +300%）' },
     { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
-    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%（1 级即生效）' },
-    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%（1 级即生效）' },
-    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 2.0 }, desc: '离线效率 → 200%（1 级即生效）' },
+    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%（1 级即生效）' },
+    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%（1 级即生效）' },
+    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%（1 级即生效，离线最高不超过在线）' },
     { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 1e5,  growth: 1.25, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时（1 级即生效）' },
     { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 1.3e5,growth: 1.27, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时（1 级即生效）' },
     // ---- 组 H · 事件/项目（6 座）----

@@ -91,7 +91,7 @@ function mkState(extra = {}) {
     pets: { fused1: { icon: '✨', name: '外神之影', level: 1, exp: 0, gen: 1, mixed: { global: 1, click: 1, offline: 10, event: 1 } } },
     activePets: ['fused1'], delve: { unlocked: true, depth: 5, active: false, up: { ember: 3 } } }));
   const or1 = econ.offlineRate();
-  rec('V3 星辰余烬离线上限扩展（m=7.65 → clamp 4.8）', Math.abs(or1 - 4.8) < 1e-9, `offlineRate=${or1}`);
+  rec('V3 星辰余烬离线上限扩展（m=3.825，低于 clamp 上限 4.8 原样返回；v2.6.6 ① 离线基准 0.25）', Math.abs(or1 - 3.825) < 1e-9, `offlineRate=${or1}`);
   // 满级禁购
   Object.assign(S, mkState({ es: 3, vs: 50000, resDiscovered: { dm: true }, religion: { unlocked: true }, delve: { unlocked: true, depth: 5, active: false, up: { diver: 5 } } }));
   const b2 = delve.buyDelveUpgrade('diver');
