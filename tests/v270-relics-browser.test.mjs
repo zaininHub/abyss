@@ -54,15 +54,15 @@ try {
   // 截屏自检：商店 tab（含触手鱼缸）
   await page.evaluate(() => document.getElementById('btn-shop').click());
   await sleep(400);
-  await page.screenshot({ path: 'dist/_shot-shop.png' });
+  await page.screenshot({ path: '../../artifacts/screenshots_v270/_shot-shop.png' });
   // 晋升页截屏
   await page.evaluate(() => document.getElementById('btn-prestige').click());
   await sleep(400);
-  await page.screenshot({ path: 'dist/_shot-prestige.png' });
+  await page.screenshot({ path: '../../artifacts/screenshots_v270/_shot-prestige.png' });
   // 遗物页截屏
   await page.evaluate(() => document.getElementById('btn-relics').click());
   await sleep(400);
-  await page.screenshot({ path: 'dist/_shot-relics.png' });
+  await page.screenshot({ path: '../../artifacts/screenshots_v270/_shot-relics.png' });
   console.log('SHOTS saved');
   await page.close();
 } catch (e) {
