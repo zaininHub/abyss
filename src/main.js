@@ -24,7 +24,7 @@ import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; /
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
-import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked } from './modules/ai.js'; // v1.3 A
+import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
 import { renderRelics, buyRelic, setRelicsLogFn, setRelicsToastFn } from './modules/relics.js'; // v2.7.0：深渊遗物
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds } from './modules/pets.js';
@@ -1299,8 +1299,12 @@ function tick(now) {
   // v2.3 资源发现：集中单点检查（所有发放点统一覆盖；发现即 toast + 存档）
   discoverCheck();
 
-  // v1.3 模块 A：AI 助手（每 5s 决策；有动作时刷商店/英雄/顶栏/任务）
-  if (tickAI(dt)) { dirty.shop = true; dirty.hero = true; dirty.top = true; dirty.projects = true; }
+  // v1.3 模块 A：AI 助手（每 5s 决策；有动作时刷英雄/顶栏/任务）
+  // v2.7.1 修复：AI/混沌买入已走单卡原地刷新（refreshShopItem/refreshV21Item），不再置 dirty.shop
+  // 整面板重建（原逻辑使混沌心智场景每 100ms 重建商店 → hover 卡被替换 → 闪烁/点击丢失）；
+  // 仅自动招募（线程区结构变化）才置 dirty.shop 刷新线程区。
+  const aiAct = tickAI(dt);
+  if (aiAct) { dirty.hero = true; dirty.top = true; dirty.projects = true; if (aiHireFlag()) dirty.shop = true; }
 
   // v2.0 潮汐脏检查：相位或剩余秒数（向上取整）变化才重绘潮汐卡
   const tideTimerCeil = Math.ceil(S.tideTimer);

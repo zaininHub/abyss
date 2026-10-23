@@ -105,11 +105,12 @@ export function tickAI(dt) {
   if (!aiUnlocked()) return false;
   // v2.6.3 反馈②：混沌心智——AI 全面禁用，混沌直觉接管（每 10s 随机购买最便宜的未拥有升级）
   if (S.tech && S.tech.chaos_mind) {
-    // v2.6.3 反馈②：持有混沌心智 = AI 禁用 + 混沌直觉接管（直接生效，不再依赖额外开关）
-    chaosIntuitionTick(dt);
-    return true;
+    // v2.7.1 修复：仅实际买入才返回 true——原无条件 return true 使 main 每 100ms 置 dirty.shop
+    // → renderShop 整面板每帧重建 → hover 卡被替换 → 闪烁 + 点击丢失（混沌心智场景实锤）
+    return chaosIntuitionTick(dt);
   }
   const ai = S.ai;
+  hiredFlag = false; // v2.7.2：每 tick 重置招募标志（main 消费后判定线程区刷新）
   if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild)) return false;
   ai.timer = (ai.timer || 0) + dt;
   // v2.6.0 深潜：拟态矩阵——决策间隔 -20%/级（下限 40% 原间隔）
@@ -142,6 +143,7 @@ export function tickAI(dt) {
     const cost = staffCost();
     if (staffNetPerSec() > 0 && S.ep >= cost * 2 && S.ep - cost >= line) {
       aiHireOne();
+      hiredFlag = true; // v2.7.2：招募发生 → main 刷新线程区（dirty.shop）
       ailog(`自动招募：+1 线程（-${fmt(cost)} EP）`, 'good');
       acted = true;
     }
@@ -187,6 +189,10 @@ export function tickAI(dt) {
   return acted;
 }
 
+// v2.7.2：招募标志——main 在 tickAI 返回 true 后查询，决定是否整刷新线程区（dirty.shop）
+let hiredFlag = false;
+export function aiHireFlag() { const h = hiredFlag; hiredFlag = false; return h; }
+
 // v2.6.3 反馈②：混沌直觉——每 10s 从「最便宜的一批未拥有升级」中随机选一个购买（EP 够即买）
 let chaosTimer = 0;
 const CHAOS_INT = 10; // 秒
@@ -205,7 +211,7 @@ function chaosIntuitionTick(dt) {
     .filter(c => S.ep >= c.cost)
     .sort((a, b) => a.cost - b.cost)
     .slice(0, 3); // 最便宜一批随机
-  if (!cands.length) return;
+  if (!cands.length) return false;
   const pick = cands[Math.floor(Math.random() * cands.length)];
   S.ep -= pick.cost;
   if (pick.kind === 'upgrade') {
@@ -220,6 +226,7 @@ function chaosIntuitionTick(dt) {
   }
   S.totalBuys = (S.totalBuys || 0) + 1;
   save(S);
+  return true;
 }
 
 // ========== 面板 ==========

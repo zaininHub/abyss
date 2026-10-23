@@ -14,7 +14,7 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
   rec('V1 宠物浮标 steps(3, end)（弃 ease-in-out）', css.includes('animation: petFloat 2s steps(3, end) infinite'), 'css');
   rec('V1 触手 steps(6, end) 细腻抽摆（v2.6.2 四帧→六帧）', css.includes('animation: tentacle-sway 5s steps(6, end) infinite'), 'css');
   rec('V1 混沌潮汐 steps(2, end) 块状闪烁', css.includes('tide-chaos-anim .8s steps(2, end) infinite alternate'), 'css');
-  rec('V1 触手六帧关键帧（15/30/50/70/85）', css.includes('15% { transform: rotate(-4deg); }') && css.includes('70% { transform: rotate(8deg); }') && css.includes('85% { transform: rotate(3deg); }'), 'css');
+  rec('V1 触手六帧关键帧（15/30/50/70/85）', css.includes('15% { transform: rotate(-1.5deg); }') && css.includes('70% { transform: rotate(2deg); }') && css.includes('85% { transform: rotate(1deg); }'), 'css');
   const html = readFileSync('index.html', 'utf-8');
   rec('V1 触手为平滑贝塞尔曲线（圆润真实触手，v2.7.1 重构：锥形基座粗、尖端内卷）', html.includes('M32 124 C42 114 32 100 44 88') && html.includes('C54 26 48 24 52 14'), 'svg');
   rec('V1 触手 stroke-linecap 圆头（圆润真实触手端帽）', html.includes('stroke-linecap="round"'), 'svg');

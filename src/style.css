@@ -901,7 +901,7 @@ body.paused .pet-grid .pet-card {
   transition: opacity 0.2s, filter 0.2s;
 }
 .tentacle-deco:hover { opacity: 1; filter: drop-shadow(0 0 8px rgba(77, 208, 225, 0.55)); }
-.tentacle-deco svg { display: block; }
+.tentacle-deco svg { display: block; overflow: hidden; /* v2.7.2：动画幅度收敛后兜底裁剪，触手本体永不超出视口 */ }
 .tentacle-deco .tentacle { transform-origin: 50% 100%; /* v2.5.9 像素克苏鲁检查：平滑摆动 → 四帧痉挛式抽摆 */ animation: tentacle-sway 5s steps(6, end) infinite; /* v2.6.2：四帧 → 六帧更细腻抽摆 */ }
 .tentacle-deco .tentacle-b { animation-duration: 7s; animation-delay: 0.6s; }
 .tentacle-deco .tentacle-c { animation-duration: 9s; animation-delay: 1.2s; }
@@ -913,17 +913,17 @@ body.paused .pet-grid .pet-card {
 .tentacle-deco:hover .tentacle-c { animation-duration: 1.3s; }
 @keyframes tentacle-writhe {
   0%, 100% { transform: rotate(0deg) scaleY(1); }
-  25% { transform: rotate(-3deg) scaleY(1.05); }
-  50% { transform: rotate(2deg) scaleY(0.96); }
-  75% { transform: rotate(-1deg) scaleY(1.03); }
+  25% { transform: rotate(-1.5deg) scaleY(1.02); }
+  50% { transform: rotate(1deg) scaleY(0.99); }
+  75% { transform: rotate(-0.5deg) scaleY(1.01); }
 }
 @keyframes tentacle-sway {
-  0%, 100% { transform: rotate(-6deg); }
-  15% { transform: rotate(-4deg); }
-  30% { transform: rotate(-1deg); }
-  50% { transform: rotate(5deg); }
-  70% { transform: rotate(8deg); }
-  85% { transform: rotate(3deg); }
+  0%, 100% { transform: rotate(-2deg); }
+  15% { transform: rotate(-1.5deg); }
+  30% { transform: rotate(-0.5deg); }
+  50% { transform: rotate(1deg); }
+  70% { transform: rotate(2deg); }
+  85% { transform: rotate(1deg); }
 }
 
 
@@ -966,9 +966,9 @@ body.paused .pet-grid .pet-card {
 .tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
 .tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
 @keyframes tentacle-tap {
-  0%, 100% { transform: rotate(2deg); }
-  33% { transform: rotate(-14deg); }
-  66% { transform: rotate(10deg); }
+  0%, 100% { transform: rotate(1deg); }
+  33% { transform: rotate(-5deg); }
+  66% { transform: rotate(4deg); }
 }
 
 /* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========
