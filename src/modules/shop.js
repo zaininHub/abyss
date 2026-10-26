@@ -1118,3 +1118,59 @@ function bindFamilyDelegate(container) {
     }
   });
 }
+
+
+// ========== v2.8.4：研究升级（研究点 tab · RP 购买 · 长线） ==========
+export function researchUpgCost(id) {
+  const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
+  if (!u) return 0;
+  const lv = (S.rpTheories && S.rpTheories[id]) || 0;
+  return Math.ceil(u.base * Math.pow(u.growth, lv));
+}
+export function buyResearchUpgrade(id) {
+  const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
+  if (!u) return { ok: false, reason: '未知研究' };
+  const lv = (S.rpTheories && S.rpTheories[id]) || 0;
+  if (lv >= u.cap) return { ok: false, reason: '已达上限' };
+  const cost = researchUpgCost(id);
+  if ((S.rp || 0) < cost) return { ok: false, reason: `RP 不足（需 ${fmt(cost)}）` };
+  S.rp -= cost;
+  S.rpTheories = S.rpTheories || {};
+  S.rpTheories[id] = lv + 1;
+  save(S);
+  return { ok: true };
+}
+export function renderResearchUpgrades(container) {
+  if (!container) return;
+  const list = (BALANCE.researchUpgs || []).slice().sort((a, b) => a.base - b.base);
+  let sig = list.map(u => `${u.id}:${S.rpTheories?.[u.id] || 0}`).join(',');
+  if (container._lastSig === sig) return; // 增量：内容未变不重建（v2.6.7 纪律）
+  container._lastSig = sig;
+  container.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const u of list) {
+    const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
+    const maxed = lv >= u.cap;
+    const cost = researchUpgCost(u.id);
+    const afford = (S.rp || 0) >= cost;
+    const div = document.createElement('div');
+    div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
+    div.dataset.research = u.id;
+    div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)}，当前 ${fmt(S.rp || 0)}）`);
+    div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
+      <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
+      <div class="cost mono">${maxed ? '✦ 已满级' : afford ? cost + ' RP' : '还差 ' + fmt(cost - (S.rp || 0)) + ' RP'}</div>`;
+    frag.appendChild(div);
+  }
+  container.appendChild(frag);
+  if (!container._bound) {
+    container._bound = true;
+    container.addEventListener('click', (ev) => {
+      const el = ev.target.closest('[data-research]');
+      if (!el || !container.contains(el)) return;
+      const r = buyResearchUpgrade(el.dataset.research);
+      if (r.ok) renderResearchUpgrades(container);
+      else if (r.reason) { /* RP 不足走卡面灰态，不弹 toast（v2.8.2 ⑪ 纪律） */ }
+    });
+  }
+}

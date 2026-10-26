@@ -1,9 +1,11 @@
 import { S } from '../state.js';
 import { TALENTS } from '../data/talents.js';
-import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv } from './economy.js';
+import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs } from './economy.js';
 import { spawnProject } from './projects.js';
 
 export function canPrestige() {
+  // v2.8.4：崩溃后必须转生——被深渊吞噬时豁免门槛（本局已失败，转生是唯一脱离路径）
+  if (S.collapsed) return true;
   return prestigeGain() >= 1;
 }
 
@@ -14,7 +16,9 @@ export function doPrestige(talentId) {
   S.prestigePoints += gain;
   S.prestige++;
   S.rp += rpg;
-  if (esg > 0) S.es += esg;
+  if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
+  // v2.8.4：崩溃转生结算湮灭残片（新资源，暂无消费用途，仅保留，克制——每次崩溃转生 +1）
+  if (S.collapsed) S.abyssSplinter = (S.abyssSplinter || 0) + 1;
   S.runTalent = talentId;
   S.ep = 0;
   S.runEarned = 0;
@@ -94,10 +98,10 @@ export function renderPrestige(container) {
   const gain = prestigeGain();
   const rpg = prestigeRpGain();
   const esg = esGain();
-  const ready = gain >= 1;
+  const ready = S.collapsed || gain >= 1; // v2.8.4：崩溃后必须转生（豁免门槛）
   const lack = Math.max(0, need - S.runEarned);
   const pct = Math.min(100, S.runEarned / need * 100);
-  const reward = `${gain} PP · ${rpg} RP${esg >= 1 ? ' · ' + esg + ' ES' : ''}`;
+  const reward = `${gain} PP · ${rpg} RP${esg >= 1 ? ' · ' + esg + ' ES' : ''}${S.collapsed ? ' · 湮灭残片 ×1' : ''}`;
   const run = container.querySelector('#prg-run');
   if (run) run.textContent = fmt(S.runEarned);
   const nd = container.querySelector('#prg-need');
@@ -111,14 +115,14 @@ export function renderPrestige(container) {
   const bar = container.querySelector('#prg-bar-fill');
   if (bar) bar.style.width = pct + '%';
   const st = container.querySelector('#prg-status');
-  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`; }
+  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = S.collapsed ? '深渊吞噬：本局已失败，必须转生（+1 湮灭残片）' : (ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`); }
   const btn = container.querySelector('#prestige-btn');
   if (btn) {
     btn.className = 'btn prestige-btn' + (ready ? '' : ' no');
-    btn.title = ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`;
+    btn.title = S.collapsed ? '深渊吞噬：必须转生（本局已崩溃，转生 +1 湮灭残片）' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。`;
+  if (note) note.textContent = S.collapsed ? `本局被深渊吞噬，系统已停止产出。转生将获得 ${reward}，跨转生资产保留。` : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。`);
   const td = container.querySelector('#talent-display');
   if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
 }

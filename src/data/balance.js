@@ -42,7 +42,7 @@ export const BALANCE = {
   // v2.1：数据中心随 RESCALE 重标定——原 base 1e6 growth 10 在终局上限（≈3.7e11）下远期失衡，
   // 重标为 base 8e4 growth 4（三档 8e4 / 3.2e5 / 1.28e6），并纳入 30% 防死锁钳制（组长硬性要求：DC 三档成本随 cap 曲线重标定）
   buildings: {
-    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 免疫'] },
+    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 0.95（v2.8.4：只减缓，不再免疫）'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
     dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护（v2.8.3：不再免疫流失；腐化满额且 EP 触顶时线程仍会被深渊吞没）'] },
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
@@ -153,6 +153,14 @@ export const BALANCE = {
     echoBase: 8, echoCap: 100,
     scoreWeights: { prestige: 2, delve: 0.5, ember: 0.1, faith: 0.05 },
     needEp: 1e9, // 本局累计 EP ≥ 10 亿才可轮回（且本局 ≥ 1 次晋升）
+    // v2.8.4：深渊遗存——每次轮回按本局最强维度自动携带 1 座（跨轮回保留，cap 3，克制）
+    // 参考 KG：跨周期资源通过「建筑」承载而非直接继承数值
+    legacy: [
+      { id: 'relic_core',   name: '湮灭核心', fx: 0.25, needKey: 'delve', need: 5,   desc: '全局产出 ×1.25/座（本局深潜 ≥5 层时轮回携带）' },
+      { id: 'relic_vault',  name: '记忆库',   fx: 2.0,  needKey: 'colony', need: 5,  desc: 'EP 存储上限 ×2/座（本局殖民总级 ≥5 时轮回携带）' },
+      { id: 'relic_anchor', name: '虚空锚',   fx: 0.25, needKey: 'rift', need: 10,  desc: '裂隙余烬 +25%/座（本局裂隙封印 ≥10 次时轮回携带）' },
+    ],
+    legacyCap: 3,
     upgBase: 50, upgGrowth: 1.6,
     upgs: [
       { id: 'echo_global', name: '回响增幅', cap: 5, desc: '回响全局倍率 ×1.3/级（叠乘）' },
@@ -272,6 +280,14 @@ export const BALANCE = {
   ],
   colonyExploreBonus: 0.10, // 每殖民等级 深空探索收益 +10%
 
+  // v2.8.4：研究点专属升级（RP 购买，研究点 tab 渲染；长线消耗 RP，克制——cap 8-10 + 成本指数涨）
+  researchUpgs: [
+    { id: 'rp_entropy',     name: '熵减研究',   cap: 10, base: 50, growth: 1.6,  fx: { key: 'ep',   v: 0.05 }, desc: '基础 EP 产出 +5%/级' },
+    { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60, growth: 1.6,  fx: { key: 'thread', v: 0.05 }, desc: '线程产出 +5%/级' },
+    { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80, growth: 1.65, fx: { key: 'global', v: 0.04 }, desc: '全局产出 ×1.04/级（叠乘）' },
+    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 100, growth: 1.7, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
+    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 120, growth: 1.7, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
+  ],
   corruption: {
     accumulateRate: 0.1,       // 每秒按溢出比例累积
     penaltyPerPercent: 0.003,  // 每 1% 腐化 -0.3% 产出

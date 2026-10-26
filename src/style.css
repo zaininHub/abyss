@@ -843,21 +843,26 @@ body.paused .pet-grid .pet-card {
 .item.bld .desc { color: var(--warn); font-size: 11px; }
 
 /* ========== v1.3 模块 A：AI 助手面板 ========== */
-.ai-card h3 { margin-bottom: 8px; }
+/* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
+#ai-card { padding: 8px 10px; }
+#code-rain {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+.ai-card h3 { margin-bottom: 6px; font-size: 12.5px; }
 .ai-desc {
-  font-size: 11px; color: var(--text-2);
-  margin-bottom: 8px; padding: 6px 8px;
+  font-size: 10.5px; color: var(--text-2);
+  margin-bottom: 6px; padding: 4px 6px;
   background: rgba(255,255,255,.03); border-radius: 6px;
 }
 /* v2.5.5：AI 自动购建区块 */
-.ai-build-box { border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px; margin-top: 4px; }
-.ai-build-box .ai-build-title { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+.ai-build-box { border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; margin-top: 3px; }
+.ai-build-box .ai-build-title { font-size: 11.5px; color: var(--accent); margin-bottom: 3px; }
 .ai-build-locked { opacity: 0.85; }
 .ai-build-box .btn.disabled { opacity: 0.45; cursor: not-allowed; }
-.ai-build-box .ai-rate-btn { padding: 2px 8px; font-size: 11px; }
+.ai-build-box .ai-rate-btn { padding: 1px 7px; font-size: 10.5px; }
 .ai-switch {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; margin-bottom: 4px;
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 8px;

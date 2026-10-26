@@ -50,7 +50,8 @@ const CLEAN = () => {
   });
   rec('A1 9.3：shop 新档首屏 1 项（K=p+1，p=0）', c.shop === 1, JSON.stringify(c.shop));
   // v2.5 ①：探采平台改裂隙门控——新档（未触发裂隙）载具区整节隐藏
-  rec('A2 9.3：thread/eternal 新档首屏各 1 项，vehicles 隐藏（v2.5 裂隙门控）', c.thread === 1 && c.veh === 0 && c.eternal === 1, JSON.stringify({ thread: c.thread, veh: c.veh, eternal: c.eternal }));
+  // v2.8.4 ③：ES 未解锁（首次晋升前）永恒矩阵整节隐藏——升级项不早于资源显示
+  rec('A2 9.3：thread 新档首屏 1 项，vehicles 隐藏，eternal 隐藏（ES 未解锁）', c.thread === 1 && c.veh === 0 && c.eternal === 0, JSON.stringify({ thread: c.thread, veh: c.veh, eternal: c.eternal }));
   rec('A3 9.2：深渊商店/效能建筑/族升级/设施 新档整节隐藏（锚点门控）', c.dm === 0 && c.v21 === 0 && c.fam === 0 && c.bld === 0 && !c.dmTitleShown && !c.v21TitleShown && !c.famTitleShown && !c.bldTitleShown, JSON.stringify({ dm: c.dm, v21: c.v21, fam: c.fam, bld: c.bld }));
   rec('A4 9.2（v2.5 ①）：探采平台开局隐藏——裂隙触发前无载具条目', c.veh === 0, String(c.veh));
   rec('A5 §5.2：链提示废除——新档全页 .chain-hint 零残留', c.shopHint === 0 && c.docHint === 0, JSON.stringify({ shop: c.shopHint, doc: c.docHint }));

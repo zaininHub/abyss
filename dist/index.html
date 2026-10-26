@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.3</title>
+<title>深渊效能工作台 v2.8.4</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-Poamfvrq.js"></script>
-  <link rel="stylesheet" href="./assets/index-DjSL1heM.css">
+  <script defer src="./assets/index-DWB8LFBz.js"></script>
+  <link rel="stylesheet" href="./assets/index-DQ8tp9f-.css">
 </head>
 <body>
 <div id="app">
@@ -22,6 +22,7 @@
     <div class="stat" title="信仰：神龛/万神殿随机产出，用于开启宗教路线。"><b>🙏信仰</b><span id="h-faith">0</span></div>
     <div class="stat" title="异兽饼干（PT）：喂养异兽的经验资源。来源：宠物乐园 / 伊甸花园 持续产出；解锁：在商店购入「宠物乐园」（PT 面板随之开启）。"><b>🍪异兽饼干</b><span id="h-pt">0</span></div>
     <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
+    <div class="stat" id="splinter-stat" title="湮灭残片：被深渊吞噬（崩溃）后强制转生获得 ×1。暂无消费用途，仅作保留（跨转生累计）。" style="display:none"><b>🧩湮灭残片</b><span id="h-splinter">0</span></div>
     <div class="stat" id="reincarn-stat" title="轮回：终极循环，结算深渊回响（全局 +5%/点）。鼠标悬停查看加成明细。" style="display:none"><b>♻️轮回</b><span id="h-reincarn">0</span></div>
     <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
     <!-- v2.0 潮汐状态 -->
@@ -177,6 +178,8 @@
         <!-- v2.5 ④：研究点（RP 独立栏目，EP 首次溢出解锁） -->
         <div class="tab-pane" id="tab-rp">
           <div id="rp-panel"></div>
+          <h3 style="margin-top:16px" id="research-upgrade-title">研究升级 <span style="font-size:12px;font-weight:400;color:var(--text-2)">RP 购买 · 长线研究（消耗 RP，随 RP 觉醒后显示）</span></h3>
+          <div id="research-upgrade-list" class="shop-grid"></div>
           <h3 style="margin-top:16px" id="rp-upgrade-title">RP 加成 <span style="font-size:12px;font-weight:400;color:var(--text-2)">EP 购买 · 晋升 RP 加成与蒸馏效率 · 随 RP 觉醒后显示</span></h3>
           <div id="rp-upgrade-list" class="shop-grid"></div>
           <h3 style="margin-top:16px" id="family-upgrade-title">族升级 <span style="font-size:12px;font-weight:400;color:var(--text-2)">RP 购买 · 扩容族与产出族的等级上限扩展 · 跨转生保留</span></h3>
@@ -277,6 +280,8 @@
   <!-- Toast -->
   <div id="toast" class="toast"></div>
 
+  <!-- v2.8.4 ⑤：编译器神殿——青色代码雨粒子（低调背景特效） -->
+  <canvas id="code-rain" style="display:none"></canvas>
   <!-- 天赋模态框 -->
   <div id="talent-modal" class="modal">
     <div class="modal-box">

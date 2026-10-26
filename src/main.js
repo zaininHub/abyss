@@ -2,7 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import {
   computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec,
-  fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks,
+  fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
   offlineRate, offlineCap, addEp,
@@ -21,7 +21,7 @@ import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProject
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn } from './modules/religions.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { religionUnlocked } from './data/religions.js';
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
@@ -184,12 +184,20 @@ function render() {
     if (famEl2) renderFamilyUpgrades(famEl2);
     dirty.shop = false;
   }
-  if (dirty.rp) { renderRpPanel(); dirty.rp = false; } // v2.7.4 ⑦：RP 蒸馏后面板刷新
+  if (dirty.rp) {
+    renderRpPanel();
+    renderResearchUpgrades(document.getElementById('research-upgrade-list')); // v2.8.4 ④：研究升级（RP 购买长线）
+    dirty.rp = false;
+  } // v2.7.4 ⑦：RP 蒸馏后面板刷新
   if (dirty.tech) {
     const techEl = document.getElementById('tech-tree');
     if (techEl) renderTech(techEl);
     const eternalEl = document.getElementById('eternal-list');
-    if (eternalEl) renderEternal(eternalEl);
+    // v2.8.4 ③：ES 未解锁（首次晋升获得 ES 前）不渲染永恒矩阵——升级项不再早于资源显示
+    if (eternalEl) {
+      if (esDiscovered()) renderEternal(eternalEl);
+      else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; }
+    }
     dirty.tech = false;
   }
   if (dirty.pets) {
@@ -327,6 +335,13 @@ function renderTop() {
     hReincarn.textContent = n;
     reincarnStat.title = `轮回 ${n} 次 · 深渊回响 ${echo} · 全局产出 +${(echo * 5).toFixed(0)}%（每点回响 +5%，跨轮回保留）`;
   }
+  // v2.8.4 ②：湮灭残片（崩溃转生 +1，>0 才显示）
+  const hSpl = document.getElementById('h-splinter');
+  const splStat = document.getElementById('splinter-stat');
+  if (hSpl && splStat) {
+    splStat.style.display = (S.abyssSplinter || 0) > 0 ? '' : 'none';
+    hSpl.textContent = S.abyssSplinter || 0;
+  }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
   if (hSalary) hSalary.textContent = fmt(staffSalaryPerSec()) + '/s'; // v2.4.1：薪资消耗（负面红，已含入 cps 净额）
@@ -396,9 +411,22 @@ function renderCorruption() {
   if (bn) {
     if (S.collapsed) {
       bn.style.display = '';
-      bn.innerHTML = `🌑 <b>深渊吞噬</b>：腐化满额且 EP 触顶，线程出逃殆尽——本局宣告失败，所有系统停止产出。<span style="opacity:.8">可晋升转生或轮回以脱离深渊。</span>`;
+      bn.style.borderColor = 'var(--red,#e5484d)';
+      bn.style.background = 'rgba(229,72,77,.12)';
+      bn.style.color = 'var(--red,#ff6b6b)';
+      bn.innerHTML = `🌑 <b>深渊吞噬</b>：本局宣告失败，所有系统停止产出。<span style="opacity:.85">必须转生以脱离（转生 +1 湮灭残片）。</span>`;
     } else {
-      bn.style.display = 'none';
+      const remain = collapseRemainMs();
+      if (remain !== null) {
+        const mm = Math.floor(remain / 60000), ss = Math.floor((remain % 60000) / 1000);
+        bn.style.display = '';
+        bn.style.borderColor = 'var(--warn,#c8a24a)';
+        bn.style.background = 'rgba(200,162,74,.12)';
+        bn.style.color = 'var(--warn,#ffd479)';
+        bn.innerHTML = `⚠️ <b>深渊吞噬倒计时</b>：腐化满额且 EP 触顶，距本局崩溃 <b>${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>。<span style="opacity:.85">快速消耗 EP 至上限 50% 以下可自救；否则请立即转生。</span>`;
+      } else {
+        bn.style.display = 'none';
+      }
     }
   }
 }
@@ -583,7 +611,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -1005,6 +1033,7 @@ function openTalentModal() {
   box.querySelectorAll('.talent-option').forEach(el => {
     el.addEventListener('click', () => {
       const tid = el.dataset.talent;
+      modal.style.display = 'none'; // v2.8.4 ⑪：转生后立即关闭模态框（原残留可重复选择）
       doPrestige(tid);
       save(S); // v2.7.1：转生立即持久化（消除 5s 保存窗口 → 选天赋后刷新不再回滚）
       modal.removeEventListener('click', onModalClose);
@@ -1452,6 +1481,7 @@ function tick(now) {
   // v2.0 潮汐 / 腐化推进
   tickTide(dt);
   tickCorruption(dt);
+  ensureCodeRain(); // v2.8.4 ⑤：编译器神殿——青色代码雨粒子（低调，持有即启）
 
   // v2.2 岔路口状态机推进（每帧幂等；替代 v2.0 弹窗强制选择）
   updateCrossroad();
@@ -1648,4 +1678,48 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', startApp);
 } else {
   startApp();
+}
+
+
+// ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（低调背景特效） ==========
+let _codeRainStarted = false, _codeRainRaf = null;
+function ensureCodeRain() {
+  const canvas = document.getElementById('code-rain');
+  if (!canvas) return;
+  const owned = (S.upgrades && S.upgrades.compiler_temple) >= 1;
+  if (!owned) {
+    canvas.style.display = 'none';
+    if (_codeRainRaf) { cancelAnimationFrame(_codeRainRaf); _codeRainRaf = null; }
+    _codeRainStarted = false;
+    return;
+  }
+  if (_codeRainStarted) return;
+  _codeRainStarted = true;
+  canvas.style.display = '';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const CHARS = '01<>/\{}[]=+*#%&';
+  const cols = Math.floor(canvas.width / 18);
+  const drops = new Array(cols).fill(0).map(() => Math.random() * -60);
+  const FONT = 12;
+  let last = 0;
+  function frame(ts) {
+    if (!_codeRainStarted) return;
+    // 低调：约 8 FPS 的慢速字符雨，透明度极低
+    if (ts - last < 125) { _codeRainRaf = requestAnimationFrame(frame); return; }
+    last = ts;
+    ctx.fillStyle = 'rgba(10,8,16,0.06)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = FONT + 'px monospace';
+    for (let i = 0; i < cols; i++) {
+      const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+      ctx.fillStyle = 'rgba(80, 220, 200, 0.10)'; // 青色，极淡
+      ctx.fillText(ch, i * 18, drops[i] * FONT);
+      drops[i] += 0.25; // 慢速下落
+      if (drops[i] * FONT > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    }
+    _codeRainRaf = requestAnimationFrame(frame);
+  }
+  _codeRainRaf = requestAnimationFrame(frame);
 }

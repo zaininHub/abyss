@@ -20,7 +20,7 @@ function techVisible(t) {
   return !!S.milesDone[1e4];
 }
 
-function techReqOk(t) { return t.req.every(r => hasTech(r)); }
+export function techReqOk(t) { return t.req.every(r => hasTech(r)); }
 
 export function renderTech(container) {
   techContainer = container;

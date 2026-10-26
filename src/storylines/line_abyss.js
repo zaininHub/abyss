@@ -15,6 +15,9 @@ export default {
         // v2.5.1 反馈④：深渊行者线专属特殊升级（深渊主题强化）
         { id: 'tentacle_protocol', col: 3, cost: 100, name: '触手协议', desc: '每 60 秒，缸中触手自动轻点一次工作台（一次点击产出）', req: [] },
         { id: 'abyss_market', col: 4, cost: 150, name: '深渊集市', desc: 'DM 采集 +50%（叠乘）；裂隙封印奖励 ×2', req: ['tentacle_protocol'] },
+        // v2.8.4：科技树扩充——深渊线长线研究
+        { id: 'void_sight', col: 5, cost: 170, name: '虚空视界', desc: '深潜产出 +25%（长线研究）', req: ['abyss_market'] },
+        { id: 'abyss_will', col: 5, cost: 240, name: '深渊意志', desc: '全局产出 ×1.1（长线研究）', req: ['void_sight'] },
       ],
     },
     chapters: {

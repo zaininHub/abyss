@@ -11,7 +11,10 @@ export default {
       append: [
         { id: 'new_protocol', col: 3, cost: 60, name: '新协议', desc: '全局 ×3；解锁线A 剧情第10章', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
         { id: 'auto_tech', col: 3, cost: 80, name: '自动研究', desc: 'AI 助手新增"自动科技"开关', req: ['ai_core'] },
-        { id: 'zero_entropy', col: 4, cost: 120, name: '零熵协议', desc: '腐化惩罚 -50%；潮汐负面效果免疫', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
+        { id: 'zero_entropy', col: 4, cost: 120, name: '零熵协议', desc: '腐化惩罚 -25%；潮汐负面效果减半（v2.8.4：不再免疫，只减缓）', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
+        // v2.8.4：科技树扩充——秩序线长线研究
+        { id: 'axiom_shift', col: 4, cost: 160, name: '公理偏移', desc: '全局产出 ×1.1（长线研究）', req: ['zero_entropy'] },
+        { id: 'stable_protocol', col: 5, cost: 220, name: '稳定协议', desc: '深渊吞噬倒计时延长 2 分钟（腐化满额 + EP 触顶后 7 分钟才崩溃）', req: ['axiom_shift'] },
       ],
     },
     chapters: {
@@ -39,7 +42,7 @@ export default {
     },
     buildings: {
       append: [
-        { id: 'compiler_temple', name: '编译器神殿', levels: 1, base: 1e6, growth: 1, desc: ['无数值效果；购买后工作台背景增加青色代码雨粒子特效'] },
+        { id: 'compiler_temple', name: '编译器神殿', levels: 1, base: 1e6, growth: 1, desc: ['购买后工作台背景增加青色代码雨粒子特效（低调背景氛围，无数值效果）'] },
         { id: 'protocol_archive', name: '协议档案馆', levels: 3, base: 5e5, growth: 5, desc: ['科技成本 -5%', '科技成本 -10%', '科技成本 -15%；解锁科技树预览'] },
       ],
     },

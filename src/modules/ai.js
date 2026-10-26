@@ -19,6 +19,8 @@ import { claimProject } from './projects.js';
 import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { v21BuildingCost } from './economy.js';
 import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
+import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
+import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已购顺序登记）
 
 let logFn = null;
 let uiRefreshFn = null;
@@ -195,6 +197,24 @@ export function tickAI(dt) {
       }
     }
   }
+
+  // v2.8.4：自动研究（科技树 · RP 购买）——秩序线科技「自动研究」解锁开关；
+  // 每决策周期至多买 1 个最便宜可负担科技，RP 消耗，克制防抢资源
+  if (ai.autoTech && S.tech && S.tech.auto_tech) {
+    const cands = (getTechs() || [])
+      .filter(t => !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r)))) // v2.8.4：techReqOk 内联（避免 tech→main→css 的 node ESM 链）
+      .map(t => ({ t, cost: techCostOf(t) }))
+      .sort((a2, b2) => a2.cost - b2.cost);
+    for (const { t, cost } of cands) {
+      if ((S.rp || 0) < cost) break;
+      S.rp -= cost;
+      S.tech[t.id] = true;
+      pushBoughtOrder(S, t.id);
+      ailog(`自动研究：购入科技「${t.name}」（-${fmt(cost)} RP）`, 'good');
+      acted = true;
+      break; // 每周期至多 1 个
+    }
+  }
   return acted;
 }
 
@@ -260,18 +280,19 @@ export function renderAiPanel(container) {
     </div>`;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
+  // v2.8.4：自动研究开关（秩序线科技「自动研究」已购后显示；RP 购买科技树）
+  const autoTechHtml = (S.tech && S.tech.auto_tech) ? sw('autoTech', '自动研究', '每决策周期自动购买最便宜的已解锁科技（RP 消耗，至多 1 个/周期）') : '';
   // v2.5.5：自动购建区块（全部资源点解锁后可激活）
   const AB = BALANCE.ai.aiAutoBuild;
-  let buildHtml;
+  let buildHtml = autoTechHtml + (autoTechHtml ? '<div style="margin-top:4px"></div>' : '');
   if (!autoBuildUnlocked()) {
     const resOk = allResDiscovered(S);
     const epOk = S.ep >= autoBuildActivateCost();
-    buildHtml = `
+    buildHtml += `
       <div class="ai-build-box ${resOk && epOk ? '' : 'ai-build-locked'}">
         <div class="ai-build-title">自动购建（全部资源点解锁后可用）</div>
         <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-          资源点：${ALL_RES_KEYS.filter(k => S.resDiscovered[k] === true).length}/${ALL_RES_KEYS.length} 已解锁
-          ${resOk ? '' : '（未全部解锁，不可激活）'}
+          资源点：${ALL_RES_KEYS.filter(k => S.resDiscovered[k] === true).length}/${ALL_RES_KEYS.length} 已解锁${resOk ? '' : '（全部解锁后可激活）'}
           <br>激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}
         </div>
         <button class="btn ${resOk && epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${resOk && epOk ? '' : 'disabled'}
@@ -281,7 +302,7 @@ export function renderAiPanel(container) {
   } else {
     const rateBtns = AB.rateOptions.map(r =>
       `<button class="btn ai-rate-btn ${(ai.autoBuildRate ?? AB.defaultRate) === r ? 'on' : ''}" data-ai-build-rate="${r}">${r}s</button>`).join('');
-    buildHtml = `
+    buildHtml += `
       <div class="ai-build-box">
         <div class="ai-build-title">自动购建（已激活）</div>
         ${sw('autoBuild', '自动购建', `每 ${autoBuildRate()}s 购买 1 栋已解锁建筑（EP 成本最低优先）；硬性间隔下限 ${AB.minRate}s、每周期至多 ${AB.perTickMax} 栋，不低于预留线`)}

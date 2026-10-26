@@ -40,6 +40,20 @@ export function doReincarn() {
   const gain = ready.echo;
   S.abyssEcho = (S.abyssEcho || 0) + gain;
   S.reincarned = (S.reincarned || 0) + 1;
+  // v2.8.4：深渊遗存——每次轮回按本局最强维度自动携带 1 座（克制：每轮回至多 +1、同种 cap 3、跨轮回保留）
+  S.relicLegacy = S.relicLegacy || {};
+  const legacyDefs = BALANCE.reincarn.legacy || [];
+  const colonyLv = (S.colonies || []).reduce((a, c) => a + (c.lv || 0), 0);
+  const vals = { delve: S.delveDepth || 0, colony: colonyLv, rift: S.riftsSealed || 0 };
+  const cands = legacyDefs
+    .filter(L => (S.relicLegacy[L.id] || 0) < BALANCE.reincarn.legacyCap && vals[L.needKey] >= L.need)
+    .sort((a, b2) => vals[b2.needKey] / b2.need - vals[a.needKey] / a.need);
+  if (cands.length > 0) {
+    const pick = cands[0];
+    S.relicLegacy[pick.id] = (S.relicLegacy[pick.id] || 0) + 1;
+    // 日志并入 main 侧？——此处直接记录（无日志钩子，通过返回值带出）
+    ready.legacy = pick;
+  }
   // 记录本局已走故事线（与晋升一致）
   if (S.storyline && S.storyline !== 'default' && !(S.storylinesCompleted || []).includes(S.storyline)) {
     S.storylinesCompleted = S.storylinesCompleted || [];
@@ -121,11 +135,14 @@ export function renderReincarn(container) {
         <span style="font-size:11px;color:var(--text-2)" id="echo-stat">深渊回响 <b style="color:var(--accent)">0</b> · 已轮回 0 次</span>
       </div>
       <div style="font-size:11px;color:var(--text-2);margin:6px 0;line-height:1.6" id="echo-desc">
-        结束当前发展：本轮成就结算为深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。
-        轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。回响获取与升级成本均严格克制。
+        轮回 = 终局循环（晋升之上）：本轮成就结算为深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。
+        与晋升的分工：<b style="color:var(--accent)">晋升</b>保留职级/RP/ES/回响/永恒——积累研究；<b style="color:var(--purple)">轮回</b>额外按本局最强维度携带 1 座「深渊遗存」建筑（跨轮回，参考 KG：跨周期资源由建筑承载而非直接继承）。
+        轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/遗存/已完成故事线。回响与遗存均严格克制。
       </div>
       <div style="font-size:11px;color:var(--red,#f85149);margin-bottom:6px" id="echo-status">未就绪</div>
       <button class="btn reincarn-btn no" id="reincarn-btn" style="width:100%">轮回 · 结算回响（二次确认）</button>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-2)">深渊遗存（跨轮回携带建筑 · 每次轮回按本局最强维度 +1 座，同种上限 3）</div>
+      <div id="echo-legacy-list" style="display:flex;flex-direction:column;gap:6px;margin:6px 0 12px"></div>
       <div style="margin-top:10px;font-size:11px;color:var(--text-2)">回响商店（升级永久，跨轮回）</div>
       <div id="echo-upg-list"></div>
     </div>`);
@@ -155,6 +172,17 @@ export function renderReincarn(container) {
   }
   const btn = container.querySelector('#reincarn-btn');
   if (btn) btn.className = 'btn reincarn-btn' + (ready.ok ? '' : ' no');
+  // v2.8.4：深渊遗存列表
+  const lg = container.querySelector('#echo-legacy-list');
+  if (lg) {
+    const legacyHtml = (BALANCE.reincarn.legacy || []).map(L => {
+      const lv = (S.relicLegacy && S.relicLegacy[L.id]) || 0;
+      return `<div style="display:flex;justify-content:space-between;font-size:11px;color:${lv > 0 ? 'var(--green,#3fb950)' : 'var(--text-3)'}">
+        <span>${L.name} ${lv > 0 ? '×' + lv : ''}<span style="opacity:.75"> · ${L.desc}</span></span>
+        <span class="mono">${lv}/3</span></div>`;
+    }).join('');
+    if (lg._last !== legacyHtml) { lg._last = legacyHtml; lg.innerHTML = legacyHtml; }
+  }
   // 回响商店卡列表局部重渲染（v2.8：内容不变跳过 innerHTML 重建——hover 期间节点替换仍会闪/重置 :hover 状态）
   const list = container.querySelector('#echo-upg-list');
   if (list) {

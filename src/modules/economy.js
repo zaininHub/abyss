@@ -54,11 +54,14 @@ export function tidePhaseInfo(idx) {
 
 export function tideMult(key) {
   const ph = tidePhaseInfo(S.tidePhase);
-  if (key === 'ep') return ph.epMult;
-  if (key === 'salary') return ph.salaryMult;
-  if (key === 'techCost') return ph.techCostMult;
-  if (key === 'eventBad') return ph.eventBadWeight;
-  if (key === 'eventGoodDur') return ph.eventGoodDur;
+  // v2.8.4：零熵协议——潮汐负面效果减半（不再免疫，只减缓）
+  const soften = hasTech('zero_entropy') ? 0.5 : 0;
+  const halve = (m) => (soften > 0 && m !== 1) ? (m < 1 ? 1 - (1 - m) * soften : 1 + (m - 1) * soften) : m;
+  if (key === 'ep') return halve(ph.epMult);
+  if (key === 'salary') return halve(ph.salaryMult);
+  if (key === 'techCost') return halve(ph.techCostMult);
+  if (key === 'eventBad') return halve(ph.eventBadWeight);
+  if (key === 'eventGoodDur') return halve(ph.eventGoodDur);
   return 1;
 }
 
@@ -66,7 +69,9 @@ export function tideMult(key) {
 export function corruptionPenalty() {
   const c = Math.max(0, Math.min(BALANCE.corruption.max, S.corruption || 0));
   if (c === 0) return 1;
-  const per = hasTech('entropy_reduce') ? BALANCE.corruption.penaltyPerPercent / 1.5 : BALANCE.corruption.penaltyPerPercent;
+  let per = BALANCE.corruption.penaltyPerPercent;
+  if (hasTech('entropy_reduce')) per /= 1.5;
+  if (hasTech('zero_entropy')) per /= 1.25; // v2.8.4：零熵协议（-25%，不再免疫级 -50%）
   return Math.max(BALANCE.corruption.penaltyFloor, 1 - c * per);
 }
 
@@ -107,24 +112,93 @@ export function tickCorruption(dt) {
 // 腐化满额（≥100%）且 EP 达到上限时：线程每 60s 被深渊强制吞没 1 条（免疫无效），
 // 出逃殆尽后本局崩溃：所有系统停止产出，给出成就；玩家只能晋升转生/轮回脱离。
 let collapseLogFn = null, collapseToastFn = null;
+// v2.8.4：深渊吞噬倒计时基准 5 分钟（稳定协议科技 +2 分钟）
 export function setCollapseHooks(logFn, toastFn) { collapseLogFn = logFn; collapseToastFn = toastFn; }
+export function collapseRemainMs() {
+  if (S.collapsed) return 0;
+  if (!S._collapseAt) return null;
+  return Math.max(0, S._collapseAt - Date.now());
+}
+
+// v2.8.4：长线科技乘数（各故事线终局研究：公理偏移/深渊意志/圣物科技 → 全局 ×1.1）
+export function techGlobalMult() {
+  let m = 1;
+  if (hasTech('axiom_shift')) m *= 1.1;
+  if (hasTech('abyss_will')) m *= 1.1;
+  if (hasTech('sacred_tech')) m *= 1.1;
+  return m;
+}
+// v2.8.4：虚空视界——深潜产出 +25%
+export function delveTechMult() { return hasTech('void_sight') ? 1.25 : 1; }
+// v2.8.4：神启之光——信仰产出 +25%
+export function faithTechMult() { return hasTech('divine_light') ? 1.25 : 1; }
+// v2.8.4：稳定协议——深渊吞噬倒计时 +2 分钟（7 分钟）
+export function collapseMs() { return hasTech('stable_protocol') ? 420000 : 300000; }
+
+// v2.8.4：ES 发现锚点（首次晋升获得 ES 时点亮；未解锁前永恒矩阵区块不显示）
+export function discoverEs() {
+  if (!S.resDiscovered) S.resDiscovered = {};
+  S.resDiscovered.es = true;
+}
+export function esDiscovered() {
+  return !!(S.resDiscovered && S.resDiscovered.es);
+}
+
+// v2.8.4：研究点升级（RP 购买）读侧
+export function researchMult(key) {
+  const T = BALANCE.researchUpgs || [];
+  let m = 1;
+  for (const u of T) {
+    const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
+    if (lv <= 0 || !u.fx || u.fx.key !== key) continue;
+    if (key === 'global') m *= Math.pow(1 + u.fx.v, lv);
+    else m *= (1 + u.fx.v * lv);
+  }
+  return m;
+}
+
+// v2.8.4：深渊遗存（跨轮回携带建筑）读侧
+export function legacyLv(id) { return (S.relicLegacy && S.relicLegacy[id]) || 0; }
+export function legacyGlobalMult() { return 1 + legacyLv('relic_core') * 0.25; }
+export function legacyCapMult() { return 1 + legacyLv('relic_vault') * 2.0; }
+export function legacyRiftMult() { return 1 + legacyLv('relic_anchor') * 0.25; }
 export function tickCollapse(dt) {
   if (S.collapsed) return;
   if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) return;
   const cap = epStorageCap();
-  if ((S.ep || 0) < cap - 1) return;
+  if ((S.ep || 0) < cap - 1) {
+    // 未触顶：若之前已进入倒计时，EP 快速消耗（买入/蒸馏）可自救取消
+    if (S._collapseAt) S._collapseAt = null;
+    S._collapseTimer = 0;
+    return;
+  }
+  // v2.8.4：倒计时机制——腐化满额 + EP 触顶后进入 5 分钟「深渊吞噬」倒计时（单向，可自救取消）
+  if (!S._collapseAt) {
+    S._collapseAt = Date.now() + collapseMs();
+    if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：腐化满额且 EP 触顶，5 分钟后本局被深渊吞没（快速消耗 EP 至上限 50% 以下可自救）', 'bad');
+    if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：5 分钟后崩溃——消耗 EP 或立即转生可脱离');
+  }
+  // 自救：EP 消耗至上限 50% 以下 → 取消倒计时
+  if ((S.ep || 0) < cap * 0.5) {
+    S._collapseAt = null;
+    S._collapseTimer = 0;
+    if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已取消：EP 跌至上限 50% 以下，深渊暂时退去', 'good');
+    return;
+  }
+  // 每 60s 吞没 1 线程（叙事提示，出逃殆尽提前崩溃）
   S._collapseTimer = (S._collapseTimer || 0) + dt;
-  if (S._collapseTimer < 60) return;
-  S._collapseTimer = 0;
-  if ((S.cultists || []).length > 0) {
+  if (S._collapseTimer >= 60 && (S.cultists || []).length > 0) {
+    S._collapseTimer = 0;
     const lost = S.cultists.pop();
-    if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（腐化满额且 EP 触顶）`, 'bad');
+    if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（倒计时中）`, 'bad');
     if (collapseToastFn) collapseToastFn(`🌊 线程【${lost.name}】被深渊吞没！`);
   }
-  if ((S.cultists || []).length === 0) {
+  // 倒计时结束 或 线程出逃殆尽 → 强制崩溃
+  if (Date.now() >= S._collapseAt || (S.cultists || []).length === 0) {
     S.collapsed = true;
-    if (collapseLogFn) collapseLogFn('深渊吞噬：所有线程出逃殆尽——本局系统停止产出，你被深渊吞噬了', 'bad');
-    if (collapseToastFn) collapseToastFn('🌑 深渊吞噬：本局宣告失败，所有系统停止产出。可晋升转生或轮回脱离');
+    S.cultists = [];
+    if (collapseLogFn) collapseLogFn('深渊吞噬：本局宣告失败，所有系统停止产出——你被深渊吞噬了（必须转生）', 'bad');
+    if (collapseToastFn) collapseToastFn('🌑 深渊吞噬：本局宣告失败，所有系统停止产出。必须转生以脱离');
   }
 }
 
@@ -295,7 +369,8 @@ function bld(id) { return (S.buildings && S.buildings[id]) || 0; }
 
 // 欠薪产出系数（能量食堂 3 级逐级缓解，3 级免疫）
 export function wageDebtMult() {
-  return [BALANCE.thread.wages.debtMult, 0.8, 0.9, 1][Math.min(3, bld('canteen'))];
+  // v2.8.4：能量食堂 3 级不再免疫——0.95 仍减缓欠薪惩罚（负面效果只能减缓）
+  return [BALANCE.thread.wages.debtMult, 0.8, 0.9, 0.95][Math.min(3, bld('canteen'))];
 }
 // 休眠期保命成本系数（休眠舱 → 0.15）
 export function wageKeepCostMult() {
@@ -413,7 +488,7 @@ export function staffOutputPerSec() {
   // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
   // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
   let outMult = 1;
-  outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul'); // v2.1 建筑驱动：协作大厅(+10%/级)+团队圣堂/超级团队殿(乘算)
+  outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
   if (S.upgrades.cpu) outMult *= 1.5;
   if (S.upgrades.gpu) outMult *= 2;
   let total = 0;
@@ -512,6 +587,7 @@ export function computeCps() {
   m *= critExpectedMult();  // v2.1：暴击反应堆期望乘算（死代码真实接线）
   m *= corruptionPenalty(); // v2.0：矩阵腐化惩罚
   m *= tideMult('ep');      // v2.0：深渊潮汐相位乘数
+  m *= researchMult('ep') * researchMult('global') * legacyGlobalMult() * techGlobalMult(); // v2.8.4：研究点 + 深渊遗存 + 长线科技
   let r = base * m;
   if (!isFinite(r)) r = 0;
   return r;
@@ -545,6 +621,7 @@ export function epStorageCap() {
   if (S.storyline === 'line_abyss') cap *= 1.15;
   else if (S.storyline === 'line_order') cap *= 1.10;
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
+  cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
   return Math.round(cap);
 }
 

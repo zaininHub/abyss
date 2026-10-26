@@ -470,8 +470,8 @@ t('A：预留线三档 + AI 核心科技定义（数值）', () => {
 });
 t('B：建筑效果改写四态生效值（数值）', () => {
   S.cultists = [];
-  // 能量食堂 3 级：欠薪惩罚 0.7 → 0.8 / 0.9 / 免疫(1)
-  const expect = [0.7, 0.8, 0.9, 1];
+  // v2.8.4 ⑦：能量食堂 3 级不再免疫——欠薪惩罚 0.7 → 0.8 / 0.9 / 0.95（负面只减缓）
+  const expect = [0.7, 0.8, 0.9, 0.95];
   for (let lv = 0; lv <= 3; lv++) {
     S.buildings = lv ? { canteen: lv } : {};
     assert.ok(Math.abs(wageDebtMult() - expect[lv]) < 1e-9, `食堂 Lv.${lv} 欠薪系数应为 ${expect[lv]}`);

@@ -24,6 +24,8 @@ export function defaultState() {
     // 晋升/永恒
     prestige: 0, prestigePoints: 0, runTalent: null,
     eternal: {},
+    // v2.8.4：湮灭残片（崩溃转生 +1，暂无消费用途，仅保留）+ 深渊遗存（轮回携带）+ RP 研究升级
+    abyssSplinter: 0, relicLegacy: {}, rpTheories: {},
     // 离线
     offUpgrades: {}, offHistory: [],
     gotOffline: false, lastOfflineSec: 0, lastOfflineGain: 0,

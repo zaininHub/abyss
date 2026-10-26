@@ -12,6 +12,9 @@ export default {
         { id: 'divine_right', col: 3, cost: 60, name: '神权协议', desc: '全局 ×3；faith 获取 ×2', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
         { id: 'prophecy', col: 3, cost: 80, name: '预言系统', desc: 'AI 变成"神谕广播"：每 30 秒预告下一个随机事件名称', req: ['ai_core'] },
         { id: 'miracle_body', col: 4, cost: 120, name: '神迹之躯', desc: '腐化被信仰中和：每 1 点 faith 抵消 1% 腐化惩罚；腐化积累速度 -50%', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
+        // v2.8.4：科技树扩充——信仰线长线研究
+        { id: 'divine_light', col: 5, cost: 170, name: '神启之光', desc: '信仰产出 +25%（长线研究）', req: ['miracle_body'] },
+        { id: 'sacred_tech', col: 5, cost: 240, name: '圣物科技', desc: '全局产出 ×1.1（长线研究）', req: ['divine_light'] },
       ],
     },
     chapters: {
