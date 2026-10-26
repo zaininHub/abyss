@@ -17,7 +17,7 @@ export function setWageToastFn(fn) { toastFn = fn; }
 function wlog(msg, cls) { if (logFn) logFn(`[薪资] ${msg}`, cls); }
 
 function resetWageState(w) {
-  w.state = 'ok'; w.debtSec = 0; w.dormantSec = 0; w.bufferSec = 0; w.loseTimer = 0;
+  w.state = 'ok'; w.debtSec = 0; w.dormantSec = 0; w.bufferSec = 0; w.loseTimer = 0; w.transition = 0;
 }
 
 export function tickWages(dt) {
@@ -47,8 +47,14 @@ export function tickWages(dt) {
   // ---- 状态迁移 ----
   if (w.state === 'ok') {
     if (S.ep < warnLine) {
-      w.state = 'debt'; w.debtSec = 0; w.bufferSec = 0;
-      wlog(`EP 余额不足（低于 ${W.warnSec}s 薪资），线程欠薪降效：产出 ×${wageDebtMult()}`, 'bad');
+      // v2.8.7：状态转换需要时间——EP 跌破黄线后维持 5s 过渡再进入欠薪，避免瞬间切换
+      w.transition = (w.transition || 0) + dt;
+      if (w.transition >= W.transitionSec) {
+        w.state = 'debt'; w.debtSec = 0; w.bufferSec = 0; w.transition = 0;
+        wlog(`EP 余额不足（低于 ${W.warnSec}s 薪资），线程欠薪降效：产出 ×${wageDebtMult()}`, 'bad');
+      }
+    } else {
+      w.transition = 0;
     }
   }
 
@@ -62,17 +68,22 @@ export function tickWages(dt) {
           wlog('恢复缓冲结束，线程回到满薪运行', 'good');
         }
       } else {
-        // 常规欠薪（自 ok 进入）：恢复线直达满薪
-        resetWageState(w);
-        wlog('EP 回到安全线（≥60s 薪资），线程恢复满薪', 'good');
+        // v2.8.7：常规欠薪恢复同样走 5s 过渡（不瞬间回满薪）
+        w.transition = (w.transition || 0) + dt;
+        if (w.transition >= W.transitionSec) {
+          resetWageState(w);
+          wlog('EP 回到安全线（≥60s 薪资），线程恢复满薪', 'good');
+        }
       }
-    } else if (S.ep < warnLine && w.bufferSec <= 0) {
+    } else if (S.ep < recoverLine && w.bufferSec <= 0) {
+      // v2.8.7：只要未达恢复线即持续累计欠薪（原仅 <warnLine 才累计——中间态倒计时卡住）
+      w.transition = 0;
       w.debtSec += dt;
       if (w.debtSec >= W.dormantAfterSec) {
         w.state = 'dormant'; w.dormantSec = 0; w.loseTimer = 0;
         wlog(`连续欠薪 ${W.dormantAfterSec}s，线程强制休眠：产出 ×0，仅扣保命成本（×${wageKeepCostMult()}）`, 'bad');
       }
-    } else if (S.ep < warnLine && w.bufferSec > 0) {
+    } else if (w.bufferSec > 0 && S.ep < warnLine) {
       // 缓冲期内资金再度告急：取消缓冲，回到普通欠薪
       w.bufferSec = 0;
     }

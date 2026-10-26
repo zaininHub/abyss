@@ -121,11 +121,11 @@ const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromiu
 // ========== V5 专注优化 RP 解锁即可购买 ==========
 {
   const focus = TECHS.find(t => t.id === 'focus_opt');
-  rec('V5 专注优化：前置 click_up 解除（RP 充足即可买，价格自成门槛）', focus && Array.isArray(focus.req) && focus.req.length === 0 && focus.cost === 8, `req=${JSON.stringify(focus?.req)},cost=${focus?.cost}`);
+  rec('V5 专注优化：前置 click_up 解除（v2.8.7 多资源成本：RP+EP 充足即可买）', focus && Array.isArray(focus.req) && focus.req.length === 0 && focus.cost && focus.cost.rp === 8 && focus.cost.ep === 8e4, `req=${JSON.stringify(focus?.req)},cost=${JSON.stringify(focus?.cost)}`);
   // 浏览器实跑：RP=10（无 click_up）→ 专注优化科技卡可买（非 locked）
   {
     const page = await browser.newPage();
-    const raw = JSON.stringify({ _version: 6, chapter: '4', storyline: 'default', ep: 1000, rp: 10, runEarned: 0, prestige: 0, upgrades: {}, buildings: {}, tech: {}, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }).replace(/</g, '\\u003c');
+    const raw = JSON.stringify({ _version: 6, chapter: '4', storyline: 'default', ep: 1e6, rp: 10, runEarned: 0, prestige: 0, upgrades: { storage: 20 }, buildings: {}, tech: {}, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }).replace(/</g, '\\u003c');
     await page.evaluateOnNewDocument(new Function(`localStorage.clear(); localStorage.setItem('abyss_idle_v2', JSON.stringify((${raw})));`));
     await page.goto(BASE, { waitUntil: 'networkidle0' });
     await sleep(1000);

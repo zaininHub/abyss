@@ -467,8 +467,20 @@ export function collectVehicleDm() {
 }
 
 // ========== v1.3 L1：科技成本潮汐乘数 ==========
+// v2.8.7：科技树成本多资源（综合产物齐耗，量最大）——cost 为 {rp,ep,dm...} 对象；退潮乘数仅作用于 RP 部分
 export function techCostOf(t) {
-  return Math.ceil(t.cost * tideMult('techCost'));
+  if (typeof t.cost === 'number') return { rp: Math.ceil(t.cost * tideMult('techCost')) };
+  const c = t.cost || {};
+  return {
+    rp: Math.ceil((c.rp || 0) * tideMult('techCost')),
+    ep: c.ep || 0,
+    dm: c.dm || 0,
+    es: c.es || 0,
+  };
+}
+export function techAfford(t) {
+  const c = techCostOf(t);
+  return S.rp >= (c.rp || 0) && S.ep >= (c.ep || 0) && (S.dm || 0) >= (c.dm || 0) && (S.es || 0) >= (c.es || 0);
 }
 
 // ========== 线程相关（v2.0 §1.4：成本/产出/薪资基数由 balance.js 配置） ==========

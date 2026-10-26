@@ -211,9 +211,11 @@ function render() {
     if (techEl) renderTech(techEl);
     const eternalEl = document.getElementById('eternal-list');
     // v2.8.4 ③：ES 未解锁（首次晋升获得 ES 前）不渲染永恒矩阵——升级项不再早于资源显示
+    // v2.8.7：标题一并隐藏（原仅清空列表，标题「永恒矩阵（ES 购买）· 当前 0 ES」仍显示）
+    const eternalTitle = document.getElementById('eternal-title');
     if (eternalEl) {
-      if (esDiscovered()) renderEternal(eternalEl);
-      else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; }
+      if (esDiscovered()) { renderEternal(eternalEl); if (eternalTitle) eternalTitle.style.display = ''; }
+      else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
     }
     dirty.tech = false;
   }
@@ -678,9 +680,9 @@ function switchTab(id) {
 }
 
 function refreshTabVisibility() {
-  // v2.5 ④：研究点 tab 常显（解锁状态由面板内占位/内容表达，未解锁也可点击查看条件）
+  // v2.8.7：研究点 tab 仅 RP 解锁后显示（保持可探索性，未解锁不展示入口）
   const rpBtn = document.getElementById('btn-rp');
-  if (rpBtn) rpBtn.style.display = '';
+  if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
   // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）
   const expBtn = document.getElementById('btn-expedition');
   if (expBtn) expBtn.style.display = (S.expeditionsDone > 0 || S.expeditions.length > 0) ? '' : 'none';
@@ -716,16 +718,14 @@ function renderRpPanel() {
     return;
   }
   panel.innerHTML = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0">🔬 研究点（RP）</h3>
+    <h3 style="margin-top:0">🔬 研究点（RP） <span title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:help;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
-    <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP（灵感蒸馏塔每级 +12%）</span></div>
+    <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="flex:1" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP → RP</button>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
-    <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。<br>
-    RP 用途：科技树（科技树 tab）、RP 加成（下方列表）、离线升级（离线 tab）、族升级（下方列表）。</p>
-  </div>`;
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
 }
 
 // v2.0：渐进开放标签页锁定状态更新
@@ -747,7 +747,8 @@ function updateTabLocks() {
     if (!btn) continue;
     const anchorKey = TAB_ANCHOR[id];
     const petsPt = id === 'btn-pets' ? anchorDone('pt', S) : false;
-    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S)) && (id !== 'btn-pets' || petsPt);
+    // v2.8.7：宠物乐园购入后即显示异兽 tab（P2 章节门控与 pt 锚点取或——买了宠物乐园就能看到宠物模块）
+    const unlocked = (isStageUnlocked(stage, S) || (id === 'btn-pets' && petsPt)) && (!anchorKey || anchorShown(anchorKey, S)) && (id !== 'btn-pets' || petsPt);
     if (!unlocked) {
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';
@@ -1404,6 +1405,9 @@ function tick(now) {
     render();
     return;
   }
+  // v2.8.7：打开存档管理时暂停所有产出/计时（防存档窗口内进度漂移）
+  const snapOpen = document.getElementById('snap-modal') && document.getElementById('snap-modal').style.display === 'flex';
+  if (snapOpen) { lastTick = now; return; }
 
   // EP 核心产出
   const cps = computeCps();

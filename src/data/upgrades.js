@@ -11,7 +11,7 @@ export const UPGRADES = [
   // v2.1 R3-A：早期 EP 存储扩容项（破解「上限 1000 死锁」的关键道具）
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
-  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}/级起步、逐级 +12%（v2.4 无限升级，成本递增）`},
+  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}/级起步、逐级 +12%（成本递增）`},
   {id:'intern',name:'实习生',base:2e5,cps:40,desc:'基础产出+40/s'}, // v2.8.3：base×4/cps 降（首升 1-3 天）
   {id:'team',name:'小组协作',base:2e6,cps:220,desc:'基础产出+220/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:2e7,cps:1200,desc:'基础产出+1.2K/s'}, // v2.8.3：base×4/cps 降
@@ -53,23 +53,23 @@ export const UPGRADES = [
   {id:'beyond',name:'超越',base:1.2e44,cps:8.4e32,desc:'基础产出+840No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,cps:0,produces:{type:'rp',rate:B.atrium.rate},desc:`每秒 +${B.atrium.rate} RP`},
-  {id:'petland',name:'宠物乐园',base:1e6,cps:0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干（异兽资源超长线，缓慢累计）'},
+  {id:'petland',name:'宠物乐园',base:1e6,cps:0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干'}, // v2.8.7：文案精简
   {id:'shrine',name:'路边神龛',base:1e8,cps:0,produces:{type:'fa_chance',rate:0.001},desc:'每秒 0.1% 概率 +1 信仰'},
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,produces:B.dataForge.produces,desc:B.dataForge.desc},
   {id:'garden',name:'伊甸花园',base:1e10,cps:0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 异兽饼干（后期主要来源）'},
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:1e14,cps:0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
-  {id:'subsist1',name:'能量合剂',base:1e6,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.2：降低成本类 base ×10
+  {id:'subsist1',name:'能量合剂',base:1e7,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.7：成本 ×10
   {id:'subsist2',name:'循环供氧',base:1e8,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v2.8.2：×10
   {id:'subsist3',name:'生物打印餐',base:1e10,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v2.8.2：×10
-  {id:'cpu',name:'CPU 超频',base:1e4,cps:0,cat:'thread',desc:'所有线程产出 +50%'},
-  {id:'mem',name:'内存扩容',base:1e6,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.2：×10
-  {id:'gpu',name:'GPU 加速',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 ×2'},
-  {id:'cache',name:'缓存优化',base:1e6,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%（下限 -35%），EP 存储上限 +8000/级（v2.4 无限升级；v2.8.2 base ×10）'},
+  {id:'cpu',name:'CPU 超频',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 +50%'}, // v2.8.7：成本 ×100
+  {id:'mem',name:'内存扩容',base:5e7,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.7：成本 ×50
+  {id:'gpu',name:'GPU 加速',base:5e7,cps:0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.7：成本 ×50
+  {id:'cache',name:'缓存优化',base:5e7,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%（下限 -35%），EP 存储上限 +8000/级'}, // v2.8.7：成本 ×50 + 文案去版本号
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
   {id:'reserve_bin',name:'备用粮仓',base:1200,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +8,000（中前期扩容，无限升级；v2.8.2 成本/上限同步放宽）'},
-  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000（后期扩容，无限升级）'},
+  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000（后期扩容）'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:500,cps:5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:5e4,cps:50,desc:'重装地面采集'},

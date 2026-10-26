@@ -1,6 +1,6 @@
 import { S } from '../state.js';
 import { PROJECT_TYPES, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
-import { computeCps, fmt, addEp, projRewardMult } from './economy.js';
+import { computeCps, fmt, addEp, projRewardMult, epStorageCap } from './economy.js';
 import { anchorShown } from './disclosure.js'; // v2.5 ③：未解锁资源不出对应奖励任务
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
@@ -49,6 +49,7 @@ export function spawnProject() {
     let amt = cps * windowSec * 1.0;
     if (!isFinite(amt) || amt < 50) amt = 50;
     amt *= projRewardMult(); // v2.1 建筑驱动：项目督导室 +50%/级（生成时计入，奖励展示与实际一致）
+    amt = Math.min(amt, epStorageCap()); // v2.8.7：任务 EP 奖励不超过当前存储上限
     reward = { kind: 'ep', amount: amt };
   } else if (roll < 0.8 && rpUnlocked) {
     // v2.0：项目 RP 奖励 3-8（balance.js 配置）
@@ -58,6 +59,7 @@ export function spawnProject() {
     let amt = cps * windowSec * 1.0;
     if (!isFinite(amt) || amt < 50) amt = 50;
     amt *= projRewardMult();
+    amt = Math.min(amt, epStorageCap()); // v2.8.7：任务 EP 奖励不超过当前存储上限
     reward = { kind: 'ep', amount: amt };
   } else if (roll < 0.9 && !hasBuff) reward = { kind: 'buff', buffMult: 2, dur: 300 };
   else if (!hasDebuff) reward = { kind: 'debuff', buffMult: 0.8, dur: 0 };
@@ -132,7 +134,11 @@ export function claimProject(p) {
   const r = p.reward;
   // v2.1 D1：EP 奖励走统一入口 addEp（受存储上限约束 + 统一记账）
   if (r.kind === 'ep') addEp(r.amount);
-  else if (r.kind === 'rp') S.rp += r.amount;
+  else if (r.kind === 'rp') {
+    // v2.8.7：防御——RP 未解锁（理论上生成已门控）时回退 EP 等值奖励
+    if (S.resDiscovered && S.resDiscovered.rp) S.rp += r.amount;
+    else addEp(Math.min(r.amount * 100, epStorageCap()));
+  }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }
   p.status = 'claimed';
 }

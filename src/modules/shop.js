@@ -164,31 +164,68 @@ export function renderShop(container) {
   });
 }
 // v2.8.2 反馈④：研究点 tab 渲染 RP 加成组（组 F + 灵感蒸馏塔），按解锁门槛（base 升序）排
+// v2.8.7 修复：数据源改 BALANCE.thread.upgrades（原 UPGRADES 数组不含 cat F——列表一直为空）；
+// 成本改 RP 购买（第 22 项：不做「RP 解锁后 EP 购买」）
+const RP_FAMILY_SRC_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
+function rpFamilyCost(u) {
+  const owned = (S.upgrades[u.id] || 0);
+  return Math.ceil((u.rpCost || 8) * Math.pow(u.growth || 1.18, owned));
+}
+function makeRpFamilyItem(u) {
+  const owned = (S.upgrades[u.id] || 0);
+  const cost = rpFamilyCost(u);
+  const afford = S.rp >= cost;
+  const div = document.createElement('div');
+  div.dataset.buy = u.id;
+  div.className = 'item' + (!afford ? ' cant' : '');
+  div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`}</span></div>
+    <div class="desc">${u.desc}</div>
+    <div class="cost mono">${fmt(cost)} RP</div>`;
+  return div;
+}
+function updateRpFamilyItem(u) {
+  const el = rpFamilyItemEls.get(u.id);
+  if (!el) return;
+  const owned = (S.upgrades[u.id] || 0);
+  const cost = rpFamilyCost(u);
+  const cnt = el.querySelector('.count');
+  if (cnt) cnt.textContent = u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`;
+  const c = el.querySelector('.cost');
+  if (c) c.textContent = `${fmt(cost)} RP`;
+  el.classList.toggle('cant', S.rp < cost);
+}
 export function renderRpFamily(container) {
   if (!container) return;
-  const RP_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
-  const rpItems = UPGRADES.filter(u => RP_IDS.includes(u.id))
+  rpFamilyContainer = container;
+  const RP_IDS = RP_FAMILY_SRC_IDS;
+  const rpItems = (BALANCE.thread.upgrades || []).filter(u => RP_IDS.includes(u.id))
     .slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   const split = chainSplit('rp', rpItems, u => (S.upgrades[u.id] || 0) > 0, S);
   const list = split.visible;
   container.innerHTML = '';
+  rpFamilyItemEls.clear();
   const frag = document.createDocumentFragment();
   for (const u of list) {
-    const el = makeShopItem(u);
+    const el = makeRpFamilyItem(u);
+    rpFamilyItemEls.set(u.id, el);
     frag.appendChild(el);
   }
   container.appendChild(frag);
   bindDelegate(container, (id, el) => {
-    const u = UPGRADES.find(x => x.id === id);
-    if (!u) return;
+    const u = (BALANCE.thread.upgrades || []).find(x => x.id === id);
+    if (!u || !rpFamilyItemEls.has(id)) return;
     const wasOwned = (S.upgrades[u.id] || 0) > 0;
-    if (buyUpgrade(u)) {
-      updateShopItem(u);
-      if (!wasOwned) renderRpFamily(container);
-      save(S);
-    }
+    const cost = rpFamilyCost(u);
+    if (S.rp < cost) return;
+    S.rp -= cost;
+    S.upgrades[u.id] = (S.upgrades[u.id] || 0) + 1;
+    if (!wasOwned) renderRpFamily(container);
+    else updateRpFamilyItem(u);
+    save(S);
   });
 }
+let rpFamilyContainer = null;
+let rpFamilyItemEls = new Map();
 
 // v2.6.7：商店链窗口增量揭示——解锁数/已购前缀变化时只插入新可见卡，不整面板重建
 // （消除「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁 + 点击竞争」根因）
@@ -225,14 +262,23 @@ export function refreshShopChain() {
         shopContainer.appendChild(el);
         continue;
       }
-      // 插到该组最后一个 item 之后（或组头后）
+      // v2.8.7：按 base 升序插入（原插到组尾——新解锁卡乱序，切 tab 重渲染才恢复）
       let anchor = null;
+      let insertBefore = null;
       for (const k of kids) {
-        if (k.className === 'group-title' && k === gTitle) { anchor = null; continue; }
-        if (k.className === 'group-title' && k !== gTitle && anchor) break;
-        if (k.className === 'item') anchor = k;
+        if (k.className === 'group-title') {
+          if (k === gTitle) { anchor = null; insertBefore = null; continue; }
+          if (anchor) break;
+        }
+        if (k.className === 'item') {
+          anchor = k;
+          const kidId = k.dataset && k.dataset.buy;
+          const kidU = UPGRADES.find(x => x.id === kidId);
+          if (kidU && (kidU.base || Infinity) > (u.base || Infinity)) { insertBefore = k; break; }
+        }
       }
-      if (anchor && anchor.nextSibling) shopContainer.insertBefore(el, anchor.nextSibling);
+      if (insertBefore) shopContainer.insertBefore(el, insertBefore);
+      else if (anchor && anchor.nextSibling) shopContainer.insertBefore(el, anchor.nextSibling);
       else if (gTitle.nextSibling) shopContainer.insertBefore(el, gTitle.nextSibling);
       else shopContainer.appendChild(el);
     }
@@ -273,7 +319,7 @@ function makeShopItem(u) {
   const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：固定 ×1
   const afford = S.ep >= cost;
   div.className = 'item' + (!afford ? ' cant' : '');
-  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())}/s each` : (u.desc || '');
+  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || ''); // v2.8.7：去除 each 字样
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
     <div class="desc">${cpsStr}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
@@ -303,7 +349,7 @@ function updateShopItem(u) {
   const c = el.querySelector('.cost');
   if (c) c.textContent = fmt(cost);
   const d = el.querySelector('.desc');
-  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + '/s each' : (u.desc || '')}`;
+  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : (u.desc || '')}`; // v2.8.7：去除 each 字样
   el.classList.toggle('cant', S.ep < cost);
 }
 
@@ -475,7 +521,7 @@ function makeVehicleItem(u) {
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${fmt(cpsEach)}/s each${protoMult > 1 ? '（协议×1.5）' : ''}</div>
+    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}</div> // v2.8.7：去除 each 字样
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -717,6 +763,9 @@ export function refreshShopAffordability() {
     if (maxedLevel(u)) continue; // v2.0.2：满级锁定项不参与灰态刷新
     const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：倍率移除，固定 ×1
     el.classList.toggle('cant', S.ep < cost);
+    // v2.8.7：成本数字随 costMult 变化同步（议价坊族购买后即时生效，不再依赖切 tab 重渲染）
+    const c = el.querySelector('.cost');
+    if (c) c.textContent = fmt(cost);
   }
   for (const [id, el] of threadItemEls) {
     const u = UPGRADES.find(x => x.id === id);

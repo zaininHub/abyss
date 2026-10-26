@@ -52,7 +52,11 @@ function buyColony(id) {
   log(`深空殖民：${c.name} Lv.${owned + 1}（-${fmt(cost)} EP，+${c.rpRate} RP/s）`, 'good');
 }
 function renderColoniesHtml() {
-  if (!starColoniesUnlocked()) return '';
+  // v2.8.7：未解锁时展示提示（深空探测后开放深空殖民），避免「解锁后没效果」的感知断层
+  if (!starColoniesUnlocked()) {
+    return `<div style="margin-top:12px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px;color:var(--text-3);font-size:11.5px">
+      🛸 深空殖民未解锁——科技树研究「深空探测」后开放（殖民站长期产出 RP，并提升探索收益）。</div>`;
+  }
   const bonus = (BALANCE.colonyExploreBonus || 0) * starColonyLevel();
   let html = `<div style="margin-top:14px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px">
     <div style="color:var(--purple);font-size:12px;font-weight:600;margin-bottom:4px">🛸 深空殖民 <span style="color:var(--text-2);font-weight:400;font-size:11px">（星际探索解锁 · 殖民站长期产出 RP，探索收益 +${Math.round(bonus * 100)}%）</span></div>`;

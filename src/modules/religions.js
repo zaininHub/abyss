@@ -20,6 +20,7 @@ function rlog(msg, cls) { if (logFn) logFn(`[宗教] ${msg}`, cls); }
 //   ① 存储节点 ≥3 级（仓库扩建三阶，前期无法达成）
 //   ② EP 库存 ≥ 存储上限 80%（深度囤积，不能只囤半仓）
 //   ③ RP 已觉醒（首次溢出过——已触及效能外溢，进入研究阶段）
+// v2.8.7：解锁前置条件保留（存储≥3 + RP 觉醒），但「唤醒信仰」需消耗 EP（当前上限的 20%），而非达标自动解锁
 export function canUnlockReligion() {
   const storageLv = S.upgrades.storage || 0;
   if (storageLv < 3) return false;
@@ -27,15 +28,22 @@ export function canUnlockReligion() {
   return S.ep >= epStorageCap() * 0.8;
 }
 
+export function religionWakeCost() {
+  return Math.max(1e3, Math.floor(epStorageCap() * 0.2)); // v2.8.7：唤醒费随上限缩放（小 cap 下限 1e3，避免「达标但不够唤醒费」死锁）
+}
+
 export function unlockReligion() {
   if (religionUnlocked()) return { ok: false, reason: '已解锁' };
   if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级、RP 已觉醒且 EP 库存 ≥ 存储上限 80%' };
+  const cost = religionWakeCost();
+  if (S.ep < cost) return { ok: false, reason: `唤醒信仰需消耗 ${cost.toLocaleString()} EP（当前 EP 不足）` };
+  S.ep -= cost;
   S.religion = S.religion || {};
   S.religion.unlocked = true;
   if (S.resDiscovered) S.resDiscovered.faith = true;
   save(S);
-  rlog('信仰觉醒：仓库囤积的效能触动了矩阵底层……宗教系统解锁', 'good');
-  if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁（仓库 + 库存达标）');
+  rlog('信仰觉醒：消耗 ' + cost.toLocaleString() + ' EP 唤醒信仰……宗教系统解锁', 'good');
+  if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁（消耗 ' + cost.toLocaleString() + ' EP）');
   return { ok: true };
 }
 
@@ -173,14 +181,16 @@ export function renderReligionPanel(container) {
   if (!container) return;
   if (!religionUnlocked()) {
     const ok = canUnlockReligion();
+    const wakeCost = religionWakeCost();
     container.innerHTML = `
-      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……当你的仓库（存储节点 ≥1 级）囤积了足够的效能（EP 库存 ≥ 存储上限 50%），信仰将觉醒。</div>
+      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……囤积足够的效能（存储节点 ≥3 级、RP 已觉醒、EP 库存 ≥ 存储上限 80%）后，可消耗 EP 唤醒信仰。</div>
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-        仓库：${S.upgrades.storage || 0}/1 级 ${(S.upgrades.storage || 0) >= 1 ? '✓' : '（未达标）'}<br>
-        EP 库存：${fmt(S.ep)} / ${fmt(epStorageCap())}（需 ≥ ${Math.round(epStorageCap() * 0.5)}）${ok ? '✓' : '（未达标）'}
+        存储节点：${S.upgrades.storage || 0}/3 级 ${(S.upgrades.storage || 0) >= 3 ? '✓' : '（未达标）'}<br>
+        EP 库存：${fmt(S.ep)} / ${fmt(epStorageCap())}（需 ≥ ${Math.round(epStorageCap() * 0.8)}）${ok ? '✓' : '（未达标）'}<br>
+        唤醒消耗：${fmt(wakeCost)} EP
       </div>
-      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" ${ok ? '' : 'disabled'} title="仓库有库存后解锁宗教系统">唤醒信仰</button>
-      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：仓库（存储节点）≥1 级，且 EP 库存 ≥ 存储上限 50%（仓库有库存）。条件未达成时入口保持可见，达成后一键唤醒。</div>`;
+      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" ${ok ? '' : 'disabled'} title="消耗 ${fmt(wakeCost)} EP 唤醒信仰">唤醒信仰（${fmt(wakeCost)} EP）</button>
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒、EP 库存 ≥ 存储上限 80%，并消耗 ${fmt(wakeCost)} EP。条件未达成时入口保持可见，达成后点击唤醒。</div>`;
     return;
   }
   const branch = branchOf();

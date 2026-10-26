@@ -2,7 +2,7 @@
 import { S } from '../state.js';
 import { getTechs } from '../core/provider.js';
 import { ETERNALS } from '../data/eternals.js';
-import { hasTech, fmt, esCost, tideMult, techCostOf } from './economy.js';
+import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford } from './economy.js';
 import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned, boughtOrderIndex } from './listkit.js';
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
@@ -43,7 +43,7 @@ export function renderTech(container) {
   const rest = visible.filter(t => !hasTech(t.id));
   owned.sort((a, b) => boughtOrderIndex(S, b.id) - boughtOrderIndex(S, a.id));
   // v1.3 E：可购区成本升序（L1：成本含潮汐乘数），前置未满足项列区末
-  const sorted = partitionSort(rest, t => techCostOf(t), techReqOk);
+  const sorted = partitionSort(rest, t => (typeof t.cost === 'number' ? t.cost : (t.cost?.rp || 0)), techReqOk); // v2.8.7：多资源成本按 RP 排序
   for (const t of owned) {
     const div = document.createElement('div');
     div.className = 'tech on owned-item';
@@ -61,14 +61,18 @@ export function renderTech(container) {
 
 function techCostText(t) {
   const cur = techCostOf(t);
-  const mult = tideMult('techCost');
-  return mult !== 1 ? `${cur} RP（基准 ${t.cost}）` : `${cur} RP`;
+  const parts = [];
+  if (cur.rp) parts.push(`${fmt(cur.rp)} RP`);
+  if (cur.ep) parts.push(`${fmt(cur.ep)} EP`);
+  if (cur.dm) parts.push(`${fmt(cur.dm)} DM`);
+  if (cur.es) parts.push(`${fmt(cur.es)} ES`);
+  return parts.join(' + ');
 }
 
 function makeTechItem(t) {
   const on = hasTech(t.id);
   const reqOk = techReqOk(t);
-  const afford = S.rp >= techCostOf(t);
+  const afford = techAfford(t); // v2.8.7：多资源可购判定
   const div = document.createElement('div');
   div.dataset.tech = t.id;
   div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford)) ? ' locked' : '');
@@ -93,10 +97,13 @@ function bindTechDelegate(container) {
 export function buyTech(t, el) {
   if (hasTech(t.id)) return;
   if (!techReqOk(t)) return;
-  // v1.3 L1：科技成本按潮汐相位缩放（退潮 ×0.8）
+  // v2.8.7：科技树多资源成本（RP + EP + DM + ES 综合消耗，退潮乘数作用于 RP）
   const cost = techCostOf(t);
-  if (S.rp < cost) return;
-  S.rp -= cost;
+  if (!techAfford(t)) return;
+  S.rp -= cost.rp || 0;
+  S.ep -= cost.ep || 0;
+  S.dm = (S.dm || 0) - (cost.dm || 0);
+  S.es = (S.es || 0) - (cost.es || 0);
   S.tech[t.id] = true;
   pushBoughtOrder(S, t.id);
   // v2.0：科技序列彩蛋检查
@@ -124,7 +131,7 @@ export function refreshTechState() {
     if (!t) continue;
     const on = hasTech(t.id);
     const reqOk = techReqOk(t);
-    const afford = S.rp >= techCostOf(t);
+    const afford = techAfford(t); // v2.8.7：多资源可购判定
     el.classList.toggle('on', on);
     el.classList.toggle('locked', !on && (!reqOk || !afford));
     // v1.3 L1：价格文本随潮汐相位与 RP 余额原地刷新

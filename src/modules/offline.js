@@ -40,7 +40,7 @@ export function renderOfflinePanel(container) {
   let html = `<div class="off-stat"><span>当前离线效率</span><b>${Math.round(effRate * 100)}%</b></div>
     <div class="off-stat"><span>离线上限</span><b>${hours} 小时</b></div>
     <div class="off-stat"><span>离线收益</span><b>回程按效率×上限结算（受 EP 存储上限约束）</b></div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">离线升级（RP 购买）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">离线升级</div>
     <div id="offline-upg-list"></div>`;
   html += `<div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">最近离线记录</div>`;
   if (S.offHistory.length === 0) {

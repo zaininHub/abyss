@@ -326,11 +326,13 @@ function wageSetup(ep) {
   return staffSalaryPerSec();
 }
 
-t('C1：EP < 10s 薪资 → 欠薪降效 ×0.7（数值）', () => {
+t('C1：EP < 10s 薪资 → 5s 过渡后欠薪降效 ×0.7（v2.8.7 状态转换需时间）', () => {
   const salary = wageSetup(0);
   assert.ok(salary > 0, '薪资应为正');
   tickWages(1);
-  assert.equal(S.wageState.state, 'debt', '应迁移到欠薪');
+  assert.equal(S.wageState.state, 'ok', 'v2.8.7：EP 跌破黄线后需 5s 过渡才进入欠薪');
+  tickWages(5);
+  assert.equal(S.wageState.state, 'debt', '过渡结束应迁移到欠薪');
   assert.ok(Math.abs(wageOutputMult() - 0.7) < 1e-9, `欠薪产出系数应为 0.7，实际 ${wageOutputMult()}`);
   assert.equal(S.ep, 0, '欠薪扣薪按余额比例扣（可扣至 0）');
 });
@@ -464,7 +466,8 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
 t('A：预留线三档 + AI 核心科技定义（数值）', () => {
   const aiCore = TECHS.find(x => x.id === 'ai_core');
   assert.ok(aiCore, '科技树应含 ai_core');
-  assert.equal(aiCore.cost, 50, 'AI 管理核心 50 RP');
+  assert.equal(aiCore.cost && aiCore.cost.rp, 50, 'AI 管理核心 50 RP（v2.8.7 多资源成本）');
+  assert.equal(aiCore.cost && aiCore.cost.ep, 1e6, 'AI 管理核心 +100万 EP（v2.8.7 多资源成本）');
   assert.deepEqual(BALANCE.ai.reserveOptions, [0.1, 0.3, 0.5], '预留线三档 10%/30%/50%');
   assert.equal(BALANCE.ai.defaultReserve, 0.3, '默认 30%');
 });
@@ -503,12 +506,13 @@ t('B：建筑效果改写四态生效值（数值）', () => {
   assert.equal(buildingMaxed(canteen, { buildings: { canteen: 3 } }), true);
   S.buildings = {}; S.cultists = [];
 });
-t('L1：退潮期科技价格 = 基准 ×0.8（数值）', () => {
-  const tt = { cost: 50 };
+t('L1：退潮期科技 RP 价 = 基准 ×0.8（v2.8.7 多资源对象）', () => {
+  const tt = { cost: { rp: 50, ep: 1e6 } };
   S.tidePhase = 1;
-  assert.equal(techCostOf(tt), 50, '平潮原价');
+  assert.equal(techCostOf(tt).rp, 50, '平潮原价');
+  assert.equal(techCostOf(tt).ep, 1e6, 'EP 成本不受潮汐影响');
   S.tidePhase = 2; // 退潮
-  assert.equal(techCostOf(tt), 40, '退潮 ×0.8 = 40');
+  assert.equal(techCostOf(tt).rp, 40, '退潮 ×0.8 = 40');
   // buyTech 走潮汐价（源码断言）
   const tj = readFileSync(new URL('../src/modules/tech.js', import.meta.url), 'utf8');
   assert.ok(tj.includes('const cost = techCostOf(t);'), 'buyTech 应按 techCostOf 扣费');
@@ -828,8 +832,8 @@ t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
 });
 
-t('5.2：cache 新价格 base=1e6（v2.8.2 ×10 变贵）', () => {
-  assert.equal(caU().base, 1e6);
+t('5.2：cache 新价格 base=5e7（v2.8.7 成本大幅提高）', () => {
+  assert.equal(caU().base, 5e7);
 });
 
 t('5.4：三故事线变体上限加成（abyss ×1.15 / order ×1.10 / faith 无）', () => {

@@ -21,6 +21,7 @@ export const BALANCE = {
       loseChancePerMin: 0.1,// 流失预警期每 60s 10% 概率流失 1 线程
       recoverSec: 180,      // 恢复线：EP ≥ 3min 薪资
       bufferSec: 60,        // 休眠恢复缓冲 60s → 满薪
+      transitionSec: 5,     // v2.8.7：普通状态转换过渡（欠薪→恢复等需 5s 维持，不瞬间切换）
       restBonusMult: 1.5,   // 休眠/流失 ≥60s 恢复后补偿——产出 ×1.5 持续 120s
       restBonusSec: 120,
     },
@@ -54,35 +55,35 @@ export const BALANCE = {
   // unlockTech = 原 52 科技 ID（作 RP 解锁定价基准：原 RP × buildingUnlockRatio）；保留钥匙（click_up 等 6 项）另作族门控
   buildingsV21: [
     // ---- 组 A · 全局乘数（10 座）----
-    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 100,  growth: 1.15, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%（满 5 级 +10%）' },
+    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 2e4,  growth: 1.30, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%（满 5 级 +10%）' }, // v2.8.7：成本大幅提高
     { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 2000, growth: 1.18, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%（满 9 级 +90%）' },
-    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 8000, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12（乘算，满 9 级 ×2.66；v2.8.3 收敛防爆仓）' },
-    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%（满 9 级 +180%；v2.8.3 收敛）' },
-    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点，满 3 级 ×1.73；v2.8.3 收敛）' },
-    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（乘算锚点，满 3 级 ×1.95；v2.8.3 收敛）' },
-    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点；v2.8.3 收敛）' },
-    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点；v2.8.3 收敛）' },
-    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22（乘算锚点；v2.8.3 收敛）' },
-    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（终局顶配；1 级解锁终章条件；v2.8.3 收敛）' },
+    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 8000, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12（乘算，满 9 级 ×2.66）' },
+    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%（满 9 级 +180%）' },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点，满 3 级 ×1.73）' },
+    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（乘算锚点，满 3 级 ×1.95）' },
+    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点）' },
+    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点）' },
+    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22（乘算锚点）' },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（终局顶配；1 级解锁终章条件）' },
     // ---- 组 B · 点击乘数（7 座）----
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
-    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 300,  growth: 1.15, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98（满 5 级 ×0.90）' },
-    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 2000, growth: 1.18, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96（满 3 级 ×0.88）' },
-    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 1e4,  growth: 1.20, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95（满 3 级 ×0.86）' },
-    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 6e4,  growth: 1.26, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92（满 2 级 ×0.85）' },
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 3e4,  growth: 1.35, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98（满 5 级 ×0.90）' }, // v2.8.7：成本大幅提高
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 2e5,  growth: 1.40, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96（满 3 级 ×0.88）' }, // v2.8.7：成本大幅提高
+    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 1e6,  growth: 1.45, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95（满 3 级 ×0.86）' }, // v2.8.7：成本大幅提高
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 6e6,  growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92（满 2 级 ×0.85）' }, // v2.8.7：成本大幅提高
     { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 1.5e5,growth: 1.28, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88（1 级即生效）' },
     { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5000, growth: 1.20, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75（1 级即生效）' },
     // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
     // v2.4 KG 模式改造：扩容类全部无限升级（unlimited），成本指数递增 + 30% 钳制 → 后期性价比自然递减；
     // 新增 3 座「多效果上限建筑」（EP 上限 + DM 采集效率 / 全局产出），先开放者后期性价比递减（数据见 PM v2.4）
-    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: '每级 EP 上限 +50,000（无限升级）' },
-    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: '每级 EP 上限 +5,000,000（无限升级）' },
-    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: '每级 EP 上限 +5,000,000,000（无限升级）' },
+    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: '每级 EP 上限 +50,000' },
+    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: '每级 EP 上限 +5,000,000' },
+    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: '每级 EP 上限 +5,000,000,000' },
     // v2.4 新增多效果上限建筑（unlimited；多键效果经 effectEngine fx 数组聚合，DM 采集效率加成作用于载具采集）
-    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: '每级 EP 上限 +1,000,000，DM 采集效率 +15%（无限升级）' },
-    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: '每级 EP 上限 +100,000,000，全局产出 +3%（无限升级）' },
-    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: '每级 EP 上限 +10,000,000,000，DM 采集效率 +30%（无限升级）' },
+    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: '每级 EP 上限 +1,000,000，DM 采集效率 +15% 每级' },
+    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: '每级 EP 上限 +100,000,000，全局产出 +3% 每级' },
+    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: '每级 EP 上限 +10,000,000,000，DM 采集效率 +30% 每级' },
     // ---- 组 E · 线程产出（5 座）----
     { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.10 }, desc: '每级线程产出 +10%（满 5 级 +50%）' },
     { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.5 },  desc: '每级线程产出 ×1.5（满 3 级 ×3.375）' },
@@ -90,13 +91,13 @@ export const BALANCE = {
     { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90（满 5 级 ×0.59）' },
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85（满 3 级 ×0.61）' },
     // ---- 组 F · RP 加成（5 座）----
-    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%（满 3 级 +90%）' },
-    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP +50%（满 3 级 +150%）' },
-    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
-    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%（满 2 级 +300%）' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, rpCost: 8,  growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%（满 3 级 +90%）' }, // v2.8.7：RP 加成组改 RP 购买
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, rpCost: 15, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%（满 3 级 +150%）' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  rpCost: 25, growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  rpCost: 40, growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%（满 2 级 +300%）' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,rpCost: 60, growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2（满 2 级 ×4）' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
-    { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%（消耗 EP 主动转化 RP；RP 首次溢出解锁）' },
+    { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%（消耗 EP 主动转化 RP；RP 首次溢出解锁）' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
     { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%（1 级即生效）' },
     { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%（1 级即生效）' },
@@ -119,7 +120,7 @@ export const BALANCE = {
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
     { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 1200, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000（中前期扩容，无限升级；v2.8.2 成本/上限同步放宽）' },
-    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000（后期扩容，无限升级）' },
+    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000（后期扩容）' },
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
@@ -267,7 +268,7 @@ export const BALANCE = {
     phases: [
       { id: 0, name: '涨潮', icon: '🌊', epMult: 1.3, salaryMult: 1.5, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1.5, cssClass: 'tide-flood' },
       { id: 1, name: '平潮', icon: '🌀', epMult: 1, salaryMult: 1, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-calm' },
-      { id: 2, name: '退潮', icon: '⛰️', epMult: 0.7, salaryMult: 0.8, techCostMult: 0.8, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-ebb' },
+      { id: 2, name: '退潮', icon: '⛰️', epMult: 0.7, salaryMult: 0.8, techCostMult: 0.8, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-ebb' }, // techCostMult：科技树研究成本 ×0.8（退潮期研究 -20%，非升级/建筑成本）
       { id: 3, name: '乱流', icon: '⚡', epMult: 1, salaryMult: 1.3, techCostMult: 1, eventBadWeight: 2, eventGoodDur: 1, cssClass: 'tide-chaos' },
     ],
   },
