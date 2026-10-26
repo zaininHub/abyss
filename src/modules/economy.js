@@ -100,6 +100,32 @@ export function tickCorruption(dt) {
     S.ep = cap;
     accountEpOverflow(overflow);
   }
+  tickCollapse(dt); // v2.8.3：深渊吞噬判定（腐化满额 + EP 触顶 → 线程出逃 → 崩溃）
+}
+
+// ===== v2.8.3 深渊吞噬（轮回失败机制）=====
+// 腐化满额（≥100%）且 EP 达到上限时：线程每 60s 被深渊强制吞没 1 条（免疫无效），
+// 出逃殆尽后本局崩溃：所有系统停止产出，给出成就；玩家只能晋升转生/轮回脱离。
+let collapseLogFn = null, collapseToastFn = null;
+export function setCollapseHooks(logFn, toastFn) { collapseLogFn = logFn; collapseToastFn = toastFn; }
+export function tickCollapse(dt) {
+  if (S.collapsed) return;
+  if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) return;
+  const cap = epStorageCap();
+  if ((S.ep || 0) < cap - 1) return;
+  S._collapseTimer = (S._collapseTimer || 0) + dt;
+  if (S._collapseTimer < 60) return;
+  S._collapseTimer = 0;
+  if ((S.cultists || []).length > 0) {
+    const lost = S.cultists.pop();
+    if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（腐化满额且 EP 触顶）`, 'bad');
+    if (collapseToastFn) collapseToastFn(`🌊 线程【${lost.name}】被深渊吞没！`);
+  }
+  if ((S.cultists || []).length === 0) {
+    S.collapsed = true;
+    if (collapseLogFn) collapseLogFn('深渊吞噬：所有线程出逃殆尽——本局系统停止产出，你被深渊吞噬了', 'bad');
+    if (collapseToastFn) collapseToastFn('🌑 深渊吞噬：本局宣告失败，所有系统停止产出。可晋升转生或轮回脱离');
+  }
 }
 
 // ========== 全局乘数 ==========
@@ -289,7 +315,8 @@ export function lazyCostMult() {
 }
 
 export function wageLoseChance() {
-  return bld('dock') >= 1 ? 0 : BALANCE.thread.wages.loseChancePerMin;
+  // v2.8.3：移除维修坞免疫——线程出逃不再被永久豁免（维修坞仅保留描述性定位）
+  return BALANCE.thread.wages.loseChancePerMin;
 }
 // 数据中心：每 10 线程全局产出加成（独立乘数，1/2/3 级 +5%/10%/15%）
 export function datacenterMult() {
@@ -444,7 +471,7 @@ export function focusCost() {
 
 // ========== 晋升需求 ==========
 export function prestigeNeed() {
-  return Math.floor(1e7 * Math.pow(S.prestige + 1, 3.2));
+  return Math.floor(3e7 * Math.pow(S.prestige + 1, 3.2)); // v2.8.3：首升需求 1e7→3e7（1-3 天节奏）
 }
 
 export function prestigeGain() {
@@ -463,6 +490,7 @@ export function prestigeRpGain() {
 
 // ========== CPS 计算 ==========
 export function computeCps() {
+  if (S.collapsed) return 0; // v2.8.3：深渊吞噬——本局所有系统停止产出
   let base = 0;
   for (const u of UPGRADES) {
     if (!u.cps) continue;

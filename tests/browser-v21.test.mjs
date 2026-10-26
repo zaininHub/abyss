@@ -45,7 +45,7 @@ await new Promise(r => setTimeout(r, 300));
 const epAfterHire = await page.$eval('#h-ep', el => el.textContent);
 const nAfterHire = parseFloat(epAfterHire.replace(/,/g, ''));
 // 薪资每秒扣款 + 初始 40 成本：EP 应低于点击所得（相对 n1 已扣 40）
-rec('招募线程扣款 40 EP（数值）', n1 - nAfterHire >= 38 && n1 - nAfterHire <= 45, `点击后 ${n1} → 招募后 ${nAfterHire}（Δ=${(n1 - nAfterHire).toFixed(1)}，含 1s 内薪资）`);
+rec('招募线程扣款 120 EP（v2.8.3）', n1 - nAfterHire >= 115 && n1 - nAfterHire <= 125, `点击后 ${n1} → 招募后 ${nAfterHire}（Δ=${(n1 - nAfterHire).toFixed(1)}，含 1s 内薪资）`);
 // 线程产出：等待 3 秒，EP 应持续增长（R1：产出不再双重乘数爆炸）
 await new Promise(r => setTimeout(r, 3000));
 const ep3s = await page.$eval('#h-ep', el => el.textContent);

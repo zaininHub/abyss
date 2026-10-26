@@ -12,45 +12,45 @@ export const UPGRADES = [
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
   {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}/级起步、逐级 +12%（v2.4 无限升级，成本递增）`},
-  {id:'intern',name:'实习生',base:5e4,cps:47,desc:'基础产出+47/s'}, // v2.8.2：base 12K→50K（减缓前期）
-  {id:'team',name:'小组协作',base:5e5,cps:260,desc:'基础产出+260/s'}, // v2.8.2：base 130K→500K
-  {id:'ai',name:'AI 助手',base:5e6,cps:1400,desc:'基础产出+1.4K/s'}, // v2.8.2：base 1.4M→5M
-  {id:'cloud',name:'云集群',base:8e7,cps:7800,desc:'基础产出+7.8K/s'}, // v2.8.2：base 20M→80M
-  {id:'global',name:'全球网络',base:3.3e8,cps:44000,desc:'基础产出+44K/s'},
-  {id:'quantum',name:'量子计算',base:5e9,cps:250000,desc:'基础产出+250K/s'},
-  {id:'singularity',name:'奇点工程',base:8e10,cps:1.5e6,desc:'基础产出+1.5M/s'},
-  {id:'dyson',name:'戴森球',base:1.5e12,cps:1e7,desc:'基础产出+10M/s'},
-  {id:'multiverse',name:'多重宇宙',base:3e13,cps:8e7,desc:'基础产出+80M/s'},
-  {id:'galactic',name:'银河联邦',base:3e14,cps:5e8,desc:'基础产出+500M/s'},
-  {id:'supercluster',name:'超星系团',base:3e15,cps:3e9,desc:'基础产出+3B/s'},
-  {id:'cosmicweb',name:'宇宙网',base:3e16,cps:2e10,desc:'基础产出+20B/s'},
-  {id:'darkmatter',name:'暗物质网络',base:3e17,cps:1.5e11,desc:'基础产出+150B/s'},
-  {id:'vacuum',name:'真空能',base:3e18,cps:1e12,desc:'基础产出+1T/s'},
-  {id:'brane',name:'膜宇宙',base:3e19,cps:7e12,desc:'基础产出+7T/s'},
-  {id:'string',name:'弦织机',base:3e20,cps:5e13,desc:'基础产出+50T/s'},
-  {id:'holographic',name:'全息投影',base:3e21,cps:3e14,desc:'基础产出+300T/s'},
-  {id:'observer',name:'观察者效应',base:3e22,cps:2e15,desc:'基础产出+2Qa/s'},
-  {id:'simulation',name:'模拟舱',base:3e23,cps:1.5e16,desc:'基础产出+15Qa/s'},
-  {id:'creator',name:'造物主',base:3e24,cps:1e17,desc:'基础产出+100Qa/s'},
-  {id:'recursion',name:'递归',base:3e25,cps:7e17,desc:'基础产出+700Qa/s'},
-  {id:'paradox',name:'自指悖论',base:3e26,cps:5e18,desc:'基础产出+5Qi/s'},
-  {id:'final',name:'终极奇点',base:3e27,cps:3e19,desc:'基础产出+30Qi/s'},
-  {id:'omega',name:'欧米茄点',base:3e28,cps:2e20,desc:'基础产出+200Qi/s'},
-  {id:'zero',name:'无',base:3e29,cps:1.5e21,desc:'基础产出+1.5Sx/s'},
-  {id:'origin',name:'起源',base:3e30,cps:1e22,desc:'基础产出+10Sx/s'},
-  {id:'essence',name:'本质',base:3e31,cps:7e22,desc:'基础产出+70Sx/s'},
-  {id:'one',name:'太一',base:3e32,cps:5e23,desc:'基础产出+500Sx/s'},
-  {id:'tao',name:'道',base:3e33,cps:3e24,desc:'基础产出+3Sp/s'},
-  {id:'void',name:'虚空',base:3e34,cps:2e25,desc:'基础产出+20Sp/s'},
-  {id:'dream',name:'大梦',base:3e35,cps:1.5e26,desc:'基础产出+150Sp/s'},
-  {id:'thought',name:'一念',base:3e36,cps:1e27,desc:'基础产出+1Oc/s'},
-  {id:'unknown',name:'不可名状',base:3e37,cps:7e27,desc:'基础产出+7Oc/s'},
-  {id:'god',name:'神之领域',base:3e38,cps:5e28,desc:'基础产出+50Oc/s'},
-  {id:'universe',name:'宇宙之心',base:3e39,cps:4e29,desc:'基础产出+400Oc/s'},
-  {id:'creation',name:'创世',base:3e40,cps:3e30,desc:'基础产出+3No/s'},
-  {id:'infinity',name:'无限',base:3e41,cps:2e31,desc:'基础产出+20No/s'},
-  {id:'absolute',name:'绝对',base:3e42,cps:1.5e32,desc:'基础产出+150No/s'},
-  {id:'beyond',name:'超越',base:3e43,cps:1e33,desc:'基础产出+1Dc/s'},
+  {id:'intern',name:'实习生',base:2e5,cps:40,desc:'基础产出+40/s'}, // v2.8.3：base×4/cps 降（首升 1-3 天）
+  {id:'team',name:'小组协作',base:2e6,cps:220,desc:'基础产出+220/s'}, // v2.8.3：base×4/cps 降
+  {id:'ai',name:'AI 助手',base:2e7,cps:1200,desc:'基础产出+1.2K/s'}, // v2.8.3：base×4/cps 降
+  {id:'cloud',name:'云集群',base:3e8,cps:6500,desc:'基础产出+6.5K/s'}, // v2.8.3：base×4/cps 降
+  {id:'global',name:'全球网络',base:1.3e9,cps:37000,desc:'基础产出+37K/s'}, // v2.8.3：base×4/cps 降
+  {id:'quantum',name:'量子计算',base:2e10,cps:210000,desc:'基础产出+210K/s'}, // v2.8.3
+  {id:'singularity',name:'奇点工程',base:3.2e11,cps:1.26e6,desc:'基础产出+1.26M/s'}, // v2.8.3
+  {id:'dyson',name:'戴森球',base:6e12,cps:8.4e6,desc:'基础产出+8.4M/s'}, // v2.8.3
+  {id:'multiverse',name:'多重宇宙',base:1.2e14,cps:6.7e7,desc:'基础产出+67M/s'}, // v2.8.3
+  {id:'galactic',name:'银河联邦',base:1.2e15,cps:4.2e8,desc:'基础产出+420M/s'}, // v2.8.3
+  {id:'supercluster',name:'超星系团',base:1.2e16,cps:2.5e9,desc:'基础产出+2.5B/s'}, // v2.8.3
+  {id:'cosmicweb',name:'宇宙网',base:1.2e17,cps:1.7e10,desc:'基础产出+17B/s'}, // v2.8.3
+  {id:'darkmatter',name:'暗物质网络',base:1.2e18,cps:1.26e11,desc:'基础产出+126B/s'}, // v2.8.3
+  {id:'vacuum',name:'真空能',base:1.2e19,cps:8.4e11,desc:'基础产出+840B/s'}, // v2.8.3
+  {id:'brane',name:'膜宇宙',base:1.2e20,cps:5.9e12,desc:'基础产出+5.9T/s'}, // v2.8.3
+  {id:'string',name:'弦织机',base:1.2e21,cps:4.2e13,desc:'基础产出+42T/s'}, // v2.8.3
+  {id:'holographic',name:'全息投影',base:1.2e22,cps:2.5e14,desc:'基础产出+250T/s'}, // v2.8.3
+  {id:'observer',name:'观察者效应',base:1.2e23,cps:1.7e15,desc:'基础产出+1.7Qa/s'}, // v2.8.3
+  {id:'simulation',name:'模拟舱',base:1.2e24,cps:1.26e16,desc:'基础产出+12.6Qa/s'}, // v2.8.3
+  {id:'creator',name:'造物主',base:1.2e25,cps:8.4e16,desc:'基础产出+84Qa/s'}, // v2.8.3
+  {id:'recursion',name:'递归',base:1.2e26,cps:5.9e17,desc:'基础产出+590Qa/s'}, // v2.8.3
+  {id:'paradox',name:'自指悖论',base:1.2e27,cps:4.2e18,desc:'基础产出+4.2Qi/s'}, // v2.8.3
+  {id:'final',name:'终极奇点',base:1.2e28,cps:2.5e19,desc:'基础产出+25Qi/s'}, // v2.8.3
+  {id:'omega',name:'欧米茄点',base:1.2e29,cps:1.7e20,desc:'基础产出+170Qi/s'}, // v2.8.3
+  {id:'zero',name:'无',base:1.2e30,cps:1.26e21,desc:'基础产出+1.26Sx/s'}, // v2.8.3
+  {id:'origin',name:'起源',base:1.2e31,cps:8.4e21,desc:'基础产出+8.4Sx/s'}, // v2.8.3
+  {id:'essence',name:'本质',base:1.2e32,cps:5.9e22,desc:'基础产出+59Sx/s'}, // v2.8.3
+  {id:'one',name:'太一',base:1.2e33,cps:4.2e23,desc:'基础产出+420Sx/s'}, // v2.8.3
+  {id:'tao',name:'道',base:1.2e34,cps:2.5e24,desc:'基础产出+2.5Sp/s'}, // v2.8.3
+  {id:'void',name:'虚空',base:1.2e35,cps:1.7e25,desc:'基础产出+17Sp/s'}, // v2.8.3
+  {id:'dream',name:'大梦',base:1.2e36,cps:1.26e26,desc:'基础产出+126Sp/s'}, // v2.8.3
+  {id:'thought',name:'一念',base:1.2e37,cps:8.4e26,desc:'基础产出+840Sx/s'}, // v2.8.3
+  {id:'unknown',name:'不可名状',base:1.2e38,cps:5.9e27,desc:'基础产出+5.9Oc/s'}, // v2.8.3
+  {id:'god',name:'神之领域',base:1.2e39,cps:4.2e28,desc:'基础产出+42Oc/s'}, // v2.8.3
+  {id:'universe',name:'宇宙之心',base:1.2e40,cps:3.4e29,desc:'基础产出+340Oc/s'}, // v2.8.3
+  {id:'creation',name:'创世',base:1.2e41,cps:2.5e30,desc:'基础产出+2.5No/s'}, // v2.8.3
+  {id:'infinity',name:'无限',base:1.2e42,cps:1.7e31,desc:'基础产出+17No/s'}, // v2.8.3
+  {id:'absolute',name:'绝对',base:1.2e43,cps:1.26e32,desc:'基础产出+126No/s'}, // v2.8.3
+  {id:'beyond',name:'超越',base:1.2e44,cps:8.4e32,desc:'基础产出+840No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,cps:0,produces:{type:'rp',rate:B.atrium.rate},desc:`每秒 +${B.atrium.rate} RP`},
   {id:'petland',name:'宠物乐园',base:1e6,cps:0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干（异兽资源超长线，缓慢累计）'},

@@ -142,11 +142,11 @@ t('熵减协议把惩罚率 /1.5', () => {
 });
 
 console.log('[5] 经济与线程');
-t('线程招募成本 40 × 1.25^n', () => {
+t('线程招募成本 120 × 1.25^n（v2.8.3）', () => {
   S.cultists = [];
-  assert.equal(staffCost(), 40);
-  S.cultists.push({ output: 3, mood: '正常' });
-  assert.equal(staffCost(), 50);
+  assert.equal(staffCost(), 120);
+  S.cultists.push({ output: 2.5, mood: '正常' });
+  assert.equal(staffCost(), 150); // 120×1.25
 });
 t('v2.0.2 EP 容量 = (基础2000 + 缓存×5000 + 存储级制累计 + DC加成) × (1 + 0.25×里程碑数)', () => {
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
@@ -356,15 +356,15 @@ t('C3（v2.8.1）：休眠 1800s → 流失预警，每 60s roll 流失；维修
   tickWages(0.1);
   Math.random = origRandom;
   assert.equal(S.cultists.length, 0, '命中 roll 应流失 1 线程');
-  // 维修坞：流失概率归零
+  // v2.8.3：维修坞不再免疫流失（腐化/触顶吞噬仍会吞没线程）
   wageSetup(0);
   S.buildings = { dock: 1 };
   S.wageState = { state: 'losing', debtSec: 0, dormantSec: 400, bufferSec: 0, loseTimer: 60 };
-  assert.equal(wageLoseChance(), 0, '维修坞应免疫流失');
+  assert.equal(wageLoseChance(), 0.1, '维修坞不再免疫：流失概率仍 10%/min');
   const origRandom2 = Math.random; Math.random = () => 0;
   tickWages(0.1);
   Math.random = origRandom2;
-  assert.equal(S.cultists.length, 1, '维修坞下命中 roll 也不流失');
+  assert.equal(S.cultists.length, 0, '维修坞下命中 roll 仍会流失（v2.8.3 移除免疫）');
   S.buildings = {};
 });
 t('C4：休眠恢复经 30s 缓冲回到满薪（数值）', () => {
@@ -481,9 +481,9 @@ t('B：建筑效果改写四态生效值（数值）', () => {
   assert.equal(wageKeepCostMult(), 0.3);
   S.buildings = { dorm: 1 };
   assert.equal(wageKeepCostMult(), 0.15);
-  // 维修坞：流失 0.1 → 0
+  // v2.8.3：维修坞不再免疫流失
   S.buildings = { dock: 1 };
-  assert.equal(wageLoseChance(), 0);
+  assert.equal(wageLoseChance(), 0.1);
   // 数据中心：每 10 线程 +5%/10%/15%
   S.buildings = {};
   S.cultists = Array.from({ length: 10 }, (_, i) => ({ id: i, output: 3, mood: '正常', moodTimer: 60 }));
@@ -821,7 +821,7 @@ t('5.2：unitCost(cache, n) ≤ epStorageCap()×0.3（任意数量）', () => {
 t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
   S.upgrades['intern'] = 40; // v2.8.2：5e4×1.30^40 ≈ 18G，远超上限×30%
-  const raw = Math.ceil(50000 * Math.pow(1.30, 40));
+  const raw = Math.ceil(2e5 * Math.pow(1.30, 40));
   const capLimit = Math.floor(epStorageCap() * 0.3);
   const u = UPGRADES.find(x => x.id === 'intern');
   assert.ok(unitCost(u, 0) === raw && raw > capLimit, `非扩容项应按原价 ${raw}（> 上限30% ${capLimit}），实际 ${unitCost(u, 0)}`);

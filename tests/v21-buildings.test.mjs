@@ -189,16 +189,16 @@ t('加法效果：warmup_node 5 级 = +10% 全局', () => {
   assert.ok(Math.abs(fxValue('globalAdd') - 0.10) < 1e-12);
   S.buildings = {};
 });
-t('乘算效果：double_workshop 9 级 = ×1.25^9 ≈ ×7.45', () => {
+t('乘算效果：double_workshop 9 级 = ×1.12^9 ≈ ×2.66（v2.8.3 收敛）', () => {
   S.buildings = { double_workshop: 9 };
-  assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.25, 9)) < 1e-9);
+  assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.12, 9)) < 1e-9);
   S.buildings = {};
 });
 t('多建筑叠加：加法求和、乘算连乘', () => {
   S.buildings = { warmup_node: 5, eff_tower: 9 };
   assert.ok(Math.abs(fxValue('globalAdd') - (0.10 + 0.90)) < 1e-9);
   S.buildings = { quantum_stacker: 3, singularity_core: 3 };
-  assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.5, 3) * Math.pow(1.8, 3)) < 1e-9);
+  assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.20, 3) * Math.pow(1.25, 3)) < 1e-9); // v2.8.3 收敛
   S.buildings = {};
 });
 t('档位效果取最大不叠加：三档信号塔 60%/100%/200%', () => {

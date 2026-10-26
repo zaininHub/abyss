@@ -1050,7 +1050,8 @@ let familyItemEls = new Map(); // familyKey -> el
 
 // PM 终稿 7698334831112899877 白名单口径：产出族 = 组E 非锚点 3 座（coop_hall/eco_battery/eco_battery_2），组B 整组不开放
 // v2.4：扩容族（组D）随 KG 模式改造移除——扩容类建筑已无限升级，族升级档位失去钳制对象
-const FAMILY_LABELS = { output: '产出族（协作大厅/节能电池/节能电池·II：上限 +3→+4，硬顶 16）' };
+// v2.8.3：文案通俗化——说清这三座建筑是什么、买了得到什么
+const FAMILY_LABELS = { output: '产出族扩容：协作大厅 / 节能电池 / 节能电池·II 三座建筑的「可购买等级上限」——每买一档，这三座建筑就能多升几级（+3→再 +4，最高 16 级），线程产出随等级水涨船高' };
 
 export function buyFamilyUpgrade(familyKey) {
   const cfg = BALANCE.familyUpgradeTiers[familyKey];
@@ -1086,18 +1087,18 @@ export function renderFamilyUpgrades(container) {
     div.dataset.family = fam;
     if (cur >= cfg.tiers.length) {
       div.className = 'item v21 owned-item';
-      div.title = '族升级：已满档（跨转生保留）';
+      div.title = '产出族扩容：三座建筑的上限扩展已全部购满（跨转生保留）';
       div.innerHTML = `<div class="name"><span>${FAMILY_LABELS[fam]}</span><span class="count mono">满档</span></div>
-        <div class="desc">当前等级上限扩展 +${cfg.tiers.reduce((a, t) => a + t.addCap, 0)}（硬顶 ${cfg.hardCap} 钳制）</div>
+        <div class="desc">已购满：三座建筑上限共扩展 +${cfg.tiers.reduce((a, t) => a + t.addCap, 0)} 级（上限硬顶 ${cfg.hardCap} 级）</div>
         <div class="cost mono" style="color:var(--purple)">✦ 已满档</div>`;
     } else {
       const next = cfg.tiers[cur];
       const mDone = Object.keys(S.milesDone || {}).length;
       const ok = S.rp >= next.rp && mDone >= next.milestone;
       div.className = 'item v21' + (!ok ? ' cant' : '');
-      div.title = '族升级：RP 购买，档位线性（T2 需已购 T1）；跨转生保留';
+      div.title = '产出族扩容：RP 购买，逐档线性（买满前档才能买下一档）；跨转生保留';
       div.innerHTML = `<div class="name"><span>${FAMILY_LABELS[fam]}</span><span class="count mono">T${cur + 1}/${cfg.tiers.length}</span></div>
-        <div class="desc">下一档：等级上限 +${next.addCap}${mDone < next.milestone ? `（需里程碑 ${next.milestone}）` : ''}</div>
+        <div class="desc">下一档：三座建筑可购买等级上限 +${next.addCap} 级${mDone < next.milestone ? `（需先达成里程碑 ${next.milestone}）` : ''}</div>
         <div class="cost mono">${fmt(next.rp)} RP</div>`;
       familyItemEls.set(fam, div);
     }

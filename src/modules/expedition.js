@@ -1,6 +1,7 @@
 import { S, save } from '../state.js';
+import { BALANCE } from '../data/balance.js';
 import { computeCps, fmt, fmtTime, hasTech, addEp } from './economy.js';
-import { log, toast } from '../main.js';
+import { log, toast, dirty } from '../main.js';
 
 export const GALAXIES = [
   { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    reward: { type: 'ep', mult: 5 },   desc: '短平快探索' },
@@ -12,6 +13,59 @@ export const GALAXIES = [
 ];
 
 export function maxExpeditions() { return hasTech('deep_space') ? 2 : 1; }
+
+// ===== v2.8.3 深空殖民（deep_space 解锁后单独模块） =====
+export function starColonyLevel() {
+  let n = 0;
+  for (const c of BALANCE.starColonies || []) n += (S.upgrades && S.upgrades[c.id]) || 0;
+  return n;
+}
+export function starColoniesUnlocked() { return hasTech('deep_space'); }
+export function colonyRpPerSec() {
+  let rp = 0;
+  for (const c of BALANCE.starColonies || []) {
+    const n = (S.upgrades && S.upgrades[c.id]) || 0;
+    rp += c.rpRate * n;
+  }
+  return rp;
+}
+export function tickColonies(dt) {
+  const rp = colonyRpPerSec();
+  if (rp > 0) S.rp = (S.rp || 0) + rp * dt;
+}
+function colonyCost(c) {
+  const owned = (S.upgrades && S.upgrades[c.id]) || 0;
+  return Math.ceil(c.base * Math.pow(c.growth, owned));
+}
+function buyColony(id) {
+  const c = (BALANCE.starColonies || []).find(x => x.id === id);
+  if (!c) return;
+  const owned = (S.upgrades && S.upgrades[c.id]) || 0;
+  if (owned >= c.cap) { toast('殖民站已达上限'); return; }
+  const cost = colonyCost(c);
+  if (S.ep < cost) { toast(`EP 不足（需 ${fmt(cost)}）`); return; }
+  S.ep -= cost;
+  S.upgrades = S.upgrades || {};
+  S.upgrades[c.id] = owned + 1;
+  save(S);
+  dirty.expedition = true;
+  log(`深空殖民：${c.name} Lv.${owned + 1}（-${fmt(cost)} EP，+${c.rpRate} RP/s）`, 'good');
+}
+function renderColoniesHtml() {
+  if (!starColoniesUnlocked()) return '';
+  const bonus = (BALANCE.colonyExploreBonus || 0) * starColonyLevel();
+  let html = `<div style="margin-top:14px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px">
+    <div style="color:var(--purple);font-size:12px;font-weight:600;margin-bottom:4px">🛸 深空殖民 <span style="color:var(--text-2);font-weight:400;font-size:11px">（星际探索解锁 · 殖民站长期产出 RP，探索收益 +${Math.round(bonus * 100)}%）</span></div>`;
+  for (const c of BALANCE.starColonies || []) {
+    const owned = (S.upgrades && S.upgrades[c.id]) || 0;
+    const cost = colonyCost(c);
+    const full = owned >= c.cap;
+    html += `<div class="off-upg${!full && S.ep < cost ? ' cant' : ''}" data-colony="${c.id}" style="${full ? 'opacity:.55' : ''}">
+      <span>${c.name}<br><span style="color:var(--text-3);font-size:10.5px">${c.desc} · ${owned}/${c.cap} 级</span></span>
+      <span style="color:var(--cyan)">${full ? '已满级' : fmt(cost) + ' EP'}</span></div>`;
+  }
+  return html + `</div>`;
+}
 
 export function renderExpeditions(container) {
   if (!container) return;
@@ -51,7 +105,11 @@ export function renderExpeditions(container) {
         <span style="color:${g.reward.type === 'es' ? 'var(--warn)' : 'var(--cyan)'}">${rewardStr}</span></div>`;
     }
   }
+  html += renderColoniesHtml();
   container.innerHTML = html;
+  container.querySelectorAll('[data-colony]').forEach(div => {
+    div.addEventListener('click', () => buyColony(div.dataset.colony));
+  });
   container.querySelectorAll('[data-galaxy]').forEach(div => {
     div.addEventListener('click', () => {
       if (S.expeditions.length >= maxExpeditions()) { toast('探索队列已满'); return; }
@@ -72,15 +130,18 @@ export function tickExpeditions() {
     if (now - ex.startsAt >= ex.duration) { done.push(ex); return false; }
     return true;
   });
+  // v2.8.3 深空殖民：每殖民等级 探索收益 +10%
+  const colonyLv = starColonyLevel();
+  const expBonus = 1 + (BALANCE.colonyExploreBonus || 0) * colonyLv;
   for (const ex of done) {
     const g = GALAXIES.find(x => x.id === ex.galaxyId);
     if (g.reward.type === 'ep') {
-      const gain = computeCps() * (ex.duration / 1000) * g.reward.mult;
+      const gain = computeCps() * (ex.duration / 1000) * g.reward.mult * expBonus;
       addEp(gain); // v2.1 D1：统一入口，受 EP 存储上限约束
       log(`探索返回：${g.name}，+${fmt(gain)} EP`, 'good');
     } else if (g.reward.type === 'rp') {
-      S.rp += g.reward.amount;
-      log(`探索返回：${g.name}，+${g.reward.amount} RP`, 'good');
+      S.rp += Math.round(g.reward.amount * expBonus);
+      log(`探索返回：${g.name}，+${Math.round(g.reward.amount * expBonus)} RP`, 'good');
     } else if (g.reward.type === 'es') {
       S.es += g.reward.amount;
       log(`探索返回：${g.name}，+${g.reward.amount} ES`, 'good');

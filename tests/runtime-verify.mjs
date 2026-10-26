@@ -48,8 +48,8 @@ console.log('[P0-1] 章节推进验证：字符串 chapter 与 storyline 章节�
     assert.equal(ch.id, 1);
   });
 
-  // 模拟推进到第 5 章
-  S.prestige = 1;
+  // 模拟推进章节（v2.8.3：ch2 门槛 prestige≥2）
+  S.prestige = 2;
   let ch = currentChapter(S);
   if (ch.id > S.chapter) S.chapter = String(ch.id);
   t('晋升后 chapter 变为字符串 "2"', () => assert.equal(S.chapter, '2'));

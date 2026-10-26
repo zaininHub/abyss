@@ -12,6 +12,12 @@ function emberMul() { return 1 + (echoLv('echo_rift') || 0); }
 import { BALANCE } from '../data/balance.js';
 import { log, toast, dirty } from '../main.js';
 
+// v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
+export function discoverDm() {
+  if (!S.resDiscovered) S.resDiscovered = {};
+  S.resDiscovered.dm = true;
+}
+
 let riftSig = null;      // v2.1 R2：当前已渲染裂隙签名，避免 100ms 全量重建
 let delegateBound = false; // v2.1 R2：容器级事件委托只绑一次
 
@@ -63,6 +69,7 @@ export function buyRiftUpgrade(id) {
 export function delveRift() {
   if (!S.activeRift) return { ok: false, reason: '裂隙已闭合' };
   if (S.riftExpedition) return { ok: false, reason: '已在深入探索中' };
+  if (!S.resDiscovered || !S.resDiscovered.dm) return { ok: false, reason: '需先发现深渊之力（DM）——购入首辆载具或通过裂隙封印获得 DM' };
   const r = S.activeRift;
   const epCost = Math.ceil(r.sealCost * 0.5);
   const dmCost = r.level * 2;
@@ -86,7 +93,7 @@ export function delveRift() {
 export function abortRiftExpedition() {
   if (!S.riftExpedition) return { ok: false, reason: '未在深入' };
   const ex = S.riftExpedition;
-  S.dm = (S.dm || 0) + ex.gainedDm;
+  if (ex.gainedDm > 0) { S.dm = (S.dm || 0) + ex.gainedDm; discoverDm(); }
   S.vs = (S.vs || 0) + (ex.gainedVs || 0);
   S.riftEmber = (S.riftEmber || 0) + Math.max(1, Math.round(ex.level * 1)) * emberMul();
   log(`[裂隙] 紧急脱出：带走 ${ex.gainedDm.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}（+${Math.max(1, Math.round(ex.level))} 余烬）`, 'bad');
@@ -116,6 +123,7 @@ function settleRiftExpedition(dt) {
     } else {
       const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * lv;
       S.dm = (S.dm || 0) + dmTotal;
+      if (dmTotal > 0) discoverDm();
       if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
       S.riftEmber = (S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul();
       log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${BALANCE.rift.emberDelve * lv} 余烬`, 'good');
@@ -174,6 +182,7 @@ export function tickRift(dt) {
 function grantRiftRewards(r, emberGain, embrace) {
   const dmGain = sealDmReward(r) * riftDmMult();
   S.dm = (S.dm || 0) + dmGain;
+  if (dmGain > 0) discoverDm();
   // RP：锚点解锁后 + level × 0.5（透镜同加成）
   if (S.resDiscovered && S.resDiscovered.rp) {
     const rpGain = BALANCE.rift.rpPerLevel * r.level * riftDmMult();

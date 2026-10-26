@@ -71,12 +71,21 @@ function aiShopUnlocked(u) {
   return owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
 
-// 自动升级候选：主商店产出项（可解锁、cps>0），回本 = 成本 ÷ 边际 CPS（含全局乘数）
+// v2.8.3：AI 自动升级白名单——仅基础产出模块（无 cat 标签的纯产出卡；资源/线程/存储/DM/净化/载具全部排除）
+function isBaseProduction(u) {
+  if (u.cat) return false;                 // 任何带类别的（线程/存储/DM/净化）都不是基础产出
+  if (VEHICLE_IDS.includes(u.id)) return false;  // 探采平台（资源采集）不自动买
+  if (DM_SKIP.includes(u.id)) return false;
+  if (THREAD_IDS.includes(u.id)) return false;
+  if (u.produces) return false;            // 资源产出型（RP/PT/信仰）不自动买
+  return !!(u.cps && u.cps > 0);           // 必须是纯 EP 产出卡
+}
+
+// 自动升级候选：仅基础产出项，回本 = 成本 ÷ 边际 CPS（含全局乘数）
 function bestPaybackItem() {
   let best = null, bestPayback = Infinity;
   for (const u of UPGRADES) {
-    if (VEHICLE_IDS.includes(u.id) || DM_SKIP.includes(u.id) || THREAD_IDS.includes(u.id)) continue;
-    if (!u.cps || u.cps <= 0) continue;
+    if (!isBaseProduction(u)) continue;
     if (!aiShopUnlocked(u)) continue;
     const cost = Math.ceil(u.base * Math.pow(u.growth || 1.15, S.upgrades[u.id] || 0) * costMult());
     const margCps = u.cps * globalMult();

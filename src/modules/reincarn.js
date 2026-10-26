@@ -56,6 +56,7 @@ export function doReincarn() {
   S.cultists = [];
   S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   S.corruption = 0;
+  S.collapsed = false; S._collapseTimer = 0; // v2.8.3：深渊吞噬脱离（轮回重置本局）
   S.vehCollectTimer = 0;
   S.pets = {};
   S.activePets = [];

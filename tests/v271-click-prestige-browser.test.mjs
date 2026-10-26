@@ -34,7 +34,7 @@ try {
       await page.mouse.click(card.x, card.y);
       await new Promise(r => setTimeout(r, 300)); // 立即读（<5s 保存窗口）
       const s = await page.evaluate(() => { const x = JSON.parse(localStorage.getItem('abyss_idle_v2')); return { scribble: x.upgrades.scribble || 0, ep: x.ep }; });
-      rec('C2 真实鼠标点击升级卡：300ms 内购买落盘（修复保存窗口丢购买）', s.scribble === 1 && s.ep > 1970 && s.ep < 2000, JSON.stringify(s));
+      rec('C2 真实鼠标点击升级卡：300ms 内购买落盘（修复保存窗口丢购买）', s.scribble === 1 && s.ep > 1940 && s.ep < 1990, JSON.stringify(s));
       const dom = await page.evaluate(() => { const el = document.querySelector('#shop-list [data-buy="scribble"]'); return el ? el.textContent.replace(/\s+/g, ' ').trim().slice(0, 30) : null; });
       rec('C3 DOM 卡状态同步（×1）', !!dom && dom.includes('×1'), dom);
     }
@@ -45,7 +45,7 @@ try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
     await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); },
-      JSON.stringify({ ...base, runEarned: 4e7, ep: 100, chapter: '5', storyline: 'line_abyss' }));
+      JSON.stringify({ ...base, runEarned: 9e7, ep: 100, chapter: '5', storyline: 'line_abyss' }));
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 6000));
     await page.click('#btn-prestige');

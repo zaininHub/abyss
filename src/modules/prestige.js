@@ -30,6 +30,7 @@ export function doPrestige(talentId) {
   // v1.3：薪资状态机随线程清空重置
   S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   S.corruption = 0; // v2.6.0 review：转生新轮从干净状态开始（旧轮腐化惩罚不带入新轮）
+  S.collapsed = false; S._collapseTimer = 0; // v2.8.3：深渊吞噬脱离（晋升重置本局）
   S.vehCollectTimer = 0;
   S.pets = {};
   S.activePets = [];

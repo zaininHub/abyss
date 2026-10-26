@@ -2,14 +2,14 @@
 export const BALANCE = {
   // 初始与前期
   initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）
-  scribble: { base: 10, cps: 0.3 },
-  script: { base: 80, cps: 2 },
-  parallel: { base: 900, cps: 8 },
+  scribble: { base: 40, cps: 0.25 },   // v2.8.3：基础卡 base×4/cps×0.83（首升 1-3 天节奏）
+  script: { base: 320, cps: 1.7 },   // v2.8.3
+  parallel: { base: 3600, cps: 7 },   // v2.8.3
   atrium: { base: 5e4, rate: 0.15 },
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
   thread: {
-    firstCost: 40, baseOutput: 3, baseOutputJitter: 3, salaryBase: 1.08,
+    firstCost: 120, baseOutput: 2.5, baseOutputJitter: 2.5, salaryBase: 1.05, // v2.8.3：线程变慢（招募 120 起步，产出 2.5）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
       // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s
@@ -44,7 +44,7 @@ export const BALANCE = {
   buildings: {
     canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 免疫'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
-    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程流失免疫：流失预警触发概率 10%/min → 0（拥有即永久免疫线程流失）'] },
+    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护（v2.8.3：不再免疫流失；腐化满额且 EP 触顶时线程仍会被深渊吞没）'] },
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%（触手在缸中缓慢摆动）', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
   },
@@ -56,14 +56,14 @@ export const BALANCE = {
     // ---- 组 A · 全局乘数（10 座）----
     { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 100,  growth: 1.15, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%（满 5 级 +10%）' },
     { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 2000, growth: 1.18, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%（满 9 级 +90%）' },
-    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 8000, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.25 },  desc: '每级全局产出 ×1.25（乘算，满 9 级 ×7.45）' },
-    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.50 },  desc: '每级全局产出 +50%（满 9 级 +450%）' },
-    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点，满 3 级 ×3.375）' },
-    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.8 },   desc: '每级全局产出 ×1.8（乘算锚点，满 3 级 ×5.83）' },
-    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点）' },
-    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.5 },   desc: '每级全局产出 ×1.5（乘算锚点）' },
-    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.6 },   desc: '每级全局产出 ×1.6（乘算锚点）' },
-    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.8 },   desc: '每级全局产出 ×1.8（终局顶配；1 级解锁终章条件）' },
+    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 8000, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12（乘算，满 9 级 ×2.66；v2.8.3 收敛防爆仓）' },
+    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%（满 9 级 +180%；v2.8.3 收敛）' },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点，满 3 级 ×1.73；v2.8.3 收敛）' },
+    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（乘算锚点，满 3 级 ×1.95；v2.8.3 收敛）' },
+    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点；v2.8.3 收敛）' },
+    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20（乘算锚点；v2.8.3 收敛）' },
+    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22（乘算锚点；v2.8.3 收敛）' },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25（终局顶配；1 级解锁终章条件；v2.8.3 收敛）' },
     // ---- 组 B · 点击乘数（7 座）----
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
@@ -264,6 +264,14 @@ export const BALANCE = {
     ],
   },
   // 矩阵腐化（v2.0 §3）
+  // v2.8.3 星际探索补模块：深空殖民（deep_space 解锁后，expedition tab 内单独渲染）
+  starColonies: [
+    { id: 'colony1', name: '近地殖民站', base: 2e6,  growth: 1.5, cap: 10, rpRate: 0.05, desc: '每级 +0.05 RP/s（深空殖民长期补充）' },
+    { id: 'colony2', name: '星港定居点', base: 2e8,  growth: 1.6, cap: 5,  rpRate: 0.3,  desc: '每级 +0.3 RP/s' },
+    { id: 'colony3', name: '环恒星城',   base: 2e10, growth: 1.7, cap: 3,  rpRate: 2,    desc: '每级 +2 RP/s（探索收益 +10%/级）' },
+  ],
+  colonyExploreBonus: 0.10, // 每殖民等级 深空探索收益 +10%
+
   corruption: {
     accumulateRate: 0.1,       // 每秒按溢出比例累积
     penaltyPerPercent: 0.003,  // 每 1% 腐化 -0.3% 产出

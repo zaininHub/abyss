@@ -2,7 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import {
   computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec,
-  fmt, fmtTime, epStorageCap, clickMult, globalMult,
+  fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks,
   prestigeNeed,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
   offlineRate, offlineCap, addEp,
@@ -38,7 +38,7 @@ import { maybeTriggerEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, buyRiftUpgrade } from './modules/rift.js';
-import { tickExpeditions, renderExpeditions } from './modules/expedition.js';
+import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
 import { UPGRADES } from './data/upgrades.js';
 import { PETS } from './data/pets.js';
 import { MOOD_MULT } from './data/threads.js';
@@ -391,6 +391,16 @@ function renderCorruption() {
   if (fill) fill.style.width = txt + '%';
   if (num) num.textContent = txt + '%';
   if (pen) pen.textContent = `-${Math.round((1 - corruptionPenalty()) * 100)}%`;
+  // v2.8.3：深渊吞噬横幅
+  const bn = document.getElementById('abyss-collapse');
+  if (bn) {
+    if (S.collapsed) {
+      bn.style.display = '';
+      bn.innerHTML = `🌑 <b>深渊吞噬</b>：腐化满额且 EP 触顶，线程出逃殆尽——本局宣告失败，所有系统停止产出。<span style="opacity:.8">可晋升转生或轮回以脱离深渊。</span>`;
+    } else {
+      bn.style.display = 'none';
+    }
+  }
 }
 
 function renderHero() {
@@ -1198,6 +1208,7 @@ function checkAch() {
     { id: 'faith1',    name: '信仰觉醒',      desc: '信奉一个宗教分支', test: s => !!(s.religion && s.religion.unlocked) },
     { id: 'dm100',     name: '深渊物质',      desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
     { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
+    { id: 'collapsed', name: '被深渊吞噬',    desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
   ];
   let unlocked = false;
   for (const a of tests) {
@@ -1404,6 +1415,7 @@ function tick(now) {
   const exBefore = S.expeditions.length;
   const exDoneBefore = S.expeditionsDone;
   tickExpeditions();
+  tickColonies(dt); // v2.8.3 深空殖民：RP 产出结算
   if (S.expeditions.length !== exBefore || S.expeditionsDone !== exDoneBefore) {
     dirty.expedition = true;
     refreshTabVisibility();
@@ -1416,6 +1428,14 @@ function tick(now) {
   if (parseInt(chNowStr, 10) > parseInt(sChapterStr, 10)) {
     S.chapter = chNowStr;
     dirty.story = true;
+    // v2.8.3：章节转变触发明显事件——toast + 日志 + 章节馈赠（RP 克制奖励）
+    const chId = parseInt(chNowStr, 10);
+    const gift = Math.max(5, chId * 5);
+    S.rp = (S.rp || 0) + gift;
+    const chName = chNow.name || `第 ${chId} 章`;
+    if (toast) toast(`📖 进入${chName}：章节馈赠 +${gift} RP`);
+    log(`章节推进：${chName}——时间线向前折叠，+${gift} RP 馈赠`, 'good');
+    dirty.top = true;
   }
 
   // v2.0 P1-1：门控系统主循环检查——门控状态变化时触发 UI 重绘
@@ -1589,6 +1609,7 @@ function startApp() {
   setReligionLogFn(log);
   setReligionToastFn(toast); // v2.5.7：宗教日志/toast
   setDelveLogFn(log);
+  setCollapseHooks(log, toast); // v2.8.3：深渊吞噬日志/toast
   setDelveToastFn(toast); // v2.6.0：深潜日志/toast
 
   dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true; dirty.relics = true; // v2.7.0：深渊遗物
