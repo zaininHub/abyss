@@ -514,6 +514,16 @@ function renderHero() {
   if (staffCostEl) staffCostEl.textContent = staffSalaryPerSec().toFixed(2) + '/s';
   const staffOutEl = document.getElementById('staff-out');
   if (staffOutEl) staffOutEl.textContent = staffOutputPerSec().toFixed(2) + '/s';
+  // v2.8.9：招募预览——下一线程新增产出/消耗（即使 EP 不足也展示，明确购买收益与门槛）
+  const staffPrevEl = document.getElementById('staff-preview');
+  if (staffPrevEl) {
+    const n = S.cultists.length;
+    const base = BALANCE.thread.baseOutput, jit = BALANCE.thread.baseOutputJitter;
+    const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
+    const nextSalary = Math.min(0.5 * Math.pow(BALANCE.thread.salaryBase, n), perCap);
+    staffPrevEl.textContent = `下一线程：产出 +${(base + jit / 2).toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
+    staffPrevEl.style.color = S.ep < staffCost() ? 'var(--warn,#c8a24a)' : 'var(--text-2)';
+  }
   if (hireBtn) {
     hireBtn.disabled = S.ep < staffCost();
     hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
@@ -1138,6 +1148,7 @@ function hireCultist() {
     moodTimer: 30 + Math.random() * 60,
   });
   dirty.top = true; dirty.hero = true;
+  save(S); // v2.8.9：招募即持久化（v2.7.1 购买即保存惯例，防刷新丢招募）
 }
 
 function buyFocus() {
@@ -1300,6 +1311,7 @@ function checkAch() {
     { id: 'dm100',     name: '深渊物质',      desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
     { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
     { id: 'collapsed', name: '被深渊吞噬',    desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
+    { id: 'idle60', name: '静默一分钟',    desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
   ];
   let unlocked = false;
   for (const a of tests) {
@@ -1335,6 +1347,7 @@ function renderAchievementPanel(container) {
     { id: 'faith1',    name: '信仰觉醒',  icon: '🙏', desc: '信奉一个宗教分支' },
     { id: 'dm100',     name: '深渊物质',  icon: '🜏', desc: '持有 100 DM' },
     { id: 'fishbowl1', name: '缸中之渊',  icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）' },
+    { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）' },
   ];
   const got = defs.filter(d => S.achievements[d.id]);
   const n = got.length;

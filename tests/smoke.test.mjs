@@ -631,8 +631,8 @@ t('Special Tasks：定义含 6 个任务（3通用+3线专属）', () => {
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp_faith_mission'), '应含 sp_faith_mission');
 });
 
-t('Easter Eggs：定义含 7 个彩蛋（v2.3.2 反馈②：thomas 随载具命名彩蛋移除）', () => {
-  assert.equal(EASTER_EGGS.length, 7, '应含 7 个彩蛋');
+t('Easter Eggs：定义含 8 个彩蛋（v2.8.9 新增 idle_start 静默开局；thomas 随载具命名彩蛋移除）', () => {
+  assert.equal(EASTER_EGGS.length, 8, '应含 8 个彩蛋');
   assert.ok(!EASTER_EGGS.find(e => e.id === 'thomas'), 'thomas 彩蛋应已移除（命名输入框废除）');
 });
 

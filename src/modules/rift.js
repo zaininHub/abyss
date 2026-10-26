@@ -251,6 +251,7 @@ export function renderRift(container) {
   if (sig !== riftSig || !container.querySelector('#seal-rift')) {
     riftSig = sig;
     const left = Math.max(0, Math.ceil((r.expiresAt - Date.now()) / 1000));
+    const dmUnlock = !!(S.resDiscovered && S.resDiscovered.dm);
     container.innerHTML = `<div style="font-size:12px;color:var(--text-2);margin-bottom:8px">
       ${riftLevelName(r.level)} <b style="color:var(--purple)">Lv.${r.power}</b> · 剩余 <span id="rift-left">${left}</span>s<br>
       当前 DM: <b id="rift-dm-balance">${(S.dm || 0).toFixed(2)}</b> → 奖励 <b style="color:var(--purple)">+<span id="rift-dm">${sealDmReward(r)}</span> DM</b><br>
@@ -260,7 +261,7 @@ export function renderRift(container) {
       <div style="display:flex;gap:6px">
         <button class="btn" id="seal-rift" style="flex:1;font-size:12px">封印</button>
         <button class="btn" id="embrace-rift" style="flex:1;font-size:12px;background:rgba(163,113,247,.15);border-color:var(--purple)">拥抱</button>
-        <button class="btn" id="delve-rift" style="flex:1;font-size:12px;background:rgba(248,81,73,.12);border-color:var(--red, #f85149)">深入</button>
+        <button class="btn" id="delve-rift" ${dmUnlock ? '' : 'disabled'} title="${dmUnlock ? '深入裂隙：60 秒探索（需消耗 EP 与 DM）' : '需先发现深渊之力（DM）——购入首辆载具或封印裂隙获得'}" style="flex:1;font-size:12px;background:rgba(248,81,73,.12);border-color:var(--red, #f85149)">深入</button>
       </div>`;
     if (!delegateBound) {
       container.addEventListener('click', (e) => {

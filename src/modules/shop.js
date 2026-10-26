@@ -230,62 +230,11 @@ let rpFamilyItemEls = new Map();
 // v2.6.7：商店链窗口增量揭示——解锁数/已购前缀变化时只插入新可见卡，不整面板重建
 // （消除「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁 + 点击竞争」根因）
 export function refreshShopChain() {
-  if (!shopContainer || !shopContainer._chain) return;
-  const RP_FAMILY_IDS2 = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
-  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS2.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
-  // v2.8.1：与 renderShop 同口径——按解锁门槛（base 升序）排
-  const sortedItems = items.slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
-  const split = chainSplit('shop', sortedItems, u => (S.upgrades[u.id] || 0) > 0, S);
-  const prev = shopContainer._chain;
-  const newIds = new Set(split.visible.map(u => u.id));
-  const fresh = split.visible.filter(u => !prev.ids.has(u.id));
-  const groups = [
-    { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
-    { title: '存储与资源建筑', test: () => true },
-  ];
-  if (fresh.length) {
-    for (const u of fresh) {
-      const gi = groups.findIndex(g => g.test(u));
-      const giSafe = gi < 0 ? groups.length - 1 : gi;
-      const kids = [...shopContainer.children];
-      const gTitle = kids.find(k => k.className === 'group-title' && k.textContent === groups[giSafe].title);
-      const el = makeShopItem(u);
-      shopItemEls.set(u.id, el);
-      if (!gTitle) {
-        const h = document.createElement('div');
-        h.className = 'group-title';
-        h.textContent = groups[giSafe].title;
-        const firstItem = kids.find(k => k.className === 'item');
-        if (firstItem) shopContainer.insertBefore(h, firstItem);
-        else shopContainer.appendChild(h);
-        shopContainer.appendChild(el);
-        continue;
-      }
-      // v2.8.7：按 base 升序插入（原插到组尾——新解锁卡乱序，切 tab 重渲染才恢复）
-      let anchor = null;
-      let insertBefore = null;
-      for (const k of kids) {
-        if (k.className === 'group-title') {
-          if (k === gTitle) { anchor = null; insertBefore = null; continue; }
-          if (anchor) break;
-        }
-        if (k.className === 'item') {
-          anchor = k;
-          const kidId = k.dataset && k.dataset.buy;
-          const kidU = UPGRADES.find(x => x.id === kidId);
-          if (kidU && (kidU.base || Infinity) > (u.base || Infinity)) { insertBefore = k; break; }
-        }
-      }
-      if (insertBefore) shopContainer.insertBefore(el, insertBefore);
-      else if (anchor && anchor.nextSibling) shopContainer.insertBefore(el, anchor.nextSibling);
-      else if (gTitle.nextSibling) shopContainer.insertBefore(el, gTitle.nextSibling);
-      else shopContainer.appendChild(el);
-    }
-  }
-  shopContainer._chain = { ids: newIds, split, groups };
+  // v2.8.9：增量插入位置与全量渲染不一致（新解锁卡出现于左侧、切 tab 才归位）——
+  // 直接全量重渲染（顺序与切 tab 完全一致；购买瞬间一次性重建无 hover 闪烁）
+  if (!shopContainer) return;
+  renderShop(shopContainer);
 }
-
 
 // v2.0.2：级制项（如存储节点）满级判定与展示辅助
 function maxedLevel(u) {

@@ -981,6 +981,7 @@ body.paused .pet-grid .pet-card {
 .delve-upg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; margin: 4px 0; }
 .delve-upg-row .btn { flex-shrink: 0; }
 #delve-panel .btn.disabled { opacity: .45; cursor: not-allowed; background: #14161c !important; color: #555 !important; border-color: #2a2e3a !important; } /* v2.8.8：DM 未解锁深入按钮暗色 */
+#rift-card .btn:disabled { opacity: .45; cursor: not-allowed; background: #14161c !important; color: #555 !important; border-color: #2a2e3a !important; } /* v2.8.9：裂隙深入按钮 DM 未解锁暗色 */
 
 /* ===== v2.6.1 裂隙栏目 ===== */
 #rift-tab-panel .rift-tab-desc { font-size: 13px; line-height: 1.8; color: var(--text-2); margin-bottom: 10px; }

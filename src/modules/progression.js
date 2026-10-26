@@ -100,6 +100,14 @@ export const EASTER_EGGS = [
     reward: { msg: '你在吗？我等你好久了。别走。' },
   },
   {
+    id: 'idle_start',
+    name: '静默开局',
+    desc: '开局后 1 分钟不做任何操作',
+    trigger: 'idle',
+    checkFn: (S) => (S._idleSec || 0) >= 60 && (S.ep || 0) < 100 && !S.cultists.length,
+    reward: { msg: '你与深渊对视了一分钟，谁也没有先开口。' },
+  },
+  {
     id: 'hidden_ending',
     name: '隐藏结局',
     desc: '同时拥有 0 线程、0 升级、0 科技、faith >= 1000',
