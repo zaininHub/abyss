@@ -67,6 +67,61 @@ export function oracleCost() { const lv = oracleLevel(); return Math.round(ORACL
 export function crusadeCost() { const lv = crusadeLevel(); return Math.round(CRUSADE.base * Math.pow(CRUSADE.growth, lv)); }
 
 export function religionUnlocked() { return !!(S.religion && S.religion.unlocked); }
+
+// ===== v2.8.6 B1a：信仰 → 赞颂 → 虔诚 → 超验 → 隐密圣学（参考 KG Order of the Sun 四层转化） =====
+// 克制原则：转化收益软上限、超验成本指数涨、隐密圣学跨周期保留但解锁科技每轮重研
+export const PRAISE = {
+  thresholdRatio: 0.8,   // 信仰 ≥ 容量 80% 才可赞颂
+  rateBase: 1,           // 转化率基础
+  ratePerTranscend: 0.25,// 每超验层级 转化率 +0.25（叠乘于平方项：rate = 1 + 0.25×T²）
+  devPerSqrt: 0.02,      // 虔诚全局加成 = √虔诚 × 0.02（软上限）
+  devSoftCap: 0.40,      // 软上限 40%
+  devSoftAfter: 500,     // 虔诚 > 500 后衰减 50%
+  transcendBase: 100,    // 超验成本 100 × 2.2^层级
+  transcendGrowth: 2.2,
+};
+export const SECRET_SANCTUMS = [
+  { id: 'black_sanctum', name: '黑曜圣所', needTranscend: 1, costEmberBase: 10, costEmberGrowth: 1.8, devGate: 10,
+    fx: { key: 'devCap', v: 0.10 }, desc: '虔诚加成软上限 +10%/座' },
+  { id: 'star_hall',     name: '星辰回廊', needTranscend: 3, costEmberBase: 50, costEmberGrowth: 1.8, devGate: 50,
+    fx: { key: 'faith', v: 0.10 }, desc: '信仰产出 +10%/座' },
+  { id: 'void_altar',    name: '虚空祭坛', needTranscend: 5, costEmberBase: 200, costEmberGrowth: 1.8, devGate: 200,
+    fx: { key: 'faithCap', v: 0.50 }, desc: '信仰存储上限 +50%/座' },
+];
+export function devotion() { return S.devotion || 0; }
+export function transcendLevel() { return (S.transcend) || 0; }
+export function secretSanctumLv(id) { return (S.secretSanctums && S.secretSanctums[id]) || 0; }
+export function secretSanctumCost(id) {
+  const d = SECRET_SANCTUMS.find(x => x.id === id);
+  if (!d) return 0;
+  return Math.round(d.costEmberBase * Math.pow(d.costEmberGrowth, secretSanctumLv(id)));
+}
+// 赞颂转化率 = 1 + 0.25 × 超验层级²（KG 风格：每层平方提升）
+export function praiseRate() {
+  const t = transcendLevel();
+  return PRAISE.rateBase + PRAISE.ratePerTranscend * t * t;
+}
+// 信仰存储上限：基础 100 + 圣所×50 + 圣印×20，虚空祭坛 ×(1+0.5/座)
+export function faithCap() {
+  let cap = 100 + ((S.religion && S.religion.temple) || 0) * 50 + (sealLevel()) * 20;
+  const va = secretSanctumLv('void_altar');
+  if (va > 0) cap *= (1 + 0.5 * va);
+  return Math.round(cap);
+}
+// 虔诚全局加成（软上限：≤40% 线性，超出部分 50% 衰减；黑曜圣所抬高软上限 +10%/座）
+export function devotionMult() {
+  const dev = S.devotion || 0;
+  if (dev <= 0) return 1;
+  let bonus = Math.sqrt(dev) * PRAISE.devPerSqrt;
+  let cap = PRAISE.devSoftCap * (1 + 0.10 * secretSanctumLv('black_sanctum'));
+  if (bonus > cap) bonus = cap + (bonus - cap) * 0.5; // 软上限后 50% 衰减
+  return 1 + bonus;
+}
+// 超验成本
+export function transcendCost() {
+  const t = transcendLevel();
+  return Math.round(PRAISE.transcendBase * Math.pow(PRAISE.transcendGrowth, t));
+}
 export function branchOf() { return S.religion && S.religion.branch ? S.religion.branch : null; }
 export function sealLevel() { return (S.religion && S.religion.seal) || 0; }
 

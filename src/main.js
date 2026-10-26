@@ -19,6 +19,8 @@ import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot,
 import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePackage } from './core/storylineManager.js';
 import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn } from './modules/projects.js';
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn } from './modules/religions.js';
+import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
+import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { religionUnlocked } from './data/religions.js';
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
@@ -128,6 +130,17 @@ function renderStorylinePanel() {
         html += `</div>`;
       }
       html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  // v2.8.6 B2a：历史政策走向（跨周期记录，展示每次游戏周期的不同选择）
+  const runs = S.policyRuns || [];
+  if (runs.length > 0) {
+    html += `<div style="margin-top:14px"><div style="color:var(--accent);font-size:11px;margin-bottom:6px">历史周期走向（政策选择）</div>`;
+    for (let i = runs.length - 1; i >= 0; i--) {
+      const run = runs[i];
+      const lineName = run.storyline === 'line_abyss' ? '深渊线' : run.storyline === 'line_order' ? '秩序线' : run.storyline === 'line_faith' ? '信仰线' : '默认线';
+      html += `<div class="codex-line" style="padding:4px 6px;margin-bottom:4px"><div class="codex-line-name" style="font-size:10.5px">周期 ${i + 1} · ${lineName}</div><div style="font-size:10.5px;color:var(--text-2)">${run.picks.join(' / ') || '（本轮未选政策）'}</div></div>`;
     }
     html += `</div>`;
   }
@@ -244,6 +257,11 @@ function render() {
     const relEl = document.getElementById('religion-panel');
     if (relEl) renderReligionPanel(relEl);
     dirty.religion = false;
+  }
+  if (dirty.policy) { // v2.8.6 B2a：政策面板（开放组/选择状态实时刷新）
+    const polEl = document.getElementById('policy-panel');
+    if (polEl) renderPolicyPanel(polEl);
+    dirty.policy = false;
   }
   if (dirty.delve) { // v2.6.0：深潜终局面板
     const dvEl = document.getElementById('delve-panel');
@@ -606,6 +624,16 @@ function updateProjectProgress() {
 }
 
 // ========== Tab 切换 ==========
+// v2.8.6 B2a：政策开放组哈希（变化时刷新面板与按钮）
+let _policyOpenHash = '';
+function policyTickRefresh() {
+  const h = policyOpenGroups().map(g => g.id).sort().join(',');
+  if (h !== _policyOpenHash) {
+    _policyOpenHash = h;
+    dirty.policy = true;
+    refreshTabVisibility();
+  }
+}
 function switchTab(id) {
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('on'));
@@ -634,6 +662,10 @@ function switchTab(id) {
   if (id === 'religion') {
     const relPanel = document.getElementById('religion-panel');
     if (relPanel) renderReligionPanel(relPanel);
+  }
+  if (id === 'policy') {
+    const polPanel = document.getElementById('policy-panel');
+    if (polPanel) renderPolicyPanel(polPanel);
   }
   if (id === 'delve') {
     const dvPanel = document.getElementById('delve-panel');
@@ -666,6 +698,9 @@ function refreshTabVisibility() {
   // v2.7.0：深渊遗物入口——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
   const relicBtn = document.getElementById('btn-relics');
   if (relicBtn) relicBtn.style.display = relicsUnlocked() ? '' : 'none';
+  // v2.8.6 B2a：政策 tab——有开放政策组才显示
+  const polBtn = document.getElementById('btn-policy');
+  if (polBtn) polBtn.style.display = policyOpenGroups().length > 0 ? '' : 'none';
 }
 
 // v2.5 ④：研究点（RP）独立栏目——EP 首次溢出解锁；展示余额 / 溢出转换 / 用途说明
@@ -764,7 +799,8 @@ function bindEvents() {
 
   document.getElementById('btn-shop')?.addEventListener('click', () => switchTab('shop'));
   document.getElementById('btn-tech')?.addEventListener('click', () => switchTab('tech'));
-  document.getElementById('btn-relics')?.addEventListener('click', () => switchTab('relics')); // v2.7.0：深渊遗物
+  document.getElementById('btn-relics')?.addEventListener('click', () => switchTab('relics'));
+  document.getElementById('btn-policy')?.addEventListener('click', () => switchTab('policy')); // v2.7.0：深渊遗物
   document.getElementById('btn-rp')?.addEventListener('click', () => switchTab('rp')); // v2.5 ④：研究点栏目
   // v2.7.4 ⑦：RP 蒸馏——消耗 25% 当前 EP 转化 RP（主动消耗，防溢出）
   document.getElementById('rp-panel')?.addEventListener('click', (e) => {
@@ -798,6 +834,10 @@ function bindEvents() {
   document.getElementById('btn-storyline')?.addEventListener('click', () => switchTab('storyline'));
   document.getElementById('btn-religion')?.addEventListener('click', () => switchTab('religion'));
   bindReligionPanel(document.getElementById('religion-panel')); // v2.5.7：宗教面板事件委托
+  bindPolicyPanel(document.getElementById('policy-panel'));
+  _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',');
+  renderPolicyPanel(document.getElementById('policy-panel'));
+  setPolicyLogFn(log); setPolicyToastFn(toast); // v2.8.6：政策模块日志/toast 接入
   document.getElementById('btn-delve')?.addEventListener('click', () => switchTab('delve'));
   bindDelvePanel(document.getElementById('delve-panel')); // v2.6.0：深潜面板事件委托
   document.getElementById('btn-rift-tab')?.addEventListener('click', () => switchTab('rift-tab'));
@@ -819,6 +859,14 @@ function bindEvents() {
   document.getElementById('snap-save')?.addEventListener('click', onSnapSave);
   document.getElementById('snap-close')?.addEventListener('click', () => { const m = document.getElementById('snap-modal'); if (m) m.style.display = 'none'; });
   document.getElementById('snap-list')?.addEventListener('click', (e) => {
+    // v2.8.6：清档行不在 [data-snap] 内，须先处理（否则无快照行时被 li 早退拦截）
+    if (e.target.classList.contains('snap-reset')) {
+      askConfirm('清档（重置全部进度）', '将删除当前本地游戏与全部快照，回到全新开局。\n此操作不可撤销，确定继续？', () => {
+        for (const s of listSnapshots()) deleteSnapshot(s.id);
+        doReset();
+      });
+      return;
+    }
     const li = e.target.closest('[data-snap]');
     if (!li) return;
     const id = li.dataset.snap;
@@ -838,12 +886,6 @@ function bindEvents() {
         deleteSnapshot(id);
         renderSnapshotList();
         toast('快照已删除');
-      });
-    } else if (e.target.classList.contains('snap-reset')) {
-      // v2.8.5 A4：清档移入快照列表（二次确认；同时清除快照）
-      askConfirm('清档（重置全部进度）', '将删除当前本地游戏与全部快照，回到全新开局。\n此操作不可撤销，确定继续？', () => {
-        for (const s of listSnapshots()) deleteSnapshot(s.id);
-        doReset();
       });
     }
   });
@@ -955,8 +997,8 @@ function renderSnapshotList() {
   box.innerHTML = '';
   if (!snaps.length) {
     box.innerHTML = '<div style="font-size:12px;color:var(--text-2);padding:8px;border:1px dashed var(--border);border-radius:5px">暂无快照。点击上方「保存当前进度为快照」生成（最多 ' + SNAP_MAX + ' 个）。</div>';
-    return;
-  }
+    // v2.8.6：无快照时清档行仍需渲染（清档 = 重置当前本地游戏，与快照有无无关）
+  } else {
   for (const sn of snaps) {
     const row = document.createElement('div');
     row.className = 'item snap-row';
@@ -974,7 +1016,8 @@ function renderSnapshotList() {
       </div>`;
     box.appendChild(row);
   }
-  // v2.8.5 A4：清档移入快照列表（外侧移除）
+  }
+  // v2.8.5 A4：清档移入快照列表（外侧移除）——v2.8.6：无条件渲染（无快照时同样可清档）
   const clearRow = document.createElement('div');
   clearRow.className = 'snap-reset-row';
   clearRow.style.cssText = 'margin-top:8px;border-top:1px dashed var(--border);padding-top:8px;text-align:center';
@@ -1214,13 +1257,13 @@ function settlePause() {
 let resetGuard = false;
 
 function doReset() {
-  if (confirm('确认清档？')) {
-    resetGuard = true;
-    reset();
-    // 展开态属进度披露 UI 态，清档一并回收（新档回到首屏窗口，与换设备口径一致）
-    try { localStorage.removeItem(EXPAND_KEY); } catch (e) { /* 隐私模式等静默忽略 */ }
-    location.reload();
-  }
+  // v2.8.6：清档入口（快照列表 .snap-reset）已由 askConfirm 完成二次确认，移除此处原生
+  // confirm 阻塞（headless/自动化环境下原生 confirm 会挂起页面；真实浏览器双重弹窗冗余）。
+  resetGuard = true;
+  reset();
+  // 展开态属进度披露 UI 态，清档一并回收（新档回到首屏窗口，与换设备口径一致）
+  try { localStorage.removeItem(EXPAND_KEY); } catch (e) { /* 隐私模式等静默忽略 */ }
+  location.reload();
 }
 
 // ========== 里程碑 & 成就 ==========
@@ -1432,6 +1475,7 @@ function tick(now) {
 
   // v2.5.7 宗教：圣所信仰产出 + 入口/面板状态刷新
   tickReligion(dt);
+  policyTickRefresh(); // v2.8.6 B2a：政策开放组变化刷新
   // v2.6.0 深潜：深潜产出/腐化/里程碑
   tickDelve(dt);
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;

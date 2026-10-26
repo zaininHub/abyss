@@ -97,13 +97,13 @@ const saveBase = (over = {}) => ({
     const storage = cards.find(el => nameOf(el) === '存储节点');
     return {
       storageCount: storage ? (storage.querySelector('.name')?.textContent || '') : null,
-      nextVisible: cards.some(el => nameOf(el) === '并行任务'),
+      nextVisible: cards.some(el => nameOf(el) === '备用粮仓'), // v2.8.3 parallel base 900→3600，揭示顺序 storage→reserve→parallel
       hintCount: document.querySelectorAll('.chain-hint').length,
     };
   });
   rec('⑦B1 v2.8.1 真实点击链提示项（dataset.buy=storage）', clicked === 'storage', String(clicked));
   rec('⑦B2 购入成功：存储节点 ×1', /存储节点×1/.test(after.storageCount || ''), String(after.storageCount));
-  rec('⑦B3 v2.8.2 链正常推进：按门槛升序揭示下一卡「并行任务」（base 900 在 storage 150 与备用粮仓 1200 之间）且链提示零残留', after.nextVisible && after.hintCount === 0, `next=${after.nextVisible}`);
+  rec('⑦B3 v2.8.3 链正常推进：按门槛升序揭示下一卡「备用粮仓」（storage 150 → reserve 1200；v2.8.3 parallel base×4=3600 后移至其后）且链提示零残留', after.nextVisible && after.hintCount === 0, `next=${after.nextVisible}`);
   rec('⑦B4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.screenshot({ path: EV + '/q7-B-chain-advanced.png' });
   await page.close();
@@ -256,28 +256,24 @@ const saveBase = (over = {}) => ({
     shopItems: document.querySelectorAll('#shop-list .item').length,
   }));
   rec('④0 前置：旧档已加载（EP 1.23K 量级 / 窗口 K=p+1=3；预埋展开态已被 ⑤ 加载清除）', /1\.2\dK/.test(pre.ep) && pre.shopItems === 3, `ep=${pre.ep} items=${pre.shopItems}`);
-  // 真实点击清档按钮（confirm 放行），点击后同步读 localStorage（reload 前的窗口期）
-  const sync = await page.evaluate(() => {
-    window.confirm = () => true;
-    document.getElementById('reset-btn')?.click();
-    return {
-      saveNow: localStorage.getItem('abyss_idle_v2'),
-      expandNow: localStorage.getItem('abyss_v2_expand'),
-    };
-  });
-  rec('④1 点击后（reload 前）存档已清空', sync.saveNow === null, String(sync.saveNow)?.slice(0, 40));
-  rec('④2 展开态一并回收（abyss_v2_expand 清空）', sync.expandNow === null, String(sync.expandNow));
-  // 等 reload 完成，验证 beforeunload 未回写旧档、页面回到新档首屏
+  // v2.8.5 A4：清档移入快照列表——#snap-btn 打开 → .snap-reset → askConfirm（#confirm-ok）→ doReset + reload
+  await page.click('#snap-btn'); await sleep(350);
+  await page.click('.snap-reset'); await sleep(250);
+  await page.click('#confirm-ok');
+  // reload 完成，验证旧档未回写、展开态已回收、页面回到新档首屏
   await page.waitForNavigation({ timeout: 15000, waitUntil: 'networkidle0' }).catch(() => {});
   await sleep(1500);
   const after = await page.evaluate(() => ({
     save: localStorage.getItem('abyss_idle_v2'),
+    expand: localStorage.getItem('abyss_v2_expand'),
     ep: document.getElementById('h-ep')?.textContent || '',
     run: document.getElementById('h-run')?.textContent || '',
     shopItems: document.querySelectorAll('#shop-list .item').length,
   }));
   const st = after.save ? JSON.parse(after.save) : null;
   const oldLeak = st && (Math.abs(st.ep - 1234) < 1 || (st.upgrades && st.upgrades.scribble === 7));
+  rec('④1 reload 后旧档已被清空（确认清档生效）', !oldLeak, JSON.stringify({ ep: st?.ep, scribble: st?.upgrades?.scribble }));
+  rec('④2 展开态一并回收（abyss_v2_expand 清空）', after.expand === null, String(after.expand));
   rec('④3 reload 后旧档未被 beforeunload 回写（修复根因断言）', !oldLeak, JSON.stringify({ ep: st?.ep, scribble: st?.upgrades?.scribble }));
   rec('④4 v2.8.1 回到新档首屏（EP 0 起始 / 本局 0）', after.ep === '0' || after.ep.startsWith('0') && !after.ep.startsWith('0.'), `ep=${after.ep} run=${after.run}`);
   rec('④5 新档首屏商店回到 K=p+1=1 项窗口（展开交互已移除、展开态已回收）', after.shopItems === 1, String(after.shopItems));

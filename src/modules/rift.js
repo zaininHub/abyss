@@ -8,8 +8,9 @@
 import { S, save } from '../state.js';
 import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv } from './economy.js';
 // v2.7.3 ⑤：回响·裂隙共鸣（余烬 ×2/级）
-function emberMul() { return 1 + (echoLv('echo_rift') || 0); }
+function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember'); } // v2.8.6 B2a：虚无主义——余烬产出 +25%
 import { BALANCE } from '../data/balance.js';
+import { policyMult } from '../data/policies.js';
 import { log, toast, dirty } from '../main.js';
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）

@@ -18,7 +18,7 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
   const html = readFileSync('index.html', 'utf-8');
   rec('V1 触手为平滑贝塞尔曲线（圆润真实触手，v2.7.1 重构：锥形基座粗、尖端内卷）', html.includes('M32 124 C42 114 32 100 44 88') && html.includes('C54 26 48 24 52 14'), 'svg');
   rec('V1 触手 stroke-linecap 圆头（圆润真实触手端帽）', html.includes('stroke-linecap="round"'), 'svg');
-  rec('V1 克苏鲁紫配色保留（#9c27b0/#7b1fa2/#6a1b9a）', html.includes('#9c27b0') && html.includes('#7b1fa2') && html.includes('#6a1b9a'), 'svg');
+  rec('V1 克苏鲁紫配色保留（#311b92/#7b1fa2/#9c27b0，v2.6.4 触手重构后色值）', html.includes('#9c27b0') && html.includes('#7b1fa2') && html.includes('#311b92'), 'svg');
   // 中性动画未误改：justBought / corruption-fill / transition 保持
   rec('V1 购买高亮/腐化条等中性动画未被误改', css.includes('animation: justBought 1s ease') && css.includes('transition:width .4s'), 'css');
 }

@@ -4,6 +4,8 @@ import { ETERNALS, esCost as _esCost } from '../data/eternals.js';
 import { PETS, petBaseMult } from '../data/pets.js';
 import { MOOD_MULT } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
+import { policyMult } from '../data/policies.js';
+import { devotionMult } from '../data/religions.js';
 import { fxValue, fxBest } from '../core/effectEngine.js';
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
@@ -208,6 +210,7 @@ export function globalMult() {
   // v2.1 建筑驱动：全局加法（预热节点/效能尖塔/调度中枢 Σ +2%~+50%/级）
   // 与全局乘算（双倍工坊 ×1.25^级、锚链 ×1.5~1.8^级）全部来自效果引擎；科技=解锁钥匙，不再参与乘数计算
   m *= (1 + fxValue('globalAdd'));
+  m *= policyMult('collab'); // v2.8.6 B2a：协作网络——协作加成 ×1.2
   m *= fxValue('globalMul');
   if (S.runTalent === 'sharp') m *= 1.5;
   m *= (1 + elv('eff') * 0.05);
@@ -234,6 +237,10 @@ export function globalMult() {
   }
   // v2.7.3 ⑤：轮回回响全局乘区（每点 +5%，跨轮回保留；克制：来源有限、升级贵）
   m *= echoMult();
+  // v2.8.6 B1a/B2a：虔诚全局加成（软上限）+ EP 政策（集权/苦行/富足）
+  m *= devotionMult();
+  m *= policyMult('ep');
+  m *= policyMult('global'); // v2.8.6 B2a：牺牲——全局 -10%
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
@@ -252,7 +259,10 @@ export function echoMult() {
 // 基础 1 RP = 15,000 EP；灵感蒸馏塔每级 ÷1.12（效率提升）；低于 20,000 溢出转换 → 蒸馏为主源
 export function rpDistillRate() {
   const lv = S.upgrades['rp_distill'] || 0;
-  return 15000 / Math.pow(1.12, lv);
+  // v2.8.6：星渊罗盘「研究点转换效率 +10%/级」接线（v2.8.2 改 desc 后漏接，效率提升 = 所需 EP 减少）
+  const compass = (S.relics && S.relics.compass) || 0;
+  const eff = 1 + compass * 0.10;
+  return 15000 / Math.pow(1.12, lv) / eff;
 }
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;
@@ -463,7 +473,11 @@ export function techCostOf(t) {
 
 // ========== 线程相关（v2.0 §1.4：成本/产出/薪资基数由 balance.js 配置） ==========
 export function staffCost() {
-  return Math.ceil(BALANCE.thread.firstCost * Math.pow(1.25, S.cultists.length));
+  // v2.8.6 B2a：招募政策——集权指令 -20% / 协作网络 +30%（价格随政策浮动，下限 5）
+  return Math.max(5, Math.ceil(staffCostBase() * policyMult('recruit')));
+}
+function staffCostBase() {
+  return BALANCE.thread.firstCost * Math.pow(1.25, S.cultists.length);
 }
 
 export function staffSalaryPerSec() {
@@ -502,7 +516,7 @@ export function staffOutputPerSec() {
 export function staffNetPerSec() {
   // v2.1 R1：净收益 = 线程产出 × 全局乘数（单次） − 薪资
   // v1.3：纳入薪资状态机产出系数与数据中心加成（AI 自动招募判定同口径）
-  return staffOutputPerSec() * globalMult() * corruptionPenalty() * tideMult('ep')
+  return staffOutputPerSec() * policyMult('thread') * globalMult() * corruptionPenalty() * tideMult('ep')
     * wageOutputMult() * lazyProdMult() * datacenterMult() - staffSalaryPerSec(); // v2.7.1：懒惰态产出/消耗同口径
 }
 

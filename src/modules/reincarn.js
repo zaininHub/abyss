@@ -6,6 +6,7 @@
 //   · 效果：每点回响全局 ×1.05（叠乘，跨轮回保留）；特殊升级池消耗回响购买（cap 3~5，50×1.6^n）
 //   · 克制：回响来源有限（每轮回上限 100）、升级成本指数涨、cap 封顶——资源不会失控
 import { S, save } from '../state.js';
+import { recordPolicyRun } from '../data/policies.js';
 import { fmt } from './economy.js';
 import { BALANCE } from '../data/balance.js';
 import { toast, dirty, askConfirm } from '../main.js';
@@ -83,6 +84,11 @@ export function doReincarn() {
   S.riftExpedition = null;
   S.crossroad = 'inactive';
   S.crossroadLockedBy = null;
+  // v2.8.6 B2a：政策每轮重选（清空本局政策与改选次数；虔诚/超验/隐密圣学保留跨周期）
+  recordPolicyRun();
+  S.policies = {};
+  S.policyRerolls = {};
+  S.vowPolicyBoost = false;
   // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
   // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
   S.resDiscovered = {

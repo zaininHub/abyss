@@ -5,7 +5,10 @@ import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
   ORACLE, CRUSADE, oracleLevel, crusadeLevel, oracleCost, crusadeCost,
+  PRAISE, SECRET_SANCTUMS, devotion, transcendLevel, secretSanctumLv, secretSanctumCost,
+  praiseRate, faithCap, devotionMult, transcendCost,
 } from '../data/religions.js';
+import { policyMult } from '../data/policies.js';
 
 let logFn = null;
 let toastFn = null;
@@ -108,12 +111,61 @@ export function buyCrusade() {
   return { ok: true, level: lv + 1 };
 }
 
+// ===== v2.8.6 B1a：赞颂 / 超验 / 隐密圣学（KG 四层转化链） =====
+// 赞颂：信仰 ≥ 容量 80% → 消耗全部信仰 → 虔诚 += ⌊信仰 × 转化率⌋（永久跨周期）
+export function praiseSun() {
+  if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
+  const f = S.faith || 0;
+  if (f < faithCap() * PRAISE.thresholdRatio) return { ok: false, reason: `信仰未满 ${Math.round(PRAISE.thresholdRatio * 100)}%（当前 ${f.toFixed(2)} / 需 ${Math.round(faithCap() * PRAISE.thresholdRatio)}）` };
+  const gain = Math.floor(f * praiseRate() * policyMult('devotion')); // v2.8.6 B2a：牺牲——虔诚获取 ×1.5
+  S.devotion = (S.devotion || 0) + gain;
+  S.faith = 0;
+  save(S);
+  rlog(`赞颂：消耗 ${f.toFixed(2)} 信仰 → +${gain} 虔诚（转化率 ×${praiseRate().toFixed(2)}，超验 ${transcendLevel()} 层）`, 'good');
+  if (toastFn) toastFn(`🙏 赞颂完成：+${gain} 虔诚（累计 ${S.devotion}）`);
+  return { ok: true, gain };
+}
+// 超验：消耗虔诚提升层级（成本 100×2.2^层级；提升赞颂转化率 + 解锁隐密圣学）
+export function transcendNow() {
+  if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
+  const cost = transcendCost();
+  if ((S.devotion || 0) < cost) return { ok: false, reason: `虔诚不足（需 ${cost}，当前 ${S.devotion || 0}）` };
+  S.devotion -= cost;
+  S.transcend = (S.transcend || 0) + 1;
+  save(S);
+  rlog(`超验升入第 ${S.transcend} 层（-${cost} 虔诚）：赞颂转化率 ×${praiseRate().toFixed(2)}，隐密圣学门槛开放 ${SECRET_SANCTUMS.filter(x => x.needTranscend <= S.transcend).length}/3`, 'good');
+  if (toastFn) toastFn(`🌌 超验 Lv.${S.transcend}：赞颂转化率 ×${praiseRate().toFixed(2)}`);
+  return { ok: true, level: S.transcend };
+}
+// 隐密圣学：余烬 + 虔诚门槛（跨周期保留；解锁科技每轮重研=门槛每轮重新达成）
+export function buySecretSanctum(id) {
+  if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
+  const d = SECRET_SANCTUMS.find(x => x.id === id);
+  if (!d) return { ok: false, reason: '未知圣学' };
+  if (transcendLevel() < d.needTranscend) return { ok: false, reason: `需超验 Lv.${d.needTranscend}` };
+  const cost = secretSanctumCost(id);
+  if ((S.devotion || 0) < d.devGate) return { ok: false, reason: `需虔诚 ≥${d.devGate}（当前 ${S.devotion || 0}）` };
+  if ((S.riftEmber || 0) < cost) return { ok: false, reason: `余烬不足（需 ${cost}，当前 ${fmt(S.riftEmber || 0)}）` };
+  S.riftEmber -= cost;
+  S.secretSanctums = S.secretSanctums || {};
+  S.secretSanctums[id] = (S.secretSanctums[id] || 0) + 1;
+  save(S);
+  rlog(`兴建「${d.name}」（-${cost} 余烬）：${d.desc}`, 'good');
+  if (toastFn) toastFn(`${d.icon ? d.icon + ' ' : ''}${d.name} 建成：${d.desc}`);
+  return { ok: true, level: S.secretSanctums[id] };
+}
+
 // 每帧信仰产出（圣所确定性产出；神龛/万神殿/远征/晋升为既有源，不重复处理）
 export function tickReligion(dt) {
   if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
   const r = templeFaithPerSec();
-  if (r > 0) S.faith = (S.faith || 0) + r * dt * faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
+  if (r > 0) {
+    let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
+    mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
+    mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
+    S.faith = (S.faith || 0) + r * dt * mult;
+  }
 }
 
 // ========== 面板 ==========
@@ -166,6 +218,31 @@ export function renderReligionPanel(container) {
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
     </div>
+    <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验（信仰 → 虔诚 → 超验，KG 四层转化）</div>
+    <div class="off-stat"><span>虔诚（永久）</span><b style="color:var(--purple)">${S.devotion || 0}</b></div>
+    <div class="off-stat"><span>超验层级</span><b style="color:var(--purple)">Lv.${transcendLevel()}（赞颂转化率 ×${praiseRate().toFixed(2)}）</b></div>
+    <div class="off-stat"><span>信仰容量</span><b>${Math.round(faithCap())}（赞颂需 ≥ ${Math.round(faithCap() * PRAISE.thresholdRatio)}）</b></div>
+    <div class="religion-seal-row">
+      <span>赞颂：消耗全部信仰 → 虔诚（虔诚加成全局 ${(devotionMult() - 1 >= 0 ? '+' : '')}${((devotionMult() - 1) * 100).toFixed(1)}%，软上限 ${Math.round(PRAISE.devSoftCap * (1 + 0.10 * secretSanctumLv('black_sanctum')) * 100)}%）</span>
+      <button class="btn ${(S.faith || 0) < faithCap() * PRAISE.thresholdRatio ? 'disabled' : ''}" data-religion-praise="1"
+        title="需信仰 ≥ 容量 80%；消耗全部信仰转化虔诚（永久保留）">赞颂（${fmt(Math.floor((S.faith || 0) * praiseRate()))} 虔诚）</button>
+    </div>
+    <div class="religion-seal-row">
+      <span>超验：Lv.${transcendLevel()} → ${transcendLevel() + 1}（成本 ${transcendCost()} 虔诚）</span>
+      <button class="btn ${(S.devotion || 0) < transcendCost() ? 'disabled' : ''}" data-religion-transcend="1"
+        title="消耗虔诚提升超验层级——赞颂转化率提升、解锁隐密圣学门槛">超验</button>
+    </div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">隐密圣学（跨周期保留 · 门槛每轮重达）</div>
+    ${SECRET_SANCTUMS.map(s2 => {
+      const lv = secretSanctumLv(s2.id);
+      const cost = secretSanctumCost(s2.id);
+      const canBuy = transcendLevel() >= s2.needTranscend && (S.devotion || 0) >= s2.devGate && (S.riftEmber || 0) >= cost;
+      return `<div class="religion-seal-row">
+        <span>${s2.name} ×${lv}（需超验 Lv.${s2.needTranscend} + 虔诚 ≥${s2.devGate}；${s2.desc}）</span>
+        <button class="btn ${canBuy ? '' : 'disabled'}" data-religion-sanctum="${s2.id}"
+          title="${s2.desc}">${lv > 0 ? `升级（${fmt(cost)} 余烬）` : `建造（${fmt(cost)} 余烬）`}</button>
+      </div>`;
+    }).join('')}
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
     <div class="religion-seal-row">
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（信仰产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
@@ -219,6 +296,25 @@ export function bindReligionPanel(container) {
     }
     if (e.target.closest('[data-religion-temple]')) {
       const r = buyTemple();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    if (e.target.closest('[data-religion-praise]')) {
+      const r = praiseSun();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    if (e.target.closest('[data-religion-transcend]')) {
+      const r = transcendNow();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    const sEl = e.target.closest('[data-religion-sanctum]');
+    if (sEl) {
+      const r = buySecretSanctum(sEl.dataset.religionSanctum);
       if (!r.ok && toastFn) toastFn(r.reason);
       renderReligionPanel(container);
       return;

@@ -17,6 +17,7 @@ import {
 import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
 import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
+import { policyMult } from '../data/policies.js';
 import { v21BuildingCost } from './economy.js';
 import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
@@ -174,7 +175,7 @@ export function tickAI(dt) {
   // v2.5.5 d. 自动购建：全部资源解锁激活后可用；严格限速——
   // 间隔硬下限 5s（autoBuildRate() 已 clamp）、每决策周期至多 1 栋、只 EP 升级已解锁建筑（不花 RP）、
   // 且受预留线约束（与手动购买共享预算，不把 EP 花到预留线以下）
-  if (ai.autoBuild && ai.autoBuildUnlocked) {
+  if (ai.autoBuild && ai.autoBuildUnlocked && policyMult('aiCap') > 0) { // v2.8.6 B2a：自治协议——自动购建上限 -1（停购）
     const rate = autoBuildRate();
     ai.autoBuildTimer = (ai.autoBuildTimer || 0) + dt;
     if (ai.autoBuildTimer >= rate) {

@@ -74,8 +74,8 @@ console.log('\n[P1] 新档首屏最小化 + 列表形态 + 倍率移除');
   rec('R18-D1 DOM 无 bulk-1/bulk-10/bulk-100/bulk-bar', dom.bulkBar === null && dom.bulkBtns === 0, JSON.stringify(dom));
   const shopItems = await page.$$eval('#shop-list .item', els => els.map(e => e.textContent));
   const unowned = shopItems.filter(t => !/已购|Lv\.0/.test(t) || true); // 新档全部未购
-  rec('R18-C3 新档升级商店同屏未购可见项 = 1（链首草稿记录）',
-    unowned.length === 1 && unowned[0].includes('草稿记录'), `可见=${unowned.length}：${unowned.map(t => t.slice(0, 12)).join('|')}`);
+  rec('R18-C3 新档升级商店同屏未购可见项 = 1（链首卡，v2.8.1 开局 0 EP 未解锁时以 ??? 门槛展示）',
+    unowned.length === 1 && (unowned[0].includes('草稿记录') || unowned[0].includes('???')), `可见=${unowned.length}：${unowned.map(t => t.slice(0, 12)).join('|')}`);
   rec('P1 加载无 JS 错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.close();
 }
@@ -87,12 +87,12 @@ console.log('\n[P2] K=p+1 窗口推进 + 链提示挂载 + expand 存量清除')
     localStorage.setItem('abyss_v2_expand', JSON.stringify({ shop: 10, thread: 5 })); // 历史展开存量
   });
   const expandAfterLoad = await page.evaluate(() => localStorage.getItem('abyss_v2_expand'));
-  const buy = (nm) => page.evaluate((name) => {
-    const el = [...document.querySelectorAll('#shop-list .item')].find(e => e.textContent.includes(name));
+  const buy = (bid) => page.evaluate((id) => {
+    const el = document.querySelector(`#shop-list [data-buy="${id}"]`);
     if (el) el.click();
     return !!el;
-  }, nm);
-  // 蓄能
+  }, bid);
+  // 蓄能：点击至 EP 上限（新档 cap 2000，3000 次够）
   await page.evaluate(() => {
     const hero = document.getElementById('hero');
     for (let i = 0; i < 3000; i++) hero.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -100,46 +100,31 @@ console.log('\n[P2] K=p+1 窗口推进 + 链提示挂载 + expand 存量清除')
   await sleep(400);
   const count0 = (await page.$$eval('#shop-list .item', els => els.length));
   rec('R18-C3(预) 蓄能后窗口仍 1 项', count0 === 1, `count=${count0}`);
-  await buy('草稿记录'); await sleep(400);
+  await buy('scribble'); await sleep(400);
   const c1 = await page.$$eval('#shop-list .item', els => els.map(e => e.textContent));
-  await buy('自动化脚本'); await sleep(400);
+  await buy('storage'); await sleep(400);
   const c2 = await page.$$eval('#shop-list .item', els => els.map(e => e.textContent));
-  await buy('并行任务'); await sleep(400);
+  await buy('script'); await sleep(400);
   const c3 = await page.$$eval('#shop-list .item', els => els.map(e => e.textContent));
+  // v2.8.3：parallel base 900→3600 超出蓄能 cap，链序改草稿→存储→脚本（并行在备用粮仓后揭示）
   const stepOk = c1.length === 2 && c2.length === 3 && c3.length === 4
-    && c2.some(t => t.includes('并行任务')) && c3.some(t => t.includes('存储节点'));
+    && c2.some(t => t.includes('存储节点')) && c3.some(t => t.includes('自动化脚本'));
   rec('R18-C4 每购入链内下一项窗口推进一项（K=p+1）', stepOk,
     `${c1.length}→${c2.length}→${c3.length}`);
   // C5：p=2 态重建——用 p=2 前的检查不可行（已买3项），改为直接断言 p=3 态：提示只挂下一项（存储节点）
   const c5 = await page.evaluate(() => {
     const items = [...document.querySelectorAll('#shop-list .item')];
-    const next = items.find(e => (e.querySelector('.name')?.textContent || '').includes('存储节点'));
+    const next = items.find(e => (e.querySelector('.name')?.textContent || '').includes('备用粮仓'));
     return {
       hintTextCount: items.filter(e => e.textContent.includes('购入前一项解锁')).length,
       chainHintCount: document.querySelectorAll('.chain-hint').length,
       nextVisible: !!next,
     };
   });
-  rec('R18-C5 §5.2 链提示废除：p=3 态全页零残留，链内下一项「存储节点」在窗口内',
+  rec('R18-C5 §5.2 链提示废除：p=3 态全页零残留，链内下一项「备用粮仓」在窗口内（storage 已购后揭示）',
     c5.hintTextCount === 0 && c5.chainHintCount === 0 && c5.nextVisible, JSON.stringify(c5));
-  // E4 固化复现：并行任务 ×0 态（p=2）——重开档构造
-  const { page: p4 } = await openPage(mkSave({ ep: 3000, upgrades: { scribble: 1, script: 1 } }));
-  const e4 = await p4.evaluate(() => {
-    const items = [...document.querySelectorAll('#shop-list .item')];
-    const parallel = items.find(e => e.textContent.includes('并行任务'));
-    return {
-      hintTextCount: items.filter(e => e.textContent.includes('购入前一项解锁')).length,
-      chainHintCount: document.querySelectorAll('.chain-hint').length,
-      hasParallel: items.some(e => e.textContent.includes('并行任务')),
-      hasStorage: items.some(e => e.textContent.includes('存储节点')),
-      parallelBuyable: parallel ? (parallel.dataset.buy === 'parallel' && !parallel.classList.contains('locked')) : false,
-      parallelOwned: items.some(e => e.textContent.includes('并行任务') && /×1|已购/.test(e.textContent)),
-    };
-  });
-  rec('R18-E4 固化复现：并行任务 ×0 态为真实可购卡（data-buy、非 locked）、存储节点不在窗口内、链提示零残留',
-    e4.hintTextCount === 0 && e4.chainHintCount === 0 && e4.hasParallel && !e4.hasStorage && e4.parallelBuyable,
-    JSON.stringify(e4));
-  await p4.close();
+  // E4 已删除：项目平行台 v2.8.x 移出主商店升级链（cat H 项目分区），旧「链内并行任务」语义无对应物
+
   const expandAfterRun = await page.evaluate(() => localStorage.getItem('abyss_v2_expand'));
   rec('R18-C2 加载清除 abyss_v2_expand 且运行期不再写入',
     expandAfterLoad === null && expandAfterRun === null, `afterLoad=${expandAfterLoad}, afterRun=${expandAfterRun}`);
@@ -212,6 +197,7 @@ console.log('\n[P4] 灵感工坊锚点当帧：RP 显示 + 分区出现');
   preOwned.storage = 20; // 抬 cap 至 ≈146k，防注入 ep 被 cap 截断
   const { page, errs } = await openPage(mkSave({
     ep: 60000, rp: 77,
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: true }, // v2.8.2：RP 首次溢出解锁后顶栏才显示
     upgrades: preOwned,
     paused: true, pausedAt: Date.now(), // 第一段：冻结经济 tick，rp 停在注入值
   }));
@@ -220,13 +206,9 @@ console.log('\n[P4] 灵感工坊锚点当帧：RP 显示 + 分区出现');
     v21: document.querySelectorAll('#v21-building-list > *').length,
     family: document.querySelectorAll('#family-upgrade-list > *').length,
   }));
-  rec('R18-A1 锚点前盲获得不显示（rp=77 未购灵感工坊 → 顶栏无 RP）', pre.rpShown === 'none' && pre.v21 === 0 && pre.family === 0, JSON.stringify(pre));
-  const clicked = await page.evaluate(() => {
-    const el = [...document.querySelectorAll('#shop-list .item')].find(e => e.textContent.includes('灵感工坊'));
-    if (!el) return false;
-    el.click();
-    return true;
-  });
+  rec('R18-A1 v2.8.2 口径：RP 解锁标记下顶栏显示（rp=77；v2.8.2 起显示由首次溢出解锁驱动，非购买触发）', pre.rpShown !== 'none', JSON.stringify(pre));
+  // v2.8.2：RP 显示由「首次溢出解锁」驱动（非购买灵感工坊触发）——注入档已置 resDiscovered.rp=true，
+  // 本段验证解锁标记下的顶栏显示与数值（原「购入触发解锁」语义已删除）
   await sleep(500); // 当帧渲染（tick 内 renderTop + renderShop）
   const post = await page.evaluate(() => ({
     rpShown: getComputedStyle(document.getElementById('h-rp').parentElement).display,
@@ -241,8 +223,8 @@ console.log('\n[P4] 灵感工坊锚点当帧：RP 显示 + 分区出现');
     family: document.querySelectorAll('#family-upgrade-list > *').length,
     ruleCopy: document.body.textContent.includes('建筑驱动'),
   }));
-  rec('R18-A2 购入灵感工坊当帧 RP 顶栏出现，数值含盲累计（≥77）',
-    clicked && post.rpShown !== 'none' && post.rpVal >= 77, JSON.stringify(post).slice(0, 120));
+  rec('R18-A2 v2.8.2 口径：RP 解锁标记下顶栏显示，数值含盲累计（≥77）',
+    post.rpShown !== 'none' && post.rpVal >= 77, JSON.stringify(post).slice(0, 120));
   rec('R18-B2 购入灵感工坊当帧 RP 锚点出现（效能建筑/族升级解锁前提成立）',
     post.rpShown !== 'none' && post.rpVal >= 77, `rpVal=${post.rpVal}`);
   rec('R18-C6 效能建筑分区无规则文案（「建筑驱动」全文档不存在）', !post.ruleCopy, '');

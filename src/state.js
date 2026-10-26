@@ -34,6 +34,8 @@ export function defaultState() {
     // 探索/宗教
     expeditions: [], expeditionsDone: 0, starMiles: {}, // v2.8.5：星际里程碑已领取记录
     chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
+    devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）
+    policies: {}, policyRerolls: {}, vowPolicyBoost: false, policyRuns: [], // v2.8.6 B2a：周期政策（每轮重选）+ 政策走向历史
     religion: {}, faith: 0,
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,

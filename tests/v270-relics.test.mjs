@@ -106,11 +106,11 @@ function mkState(extra = {}) {
 }
 {
   const s = mkState({ dm: 5000, _riftSeen: true, resDiscovered: { ...S.resDiscovered, dm: true, rp: true }, relics: { compass: 2 } });
-  // 罗盘：溢出转换效率——构造溢出场景验证 accountEpOverflow 路径（借 addEp 溢出）
-  S.ep = econ.epStorageCap();
-  econ.addEp(40000); // 触发溢出记账：40000 溢出 ×1.20 / 20000 = 2.4 → 转 2 RP
-  // 溢出 40000 / need(20000) × 1.20 = 2.4 → 1 RP 转出（floor(2.4)=1）
-  rec('③d 星渊罗盘 Lv2：溢出 → RP 转换效率 ×1.20（40000 溢出转 2 RP）', S.rp >= 2, `rp=${S.rp} acc=${(S._overflowRpAcc||0).toFixed(2)}`);
+  // v2.8.2：溢出自动转 RP 已移除（改蒸馏主动转化）——罗盘接线为蒸馏效率 ×1.10/级
+  // 基础 15000 / 1.12^2（蒸馏 2 级）/ 1.20（罗盘 2 级）= 9945.6
+  S.upgrades = { ...(S.upgrades || {}), rp_distill: 2 };
+  const rate = econ.rpDistillRate();
+  rec('③d 星渊罗盘 Lv2：研究点转换效率 ×1.20（蒸馏 2 级 15000/1.12²/1.20）', Math.abs(rate - 15000 / Math.pow(1.12, 2) / 1.20) < 1e-6, `rate=${rate.toFixed(2)}`);
 }
 {
   const s = mkState({ dm: 5000, _riftSeen: true, resDiscovered: { ...S.resDiscovered, dm: true }, tech: { ai_core: true }, ai: { autoUpgrade: true, autoHire: true }, relics: { tentacle: 5 } });

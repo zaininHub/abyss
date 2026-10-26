@@ -113,7 +113,7 @@ for (const L of LINES) {
   }, JSON.stringify(baseSave({ chapter: '5', ep: 400000, runEarned: 400000, allTimeEp: 400000, expeditionsDone: 3, buildings: { quantum_pool: 8 }, milesDone: { '10000': 1 } })));
   await page.goto(url, { waitUntil: 'load' });
   await new Promise(r => setTimeout(r, 1300));
-  await page.click('#btn-shop');
+  await page.click('#btn-storyline'); // v2.7.5：岔路口分区随故事线 tab（原 shop tab 已移除）
   await new Promise(r => setTimeout(r, 400));
   const crIds = await page.$$eval('#crossroad-list [data-crossroad]', els => els.map(e => e.dataset.crossroad).sort());
   rec('[E2E] ch5 未选线档岔路口分区开放（三栋定向建筑 order_pillar/abyss_anchor/faith_shrine 可购）',
@@ -124,7 +124,7 @@ for (const L of LINES) {
   await page.click('#btn-tech');
   await new Promise(r => setTimeout(r, 400));
   const techPicked = await page.$eval('#tech-tree', el => el.textContent);
-  await page.click('#btn-shop');
+  await page.click('#btn-storyline');
   await new Promise(r => setTimeout(r, 400));
   const crLockedTxt = await page.$eval('#crossroad-list', el => el.textContent);
   rec('[E2E] 买信仰圣龛立誓成功=购买钩子生效，线内容即时生效（章节=回应、科技含神权协议、分区转已立誓/封印）',

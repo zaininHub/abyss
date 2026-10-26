@@ -1,4 +1,5 @@
 import { S } from '../state.js';
+import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs } from './economy.js';
 import { spawnProject } from './projects.js';
@@ -41,6 +42,11 @@ export function doPrestige(talentId) {
   S.resDiscovered = {
     ep: true, es: !!S.resDiscovered.es, faith: !!S.resDiscovered.faith, rp: !!S.resDiscovered.rp,
   };
+  // v2.8.6 B2a：政策每轮重选（清空本局政策与改选次数；虔诚/超验/隐密圣学保留跨周期）
+  recordPolicyRun();
+  S.policies = {};
+  S.policyRerolls = {};
+  S.vowPolicyBoost = false;
   S.pets = {};
   S.activePets = [];
   S.buffMult = 1; S.buffUntil = 0;

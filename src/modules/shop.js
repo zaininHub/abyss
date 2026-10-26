@@ -973,6 +973,7 @@ export function buyCrossroadBuilding(id) {
     S.storyline = line;
     S.crossroad = 'locked';
     S.crossroadLockedBy = id;
+    S.vowPolicyBoost = true; // v2.8.6 B2a：立誓——本局政策正向幅度 +5%
     save(S);
     // v2.2 组长裁定（评论 7698335062311341299 选项③）：立誓 toast 附 5X 章名+文案一次性播报——
     // 5X 章在剧情条上被 6X 遮蔽（currentChapter 取最后满足章），其叙事由本 toast 承接，随购买路径唯一触发（只播一次）
