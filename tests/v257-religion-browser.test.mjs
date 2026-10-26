@@ -16,8 +16,8 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
 try {
   const inject = JSON.stringify({
     _version: 6, chapter: '1', storyline: 'default', ep: 1e9, rp: 0, es: 0,
-    upgrades: { storage: 1 }, buildings: {}, tech: {}, cultists: [], religion: {}, faith: 0,
-    resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false },
+    upgrades: { storage: 3 }, buildings: {}, tech: {}, cultists: [], religion: {}, faith: 0, // v2.8.2：解锁需 storage≥3 + RP 觉醒 + 库存≥80%
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false },
     lastSeen: Date.now(), startTime: Date.now(),
   });
   const page = await browser.newPage();

@@ -21,7 +21,7 @@ import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProject
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn } from './modules/religions.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { religionUnlocked } from './data/religions.js';
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
@@ -204,6 +204,8 @@ function render() {
   if (tentacleEl) {
     const fb = Math.min((S.buildings && S.buildings.abyss_fishbowl) || 0, 3);
     tentacleEl.style.display = fb >= 1 ? '' : 'none';
+    // v2.8.2 反馈⑫：1 级 1 条触手、2 级 2 条、3 级 3 条（CSS 默认只显示 tentacle-a）
+    tentacleEl.classList.toggle('tentacle-2', fb >= 2);
     tentacleEl.classList.toggle('tentacle-3', fb >= 3);
   }
   if (dirty.prestige) {
@@ -459,6 +461,13 @@ function renderHero() {
   }
   if (focusLv) focusLv.textContent = S.focusLevel;
   if (focusCostEl) focusCostEl.textContent = fmt(focusCost());
+  // v2.8.2 反馈⑥：专注等级购买状态明确——EP 不足暗色 + 标题提示（当前/所需）
+  const focusBarEl = document.getElementById('focus-bar');
+  if (focusBarEl) {
+    const fAfford = S.ep >= focusCost();
+    focusBarEl.classList.toggle('cant', !fAfford);
+    focusBarEl.title = `专注：提升点击产出（每级 +50% 点击产出）。成本 ${fmt(focusCost())} EP（当前 ${fmt(S.ep)} EP，${fAfford ? '可购买' : 'EP 不足'}），点击此处购买`;
+  }
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
   const cbar = document.getElementById('corruption-bar');
   if (cbar) {
@@ -564,7 +573,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④：研究点独立栏目 + v2.7.5 ④：族升级（RP 购买）并入研究点
+  if (id === 'rp') { renderRpPanel(); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -624,24 +633,21 @@ function renderRpPanel() {
   if (!anchorShown('rp', S)) {
     panel.innerHTML = `<div class="panel" style="padding:14px">
       <h3 style="margin-top:0;color:var(--dim)">🔬 研究点（RP）未解锁</h3>
-      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">让 EP 溢出存储上限，效能外溢将觉醒研究点。<br>
-      解锁后：溢出 EP 自动转换为 RP（20K 溢出 → 1 RP，满 1 转出；每转生转换效率 +2.5%，所需溢出递减），用于科技树、离线升级与族升级。</p>
-      <p style="font-size:12px;color:var(--text-3)">当前存储上限：${fmt(epStorageCap())} EP · 点击英雄区或挂机持续产出即可触发溢出</p>
+      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">让 EP 溢出存储上限一次即可解锁。<br>
+      解锁后：消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。</p>
     </div>`;
     return;
   }
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <h3 style="margin-top:0">🔬 研究点（RP）</h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
-    <div class="stat"><b>溢出累计</b><span class="mono">${fmt(S.epOverflowTotal || 0)} EP</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP（灵感蒸馏塔每级 +12%）</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="flex:1" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP → RP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
-    <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 用途：科技树购买（科技树 tab）、离线升级（离线 tab）、族升级（研究点 tab）。<br>
-    RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP，主源；EP 满时点击可防溢出）、任务奖励、溢出转换（兜底：每轮 -500 溢出 EP，下限 5,000）、数据熔炉建筑。<br>
-    本栏目独立于深渊裂隙：EP 首次溢出即觉醒，与裂隙无关。</p>
+    <p style="font-size:12px;color:var(--text-2);line-height:1.8;margin-top:10px">RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。<br>
+    RP 用途：科技树（科技树 tab）、RP 加成（下方列表）、离线升级（离线 tab）、族升级（下方列表）。</p>
   </div>`;
 }
 

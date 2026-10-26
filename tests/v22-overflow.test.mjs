@@ -42,12 +42,13 @@ t('超 cap 存量：tickCorruption 后 S.ep === cap 且 epOverflowTotal 增量 =
   assert.strictEqual(S.epOverflowTotal, overflow, `epOverflowTotal 应记 ${overflow}，实际 ${S.epOverflowTotal}`);
 });
 
-t('溢出转 RP（v2.5.2：1/20000，随转生递减）：overflow=1e6 → RP +50', () => {
+t('v2.8.2 溢出不转 RP：overflow=1e6 仅记账，RP 不变', () => {
   resetBaseline();
   const overflow = 1e6;
   S.ep = CAP + overflow;
   tickCorruption(0.1);
-  assert.strictEqual(S.rp, 50, `RP 应 +50，实际 +${S.rp}`);
+  assert.strictEqual(S.rp, 0, `RP 不应变化，实际 +${S.rp}`);
+  assert.strictEqual(S.epOverflowTotal, overflow, '溢出应全额记账');
 });
 
 t('两路径逐位一致：同 overflow 值经 addEp 与 tickCorruption 的 RP/累计/尾数完全相等', () => {
@@ -112,7 +113,7 @@ t('addEp 部分入账回归：ep=cap-100 注入 1000 → 入账 100、溢出 900
   assert.strictEqual(gained, 100);
   assert.strictEqual(S.ep, CAP);
   assert.strictEqual(S.epOverflowTotal, 900);
-  assert.ok(S._overflowRpAcc > 0 && S._overflowRpAcc < 1, '900 溢出不足 1/20000，应滞留尾数');
+  assert.strictEqual(S.rp, 0, 'v2.8.2 溢出不转 RP');
 });
 
 console.log('[3] 源码级断言（公共记账单点）');
@@ -127,8 +128,9 @@ t('accountEpOverflow 恰 1 处定义 + 恰 2 处调用（addEp 与 tickCorruptio
 t('旧截断行已移除：tick 路径不再直接丢弃溢出 EP', () => {
   assert.ok(!econSrc.includes('if (S.ep > cap) S.ep = cap'), '旧截断行仍存在');
 });
-t('记账口径注释同源（v2.5.2：1 RP = 20000 溢出 EP、每转生 -500 下限 5000）', () => {
-  assert.ok(econSrc.includes('Math.max(5000, 20000 - 500 * (S.prestige || 0))'), '公共函数内应有 20000-500×prestige 换算');
+t('记账口径注释同源（v2.8.2：溢出仅累计统计 + 解锁标记，无 RP 转换）', () => {
+  assert.ok(econSrc.includes('移除「溢出 → RP」自动转换'), '公共函数内应注明无溢出转换');
+  assert.ok(!econSrc.includes('_overflowRpAcc'), '不应残留溢出转换累加器');
 });
 
 for (const [name, fn] of tests) {

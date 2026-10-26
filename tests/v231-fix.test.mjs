@@ -97,13 +97,13 @@ const saveBase = (over = {}) => ({
     const storage = cards.find(el => nameOf(el) === '存储节点');
     return {
       storageCount: storage ? (storage.querySelector('.name')?.textContent || '') : null,
-      nextVisible: cards.some(el => nameOf(el) === '备用粮仓'),
+      nextVisible: cards.some(el => nameOf(el) === '并行任务'),
       hintCount: document.querySelectorAll('.chain-hint').length,
     };
   });
   rec('⑦B1 v2.8.1 真实点击链提示项（dataset.buy=storage）', clicked === 'storage', String(clicked));
   rec('⑦B2 购入成功：存储节点 ×1', /存储节点×1/.test(after.storageCount || ''), String(after.storageCount));
-  rec('⑦B3 v2.8.1 链正常推进：按门槛升序揭示下一卡「备用粮仓」（base 800 在 storage 150 与 parallel 900 之间）且链提示零残留', after.nextVisible && after.hintCount === 0, `next=${after.nextVisible}`);
+  rec('⑦B3 v2.8.2 链正常推进：按门槛升序揭示下一卡「并行任务」（base 900 在 storage 150 与备用粮仓 1200 之间）且链提示零残留', after.nextVisible && after.hintCount === 0, `next=${after.nextVisible}`);
   rec('⑦B4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.screenshot({ path: EV + '/q7-B-chain-advanced.png' });
   await page.close();

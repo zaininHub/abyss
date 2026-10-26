@@ -8,7 +8,7 @@ export const SPECIAL_TASKS = [
   {
     id: 'sp1_museum',
     name: '博物馆的访客',
-    desc: '无时间限制；要求玩家"参观"每个建筑一次（逐一点击）',
+    desc: '判定：同时拥有 ≥2 种建筑 且 建筑总级数 ≥3（每级建筑即一件已参观展品；任务面板显示进度）',
     condition: (S) => Object.keys(S.buildings || {}).length >= 2 && Object.values(S.buildings || {}).reduce((a, b) => a + b, 0) >= 3,
     reward: { type: 'museum_mode', msg: '解锁"博物馆模式"（所有建筑特效同时播放，持续 30 秒）' },
     triggered: false,

@@ -411,8 +411,9 @@ const CAP_EXPANSION_IDS = ['storage', 'cache'];  // v2.0.2 复验 P0 修复：�
 export { CAP_EXPANSION_IDS };
 export function unitCost(u, n) {
   const owned = S.upgrades[u.id] || 0;
-  // v2.1 R3-A：支持单项自定义增长率（存储节点 ×1.25，其余默认 1.15）
-  const growth = u.growth || 1.15;
+  // v2.1 R3-A：支持单项自定义增长率（存储节点 ×1.25 等）
+  // v2.8.2：默认增长率 1.15 → 1.30（成本曲线陡峭化——避免一个建筑买几十几百个，减缓前期发展）
+  const growth = u.growth || 1.30;
   let cost = Math.ceil(u.base * Math.pow(growth, owned + n) * costMult());
   if (CAP_EXPANSION_IDS.includes(u.id)) {
     cost = Math.min(cost, Math.floor(epStorageCap() * (B.storageAntiDeadlockRatio || 0.3)));
@@ -496,9 +497,9 @@ export function epStorageCap() {
   let cap = 2000;
   // v2.4：cache 无限购买（原 v2.0.2 20 级封顶解除，旧档超 20 级数量仍全额计入）
   const cacheCount = S.upgrades['cache'] || 0;
-  cap += cacheCount * 5000;
+  cap += cacheCount * 8000; // v2.8.2：5000→8000（中期上限宽松，EP 不易触顶）
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
-  cap += (S.upgrades['reserve_bin'] || 0) * 3000;
+  cap += (S.upgrades['reserve_bin'] || 0) * 8000; // v2.8.2：3000→8000
   cap += (S.upgrades['deep_bin'] || 0) * 5e5;
   // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）
   const storageLv = S.upgrades['storage'] || 0;
@@ -527,16 +528,9 @@ function accountEpOverflow(overflow) {
   if (overflow > 0 && !S._rpOverflowSeen) {
     S._rpOverflowSeen = true;
   }
-  // v2.5.2 反馈②：转换效率基础 1 RP = 20,000 溢出 EP（原 0.05/10000 = 200,000 EP/RP 过低，
-  // 18.79K 溢出显示 5% 却转不出 1 RP）；每转生所需溢出 -500（下限 5,000）——后期获取速率加快
-  const need = Math.max(5000, 20000 - 500 * (S.prestige || 0));
-  // v2.7.0 遗物：星渊罗盘——研究点转换效率 +10%/级（溢出 → RP 更快）
-  S._overflowRpAcc = (S._overflowRpAcc || 0) + overflow * relicMult('compass') / need;
-  if (S._overflowRpAcc >= 1) {
-    const rp = Math.floor(S._overflowRpAcc);
-    S.rp += rp;
-    S._overflowRpAcc -= rp;
-  }
+  // v2.8.2：移除「溢出 → RP」自动转换——RP 主源改为灵感蒸馏塔主动消耗 EP 转化 +
+  // 数据熔炉建筑产出 + 任务奖励（用户口径：解锁后通过大量 EP 转化 RP，而非靠溢出自然产生）；
+  // 溢出仍累计统计（epOverflowTotal 页头展示），解锁标记 _rpOverflowSeen 保留（首次溢出解锁）。
 }
 
 // ========== v2.1 D1：EP 唯一加成入口（受上限约束 + 统一记账） ==========

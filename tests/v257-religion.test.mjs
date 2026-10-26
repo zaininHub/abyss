@@ -1,5 +1,5 @@
 // v2.5.7 宗教系统套件：
-// ① 解锁：仓库（storage）≥1 且 EP 库存 ≥ 存储上限 50%（仓库有库存）才可解锁
+// ① v2.8.2 解锁：存储节点 ≥3 级 且 RP 已觉醒（首次溢出过） 且 EP 库存 ≥ 存储上限 80%（深度囤积）才可解锁
 // ② 分支：随进度解锁（基础 2 / RP 后 5 / DM 后 6 / ES 后 7），选一锁定
 // ③ 圣印升级点：消耗信仰，等级上限随进度解锁（3/5/8/10）；economy 全局加成 8%/级
 // ④ 圣所：EP 购买，确定性信仰产出；信仰在 economy 各钩子链路生效
@@ -37,13 +37,16 @@ function mkState(extra = {}) {
   // 无仓库 → 不可解锁
   Object.assign(S, mkState({ ep: 1e6 }));
   rec('V1 无仓库（storage=0）不可解锁', relMod.canUnlockReligion() === false, `storage=0,ep=1e6`);
-  // 仓库 1 级但库存 < 50% 上限 → 不可解锁
-  Object.assign(S, mkState({ ep: 100, upgrades: { storage: 1 } }));
-  rec('V1 仓库 1 级但库存不足不可解锁', relMod.canUnlockReligion() === false, `ep=100,cap=${econ.epStorageCap()}`);
-  // 仓库 1 级 + 库存 ≥ 50% → 可解锁
+  // storage 1 级 + RP 未觉醒 → 不可解锁
+  Object.assign(S, mkState({ ep: 100000, upgrades: { storage: 1 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false } }));
+  rec('V1 storage 1 级（不满足 ≥3）+ RP 未觉醒 → 不可解锁', relMod.canUnlockReligion() === false, `ep=100000,cap=${econ.epStorageCap()}`);
+  // storage 3 级 + RP 觉醒 + 库存 < 80% → 不可解锁
+  Object.assign(S, mkState({ ep: 1000, upgrades: { storage: 3 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false } }));
+  rec('V1 storage 3 级 + RP 觉醒但库存不足 80% → 不可解锁', relMod.canUnlockReligion() === false, `ep=1000,cap=${econ.epStorageCap()}`);
+  // storage 3 级 + RP 觉醒 + 库存 ≥ 80% → 可解锁
   const cap = econ.epStorageCap();
-  Object.assign(S, mkState({ ep: Math.ceil(cap * 0.5), upgrades: { storage: 1 } }));
-  rec('V1 仓库 1 级 + 库存 ≥50% 上限可解锁', relMod.canUnlockReligion() === true, `ep=${Math.ceil(cap*0.5)}/cap=${cap}`);
+  Object.assign(S, mkState({ ep: Math.ceil(cap * 0.8), upgrades: { storage: 3 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false } }));
+  rec('V1 storage 3 级 + RP 觉醒 + 库存 ≥80% 上限可解锁', relMod.canUnlockReligion() === true, `ep=${Math.ceil(cap*0.8)}/cap=${cap}`);
   const u = relMod.unlockReligion();
   rec('V1 unlockReligion 置位 + faith 锚点', u.ok === true && religionUnlocked() && S.resDiscovered.faith === true, JSON.stringify(S.religion));
 }

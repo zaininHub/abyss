@@ -240,17 +240,17 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
   for (let i = 0; i < miles; i++) S.milesDone['m' + i] = true;
   S.storyline = storyline || 'line_abyss';
 }
-t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 1,814,427', () => {
+t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 2,387,201（v2.8.2 曲线）', () => {
   setCapState(12, 20, 2, 8, 0, 0, 6);
-  assert.equal(epStorageCap(), 1814427, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 2387201, `实际 ${epStorageCap()}`);
 });
-t('S2 终局锚点：全满配 m=9 → epStorageCap = 374,128,594,192', () => {
+t('S2 终局锚点：全满配 m=9 → epStorageCap = 374,129,428,499（v2.8.2 曲线）', () => {
   setCapState(20, 20, 3, 20, 20, 20, 9);
-  assert.equal(epStorageCap(), 374128594192, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 374129428499, `实际 ${epStorageCap()}`);
 });
-t('开局锚点：storage1/其余 0 → 4,600', () => {
+t('开局锚点：storage1/其余 0 → 5,750（v2.8.2 capPer 3000 曲线）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
-  assert.equal(epStorageCap(), 4600);
+  assert.equal(epStorageCap(), 5750);
 });
 
 console.log('[6] 防死锁 30% 钳制（组长硬性要求：组D 三梯任意阶段买得起）');

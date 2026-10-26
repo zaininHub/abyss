@@ -62,7 +62,7 @@ console.log('\n[A] file:// 冷启动（无存档，双击打开场景）');
   // 样式生效：computed style 抽验关键选择器
   const styles = await page.evaluate(() => {
     const body = getComputedStyle(document.body);
-    const btn = document.getElementById('hire-btn');
+    const btn = document.getElementById('btn-shop'); // v2.8.2：抽验 tab 按钮（EP 0 开局下招募按钮 disabled，非样式代表）
     const btnStyle = btn ? getComputedStyle(btn) : null;
     const stat = document.querySelector('.stat');
     const statStyle = stat ? getComputedStyle(stat) : null;
@@ -237,7 +237,7 @@ console.log('\n[E] http 子路径部署');
   const server = spawn('python3', ['-m', 'http.server', '8642', '--bind', '127.0.0.1'], { cwd: root, stdio: 'ignore' });
   await new Promise(r => setTimeout(r, 1000));
   try {
-    const { page, errs } = await openPage(null, 'http://127.0.0.1:8642/dist/index.html');
+    const { page, errs } = await openPage({ _version: 6, chapter: '1', storyline: 'default', ep: 500, rp: 0, upgrades: {}, tech: {}, cultists: [], resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }, 'http://127.0.0.1:8642/dist/index.html'); // v2.8.2：EP 0 开局后注入 500 供招募断言
     const httpBoot = await page.evaluate(() => ({
       ep: document.getElementById('h-ep')?.textContent || '',
       bg: getComputedStyle(document.body).backgroundColor,

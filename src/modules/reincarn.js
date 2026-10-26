@@ -102,6 +102,16 @@ export function buyEchoUpgrade(id) {
 // 渲染：晋升面板内轮回区块（v2.7.5 ①：增量——结构一次构建，数值/状态/卡列表轻量更新）
 export function renderReincarn(container) {
   if (!container) return;
+  // v2.8.2 反馈③：晋升完成前（本局 prestige < 1）不显示轮回模块——轮回是晋升之上的第二层循环，
+  // 未晋升时不占界面；晋升达成后即时渲染
+  if ((S.prestige || 0) < 1) {
+    if (container._echoBuilt) {
+      const blk = container.querySelector('#echo-block');
+      if (blk) blk.remove();
+      container._echoBuilt = false;
+    }
+    return;
+  }
   if (!container._echoBuilt) {
     container._echoBuilt = true;
     container.insertAdjacentHTML('beforeend', `<div id="echo-block" style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">

@@ -115,10 +115,10 @@ export const BALANCE = {
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3（1 级即生效）' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
     { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级；成本曲线 v2.7.4 加陡）' },
-    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e5, growth: 1.4, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +5,000（线程强化区购买，无限升级；成本曲线 v2.7.4 加陡）' },
+    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000（线程强化区购买，无限升级；v2.8.2 成本大福上调）' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 800, growth: 1.45, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 3000 }, desc: '每级 EP 上限 +3,000（中前期扩容，无限升级）' },
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 1200, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000（中前期扩容，无限升级；v2.8.2 成本/上限同步放宽）' },
     { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000（后期扩容，无限升级）' },
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
@@ -199,7 +199,7 @@ export const BALANCE = {
   // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
   // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
   // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
-  storage: { base: 150, growth: 1.25, capPer: 2000, capGrowth: 1.12, maxLevel: 20 },
+  storage: { base: 150, growth: 1.25, capPer: 3000, capGrowth: 1.15, maxLevel: 20 }, // v2.8.2：capPer 2000→3000、capGrowth 1.12→1.15（中期上限宽松）
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],

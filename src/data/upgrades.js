@@ -12,10 +12,10 @@ export const UPGRADES = [
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
   {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}/级起步、逐级 +12%（v2.4 无限升级，成本递增）`},
-  {id:'intern',name:'实习生',base:12000,cps:47,desc:'基础产出+47/s'},
-  {id:'team',name:'小组协作',base:130000,cps:260,desc:'基础产出+260/s'},
-  {id:'ai',name:'AI 助手',base:1.4e6,cps:1400,desc:'基础产出+1.4K/s'},
-  {id:'cloud',name:'云集群',base:2e7,cps:7800,desc:'基础产出+7.8K/s'},
+  {id:'intern',name:'实习生',base:5e4,cps:47,desc:'基础产出+47/s'}, // v2.8.2：base 12K→50K（减缓前期）
+  {id:'team',name:'小组协作',base:5e5,cps:260,desc:'基础产出+260/s'}, // v2.8.2：base 130K→500K
+  {id:'ai',name:'AI 助手',base:5e6,cps:1400,desc:'基础产出+1.4K/s'}, // v2.8.2：base 1.4M→5M
+  {id:'cloud',name:'云集群',base:8e7,cps:7800,desc:'基础产出+7.8K/s'}, // v2.8.2：base 20M→80M
   {id:'global',name:'全球网络',base:3.3e8,cps:44000,desc:'基础产出+44K/s'},
   {id:'quantum',name:'量子计算',base:5e9,cps:250000,desc:'基础产出+250K/s'},
   {id:'singularity',name:'奇点工程',base:8e10,cps:1.5e6,desc:'基础产出+1.5M/s'},
@@ -60,15 +60,15 @@ export const UPGRADES = [
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:1e14,cps:0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
-  {id:'subsist1',name:'能量合剂',base:1e5,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`},
-  {id:'subsist2',name:'循环供氧',base:1e7,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`},
-  {id:'subsist3',name:'生物打印餐',base:1e9,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'},
+  {id:'subsist1',name:'能量合剂',base:1e6,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.2：降低成本类 base ×10
+  {id:'subsist2',name:'循环供氧',base:1e8,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v2.8.2：×10
+  {id:'subsist3',name:'生物打印餐',base:1e10,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v2.8.2：×10
   {id:'cpu',name:'CPU 超频',base:1e4,cps:0,cat:'thread',desc:'所有线程产出 +50%'},
-  {id:'mem',name:'内存扩容',base:1e5,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'},
+  {id:'mem',name:'内存扩容',base:1e6,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.2：×10
   {id:'gpu',name:'GPU 加速',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 ×2'},
-  {id:'cache',name:'缓存优化',base:1e5,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%（下限 -35%），EP 存储上限 +5000/级（v2.4 无限升级）'},
+  {id:'cache',name:'缓存优化',base:1e6,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%（下限 -35%），EP 存储上限 +8000/级（v2.4 无限升级；v2.8.2 base ×10）'},
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
-  {id:'reserve_bin',name:'备用粮仓',base:800,growth:1.45,cps:0,cat:'D',desc:'每级 EP 上限 +3,000（中前期扩容，无限升级）'},
+  {id:'reserve_bin',name:'备用粮仓',base:1200,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +8,000（中前期扩容，无限升级；v2.8.2 成本/上限同步放宽）'},
   {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000（后期扩容，无限升级）'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:500,cps:5,desc:'地面快速采集'},

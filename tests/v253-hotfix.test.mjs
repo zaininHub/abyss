@@ -57,17 +57,15 @@ function mkState(rawObj) {
 {
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
   rec('V2 顶栏文案：溢出累计按 20,000:1 转 RP（不再「5% 已转」）', !mainSrc.includes('5% 已转 RP') && mainSrc.includes('按 20,000:1 转 RP'), '顶栏文案');
-  rec('V2 面板说明：补 RP 获取途径（蒸馏主源/任务/溢出兜底/数据熔炉）+ 速率加快（每轮 -500）', mainSrc.includes('灵感蒸馏塔主动转化') && mainSrc.includes('数据熔炉建筑') && mainSrc.includes('每轮 -500 溢出 EP，下限 5,000'), '面板说明');
-  // 转换公式：基础 20,000 / 转生递减 500（下限 5,000）
+  rec('V2 面板说明：RP 获取（蒸馏主源/数据熔炉/任务）+ 无溢出兜底文案', mainSrc.includes('灵感蒸馏塔主动转化') && mainSrc.includes('数据熔炉建筑') && mainSrc.includes('任务奖励') && !mainSrc.includes('每轮 -500 溢出 EP'), '面板说明');
+  // 溢出→RP 自动转换已移除（v2.8.2：RP 只靠蒸馏/建筑/任务）
   const ecSrc = fs.readFileSync('src/modules/economy.js', 'utf-8');
-  rec('V2 转换公式：1 RP = 20,000 溢出 EP（转生 -500，下限 5,000）', /Math\.max\(5000, 20000 - 500 \* \(S\.prestige \|\| 0\)\)/.test(ecSrc), '公式');
-  // 行为：18.79K 溢出（prestige 0）→ 0 RP（0.94 不足 1，与「5% 应 939 RP」对照，文案修正后合理）
+  rec('V2 无溢出→RP 自动转换（_overflowRpAcc 移除）', !/_overflowRpAcc/.test(ecSrc), 'no-overflow-convert');
+  // 行为（v2.8.2）：溢出不再自动转 RP——溢出只累计统计与解锁标记，RP 余额不变
   {
-    Object.assign(S, mkState({ _version: 6, chapter: '1', storyline: 'default', ep: 1000, rp: 0, runEarned: 1000, prestige: 0, upgrades: {}, buildings: {}, tech: {}, _overflowRpAcc: 0, epOverflowTotal: 18790, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }));
+    Object.assign(S, mkState({ _version: 6, chapter: '1', storyline: 'default', ep: 1000, rp: 0, runEarned: 1000, prestige: 0, upgrades: {}, buildings: {}, tech: {}, epOverflowTotal: 18790, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }));
     economy.addEp(0); // 触发不了溢出（amount 0）
-    // 直接验证转换单元：18,790 溢出 → need=20,000 → 0 RP 累积 0.94
-    const need = Math.max(5000, 20000 - 500 * (S.prestige || 0));
-    rec('V2 溢出转换：18.79K EP → 0.94 不足 1 RP（文案修正后「5%→939 RP」误解消除）', need === 20000 && S.rp === 0, `need=${need},rp=${S.rp}`);
+    rec('V2 溢出仅累计统计（epOverflowTotal 记录、RP 不自动增加）', (S.epOverflowTotal || 0) > 0 && S.rp === 0, `overflow=${S.epOverflowTotal},rp=${S.rp}`);
   }
 }
 

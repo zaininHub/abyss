@@ -11,6 +11,10 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1920, height: 1080 });
+// v2.8.1 EP 0 开局后，数值断言注入启动资金 500（招募 40 / 存储节点 150 可购）
+await page.evaluateOnNewDocument(() => {
+  localStorage.setItem('abyss_idle_v2', JSON.stringify({ _version: 6, chapter: '1', storyline: 'default', ep: 500, rp: 0, upgrades: {}, tech: {}, cultists: [], resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }));
+});
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 
@@ -90,12 +94,12 @@ const epAfterBuy = curNumOf(capAfterTxt);
 function curNumOf(s) { const m = s.split('/')[0].trim().match(/^([\d.,]+)\s*([KM]?)/); if (!m) return -1; return parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'K' ? 1e3 : m[2] === 'M' ? 1e6 : 1); } // v2.3.1：fmt 后缀乘回
 function capNumOf(s) { const m = s.match(/\/\s*([\d.,]+K?M?)/); if (!m) return -1; const v = m[1]; const mult = v.includes('K') ? 1000 : v.includes('M') ? 1e6 : 1; return Math.round(parseFloat(v.replace(/[KM,]/g, '')) * mult); }
 const capB = capNumOf(capBeforeTxt), capA = capNumOf(capAfterTxt);
-const ratioOk = Math.abs(capA / capB - 2.0) < 0.02; // (2000+2000)/2000，v2.0.2 级制首级 +2000
+const ratioOk = Math.abs(capA / capB - 2.5) < 0.02; // (2000+3000)/2000，v2.8.2 capPer 3000
 // v2.3.2 断言加固：扣款测量加 cps 产出补偿——400ms 窗口内挂机产出（链内购入后 cps≈13/s → +5 EP）
 // 叠加 #h-ep 的 K 格式舍入（±5）会挤爆原 ±10 容差（实测显示价与实扣均为 150，纯测量性问题）
 const cpsVal = parseFloat(await page.$eval('#h-cps', el => el.textContent)) || 0;
 const deductOk = Math.abs((epBeforeBuy - epAfterBuy) + cpsVal * 0.4 - 150) < 10; // 扣款 =150（v2.0.2 首级价）+ 产出回补
-rec('R3：购买存储节点 → 上限×2.0（2000+2000 级制）+ 扣款 150（含 cps 产出补偿）', bought === 'clicked' && ratioOk && deductOk,
+rec('R3：购买存储节点 → 上限×2.5（2000→5000，v2.8.2 capPer 3000）+ 扣款 150（含 cps 产出补偿）', bought === 'clicked' && ratioOk && deductOk,
   `${capBeforeTxt} → ${capAfterTxt}（cap比=${(capA / capB).toFixed(2)}，扣款=${(epBeforeBuy - epAfterBuy).toFixed(0)}，cps=${cpsVal}/s）`);
 
 // ---- 6. EP 满仓截断（D1）：点击至溢出，EP 不超过上限 ----

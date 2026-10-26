@@ -13,16 +13,20 @@ export function setReligionLogFn(fn) { logFn = fn; }
 export function setReligionToastFn(fn) { toastFn = fn; }
 function rlog(msg, cls) { if (logFn) logFn(`[宗教] ${msg}`, cls); }
 
-// 解锁前提：仓库（存储节点）≥1 级，且 EP 库存 ≥ 存储上限 50%（仓库有库存）
+// v2.8.2 解锁前提（反馈：宗教解锁过于简单——超长线功能，需中后期资源积累）：
+//   ① 存储节点 ≥3 级（仓库扩建三阶，前期无法达成）
+//   ② EP 库存 ≥ 存储上限 80%（深度囤积，不能只囤半仓）
+//   ③ RP 已觉醒（首次溢出过——已触及效能外溢，进入研究阶段）
 export function canUnlockReligion() {
   const storageLv = S.upgrades.storage || 0;
-  if (storageLv < 1) return false;
-  return S.ep >= epStorageCap() * 0.5;
+  if (storageLv < 3) return false;
+  if (!(S.resDiscovered && S.resDiscovered.rp)) return false;
+  return S.ep >= epStorageCap() * 0.8;
 }
 
 export function unlockReligion() {
   if (religionUnlocked()) return { ok: false, reason: '已解锁' };
-  if (!canUnlockReligion()) return { ok: false, reason: '需仓库 ≥1 级且 EP 库存 ≥ 存储上限 50%' };
+  if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级、RP 已觉醒且 EP 库存 ≥ 存储上限 80%' };
   S.religion = S.religion || {};
   S.religion.unlocked = true;
   if (S.resDiscovered) S.resDiscovered.faith = true;

@@ -55,7 +55,7 @@ export function buyUpgrade(u) {
 function threadCost(u) {
   if (CAP_EXPANSION_IDS.includes(u.id)) return unitCost(u, 0);
   const owned = S.upgrades[u.id] || 0;
-  return Math.ceil(u.base * Math.pow(1.15, owned) * costMult());
+  return Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 陡峭化
 }
 
 export function buyThreadUpgrade(u) {
@@ -73,7 +73,7 @@ export function buyThreadUpgrade(u) {
 
 export function buyVehicle(u) {
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.15, owned) * costMult());
+  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
   if (S.ep < cost) return false;
   S.ep -= cost;
   S.upgrades[u.id] = owned + 1;
@@ -123,9 +123,10 @@ export function renderShop(container) {
   shopContainer = container;
   container.innerHTML = '';
   shopItemEls.clear();
-  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce'))
-    && (u.id !== 'rp_distill' || anchorShown('rp', S))); // v2.1 钥匙门控：净化节点族需「熵减协议」；v2.7.4 ⑦：灵感蒸馏塔需 RP 解锁
+  // v2.8.2 反馈④：RP 相关升级（组 F 加成 + 灵感蒸馏塔）移入研究点 tab，主商店不再渲染
+  const RP_FAMILY_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
+  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS.includes(u.id)
+    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
   // v2.3.1 缺陷⑦修复：链序改定义序（与 eternal v2.3 修复同口径）。
   // 原 v1.3 E「已解锁按成本升序」在 v2.3 渐进披露链下失效：已购项成本上浮后
   // 与未购项按成本交错，chainSplit 的已购前缀 p 判定失真 → 链提示挂错对象
@@ -158,17 +159,44 @@ export function renderShop(container) {
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {
-      shopToast(`EP 不足：${u.name} 需要 ${fmt(bulkCostCalc(u, 1))} EP`);
+      /* v2.8.2 反馈⑪：EP 不足不弹框（卡片已暗色 cant 提示） */
     }
   });
 }
+// v2.8.2 反馈④：研究点 tab 渲染 RP 加成组（组 F + 灵感蒸馏塔），按解锁门槛（base 升序）排
+export function renderRpFamily(container) {
+  if (!container) return;
+  const RP_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
+  const rpItems = UPGRADES.filter(u => RP_IDS.includes(u.id))
+    .slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
+  const split = chainSplit('rp', rpItems, u => (S.upgrades[u.id] || 0) > 0, S);
+  const list = split.visible;
+  container.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const u of list) {
+    const el = makeShopItem(u);
+    frag.appendChild(el);
+  }
+  container.appendChild(frag);
+  bindDelegate(container, (id, el) => {
+    const u = UPGRADES.find(x => x.id === id);
+    if (!u) return;
+    const wasOwned = (S.upgrades[u.id] || 0) > 0;
+    if (buyUpgrade(u)) {
+      updateShopItem(u);
+      if (!wasOwned) renderRpFamily(container);
+      save(S);
+    }
+  });
+}
+
 // v2.6.7：商店链窗口增量揭示——解锁数/已购前缀变化时只插入新可见卡，不整面板重建
 // （消除「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁 + 点击竞争」根因）
 export function refreshShopChain() {
   if (!shopContainer || !shopContainer._chain) return;
-  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce'))
-    && (u.id !== 'rp_distill' || anchorShown('rp', S)));
+  const RP_FAMILY_IDS2 = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
+  const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS2.includes(u.id)
+    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
   // v2.8.1：与 renderShop 同口径——按解锁门槛（base 升序）排
   const sortedItems = items.slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   const split = chainSplit('shop', sortedItems, u => (S.upgrades[u.id] || 0) > 0, S);
@@ -305,7 +333,7 @@ export function renderThreadShop(container) {
       if (!wasOwned) dirty.shop = true;
       save(S); // v2.7.1：购买即持久化（同上）
     }
-    else shopToast(`EP 不足：${u.name} 需要 ${fmt(threadCost(u))} EP`);
+    /* v2.8.2 反馈⑪：EP 不足不弹框 */
   });
 }
 
@@ -436,7 +464,7 @@ function makeVehicleLockedCard(u) {
 
 function makeVehicleItem(u) {
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.15, owned) * costMult());
+  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
   const afford = S.ep >= cost;
   const div = document.createElement('div');
   div.dataset.buy = u.id;
@@ -456,7 +484,7 @@ function updateVehicleItem(u) {
   const el = vehicleItemEls.get(u.id);
   if (!el) return;
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.15, owned) * costMult());
+  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
   const cnt = el.querySelector('.count');
   if (cnt) cnt.textContent = '×' + owned;
   const c = el.querySelector('.cost');
@@ -637,7 +665,7 @@ export function renderBuildings(container) {
       }
     } else {
       const lv = buildingLevel(b, S);
-      shopToast(`EP 不足：${b.name} Lv.${lv + 1} 需要 ${fmt(buildingCost(b, S, costMult()))} EP`);
+      /* v2.8.2 反馈⑪：EP 不足不弹框 */
     }
   });
 }
@@ -919,7 +947,7 @@ function bindV21Delegate(container) {
       }
     } else {
       const lv = v21Level(b.id, S);
-      shopToast(`EP 不足：${b.name} Lv.${lv + 1} 需要 ${fmt(v21BuildingCost(b))} EP`);
+      /* v2.8.2 反馈⑪：EP 不足不弹框 */
     }
   });
 }
@@ -936,7 +964,7 @@ export function buyCrossroadBuilding(id) {
   if (!b || S.crossroad !== 'open') return false; // 状态机门控（唯一合法入口；inactive 隐藏 / locked 已立誓）
   if (crossroadOwned(id, S)) return false;        // 1 级封顶
   const cost = 3e5;                                // 固定价（PM §2.2：不乘 costMult、不受 30% 钳制）
-  if (S.ep < cost) { shopToast(`EP 不足：${b.name} 立誓需要 ${fmt(cost)} EP`); return false; }
+  if (S.ep < cost) return false; // v2.8.2 反馈⑪：EP 不足不弹框
   S.ep -= cost;
   S.buildings[id] = 1;
   const line = BALANCE.crossroadToLine[id];

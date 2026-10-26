@@ -80,12 +80,12 @@ t('打满上限后 addEp 溢出全额累计入 epOverflowTotal', () => {
   assert.equal(S.ep, cap); assert.equal(S.epOverflowTotal, 5000);
   assert.ok(S.rp >= rp0, 'RP 不应减少');
 });
-t('溢出按 1/20000 换算累计（v2.5.2：20000-500×转生，下限 5000），满 1 落账 RP', () => {
+t('v2.8.2 溢出不再自动转 RP（只记账 + 解锁标记；RP 靠蒸馏/建筑/任务）', () => {
   const cap = epStorageCap();
-  S.ep = cap; S._overflowRpAcc = 0; const rp0 = S.rp;
-  addEp(200000); // 200000/20000 = 10 → +10 RP
-  assert.equal(S.rp, rp0 + 10, `RP 应 +10（实际 +${S.rp - rp0}）`);
-  assert.ok(S._overflowRpAcc < 1);
+  S.ep = cap; const rp0 = S.rp;
+  addEp(200000); // 溢出 200K 仅累计记账，RP 不变
+  assert.equal(S.rp, rp0, `RP 不应变化（实际 +${S.rp - rp0}）`);
+  assert.ok((S.epOverflowTotal || 0) >= 200000, `溢出应累计 ${S.epOverflowTotal}`);
 });
 
 console.log('[3] 接线源码断言（doClick 暴击 / 终章条件 / 溢出页头）');
