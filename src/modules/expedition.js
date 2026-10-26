@@ -64,7 +64,32 @@ function renderColoniesHtml() {
       <span>${c.name}<br><span style="color:var(--text-3);font-size:10.5px">${c.desc} · ${owned}/${c.cap} 级</span></span>
       <span style="color:var(--cyan)">${full ? '已满级' : fmt(cost) + ' EP'}</span></div>`;
   }
+  // v2.8.5：星际里程碑（殖民总级数门槛一次性奖励，长线）
+  html += `<div style="margin-top:8px;color:var(--text-2);font-size:11px;font-weight:600">星际里程碑（殖民总级数 ${starColonyLevel()}，奖励一次性）</div>`;
+  for (const ms of BALANCE.starMilestones || []) {
+    const claimed = !!(S.starMiles && S.starMiles[ms.need]);
+    const reach = starColonyLevel() >= ms.need;
+    html += `<div class="off-upg${claimed ? '' : reach ? '' : ' cant'}" data-starmile="${ms.need}" style="${claimed ? 'opacity:.55' : ''}">
+      <span>${ms.name} · ${ms.need} 级${claimed ? '（已领取）' : ''}<br><span style="color:var(--text-3);font-size:10.5px">${fmt(ms.rp)} RP + ${fmt(ms.ep)} EP</span></span>
+      <span style="color:var(--cyan)">${claimed ? '✓' : reach ? '可领取' : '未达成'}</span></div>`;
+  }
   return html + `</div>`;
+}
+
+// v2.8.5：领取星际里程碑奖励
+function claimStarMilestone(need) {
+  const ms = (BALANCE.starMilestones || []).find(x => x.need === need);
+  if (!ms) return;
+  if (S.starMiles && S.starMiles[need]) { toast('该里程碑已领取'); return; }
+  if (starColonyLevel() < need) { toast(`殖民总级数未达标（需 ${need} 级，当前 ${starColonyLevel()}）`); return; }
+  S.starMiles = S.starMiles || {};
+  S.starMiles[need] = true;
+  S.ep += ms.ep;
+  S.rp = (S.rp || 0) + ms.rp;
+  save(S);
+  dirty.expedition = true;
+  log(`星际里程碑「${ms.name}」：+${fmt(ms.rp)} RP / +${fmt(ms.ep)} EP`, 'good');
+  toast(`星际里程碑「${ms.name}」达成：+${fmt(ms.rp)} RP / +${fmt(ms.ep)} EP`);
 }
 
 export function renderExpeditions(container) {
@@ -109,6 +134,9 @@ export function renderExpeditions(container) {
   container.innerHTML = html;
   container.querySelectorAll('[data-colony]').forEach(div => {
     div.addEventListener('click', () => buyColony(div.dataset.colony));
+  });
+  container.querySelectorAll('[data-starmile]').forEach(div => {
+    div.addEventListener('click', () => claimStarMilestone(parseInt(div.dataset.starmile, 10)));
   });
   container.querySelectorAll('[data-galaxy]').forEach(div => {
     div.addEventListener('click', () => {

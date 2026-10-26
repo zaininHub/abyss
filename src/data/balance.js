@@ -279,6 +279,12 @@ export const BALANCE = {
     { id: 'colony3', name: '环恒星城',   base: 2e10, growth: 1.7, cap: 3,  rpRate: 2,    desc: '每级 +2 RP/s（探索收益 +10%/级）' },
   ],
   colonyExploreBonus: 0.10, // 每殖民等级 深空探索收益 +10%
+  // v2.8.5：星际里程碑——殖民总级数门槛一次性奖励（EP/RP），长线引导深空殖民
+  starMilestones: [
+    { need: 3,  rp: 10,  ep: 5e5,  name: '星系立足' },
+    { need: 6,  rp: 40,  ep: 5e7,  name: '星海殖民' },
+    { need: 10, rp: 150, ep: 5e9,  name: '星际联邦' },
+  ],
 
   // v2.8.4：研究点专属升级（RP 购买，研究点 tab 渲染；长线消耗 RP，克制——cap 8-10 + 成本指数涨）
   researchUpgs: [

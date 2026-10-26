@@ -36,6 +36,11 @@ export function doPrestige(talentId) {
   S.corruption = 0; // v2.6.0 review：转生新轮从干净状态开始（旧轮腐化惩罚不带入新轮）
   S.collapsed = false; S._collapseTimer = 0; // v2.8.3：深渊吞噬脱离（晋升重置本局）
   S.vehCollectTimer = 0;
+  // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
+  // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
+  S.resDiscovered = {
+    ep: true, es: !!S.resDiscovered.es, faith: !!S.resDiscovered.faith, rp: !!S.resDiscovered.rp,
+  };
   S.pets = {};
   S.activePets = [];
   S.buffMult = 1; S.buffUntil = 0;

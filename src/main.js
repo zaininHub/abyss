@@ -114,9 +114,13 @@ function renderStorylinePanel() {
       const chs = (pkg.chapters && pkg.chapters.append) || [];
       if (chs.length > 0) {
         html += `<div class="codex-chs">`;
+        // v2.8.5 A3：解锁判定 = 持久化已进入（chaptersUnlocked）优先，其次即时 cond（未写入前的兼容）
+        const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
         for (const ch of chs) {
           let ok = false;
           try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
+          const chIdx = ch.id !== undefined ? parseInt(ch.id, 10) : chs.indexOf(ch) + 1;
+          if (seenChs.includes(chIdx)) ok = true; // 历史已进入 → 永久点亮
           html += `<div class="codex-ch${ok ? ' on' : ' locked'}"><span class="codex-ch-name">${ok ? '✓' : '🔒'} ${ch.name}</span>`;
           if (ok && ch.desc) html += `<div class="codex-ch-desc">${ch.desc}</div>`;
           html += `</div>`;
@@ -744,7 +748,6 @@ function bindEvents() {
   document.getElementById('hero')?.addEventListener('click', doClick);
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
-  document.getElementById('reset-btn')?.addEventListener('click', doReset);
   document.getElementById('focus-bar')?.addEventListener('click', buyFocus);
 
   // v2.1 R2：任务面板容器级事件委托——领取按钮无论面板怎么刷新都能点到
@@ -835,6 +838,12 @@ function bindEvents() {
         deleteSnapshot(id);
         renderSnapshotList();
         toast('快照已删除');
+      });
+    } else if (e.target.classList.contains('snap-reset')) {
+      // v2.8.5 A4：清档移入快照列表（二次确认；同时清除快照）
+      askConfirm('清档（重置全部进度）', '将删除当前本地游戏与全部快照，回到全新开局。\n此操作不可撤销，确定继续？', () => {
+        for (const s of listSnapshots()) deleteSnapshot(s.id);
+        doReset();
       });
     }
   });
@@ -954,14 +963,23 @@ function renderSnapshotList() {
     row.dataset.snap = sn.id;
     row.dataset.name = sn.name;
     row.dataset.time = sn.timeText;
-    row.title = '点击行内按钮操作；「使用」= 作为本地游戏覆盖当前进度';
+    row.title = '「读取」= 用快照覆盖当前本地游戏（二次确认）；「删除」= 移除该快照';
+    const sm = sn.summary || {};
+    const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
     row.innerHTML = `<div class="name"><span>${sn.slot}. ${sn.name}</span><span class="count mono">${sn.timeText}</span></div>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn snap-use" style="flex:1;padding:4px 6px;font-size:11px">作为本地游戏</button>
-        <button class="btn snap-del" style="flex:1;padding:4px 6px;font-size:11px;background:transparent">删除</button>
+      <div style="font-size:10.5px;color:var(--text-3);margin-top:2px">EP ${fmt(sm.ep || 0)} · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button class="btn snap-use" style="flex:1;padding:2px 4px;font-size:10px">读取</button>
+        <button class="btn snap-del" style="flex:1;padding:2px 4px;font-size:10px;background:transparent">删除</button>
       </div>`;
     box.appendChild(row);
   }
+  // v2.8.5 A4：清档移入快照列表（外侧移除）
+  const clearRow = document.createElement('div');
+  clearRow.className = 'snap-reset-row';
+  clearRow.style.cssText = 'margin-top:8px;border-top:1px dashed var(--border);padding-top:8px;text-align:center';
+  clearRow.innerHTML = `<button class="btn snap-reset" style="width:100%;padding:3px 6px;font-size:11px;background:transparent;color:var(--red,#f85149)">清档（重置全部进度与快照）</button>`;
+  box.appendChild(clearRow);
 }
 
 function openSnapshotModal() {
@@ -1000,11 +1018,15 @@ function importSave(e) {
       if (!data || typeof data !== 'object' || data._version === undefined) {
         throw new Error('文件不是有效存档');
       }
-      const cur = localStorage.getItem(SAVE_KEY);
-      if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-      toast('存档导入成功，页面即将刷新');
-      setTimeout(() => location.reload(), 600);
+      // v2.8.5 A4：导入 = 覆盖当前本地游戏，二次确认
+      const sum = `EP ${fmt(data.ep || 0)} · 职级 ${data.prestige || 0} · 第 ${data.chapter || 1} 章`;
+      askConfirm('导入存档并覆盖当前', `导入外部存档（${sum}）将覆盖当前本地游戏进度。\n当前进度会自动备份（abyss_idle_v2_bak）。确定继续？`, () => {
+        const cur = localStorage.getItem(SAVE_KEY);
+        if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        toast('存档导入成功，页面即将刷新');
+        setTimeout(() => location.reload(), 600);
+      });
     } catch (err) {
       toast('导入失败：' + (err && err.message ? err.message : '文件无法解析'));
     }
@@ -1457,6 +1479,11 @@ function tick(now) {
   if (parseInt(chNowStr, 10) > parseInt(sChapterStr, 10)) {
     S.chapter = chNowStr;
     dirty.story = true;
+    // v2.8.5 A3：章节解锁持久化写入图鉴（进入即记录，跨周期保留——图鉴不再依赖即时状态推断）
+    S.chaptersUnlocked = S.chaptersUnlocked || {};
+    const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
+    S.chaptersUnlocked[slId] = S.chaptersUnlocked[slId] || [];
+    if (!S.chaptersUnlocked[slId].includes(parseInt(chNowStr, 10))) S.chaptersUnlocked[slId].push(parseInt(chNowStr, 10));
     // v2.8.3：章节转变触发明显事件——toast + 日志 + 章节馈赠（RP 克制奖励）
     const chId = parseInt(chNowStr, 10);
     const gift = Math.max(5, chId * 5);

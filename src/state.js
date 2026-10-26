@@ -32,7 +32,8 @@ export function defaultState() {
     // 任务版
     projects: [], projectsDone: 0,
     // 探索/宗教
-    expeditions: [], expeditionsDone: 0,
+    expeditions: [], expeditionsDone: 0, starMiles: {}, // v2.8.5：星际里程碑已领取记录
+    chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
     religion: {}, faith: 0,
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,

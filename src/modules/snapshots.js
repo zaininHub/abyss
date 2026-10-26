@@ -55,9 +55,19 @@ export function coverOldest(newSnap) {
   return { ok: true, covered };
 }
 
-// 快照列表（含槽位号，时间已格式化）
+// 快照列表（含槽位号、时间与进度摘要——解析存档关键字段，供 UI 展示）
 export function listSnapshots() {
-  return read().map((s, i) => ({ ...s, slot: i + 1, timeText: fmtStamp(s.time) }));
+  return read().map((s, i) => {
+    let summary = { ep: 0, prestige: 0, chapter: 1, storyline: '', name: s.name };
+    try {
+      const d = JSON.parse(s.data || '{}');
+      summary.ep = d.ep || 0;
+      summary.prestige = d.prestige || 0;
+      summary.chapter = d.chapter || 1;
+      summary.storyline = d.storyline && d.storyline !== 'default' ? d.storyline : '';
+    } catch { /* 坏档摘要归零 */ }
+    return { ...s, slot: i + 1, timeText: fmtStamp(s.time), summary };
+  });
 }
 
 // 取快照存档数据（字符串），供「作为本地游戏」覆盖当前进度

@@ -125,7 +125,7 @@ const fs = await import('node:fs');
   rec('V3 点击仅差 RP 的卡可正常解锁（RP 充足）', unlockOk, 'unlocked');
 
   // ① 快照 UI：打开面板 → 保存快照 → 槽位出现 → 二级确认弹框（覆盖）→ 使用覆盖
-  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent === '快照存档'); if (b) b.click(); });
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent === '存档管理'); if (b) b.click(); });
   await sleep(300);
   const snapOpen = await page.evaluate(() => document.getElementById('snap-modal').style.display);
   rec('V3 快照面板可打开', snapOpen === 'flex', snapOpen);
@@ -165,7 +165,7 @@ const fs = await import('node:fs');
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
   rec('V3 源码：流失预警 tooltip 已补「维修坞 → 0，免疫」', mainSrc.includes('（维修坞 → 0，免疫）'), 'tooltip 源码');
   const dockDesc = fs.readFileSync('src/data/balance.js', 'utf-8');
-  rec('V3 源码：维修坞卡描述含「流失预警触发概率 10%/min → 0」', /流失预警触发概率 10%\/min → 0/.test(dockDesc), 'dock desc');
+  rec('V3 源码：维修坞卡描述含「不再免疫流失」（v2.8.3 起）', /不再免疫流失/.test(dockDesc), 'dock desc');
   await page.close();
   await browser.close();
 }

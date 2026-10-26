@@ -647,6 +647,15 @@ body {
   z-index: 200;
 }
 
+/* v2.8.5 A4：弹框关闭角标 × */
+.modal-x {
+  position: absolute; top: 6px; right: 10px;
+  width: 28px; height: 28px; line-height: 26px; text-align: center;
+  background: transparent; border: none; color: var(--text-2);
+  font-size: 20px; cursor: pointer; border-radius: 4px; padding: 0;
+}
+.modal-x:hover { color: var(--red,#f85149); background: rgba(255,255,255,.06); }
+
 .modal-box {
   background: var(--panel);
   border: 1px solid var(--border);

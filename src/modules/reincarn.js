@@ -83,6 +83,11 @@ export function doReincarn() {
   S.riftExpedition = null;
   S.crossroad = 'inactive';
   S.crossroadLockedBy = null;
+  // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
+  // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
+  S.resDiscovered = {
+    ep: true, es: !!S.resDiscovered.es, faith: !!S.resDiscovered.faith, rp: !!S.resDiscovered.rp,
+  };
   // 保留：S.rp / S.es / S.prestige / S.prestigePoints / S.religion / S.faith /
   //       S.riftEmber / S.riftsSealed / S.delve* / S.resDiscovered / S.storylinesCompleted /
   //       S.abyssEcho / S.echoUpgrades / S.reincarned
