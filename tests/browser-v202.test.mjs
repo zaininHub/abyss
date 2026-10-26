@@ -81,9 +81,9 @@ console.log('\n[A] 6.1 新档开局（file:// 冷启动）');
   // 真实点击购买存储节点首级：150 EP 扣款、上限 2000→4000
   await page.click('#btn-shop');
   await new Promise(r => setTimeout(r, 400));
-  // v2.3.1 ⑤：窗口 K=p+1——先真实购入链前三项（草稿记录/自动化脚本/并行任务），
-  // 存储节点作为链内下一项进入窗口（对应用户试玩真实推进路径）
-  for (const nm of ['草稿记录', '自动化脚本', '并行任务']) {
+  // v2.8.1：窗口 K=p+1 + 按解锁门槛（base 升序）——购入草稿记录/自动化脚本后，
+  // 存储节点（门槛 45 EP）作为链内下一项进入窗口（先于并行任务 450 EP，先解锁先显示）
+  for (const nm of ['草稿记录', '自动化脚本']) {
     await page.evaluate((name) => {
       const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes(name));
       if (el) el.click();

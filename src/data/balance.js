@@ -1,7 +1,7 @@
 // v2.0 数值配置中心：所有平衡常量集中于此（设计方案 §4.1）
 export const BALANCE = {
   // 初始与前期
-  initialEp: 50,
+  initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）
   scribble: { base: 10, cps: 0.3 },
   script: { base: 80, cps: 2 },
   parallel: { base: 900, cps: 8 },
@@ -12,16 +12,17 @@ export const BALANCE = {
     firstCost: 40, baseOutput: 3, baseOutputJitter: 3, salaryBase: 1.08,
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
-      warnSec: 8,           // v2.5.3：黄线预跨度 10s→8s（更早提示欠薪，休眠路径更快出现）
+      // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s
+      warnSec: 30,          // 黄线：EP < 30s 薪资 → 欠薪
       debtMult: 0.7,        // 欠薪产出系数
-      dormantAfterSec: 15,  // v2.5.3：连续欠薪 30s→15s（原阈值仍偏长；配合休眠期产出，形成「欠薪→休眠→补偿」节奏）
+      dormantAfterSec: 60,  // 连续欠薪 60s → 强制休眠
       keepCostMult: 0.3,    // 休眠期保命成本 = 薪资 ×0.3
-      loseAfterSec: 300,    // 休眠持续 300s → 流失预警
+      loseAfterSec: 1800,   // 休眠持续 30 分钟 → 流失预警
       loseChancePerMin: 0.1,// 流失预警期每 60s 10% 概率流失 1 线程
-      recoverSec: 60,       // 恢复线：EP ≥ 60s 薪资
-      bufferSec: 20,        // v2.5.2 反馈①：休眠恢复缓冲 30s→20s（更早回到满薪）
-      restBonusMult: 1.5,   // v2.5.2 反馈①：休眠 ≥60s 恢复后补偿——产出 ×1.5 持续 60s
-      restBonusSec: 60,
+      recoverSec: 180,      // 恢复线：EP ≥ 3min 薪资
+      bufferSec: 60,        // 休眠恢复缓冲 60s → 满薪
+      restBonusMult: 1.5,   // 休眠/流失 ≥60s 恢复后补偿——产出 ×1.5 持续 120s
+      restBonusSec: 120,
     },
   },
   // v2.7.1：线程懒惰态（EP 满上限惩罚）——持续满上限后线程怠工：产出降、消耗升，

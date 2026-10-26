@@ -571,6 +571,7 @@ function switchTab(id) {
   } // v2.7.5 ⑦：探采平台与深渊商店并入遗物 tab（DM 资源系统合一）
   if (id === 'pets') dirty.pets = true;
   if (id === 'prestige') dirty.prestige = true;
+  if (id === 'achievement') renderAchievementPanel(document.getElementById('achievement-panel'));
   if (id === 'offline') {
     const offPanel = document.getElementById('offline-panel');
     if (offPanel) renderOfflinePanel(offPanel);
@@ -733,6 +734,7 @@ function bindEvents() {
   });
   document.getElementById('btn-pets')?.addEventListener('click', () => switchTab('pets'));
   document.getElementById('btn-prestige')?.addEventListener('click', () => switchTab('prestige'));
+  document.getElementById('btn-achievement')?.addEventListener('click', () => switchTab('achievement'));
   document.getElementById('btn-offline')?.addEventListener('click', () => switchTab('offline'));
   // v2.7.1：触手交互动画——点击拍打 + 日志反馈（hover 蠕动走 CSS）
   document.getElementById('tentacle-deco')?.addEventListener('click', () => {
@@ -1170,23 +1172,82 @@ function checkMiles() {
 }
 
 function checkAch() {
+  // v2.8.1：成就列表扩充（名称/描述/判定；仅判定不渲染，页面只显示已解锁）
   const tests = [
-    { id: 'click1', test: s => s.totalClicks >= 1 },
-    { id: 'ep1k', test: s => s.allTimeEp >= 1e3 },
-    { id: 'ep100k', test: s => s.allTimeEp >= 1e5 },
-    { id: 'ep1m', test: s => s.allTimeEp >= 1e6 },
-    { id: 'own10', test: s => totalOwned() >= 10 },
-    { id: 'pre1', test: s => s.prestige >= 1 },
-    { id: 'tech1', test: s => techCount() >= 1 },
-    { id: 'offline', test: s => s.gotOffline },
-    { id: 'pet1', test: s => petCount() >= 1 },
+    { id: 'click1',    name: '初次接触',      desc: '第一次点击工作台，深渊回应了你的触碰', test: s => s.totalClicks >= 1 },
+    { id: 'ep1k',      name: '一丝涟漪',      desc: '累计获得 1K EP', test: s => s.allTimeEp >= 1e3 },
+    { id: 'ep100k',    name: '涌动',          desc: '累计获得 100K EP', test: s => s.allTimeEp >= 1e5 },
+    { id: 'ep1m',      name: '深流',          desc: '累计获得 1M EP', test: s => s.allTimeEp >= 1e6 },
+    { id: 'ep1b',      name: '渊海',          desc: '累计获得 1B EP', test: s => s.allTimeEp >= 1e9 },
+    { id: 'own10',     name: '十件造物',      desc: '同时拥有 10 个升级/建筑', test: s => totalOwned() >= 10 },
+    { id: 'thread3',   name: '三人成众',      desc: '同时拥有 3 条产出线程', test: s => (s.cultists || []).length >= 3 },
+    { id: 'pre1',      name: '初次超脱',      desc: '完成首次晋升转生', test: s => s.prestige >= 1 },
+    { id: 'reincarn1', name: '循环之始',      desc: '完成首次轮回（第二层循环）', test: s => (s.reincarned || 0) >= 1 },
+    { id: 'es1',       name: '永恒碎片',      desc: '首次获得 ES（晋升结算）', test: s => (s.es || 0) >= 1 },
+    { id: 'tech1',     name: '认知扩展',      desc: '解锁首个科技', test: s => techCount() >= 1 },
+    { id: 'offline',   name: '短暂告别',      desc: '离开一段时间后回归，领取离线收益', test: s => s.gotOffline },
+    { id: 'pet1',      name: '深渊伙伴',      desc: '拥有一位深渊宠物伙伴', test: s => petCount() >= 1 },
+    { id: 'rift1',     name: '裂缝缝合',      desc: '首次封印深渊裂隙', test: s => (s.riftsSealed || 0) >= 1 },
+    { id: 'delve1',    name: '深渊之下',      desc: '深潜达到 10 层', test: s => (s.delve && s.delve.depth) >= 10 },
+    { id: 'faith1',    name: '信仰觉醒',      desc: '信奉一个宗教分支', test: s => !!(s.religion && s.religion.unlocked) },
+    { id: 'dm100',     name: '深渊物质',      desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
+    { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
   ];
+  let unlocked = false;
   for (const a of tests) {
     if (!S.achievements[a.id] && a.test(S)) {
       S.achievements[a.id] = true;
-      log(`成就：${a.id}`, 'good');
+      log(`成就解锁：${a.name}——${a.desc}`, 'good');
+      if (toast) toast(`🏆 成就解锁：${a.name}`);
+      unlocked = true;
     }
   }
+  if (unlocked && document.getElementById('achievement-panel')) renderAchievementPanel(document.getElementById('achievement-panel'));
+}
+
+// v2.8.1：成就页面——只显示已解锁成就（达成即点亮，未达成不展示）
+function renderAchievementPanel(container) {
+  if (!container) return;
+  const defs = [
+    { id: 'click1',    name: '初次接触',  icon: '👆', desc: '第一次点击工作台，深渊回应了你的触碰' },
+    { id: 'ep1k',      name: '一丝涟漪',  icon: '🌊', desc: '累计获得 1K EP' },
+    { id: 'ep100k',    name: '涌动',      icon: '🌊', desc: '累计获得 100K EP' },
+    { id: 'ep1m',      name: '深流',      icon: '🌊', desc: '累计获得 1M EP' },
+    { id: 'ep1b',      name: '渊海',      icon: '🌊', desc: '累计获得 1B EP' },
+    { id: 'own10',     name: '十件造物',  icon: '🏗️', desc: '同时拥有 10 个升级/建筑' },
+    { id: 'thread3',   name: '三人成众',  icon: '🧵', desc: '同时拥有 3 条产出线程' },
+    { id: 'pre1',      name: '初次超脱',  icon: '⬆️', desc: '完成首次晋升转生' },
+    { id: 'reincarn1', name: '循环之始',  icon: '♻️', desc: '完成首次轮回（第二层循环）' },
+    { id: 'es1',       name: '永恒碎片',  icon: '💎', desc: '首次获得 ES（晋升结算）' },
+    { id: 'tech1',     name: '认知扩展',  icon: '🔬', desc: '解锁首个科技' },
+    { id: 'offline',   name: '短暂告别',  icon: '🌙', desc: '离开一段时间后回归，领取离线收益' },
+    { id: 'pet1',      name: '深渊伙伴',  icon: '🐈', desc: '拥有一位深渊宠物伙伴' },
+    { id: 'rift1',     name: '裂缝缝合',  icon: '🌀', desc: '首次封印深渊裂隙' },
+    { id: 'delve1',    name: '深渊之下',  icon: '🌑', desc: '深潜达到 10 层' },
+    { id: 'faith1',    name: '信仰觉醒',  icon: '🙏', desc: '信奉一个宗教分支' },
+    { id: 'dm100',     name: '深渊物质',  icon: '🜏', desc: '持有 100 DM' },
+    { id: 'fishbowl1', name: '缸中之渊',  icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）' },
+  ];
+  const got = defs.filter(d => S.achievements[d.id]);
+  const n = got.length;
+  let html = `<div class="panel" style="padding:14px">
+    <h3 style="margin-top:0;color:var(--purple)">🏆 深渊成就 <span style="font-size:12px;font-weight:400;color:var(--text-2)">已解锁 ${n}/${defs.length} · 只显示已达成项</span></h3>
+    <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">成就跨转生保留，达成即时点亮。未达成的成就不会显示——深渊只记录已发生的奇迹。</p>`;
+  if (n === 0) {
+    html += `<div style="font-size:13px;color:var(--text-3);padding:18px 0;text-align:center">尚未解锁任何成就——一切才刚刚开始。</div>`;
+  } else {
+    for (const a of got) {
+      html += `<div class="ach-card" style="border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin:6px 0;display:flex;align-items:center;gap:12px">
+        <span style="font-size:22px">${a.icon}</span>
+        <div style="flex:1">
+          <div style="font-weight:600;color:var(--good)">${a.name}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:1px">${a.desc}</div>
+        </div>
+      </div>`;
+    }
+  }
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ========== v2.0 潮汐 tick ==========
@@ -1224,7 +1285,7 @@ let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
 function tick(now) {
   frame++;
-  const dt = Math.min(1, (now - lastTick) / 1000);
+  const dt = Math.min(10, (now - lastTick) / 1000); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时（休眠/薪资状态真实计数），离线结算仍走独立通道
   lastTick = now;
   if (S.paused) {
     updatePausePreview(); // v2.5 ⑥：暂停弹框实时刷新（预计离线时间/收入）

@@ -132,7 +132,9 @@ export function renderShop(container) {
   // （用户截图场景：「存储节点」显示链提示而其链前一项「并行任务」排在其后，
   // 定义序实为 parallel→storage）。链序必须稳定，定义序即链序；??? 项随链位
   // 置出现（链是线性的，??? 即链上尚未抵达的位置）。
-  const sorted = items;
+  // v2.8.1：主商店按解锁门槛排序——解锁门槛 = 累计 EP ≥ base×0.3（shopUnlocked），base 升序即先解锁先显示；
+  // 门槛是静态值（不随已购成本上浮变化），规避 v2.3.1「已购成本上浮后与未购项交错」问题，链窗口判定不受影响
+  const sorted = items.slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   // v2.3 渐进披露链：链序 = 定义序；窗口内渲染（K = p + 1），已购永不隐藏，链内下一项挂链提示
   const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
   // v2.6.7：记录链窗口状态（供 refreshShopChain 增量揭示，避免整面板重建）
@@ -167,7 +169,9 @@ export function refreshShopChain() {
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id)
     && (u.cat !== 'purifier' || hasTech('entropy_reduce'))
     && (u.id !== 'rp_distill' || anchorShown('rp', S)));
-  const split = chainSplit('shop', items, u => (S.upgrades[u.id] || 0) > 0, S);
+  // v2.8.1：与 renderShop 同口径——按解锁门槛（base 升序）排
+  const sortedItems = items.slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
+  const split = chainSplit('shop', sortedItems, u => (S.upgrades[u.id] || 0) > 0, S);
   const prev = shopContainer._chain;
   const newIds = new Set(split.visible.map(u => u.id));
   const fresh = split.visible.filter(u => !prev.ids.has(u.id));

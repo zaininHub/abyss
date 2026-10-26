@@ -334,21 +334,21 @@ t('C1：EP < 10s 薪资 → 欠薪降效 ×0.7（数值）', () => {
   assert.ok(Math.abs(wageOutputMult() - 0.7) < 1e-9, `欠薪产出系数应为 0.7，实际 ${wageOutputMult()}`);
   assert.equal(S.ep, 0, '欠薪扣薪按余额比例扣（可扣至 0）');
 });
-t('C2（v2.5.2/3）：连续欠薪 15s → 强制休眠 ×0.3，保命成本 = 0.3×薪资（数值）', () => {
+t('C2（v2.8.1）：连续欠薪 60s → 强制休眠 ×0.3，保命成本 = 0.3×薪资（数值）', () => {
   const salary = wageSetup(1);
-  S.wageState = { state: 'debt', debtSec: 14.9, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
+  S.wageState = { state: 'debt', debtSec: 59.9, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   tickWages(0.2);
-  assert.equal(S.wageState.state, 'dormant', 'debtSec≥15 应迁移到休眠');
+  assert.equal(S.wageState.state, 'dormant', 'debtSec≥60 应迁移到休眠');
   assert.equal(wageOutputMult(), 0.3, '休眠产出 ×0.3（v2.5.3 温和产出）');
   const ep0 = S.ep;
   tickWages(1);
   assert.ok(Math.abs((ep0 - S.ep) - salary * 0.3) < 1e-9, `保命成本应 = 0.3×薪资（${salary * 0.3}），实际扣 ${ep0 - S.ep}`);
 });
-t('C3：休眠 300s → 流失预警，每 60s roll 流失；维修坞免疫（数值）', () => {
+t('C3（v2.8.1）：休眠 1800s → 流失预警，每 60s roll 流失；维修坞免疫（数值）', () => {
   wageSetup(0);
-  S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 299.9, bufferSec: 0, loseTimer: 0 };
+  S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 1799.9, bufferSec: 0, loseTimer: 0 };
   tickWages(0.2);
-  assert.equal(S.wageState.state, 'losing', 'dormantSec≥300 应迁移到流失预警');
+  assert.equal(S.wageState.state, 'losing', 'dormantSec≥1800 应迁移到流失预警');
   assert.equal(wageLoseChance(), 0.1, '无维修坞流失概率 10%/min');
   // 强制命中 roll：Math.random → 0（< 0.1）
   S.wageState.loseTimer = 60;
@@ -372,8 +372,8 @@ t('C4：休眠恢复经 30s 缓冲回到满薪（数值）', () => {
   S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 400, bufferSec: 0, loseTimer: 0 };
   tickWages(0.1);
   assert.equal(S.wageState.state, 'debt', 'EP≥60s薪资 应先回到欠薪（缓冲）');
-  assert.ok(Math.abs(S.wageState.bufferSec - 20) < 0.1, `缓冲应为 20s（v2.5.2），实际 ${S.wageState.bufferSec}`);
-  tickWages(19);
+  assert.ok(Math.abs(S.wageState.bufferSec - 60) < 0.1, `缓冲应为 60s（v2.8.1），实际 ${S.wageState.bufferSec}`);
+  tickWages(59);
   assert.equal(S.wageState.state, 'debt', '缓冲期内不应直接满薪');
   tickWages(2);
   assert.equal(S.wageState.state, 'ok', '缓冲结束应回到满薪');

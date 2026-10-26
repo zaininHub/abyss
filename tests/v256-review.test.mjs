@@ -37,10 +37,10 @@ function mkState(extra = {}) {
 // ========== V1 注释最终版 ==========
 {
   const src = readFileSync('src/modules/wages.js', 'utf-8');
-  rec('V1 头注释：休眠进入 15s（非旧 60s）', src.includes('连续欠薪 ≥15s（v2.5.3）'), 'comment');
+  rec('V1 头注释：休眠进入 60s（v2.8.1 放缓）', src.includes('连续欠薪 ≥60s'), 'comment');
   rec('V1 头注释：休眠产出 ×0.3（非旧 ×0）', src.includes('产出 ×0.3 温和产出'), 'comment');
-  rec('V1 头注释：缓冲 20s（非旧 30s）', src.includes('缓冲 20s'), 'comment');
-  rec('V1 头注释：补偿触发 30s（×1.5/60s）', src.includes('休眠或流失预警持续 ≥30s 后恢复') && src.includes('默认 ×1.5/60s'), 'comment');
+  rec('V1 头注释：缓冲 60s（v2.8.1）', src.includes('缓冲 60s'), 'comment');
+  rec('V1 头注释：补偿触发 60s（×1.5/120s，v2.8.1）', src.includes('持续 ≥60s 后恢复') && src.includes('默认 ×1.5/120s'), 'comment');
 }
 
 // ========== V2 losing 恢复补偿 ==========

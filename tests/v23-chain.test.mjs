@@ -93,7 +93,7 @@ const CLEAN = () => {
     };
   });
   rec('B1 §5.2：链提示废除——.chain-hint 零残留、无卡片携带「购入前一项解锁」文本', c.hintCount === 0 && c.hintText === null && c.hintTextAnywhere === 0, JSON.stringify({ hintCount: c.hintCount, anywhere: c.hintTextAnywhere }));
-  rec('B2 §5.2：链内下一项（第 3 项「并行任务」）为真实可购卡（data-buy、非 locked）', c.thirdName === '并行任务' && c.thirdBuy === 'parallel' && c.thirdLocked === false, JSON.stringify({ name: c.thirdName, buy: c.thirdBuy, locked: c.thirdLocked }));
+  rec('B2 v2.8.1：链内下一项（第 3 项「存储节点」——按解锁门槛 base 升序）为真实可购卡（data-buy、非 locked）', c.thirdName === '存储节点' && c.thirdBuy === 'storage' && c.thirdLocked === false, JSON.stringify({ name: c.thirdName, buy: c.thirdBuy, locked: c.thirdLocked }));
   rec('B3 断言3（可测化）：提示项前缀已购（前 2 项 = 草稿记录/自动化脚本 已购）', c.firstOwned[0] === '草稿记录×1' && c.firstOwned[1] === '自动化脚本×1', JSON.stringify(c.firstOwned));
   rec('B4 9.3：已购 ∪ 窗口 K = p+1 = 3', c.shopItems === 3, String(c.shopItems));
   rec('B5 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));

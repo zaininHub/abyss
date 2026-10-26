@@ -47,7 +47,7 @@ const saveBase = (over = {}) => ({
   const c = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#shop-list .item')];
     const nameOf = (el) => (el.querySelector('.name')?.textContent || '').replace(/×\d+|Lv\.\d+\/\d+/g, '').trim();
-    const nextCard = cards.find(el => nameOf(el) === '并行任务');
+    const nextCard = cards.find(el => nameOf(el) === '存储节点');
     return {
       order: cards.slice(0, 5).map(nameOf),
       hintCount: document.querySelectorAll('.chain-hint').length,
@@ -56,12 +56,12 @@ const saveBase = (over = {}) => ({
       nextLocked: nextCard ? nextCard.classList.contains('locked') : null,
     };
   });
-  rec('⑦A1 显示序 = 定义序且窗口 K=p+1（已购2 → 前3=草稿记录→自动化脚本→并行任务）',
-    c.order.slice(0, 3).join(',') === '草稿记录,自动化脚本,并行任务', JSON.stringify(c.order));
+  rec('⑦A1 v2.8.1：显示序 = 解锁门槛升序且窗口 K=p+1（已购2 → 前3=草稿记录→自动化脚本→存储节点）',
+    c.order.slice(0, 3).join(',') === '草稿记录,自动化脚本,存储节点', JSON.stringify(c.order));
   rec('⑦A2 §5.2 链提示废除：全页 .chain-hint 零残留、无卡片携带提示文本',
     c.hintCount === 0 && c.hintTextAnywhere === 0, `hintCount=${c.hintCount}`);
-  rec('⑦A3 链内下一项「并行任务」为真实可购卡（data-buy、非 locked）——锁定感由预览卡承担',
-    c.nextBuy === 'parallel' && c.nextLocked === false, JSON.stringify({ nextBuy: c.nextBuy, nextLocked: c.nextLocked }));
+  rec('⑦A3 v2.8.1：链内下一项「存储节点」为真实可购卡（data-buy、非 locked）——锁定感由预览卡承担',
+    c.nextBuy === 'storage' && c.nextLocked === false, JSON.stringify({ nextBuy: c.nextBuy, nextLocked: c.nextLocked }));
   rec('⑦A4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.screenshot({ path: EV + '/q7-A-order-fixed.png' });
   await page.close();
@@ -83,9 +83,9 @@ const saveBase = (over = {}) => ({
   const before = await page.evaluate(() => ({
     ep: document.getElementById('h-ep')?.textContent || '',
   }));
-  // 真实点击链提示项（并行任务，成本 900 ≤ EP 1000）
+  // v2.8.1：真实点击链提示项（存储节点，成本 150 ≤ EP 1000）
   const clicked = await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#shop-list .item')].find(el => (el.querySelector('.name')?.textContent || '').includes('并行任务') && !el.classList.contains('locked'));
+    const card = [...document.querySelectorAll('#shop-list .item')].find(el => (el.querySelector('.name')?.textContent || '').includes('存储节点') && !el.classList.contains('locked'));
     if (!card) return null;
     card.click();
     return card.dataset.buy || null;
@@ -94,16 +94,16 @@ const saveBase = (over = {}) => ({
   const after = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#shop-list .item')];
     const nameOf = (el) => (el.querySelector('.name')?.textContent || '').replace(/×\d+|Lv\.\d+\/\d+/g, '').trim();
-    const parallel = cards.find(el => nameOf(el) === '并行任务');
+    const storage = cards.find(el => nameOf(el) === '存储节点');
     return {
-      parallelCount: parallel ? (parallel.querySelector('.name')?.textContent || '') : null,
-      storageVisible: cards.some(el => nameOf(el) === '存储节点'),
+      storageCount: storage ? (storage.querySelector('.name')?.textContent || '') : null,
+      nextVisible: cards.some(el => nameOf(el) === '备用粮仓'),
       hintCount: document.querySelectorAll('.chain-hint').length,
     };
   });
-  rec('⑦B1 真实点击链提示项（dataset.buy=parallel）', clicked === 'parallel', String(clicked));
-  rec('⑦B2 购入成功：并行任务 ×1', /并行任务×1/.test(after.parallelCount || ''), String(after.parallelCount));
-  rec('⑦B3 链正常推进：「存储节点」进入窗口（K=p+1=4）且链提示零残留', after.storageVisible && after.hintCount === 0, `storageVisible=${after.storageVisible}`);
+  rec('⑦B1 v2.8.1 真实点击链提示项（dataset.buy=storage）', clicked === 'storage', String(clicked));
+  rec('⑦B2 购入成功：存储节点 ×1', /存储节点×1/.test(after.storageCount || ''), String(after.storageCount));
+  rec('⑦B3 v2.8.1 链正常推进：按门槛升序揭示下一卡「备用粮仓」（base 800 在 storage 150 与 parallel 900 之间）且链提示零残留', after.nextVisible && after.hintCount === 0, `next=${after.nextVisible}`);
   rec('⑦B4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.screenshot({ path: EV + '/q7-B-chain-advanced.png' });
   await page.close();
@@ -125,7 +125,7 @@ const saveBase = (over = {}) => ({
   const c = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#shop-list .item')];
     const nameOf = (el) => (el.querySelector('.name')?.textContent || '').replace(/×\d+|Lv\.\d+\/\d+/g, '').trim();
-    const nextCard = cards.find(el => nameOf(el) === '并行任务');
+    const nextCard = cards.find(el => nameOf(el) === '存储节点');
     return {
       first: cards[0] ? nameOf(cards[0]) : null,
       order: cards.slice(0, 4).map(nameOf),
@@ -134,7 +134,7 @@ const saveBase = (over = {}) => ({
     };
   });
   rec('⑦C1 已购高浮项不漂移：第 1 项仍「草稿记录」（修复前漂至队尾）', c.first === '草稿记录', JSON.stringify(c.order));
-  rec('⑦C2 真链下一项「并行任务」为可购卡且链提示零残留', c.nextBuy === 'parallel' && c.hintCount === 0, `nextBuy=${c.nextBuy}`);
+  rec('⑦C2 v2.8.1 真链下一项「存储节点」为可购卡且链提示零残留', c.nextBuy === 'storage' && c.hintCount === 0, `nextBuy=${c.nextBuy}`);
   rec('⑦C3 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.close();
 }
@@ -279,7 +279,7 @@ const saveBase = (over = {}) => ({
   const st = after.save ? JSON.parse(after.save) : null;
   const oldLeak = st && (Math.abs(st.ep - 1234) < 1 || (st.upgrades && st.upgrades.scribble === 7));
   rec('④3 reload 后旧档未被 beforeunload 回写（修复根因断言）', !oldLeak, JSON.stringify({ ep: st?.ep, scribble: st?.upgrades?.scribble }));
-  rec('④4 回到新档首屏（EP 50 起始 / 本局 0）', after.ep.startsWith('50') || after.ep.includes('50'), `ep=${after.ep} run=${after.run}`);
+  rec('④4 v2.8.1 回到新档首屏（EP 0 起始 / 本局 0）', after.ep === '0' || after.ep.startsWith('0') && !after.ep.startsWith('0.'), `ep=${after.ep} run=${after.run}`);
   rec('④5 新档首屏商店回到 K=p+1=1 项窗口（展开交互已移除、展开态已回收）', after.shopItems === 1, String(after.shopItems));
   rec('④6 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.screenshot({ path: EV + '/q4-after-reset-fresh.png' });

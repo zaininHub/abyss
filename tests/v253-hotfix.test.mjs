@@ -34,9 +34,9 @@ function mkState(rawObj) {
 {
   // 配置断言：warnSec 8 / dormantAfterSec 15 / 补偿触发阈值 30s（源码文本）
   const W = BALANCE.thread.wages;
-  rec('V1 休眠进入提速：黄线 8s + 连续欠薪 15s 即休眠', W.warnSec === 8 && W.dormantAfterSec === 15, `warn=${W.warnSec},dormant=${W.dormantAfterSec}`);
+  rec('V1 休眠进入放缓：黄线 30s 薪资 + 连续欠薪 60s 即休眠（v2.8.1）', W.warnSec === 30 && W.dormantAfterSec === 60, `warn=${W.warnSec},dormant=${W.dormantAfterSec}`);
   const wageSrc = fs.readFileSync('src/modules/wages.js', 'utf-8');
-  rec('V1 补偿触发门槛 60s→30s（转机更易获得）', /\(w\.dormantSec \|\| 0\) >= 30/.test(wageSrc), 'dormantSec>=30');
+  rec('V1 补偿触发门槛 30s→60s（v2.8.1 转换放缓同步）', /\(w\.dormantSec \|\| 0\) >= 60/.test(wageSrc), 'dormantSec>=60');
   // 休眠期产出系数：dormant → ×0.3（非 ×0 纯惩罚）
   Object.assign(S, mkState({ _version: 6, chapter: '1', storyline: 'default', ep: 100, rp: 0, upgrades: {}, buildings: {}, tech: {}, wageState: { state: 'dormant', debtSec: 20, dormantSec: 40, bufferSec: 0, loseTimer: 0 }, cultists: [{ name: 'T', output: 3, mood: '正常', moodTimer: 999 }], resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }));
   rec('V1 休眠期产出 ×0.3（温和产出，非纯惩罚）', economy.wageOutputMult() === 0.3, `mult=${economy.wageOutputMult()}`);
@@ -46,13 +46,10 @@ function mkState(rawObj) {
   // 状态机：连续欠薪 15s 触发 dormant
   {
     Object.assign(S, mkState({ _version: 6, chapter: '1', storyline: 'default', ep: 5, rp: 0, upgrades: { scribble: 2 }, buildings: {}, tech: {}, wageState: { state: 'debt', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 }, cultists: [{ name: 'T', output: 3, mood: '正常', moodTimer: 999 }], resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }));
-    // 注：tickWages 依赖 salary 与 S.ep；低 ep（5）→ 持续 debt → 15s 后 dormant
+    // 注：tickWages 依赖 salary 与 S.ep；低 ep（5）→ 持续 debt → v2.8.1 60s 后 dormant
     const before = S.wageState.state;
-    tickWages(1); tickWages(1); tickWages(1); tickWages(1); tickWages(1);
-    tickWages(1); tickWages(1); tickWages(1); tickWages(1); tickWages(1);
-    tickWages(1); tickWages(1); tickWages(1); tickWages(1); tickWages(1);
-    tickWages(1); tickWages(1); // 16s
-    rec('V1 状态机：连续欠薪 16s → dormant', S.wageState.state === 'dormant', `state=${S.wageState.state}`);
+    for (let i = 0; i < 61; i++) tickWages(1); // 61s ≥ dormantAfterSec(60)
+    rec('V1 状态机：连续欠薪 61s → dormant（v2.8.1 放缓）', S.wageState.state === 'dormant', `state=${S.wageState.state}`);
   }
 }
 

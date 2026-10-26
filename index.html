@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.0</title>
+<title>深渊效能工作台 v2.8.1</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -142,6 +142,7 @@
         <button class="btn" id="btn-relics" style="display:none">遗物</button>
         <button class="btn" id="btn-pets">异兽</button>
         <button class="btn" id="btn-prestige">晋升</button>
+        <button class="btn" id="btn-achievement">成就</button>
         <button class="btn" id="btn-offline">离线</button>
         <button class="btn" id="btn-expedition">星图</button>
         <button class="btn" id="btn-storyline">故事线</button>
@@ -194,6 +195,11 @@
         <!-- 晋升 -->
         <div class="tab-pane" id="tab-prestige">
           <div id="prestige-panel"></div>
+        </div>
+
+        <!-- 成就（v2.8.1：只显示已解锁，点击/达成即时点亮） -->
+        <div class="tab-pane" id="tab-achievement">
+          <div id="achievement-panel"></div>
         </div>
 
         <!-- 离线 -->

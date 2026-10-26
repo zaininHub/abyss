@@ -1,11 +1,11 @@
-// v1.3 模块 C：线程薪资四态状态机（主循环 tick 驱动）
+// v1.3 模块 C：线程薪资四态状态机（主循环 tick 驱动；v2.8.1 参数调长：欠薪 60s 休眠 / 休眠 30min 流失预警 / 恢复缓冲 60s / 补偿门槛 60s）
 // 状态表（v2.5.2/3 参数）：
-//   ok      满薪运行（绿）  EP ≥ 8s 薪资，无惩罚
-//   debt    欠薪降效（黄）  EP < 8s 薪资，产出 ×debtMult，薪资按余额比例扣（可扣至 0）
-//   dormant 强制休眠（橙）  连续欠薪 ≥15s（v2.5.3），产出 ×0.3 温和产出，保命成本 = 薪资 ×keepCostMult
-//   losing  流失预警（红）  休眠 ≥300s，每 60s loseChancePerMin 概率流失 1 线程
-// 恢复：EP ≥ 60s 薪资；休眠/流失恢复经「欠薪（缓冲 20s）→ 满薪」，欠薪直接恢复（8s/60s 双阈值天然防抖）
-// 转机：休眠或流失预警持续 ≥30s 后恢复，触发补偿 buff（产出 ×restBonusMult 持续 restBonusSec，默认 ×1.5/60s）
+//   ok      满薪运行（绿）  EP ≥ 30s 薪资，无惩罚
+//   debt    欠薪降效（黄）  EP < 30s 薪资，产出 ×debtMult，薪资按余额比例扣（可扣至 0）
+//   dormant 强制休眠（橙）  连续欠薪 ≥60s，产出 ×0.3 温和产出，保命成本 = 薪资 ×keepCostMult
+//   losing  流失预警（红）  休眠 ≥1800s，每 60s loseChancePerMin 概率流失 1 线程
+// 恢复：EP ≥ 3min 薪资；休眠/流失恢复经「欠薪（缓冲 60s）→ 满薪」，欠薪直接恢复（30s/3min 双阈值天然防抖）
+// 转机：休眠或流失预警持续 ≥60s 后恢复，触发补偿 buff（产出 ×restBonusMult 持续 restBonusSec，默认 ×1.5/120s）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { staffSalaryPerSec, wageDebtMult, wageKeepCostMult, wageLoseChance, fmt } from './economy.js';
@@ -80,11 +80,11 @@ export function tickWages(dt) {
 
   // v2.5.6 review：休眠补偿（dormant/losing 恢复共用）——持续 ≥30s 后恢复即触发
   function grantRestBonus(w) {
-    if ((w.dormantSec || 0) >= 30) {
+    if ((w.dormantSec || 0) >= 60) { // v2.8.1：补偿门槛 30s→60s（转换节奏放缓后同步）
       S.restBonusMult = W.restBonusMult || 1.5;
       S.restBonusUntil = Date.now() + (W.restBonusSec || 60) * 1000;
-      wlog(`休眠 ${Math.round(w.dormantSec)}s 后恢复：获得休眠补偿，产出 ×${S.restBonusMult} 持续 ${W.restBonusSec || 60}s`, 'good');
-      if (toastFn) toastFn('😴 休眠补偿：恢复后产出 ×1.5（60s）');
+      wlog(`休眠 ${Math.round(w.dormantSec)}s 后恢复：获得休眠补偿，产出 ×${S.restBonusMult} 持续 ${W.restBonusSec || 120}s`, 'good');
+      if (toastFn) toastFn('😴 休眠补偿：恢复后产出 ×1.5（120s）');
     }
   }
 
