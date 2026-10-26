@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.7</title>
+<title>深渊效能工作台 v2.8.8</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -81,8 +81,8 @@
         <div class="hero-row">
           <span>线程: <b id="staff-count">0</b></span>
           <span id="staff-status" title="线程运转状态：EP 不足以支付薪资时会积累不满，严重时线程死锁或退出">运行中</span>
-          <span class="hero-cost">消耗: <span id="staff-cost" class="mono">50</span></span>
-          <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增）">招募线程</button>
+          <span class="hero-cost">产出: <span id="staff-out" class="mono">0.00</span>/s · 消耗: <span id="staff-cost" class="mono">0.00</span>/s</span>
+          <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
         </div>
         <div id="focus-bar" class="focus-bar" title="专注：提升点击产出（每级 +50% 点击产出）。成本随等级按 30×1.6^n 增长，点击此处购买">
           <span>专注等级: <b id="focus-lv">0</b></span>
@@ -169,7 +169,7 @@
 
         <!-- 科技树 -->
         <div class="tab-pane" id="tab-tech">
-          <h3>科技树（RP 购买）· 当前 <span id="tech-rp" class="mono" style="color:var(--cyan)">0</span> RP</h3>
+          <h3>科技树 · 当前 <span id="tech-rp" class="mono" style="color:var(--cyan)">0</span> RP</h3>
           <div id="tech-tree" class="tech-grid"></div>
           <h3 style="margin-top:12px" id="eternal-title">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES</h3>
           <div id="eternal-list" class="tech-grid"></div>

@@ -9,7 +9,7 @@ export const BALANCE = {
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
   thread: {
-    firstCost: 120, baseOutput: 2.5, baseOutputJitter: 2.5, salaryBase: 1.05, // v2.8.3：线程变慢（招募 120 起步，产出 2.5）
+    firstCost: 120, baseOutput: 2.0, baseOutputJitter: 2.0, salaryBase: 1.04, salaryPerThreadCap: 0.9, // v2.8.8：线程产出再降（2.0），薪资单线程封顶 0.9/s（消耗渐升但不超过产出）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
       // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s

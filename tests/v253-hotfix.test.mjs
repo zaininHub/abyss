@@ -56,7 +56,7 @@ function mkState(rawObj) {
 // ========== V2 RP 获取口径 ==========
 {
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
-  rec('V2 顶栏文案：溢出累计按 20,000:1 转 RP（不再「5% 已转」）', !mainSrc.includes('5% 已转 RP') && mainSrc.includes('按 20,000:1 转 RP'), '顶栏文案');
+  rec('V2 顶栏文案：无溢出转换说明（v2.8.8 删除过时文案，溢出仅记账）', !mainSrc.includes('按 20,000:1 转 RP') && !mainSrc.includes('5% 已转 RP'), '顶栏文案');
   rec('V2 面板说明：RP 获取（蒸馏主源/数据熔炉/任务）+ 无溢出兜底文案', mainSrc.includes('灵感蒸馏塔主动转化') && mainSrc.includes('数据熔炉建筑') && mainSrc.includes('任务奖励') && !mainSrc.includes('每轮 -500 溢出 EP'), '面板说明');
   // 溢出→RP 自动转换已移除（v2.8.2：RP 只靠蒸馏/建筑/任务）
   const ecSrc = fs.readFileSync('src/modules/economy.js', 'utf-8');

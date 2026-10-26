@@ -332,12 +332,7 @@ function renderTop() {
     if (S.buffMult > 1) buffTag = `<span class="buff-tag buff-on">全局+${Math.round((S.buffMult - 1) * 100)}%（${timeStr}）</span>`;
     else if (S.buffMult < 1) buffTag = `<span class="buff-tag buff-off">产出-${Math.round((1 - S.buffMult) * 100)}%（${timeStr}）</span>`;
   }
-  // v2.1 溢出池：探采页头累计统计（溢出 EP 总量 + 5% 转 RP）
-  const ovEl = document.getElementById('v21-overflow-stat');
-  if (ovEl) {
-    ovEl.textContent = (S.epOverflowTotal || 0) > 0
-      ? `· 溢出累计 ${fmt(S.epOverflowTotal)} EP（按 20,000:1 转 RP）` : ''; // v2.5.3：文案同步 v2.5.2 新转换公式
-  }
+  // v2.8.8：探采页头不再显示溢出转换文案（溢出仅记账，自动转 RP 已移除）
   const hEp = document.getElementById('h-ep');
   const hCps = document.getElementById('h-cps');
   const hSalary = document.getElementById('h-salary'); // v2.4.1：顶栏 EP 消耗（线程薪资，负面红）
@@ -516,7 +511,9 @@ function renderHero() {
       `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
       `恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）`;
   }
-  if (staffCostEl) staffCostEl.textContent = fmt(staffCost());
+  if (staffCostEl) staffCostEl.textContent = staffSalaryPerSec().toFixed(2) + '/s';
+  const staffOutEl = document.getElementById('staff-out');
+  if (staffOutEl) staffOutEl.textContent = staffOutputPerSec().toFixed(2) + '/s';
   if (hireBtn) {
     hireBtn.disabled = S.ep < staffCost();
     hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
@@ -862,8 +859,7 @@ function bindEvents() {
   document.getElementById('snap-list')?.addEventListener('click', (e) => {
     // v2.8.6：清档行不在 [data-snap] 内，须先处理（否则无快照行时被 li 早退拦截）
     if (e.target.classList.contains('snap-reset')) {
-      askConfirm('清档（重置全部进度）', '将删除当前本地游戏与全部快照，回到全新开局。\n此操作不可撤销，确定继续？', () => {
-        for (const s of listSnapshots()) deleteSnapshot(s.id);
+      askConfirm('清档（删除当前游戏）', '将删除当前本地游戏，回到全新开局。\n存档快照保留，可逐个删除；此操作不可撤销，确定继续？', () => {
         doReset();
       });
       return;
@@ -1022,7 +1018,7 @@ function renderSnapshotList() {
   const clearRow = document.createElement('div');
   clearRow.className = 'snap-reset-row';
   clearRow.style.cssText = 'margin-top:8px;border-top:1px dashed var(--border);padding-top:8px;text-align:center';
-  clearRow.innerHTML = `<button class="btn snap-reset" style="width:100%;padding:3px 6px;font-size:11px;background:transparent;color:var(--red,#f85149)">清档（重置全部进度与快照）</button>`;
+  clearRow.innerHTML = `<button class="btn snap-reset" style="width:100%;padding:3px 6px;font-size:11px;background:transparent;color:var(--red,#f85149)">清档（删除当前游戏，快照保留）</button>`; // v2.8.8：清档只删当前，快照逐个删
   box.appendChild(clearRow);
 }
 

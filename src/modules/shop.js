@@ -319,7 +319,7 @@ function makeShopItem(u) {
   const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：固定 ×1
   const afford = S.ep >= cost;
   div.className = 'item' + (!afford ? ' cant' : '');
-  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || ''); // v2.8.7：去除 each 字样
+  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || '');
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
     <div class="desc">${cpsStr}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
@@ -349,7 +349,7 @@ function updateShopItem(u) {
   const c = el.querySelector('.cost');
   if (c) c.textContent = fmt(cost);
   const d = el.querySelector('.desc');
-  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : (u.desc || '')}`; // v2.8.7：去除 each 字样
+  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : (u.desc || '')}`;
   el.classList.toggle('cant', S.ep < cost);
 }
 
@@ -521,7 +521,7 @@ function makeVehicleItem(u) {
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}</div> // v2.8.7：去除 each 字样
+    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -806,7 +806,7 @@ export function refreshShopAffordability() {
   for (const [id, el] of v21ItemEls) {
     const b = V21_BUILDINGS.find(x => x.id === id);
     if (!b) continue;
-    if (!v21UnlockedMark(b)) { el.classList.toggle('cant', S.rp < unlockRpV21(b)); continue; }
+    if (!v21UnlockedMark(b)) { el.classList.toggle('cant', S.ep < v21BuildingCost(b)); continue; } // v2.8.8：纯 EP
     if (v21Maxed(b, S)) continue;
     const cost = v21BuildingCost(b);
     el.classList.toggle('cant', S.ep < cost);
@@ -818,8 +818,10 @@ export function refreshShopAffordability() {
     if (crossroadOwned(id, S)) continue;
     el.classList.toggle('cant', S.ep < 3e5);
   }
-  for (const [fam, el] of familyItemEls) {
+  for (const [key, el] of familyItemEls) {
+    const fam = key.split(':')[0];
     const cfg = BALANCE.familyUpgradeTiers[fam];
+    if (!cfg) continue;
     const cur = (S.familyUpgrades || {})[fam] || 0;
     if (cur >= cfg.tiers.length) continue;
     const next = cfg.tiers[cur];
@@ -850,10 +852,11 @@ export function buyUnlockV21(b) {
   if (m && Object.keys(S.milesDone || {}).length < m) {
     shopToast(`需先达成里程碑 ${m}`); return false;
   }
-  const cost = unlockRpV21(b);
-  if (S.rp < cost) { shopToast(`RP 不足：${b.name} 解锁需要 ${cost} RP`); return false; }
-  S.rp -= cost;
+  const cost = v21BuildingCost(b); // v2.8.8：纯 EP 购买（解锁+首级），去除 RP 解锁+EP 升级混合支付
+  if (S.ep < cost) { shopToast(`EP 不足：${b.name} 需要 ${fmt(cost)} EP`); return false; }
+  S.ep -= cost;
   S.unlockedBuildings[b.id] = true;
+  S.buildings[b.id] = 1;
   return true;
 }
 
@@ -873,18 +876,17 @@ function makeV21Item(b) {
   const div = document.createElement('div');
   div.dataset.v21 = b.id;
   if (!v21UnlockedMark(b)) {
-    const rp = unlockRpV21(b);
+    const cost = v21BuildingCost(b);
     div.className = 'item v21 lock-card';
-    div.title = '效能建筑：先以 RP 解锁（需对应钥匙科技与里程碑），再以 EP 逐级升级'; // v2.3 文案清理：删除研发版本号前缀
+    div.title = '效能建筑：纯 EP 购买（需对应里程碑）；等级成长，数量受控';
     let gate = '';
     if (b.unlockTech && BALANCE.v21KeyTechs.includes(b.unlockTech) && !S.tech[b.unlockTech]) gate += `需钥匙「${keyTechName(b.unlockTech)}」· `;
     const m = unlockMilestoneV21(b);
     if (m && Object.keys(S.milesDone || {}).length < m) gate += `需里程碑 ${m} · `;
-    // v2.5.4 ②：存在未满足前置（钥匙/里程碑）时卡片整体锁定不可点击（仅差 RP 仍可点击解锁）
     if (gate) div.classList.add('locked');
-    div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${rp} RP</span></div>
+    div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${fmt(cost)} EP</span></div>
       <div class="desc">${b.desc}</div>
-      <div class="cost mono">${gate}${rp} RP 解锁</div>`;
+      <div class="cost mono">${gate}${fmt(cost)} EP</div>`;
   } else {
     const lv = v21Level(b.id, S);
     const cost = v21BuildingCost(b);
@@ -953,7 +955,7 @@ export function renderV21Buildings(container) {
   const open = avail.filter(v21UnlockedMark);
   const locked = avail.filter(b => !v21UnlockedMark(b));
   open.sort((a, b) => v21BuildingCost(a) - v21BuildingCost(b));
-  locked.sort((a, b) => unlockRpV21(a) - unlockRpV21(b));
+  locked.sort((a, b) => v21BuildingCost(a) - v21BuildingCost(b)); // v2.8.8：纯 EP 成本排序
   // v2.3.1 ⑤（rev18 9.3）：链序 = 可购区既有序（open 前 locked 后）；窗口 K = p + 1，
   // 已解锁=已购永不隐藏；按 cat 分组渲染（分组纯显示不拆链，组内可见 0 项整组不渲染）
   const chainList = [...open, ...locked];
@@ -1101,7 +1103,7 @@ let familyItemEls = new Map(); // familyKey -> el
 // PM 终稿 7698334831112899877 白名单口径：产出族 = 组E 非锚点 3 座（coop_hall/eco_battery/eco_battery_2），组B 整组不开放
 // v2.4：扩容族（组D）随 KG 模式改造移除——扩容类建筑已无限升级，族升级档位失去钳制对象
 // v2.8.3：文案通俗化——说清这三座建筑是什么、买了得到什么
-const FAMILY_LABELS = { output: '产出族扩容：协作大厅 / 节能电池 / 节能电池·II 三座建筑的「可购买等级上限」——每买一档，这三座建筑就能多升几级（+3→再 +4，最高 16 级），线程产出随等级水涨船高' };
+const FAMILY_LABELS = { output: '产出族扩容' }; // v2.8.8：长文案拆入各档位 desc，标签精简
 
 export function buyFamilyUpgrade(familyKey) {
   const cfg = BALANCE.familyUpgradeTiers[familyKey];
@@ -1133,26 +1135,34 @@ export function renderFamilyUpgrades(container) {
   familyItemEls.clear();
   for (const [fam, cfg] of Object.entries(BALANCE.familyUpgradeTiers)) {
     const cur = (S.familyUpgrades || {})[fam] || 0;
-    const div = document.createElement('div');
-    div.dataset.family = fam;
+    const total = cfg.tiers.reduce((a, t) => a + t.addCap, 0);
     if (cur >= cfg.tiers.length) {
+      const div = document.createElement('div');
       div.className = 'item v21 owned-item';
-      div.title = '产出族扩容：三座建筑的上限扩展已全部购满（跨转生保留）';
+      div.title = '族扩容：三座建筑的上限扩展已全部购满（跨转生保留）';
       div.innerHTML = `<div class="name"><span>${FAMILY_LABELS[fam]}</span><span class="count mono">满档</span></div>
-        <div class="desc">已购满：三座建筑上限共扩展 +${cfg.tiers.reduce((a, t) => a + t.addCap, 0)} 级（上限硬顶 ${cfg.hardCap} 级）</div>
+        <div class="desc">已购满：三座建筑上限共扩展 +${total} 级（上限硬顶 ${cfg.hardCap} 级）</div>
         <div class="cost mono" style="color:var(--purple)">✦ 已满档</div>`;
-    } else {
-      const next = cfg.tiers[cur];
-      const mDone = Object.keys(S.milesDone || {}).length;
-      const ok = S.rp >= next.rp && mDone >= next.milestone;
-      div.className = 'item v21' + (!ok ? ' cant' : '');
-      div.title = '产出族扩容：RP 购买，逐档线性（买满前档才能买下一档）；跨转生保留';
-      div.innerHTML = `<div class="name"><span>${FAMILY_LABELS[fam]}</span><span class="count mono">T${cur + 1}/${cfg.tiers.length}</span></div>
-        <div class="desc">下一档：三座建筑可购买等级上限 +${next.addCap} 级${mDone < next.milestone ? `（需先达成里程碑 ${next.milestone}）` : ''}</div>
-        <div class="cost mono">${fmt(next.rp)} RP</div>`;
-      familyItemEls.set(fam, div);
+      container.appendChild(div);
+      continue;
     }
-    container.appendChild(div);
+    // v2.8.8：每档独立升级项（消除超长文案）
+    for (let ti = cur; ti < cfg.tiers.length; ti++) {
+      const t = cfg.tiers[ti];
+      const mDone = Object.keys(S.milesDone || {}).length;
+      const prevOk = ti === 0 || cur >= ti;
+      const ok = prevOk && S.rp >= t.rp && mDone >= t.milestone;
+      const div = document.createElement('div');
+      div.dataset.family = fam;
+      div.className = 'item v21' + (prevOk ? (!ok ? ' cant' : '') : ' locked');
+      div.title = '族扩容：RP 购买，逐档线性（买满前档才能买下一档）；跨转生保留';
+      const gate = !prevOk ? '需先购买前一档 · ' : (mDone < t.milestone ? `需里程碑 ${t.milestone} · ` : '');
+      div.innerHTML = `<div class="name"><span>${FAMILY_LABELS[fam]}</span><span class="count mono">档位 T${ti + 1}</span></div>
+        <div class="desc">三座建筑可购买等级上限 +${t.addCap} 级</div>
+        <div class="cost mono">${gate}${fmt(t.rp)} RP</div>`;
+      if (prevOk) familyItemEls.set(`${fam}:${ti}`, div);
+      container.appendChild(div);
+    }
   }
   bindFamilyDelegate(container);
 }

@@ -503,8 +503,9 @@ export function staffSalaryPerSec() {
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
   const base = BALANCE.thread.salaryBase;
+  const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
   let total = 0;
-  for (let i = 0; i < S.cultists.length; i++) total += 0.5 * Math.pow(base, i);
+  for (let i = 0; i < S.cultists.length; i++) total += Math.min(0.5 * Math.pow(base, i), perCap);
   total *= tideMult('salary'); // 潮汐：涨潮薪资 +50% / 退潮 -20% / 乱流 +30%
   return total * m * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }

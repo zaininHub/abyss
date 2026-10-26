@@ -14,11 +14,9 @@ let techSection = null;   // 已研究折叠区
 let techEls = new Map();  // id -> el（未研究可购项）
 let eternalEls = new Map();
 
-// v1.3 模块 A：AI 管理核心只在达成里程碑 cps≥1e4 后出现
-function techVisible(t) {
-  if (t.id !== 'ai_core') return true;
-  return !!S.milesDone[1e4];
-}
+// v2.8.8：AI 管理核心恒显示（达成里程碑 cps≥1e4 前为锁定卡，消除布局空缺）
+function techVisible(t) { return true; }
+function aiCoreCpsGate(t) { return t.id === 'ai_core' && !S.milesDone[1e4]; }
 
 export function techReqOk(t) { return t.req.every(r => hasTech(r)); }
 
@@ -73,9 +71,11 @@ function makeTechItem(t) {
   const on = hasTech(t.id);
   const reqOk = techReqOk(t);
   const afford = techAfford(t); // v2.8.7：多资源可购判定
+  const cpsGate = aiCoreCpsGate(t); // v2.8.8：AI 核心 cps 前置（锁定展示）
   const div = document.createElement('div');
   div.dataset.tech = t.id;
-  div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford)) ? ' locked' : '');
+  div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford || cpsGate)) ? ' locked' : '');
+  if (cpsGate) div.title = '需达成里程碑：线程产出 cps ≥ 1 万 后解锁（AI 自动购买模块）';
   const techs = getTechs();
   div.title = t.req.length ? `前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}` : '无前置';
   div.innerHTML = `<div class="n">${t.name}</div><div class="d">${t.desc}</div>
@@ -97,6 +97,7 @@ function bindTechDelegate(container) {
 export function buyTech(t, el) {
   if (hasTech(t.id)) return;
   if (!techReqOk(t)) return;
+  if (aiCoreCpsGate(t)) return; // v2.8.8：AI 核心需 cps 1e4 里程碑
   // v2.8.7：科技树多资源成本（RP + EP + DM + ES 综合消耗，退潮乘数作用于 RP）
   const cost = techCostOf(t);
   if (!techAfford(t)) return;
