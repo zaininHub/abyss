@@ -77,18 +77,6 @@ export function corruptionPenalty() {
   return Math.max(BALANCE.corruption.penaltyFloor, 1 - c * per);
 }
 
-// v2.8.21 ④：模块解锁「发展跃迁」——首次解锁大模块（科技/建筑/宗教/深潜/星际等）触发短暂全局产出爆发
-export function triggerBurst(logFn, toastFn) {
-  if (Date.now() < (S.burstUntil || 0)) return false; // 已有爆发进行中不叠加
-  if ((S.burstCount || 0) >= 3) return false; // 每轮至多 3 次（克制）
-  S.burstCount = (S.burstCount || 0) + 1;
-  S.burstUntil = Date.now() + 60000;
-  S.burstMult = 1.5;
-  if (logFn) logFn('发展跃迁：全局产出 ×1.5（60 秒快速期，模块解锁馈赠）', 'good');
-  if (toastFn) toastFn('⚡ 发展跃迁：全局产出 ×1.5（60s）');
-  return true;
-}
-
 export function purifierCleanRate() {
   let total = 0;
   for (const p of BALANCE.corruption.purifiers) {
@@ -175,30 +163,24 @@ export function legacyCapMult() { return 1 + legacyLv('relic_vault') * 2.0; }
 export function legacyRiftMult() { return 1 + legacyLv('relic_anchor') * 0.25; }
 export function tickCollapse(dt) {
   if (S.collapsed) return;
-  if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) return;
-  const cap = epStorageCap();
-  if ((S.ep || 0) < cap - 1) {
-    // 未触顶：若之前已进入倒计时，EP 快速消耗（买入/蒸馏）可自救取消
-    if (S._collapseAt) S._collapseAt = null;
-    S._collapseTimer = 0;
+  // v2.8.22 ⑦：重做——腐化满额（100%）即进入 60 秒「深渊吞噬」倒计时（不再要求 EP 触顶；
+  // 旧版需腐化满额且 EP 触顶且倒计时 5 分钟，但腐化仅深入产生、平时趋 0，崩溃机制实际永不触发——
+  // 现在深入叠加腐化至满额即可真实触发，60s 内净化/消耗自救或转生）
+  if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) {
+    if (S._collapseAt) {
+      S._collapseAt = null; S._collapseTimer = 0;
+      if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已取消：腐化被净化至满额以下，深渊暂时退去', 'good');
+    }
     return;
   }
-  // v2.8.4：倒计时机制——腐化满额 + EP 触顶后进入 5 分钟「深渊吞噬」倒计时（单向，可自救取消）
   if (!S._collapseAt) {
-    S._collapseAt = Date.now() + collapseMs();
-    if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：腐化满额且 EP 触顶，5 分钟后本局被深渊吞没（快速消耗 EP 至上限 50% 以下可自救）', 'bad');
-    if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：5 分钟后崩溃——消耗 EP 或立即转生可脱离');
+    S._collapseAt = Date.now() + 60000; // 60 秒倒计时（倒计时内净化/消耗可自救）
+    if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：腐化已满额，60 秒后本局被深渊吞没（净化腐化或立即转生可脱离）', 'bad');
+    if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：60 秒后崩溃——净化腐化或立即转生可脱离');
   }
-  // 自救：EP 消耗至上限 50% 以下 → 取消倒计时
-  if ((S.ep || 0) < cap * 0.5) {
-    S._collapseAt = null;
-    S._collapseTimer = 0;
-    if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已取消：EP 跌至上限 50% 以下，深渊暂时退去', 'good');
-    return;
-  }
-  // 每 60s 吞没 1 线程（叙事提示，出逃殆尽提前崩溃）
+  // 每 20s 吞没 1 线程（出逃殆尽提前崩溃）
   S._collapseTimer = (S._collapseTimer || 0) + dt;
-  if (S._collapseTimer >= 60 && (S.cultists || []).length > 0) {
+  if (S._collapseTimer >= 20 && (S.cultists || []).length > 0) {
     S._collapseTimer = 0;
     const lost = S.cultists.pop();
     if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（倒计时中）`, 'bad');
@@ -222,7 +204,6 @@ export function globalMult() {
   m *= policyMult('collab'); // v2.8.6 B2a：协作网络——协作加成 ×1.2
   m *= fxValue('globalMul');
   if (S.runTalent === 'sharp') m *= 1.5;
-  if (S.burstUntil && Date.now() < S.burstUntil) m *= S.burstMult || 1.5; // v2.8.21 ④：模块解锁「发展跃迁」短暂爆发（×1.5 ×60s，每轮至多 3 次）
   m *= (1 + elv('eff') * 0.05);
   m *= petMult('global');
   m *= bondMult();
@@ -641,6 +622,35 @@ export function computeCps() {
 }
 
 // ========== v2.8.14：顶部产出/消耗来源明细（按升级类目合并） ==========
+// v2.8.22 ④：全局加成明细（与 globalMult 同口径，悬浮气泡展示）——只列实际生效项
+export function multBreakdown() {
+  const parts = [];
+  if (S.prestigePoints > 0) parts.push(`职级 ×${(1 + S.prestigePoints * 0.10).toFixed(2)}`);
+  const ga = fxValue('globalAdd');
+  if (ga > 0.001) parts.push(`全局加成 +${(ga * 100).toFixed(0)}%`);
+  const pol = policyMult('collab');
+  if (pol !== 1) parts.push(`协作政策 ×${pol.toFixed(2)}`);
+  const gm = fxValue('globalMul');
+  if (Math.abs(gm - 1) > 0.001) parts.push(`全局倍率 ×${gm.toFixed(2)}`);
+  if (S.runTalent === 'sharp') parts.push('天赋·敏锐 ×1.5');
+  const eff = elv('eff');
+  if (eff > 0) parts.push(`效能 +${(eff * 5).toFixed(0)}%`);
+  const pet = petMult('global');
+  if (pet !== 1) parts.push(`宠物 ×${pet.toFixed(2)}`);
+  const bond = bondMult();
+  if (bond !== 1) parts.push(`羁绊 ×${bond.toFixed(2)}`);
+  if (S.upgrades.dmsight) parts.push('深渊视界 ×1.25');
+  if (S.religion && S.religion.sun) parts.push('宗教·日 ×2');
+  if (S.religion && S.religion.omnipot) parts.push('宗教·全能 ×10');
+  const seal = S.religion && S.religion.seal ? S.religion.seal : 0;
+  if (seal > 0) parts.push(`圣印 ×${(1 + 0.08 * seal).toFixed(2)}`);
+  if (S.delve && S.delve.up && S.delve.up.void > 0) parts.push(`虚空 ×${Math.pow(1.10, S.delve.up.void).toFixed(2)}`);
+  if (S.religion && S.religion.crusade > 0) parts.push(`圣战军 ×${Math.pow(1.12, S.religion.crusade).toFixed(2)}`);
+  const tome = relicMult('tome');
+  if (tome !== 1) parts.push(`遗物·古卷 ×${tome.toFixed(2)}`);
+  return parts;
+}
+
 export function cpsBreakdown() {
   // 与 computeCps 同口径拆分：载具 / 线程 / 其余升级（基础·建筑·家族等合并为「基础产出」）
   let vehicle = 0, other = 0;
@@ -709,9 +719,17 @@ function accountEpOverflow(overflow) {
   if (overflow > 0 && !S._rpOverflowSeen) {
     S._rpOverflowSeen = true;
   }
-  // v2.8.2：移除「溢出 → RP」自动转换——RP 主源改为灵感蒸馏塔主动消耗 EP 转化 +
-  // 数据熔炉建筑产出 + 任务奖励（用户口径：解锁后通过大量 EP 转化 RP，而非靠溢出自然产生）；
-  // 溢出仍累计统计（epOverflowTotal 页头展示），解锁标记 _rpOverflowSeen 保留（首次溢出解锁）。
+  // v2.8.22 ⑤：EP 达到上限后的溢出转化 RP，效率与蒸馏一致（1 RP = 蒸馏率 EP，蒸馏塔升级/星渊罗盘效率同步生效），
+  // 满 1 RP 转出、尾数滞留池中（与蒸馏同口径，避免溢出自然产 RP 绕过蒸馏塔投入）
+  if (overflow > 0) {
+    const rate = rpDistillRate();
+    S._overflowRpPool = (S._overflowRpPool || 0) + overflow;
+    const gained = Math.floor(S._overflowRpPool / rate);
+    if (gained > 0) {
+      S._overflowRpPool -= gained * rate;
+      S.rp = (S.rp || 0) + gained;
+    }
+  }
 }
 
 // ========== v2.1 D1：EP 唯一加成入口（受上限约束 + 统一记账） ==========

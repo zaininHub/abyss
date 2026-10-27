@@ -10,7 +10,7 @@ import {
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, // v2.7.4 ⑦：RP 蒸馏效率
-} from './modules/economy.js';
+  multBreakdown } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -29,7 +29,7 @@ import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
-import { renderRelics, buyRelic, setRelicsLogFn, setRelicsToastFn } from './modules/relics.js'; // v2.7.0：深渊遗物
+import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds } from './modules/pets.js';
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
@@ -364,17 +364,15 @@ function renderTop() {
   }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
-  // v2.8.21 ⑦：来源悬浮气泡（CSS ::after hover；同时保留原生 title 兜底）
+  // v2.8.22 ④：来源悬浮气泡（只留自定义 CSS 气泡，移除原生 title —— 双弹窗）；气泡含来源 + 加成明细
   if (hCps) {
-    hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`;
     const st = hCps.closest('.stat');
-    if (st) st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}`;
+    if (st) st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
   }
   if (hSalary) {
     hSalary.textContent = fmt(totalDrainPerSec()) + '/s';
-    hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`;
     const st2 = hSalary.closest('.stat');
-    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}`;
+    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
@@ -965,6 +963,14 @@ function renderWikiContent() {
 
   // v2.7.0：深渊遗物购买（事件委托）
   document.getElementById('relics-panel')?.addEventListener('click', (e) => {
+    const pb = e.target && e.target.dataset ? e.target.dataset.purifierBuy : null;
+    if (pb) {
+      const r = buyPurifier(pb);
+      if (!r.ok && r.reason) { log(`[净化节点] ${r.reason}`, 'bad'); toast(r.reason); }
+      renderRelics(document.getElementById('relics-panel'));
+      dirty.corruption = true; // 净化速率变化 → 腐化条即时刷新
+      return;
+    }
     const id = e.target && e.target.dataset ? e.target.dataset.relicBuy : null;
     if (!id) return;
     const r = buyRelic(id);

@@ -329,7 +329,9 @@ body {
   gap: 6px;
 }
 
-.tech-grid .owned-header, .tech-grid .owned-box { grid-column: 1 / -1; } /* v2.8.21 ⑤：已研究折叠占整行（模块底部）——此前 auto-placement 放右侧，展开后横向拉长 */
+.tech-grid .owned-header, .tech-grid .owned-box,
+.shop-grid .owned-header, .shop-grid .owned-box,
+.grid .owned-header, .grid .owned-box { grid-column: 1 / -1; } /* v2.8.21 ⑤ + v2.8.22 ⑧：科技树/升级商店/研究点等所有折叠区占整行（模块底部），不再右侧缝隙横向拉长 */
 .tech-grid .tech {
   background: #1c2128;
   border: 1px solid var(--border);

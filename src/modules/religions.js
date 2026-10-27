@@ -1,6 +1,6 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
-import { epStorageCap, fmt, echoLv, faithTechMult, triggerBurst } from './economy.js'; // v2.8.21 ④
+import { epStorageCap, fmt, echoLv, faithTechMult } from './economy.js';
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
@@ -41,7 +41,6 @@ export function unlockReligion() {
   save(S);
   rlog('信仰觉醒：宗教系统解锁（存储节点 ≥3 级 + RP 已觉醒，无需 EP）', 'good'); // v2.8.20 ④：唤醒不再消耗 EP
   if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁');
-  triggerBurst(rlog); // v2.8.21 ④：宗教模块解锁 → 发展跃迁
   return { ok: true };
 }
 

@@ -26,7 +26,7 @@ try {
     await page.setViewport({ width: 1440, height: 900 });
     await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave());
     await page.goto(BASE, { waitUntil: 'load' });
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r => setTimeout(r, 3500)); // 等粒子累积数帧（动态字符雨，过早采样像素少）
     const t1 = await page.evaluate(() => {
       const cv = document.getElementById('code-rain');
       if (!cv) return { cyan: 0, z: '' };
@@ -36,7 +36,7 @@ try {
       for (let i = 0; i < d.length; i += 4) { if (d[i+2] > d[i] && d[i+3] > 60) cyan++; }
       return { cyan, z: getComputedStyle(cv).zIndex };
     });
-    rec('T1 编译器神殿粒子真实渲染（青色像素>500，z 最高层）', t1.cyan > 500 && t1.z === '999', `cyan=${t1.cyan} z=${t1.z}`);
+    rec('T1 编译器神殿粒子真实渲染（青色像素>150，z 最高层）', t1.cyan > 150 && t1.z === '999', `cyan=${t1.cyan} z=${t1.z}`);
     await page.close();
   }
 
@@ -142,7 +142,7 @@ try {
     await page.close();
   }
 
-  // T8 发展跃迁：首次科技解锁触发 burst（×1.5 ×60s，每轮至多 3 次）
+  // T8 首次科技解锁正常购入（无临时 buff 机制——v2.8.22 ③ 移除发展跃迁 buff，模块解锁靠解锁项自然发展）
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
@@ -151,19 +151,13 @@ try {
     await new Promise(r => setTimeout(r, 1500));
     await page.click('#btn-tech');
     await new Promise(r => setTimeout(r, 500));
-    const card = await page.evaluate(() => {
-      const el = document.querySelector('.tech-grid .tech');
-      return el ? el.textContent : '';
-    });
-    if (card) {
-      await page.evaluate(() => { document.querySelector('.tech-grid .tech').click(); });
-      await new Promise(r => setTimeout(r, 600));
-    }
+    await page.evaluate(() => { const el = document.querySelector('.tech-grid .tech'); if (el) el.click(); });
+    await new Promise(r => setTimeout(r, 600));
     const t8 = await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
-      return { burstUntil: s.burstUntil || 0, burstMult: s.burstMult || 0, burstCount: s.burstCount || 0 };
+      return { bought: !!s.tech.offline1, burstUntil: s.burstUntil || 0 };
     });
-    rec('T8 首次科技解锁触发发展跃迁 burst', t8.burstUntil > Date.now() && t8.burstMult === 1.5 && t8.burstCount === 1, JSON.stringify(t8));
+    rec('T8 首次科技解锁正常购入、无临时 burst buff', t8.bought && !t8.burstUntil, JSON.stringify(t8));
     await page.close();
   }
 

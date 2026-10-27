@@ -148,7 +148,7 @@ export function renderShop(container) {
   shopContainer._chain = {
     ids: new Set(split.visible.map(u => u.id)),
     split,
-    groups: [{ title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat }, { title: '存储与资源建筑', test: () => true }],
+    groups: [{ title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat }, { title: '存储与资源建筑', test: u => u.cat !== 'purifier' }], // v2.8.22 ⑥
   };
   // v2.3.1 ⑤（rev18 9.3 分组表）：基础产出在前、存储与资源建筑在后；分组纯显示不拆链
   // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
@@ -165,6 +165,8 @@ export function renderShop(container) {
       updateShopItem(u); // v1.3 E：购后原地更新（×N / 成本 / 灰态），不重建列表
       // v2.8.20 ⑨：购买后立即刷新全部主商店卡（成本资源变化 → 灰显即时同步）
       for (const [sid, sel] of shopItemEls) { const su = UPGRADES.find(x => x.id === sid); if (su && sel) updateShopItem(su); }
+      // v2.8.22 ①：购买后全相关面板置脏——线程/科技/遗物/腐化即时重算灰显（资源变化跨面板同步）
+      dirty.tech = true; dirty.relics = true; dirty.corruption = true; dirty.hero = true;
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {

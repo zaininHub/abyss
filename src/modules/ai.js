@@ -12,7 +12,7 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   hasTech, computeCps, globalMult, epStorageCap, staffCost, staffNetPerSec,
-  fmt, unitCost, costMult, addEp,
+  fmt, unitCost, costMult, addEp, techCostOf, // v2.8.22 ②：自动研究按多资源成本购买（此前未 import → ReferenceError → 自动研究永不买，真根因）
 } from './economy.js';
 import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
@@ -123,7 +123,7 @@ export function tickAI(dt) {
   }
   const ai = S.ai;
   hiredFlag = false; // v2.7.2：每 tick 重置招募标志（main 消费后判定线程区刷新）
-  if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild)) return false;
+  if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild && !ai.autoTech)) return false; // v2.8.22 ②：只开自动研究时也要进入决策（此前前置 return 吞掉 autoTech 分支 → 「自动研究开了没效果」真因）
   ai.timer = (ai.timer || 0) + dt;
   // v2.6.0 深潜：拟态矩阵——决策间隔 -20%/级（下限 40% 原间隔）
   const matLv = (S.delve && S.delve.up && S.delve.up.matrix) || 0;
@@ -203,15 +203,17 @@ export function tickAI(dt) {
   // 每决策周期至多买 1 个最便宜可负担科技，RP 消耗，克制防抢资源
   if (ai.autoTech && S.tech && S.tech.auto_tech) {
     const cands = (getTechs() || [])
-      .filter(t => !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r)))) // v2.8.4：techReqOk 内联（避免 tech→main→css 的 node ESM 链）
+      .filter(t => t.autoTech && !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r)))) // v2.8.22 ②：自动研究只买标记 autoTech 的基础产出相关科技（不做临时 buff 式购买）
       .map(t => ({ t, cost: techCostOf(t) }))
-      .sort((a2, b2) => a2.cost - b2.cost);
+      .sort((a2, b2) => a2.cost.rp - b2.cost.rp); // v2.8.22 ②：按 RP 成本排序（cost 为多资源对象，此前按对象减法排序恒 NaN）
     for (const { t, cost } of cands) {
-      if ((S.rp || 0) < cost) break;
-      S.rp -= cost;
+      // v2.8.22 ②：cost 为 {rp,ep,dm,es} 对象——此前 <cost/扣减用整个对象 → 永不购买或 RP 变 NaN（「自动研究开了没效果」真根因之一）
+      if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
+      S.rp -= cost.rp;
+      S.ep -= cost.ep || 0;
       S.tech[t.id] = true;
       pushBoughtOrder(S, t.id);
-      ailog(`自动研究：购入科技「${t.name}」（-${fmt(cost)} RP）`, 'good');
+      ailog(`自动研究：购入科技「${t.name}」（-${fmt(cost.rp)} RP${cost.ep ? ' -' + fmt(cost.ep) + ' EP' : ''}）`, 'good');
       acted = true;
       break; // 每周期至多 1 个
     }
