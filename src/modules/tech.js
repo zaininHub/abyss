@@ -78,8 +78,9 @@ function makeTechItem(t) {
   if (cpsGate) div.title = '需达成里程碑：线程产出 cps ≥ 1 万 后解锁（AI 自动购买模块）';
   const techs = getTechs();
   div.title = t.req.length ? `前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}` : '无前置';
-  div.innerHTML = `<div class="n">${t.name}</div><div class="d">${t.desc}</div>
-    <div class="c">${on ? '✓' : techCostText(t)}</div>`;
+  // v2.8.13：科技卡片结构与升级商店 .item 统一（name/desc/cost），UI 设计一致
+  div.innerHTML = `<div class="name"><span>${t.name}</span></div><div class="desc">${t.desc}</div>
+    <div class="cost mono">${on ? '✓' : techCostText(t)}</div>`;
   return div;
 }
 

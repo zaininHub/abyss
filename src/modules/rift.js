@@ -326,9 +326,9 @@ export function renderRiftPanel(container) {
       const cur = Math.round(riftSpawnSec() / 60);
       if (lv < u.cap) {
         const next = Math.round(Math.max(360, BALANCE.rift.spawnSec * Math.pow(0.75, lv + 1)) / 60);
-        desc = `裂隙出现间隔缩短 25%/级：当前 ${cur} 分钟 → 下一级 ${next} 分钟（下限 6 分钟）`;
+        desc = `裂隙出现间隔缩短 25%/级：当前 ${cur} 分钟 → 下一级 ${next} 分钟`; // v2.8.13：去除「下限」文案
       } else {
-        desc = `裂隙出现间隔 -25%/级：已达下限 ${cur} 分钟`;
+        desc = `裂隙出现间隔缩短 25%/级：已达最短 ${cur} 分钟`;
       }
     }
     html += `

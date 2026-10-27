@@ -342,23 +342,23 @@ body {
   cursor: not-allowed;
 }
 
-.tech-grid .tech .n {
+.tech-grid .tech .name {
   font-weight: 600;
   margin-bottom: 2px;
 }
 
-.tech-grid .tech .d {
+.tech-grid .tech .desc {
   color: var(--text-2);
   font-size: 11px;
   margin-bottom: 3px;
 }
 
-.tech-grid .tech .c {
+.tech-grid .tech .cost {
   color: var(--accent);
   font-size: 11px;
 }
 
-.tech-grid .tech.on .c { color: var(--green); }
+.tech-grid .tech.on .cost { color: var(--green); }
 
 /* ========== 异兽网格 ========== */
 .pet-grid {

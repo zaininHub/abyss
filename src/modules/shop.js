@@ -392,7 +392,7 @@ function updateVehicleCollectHeader() {
   const rate = vehicleDmPerMin();
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
-    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 采集 -${Number(epPerSec.toFixed(1))} ep/s → +${Math.round(rate * 100) / 100}/min`;
+    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 采集 +${Math.round(rate * 100) / 100} DM/min（消耗 ${Number(epPerSec.toFixed(1))} ep/s）`; // v2.8.13：文案明确「采集产出 + 消耗」，去除歧义箭头
     el.title = '探采消耗 EP 换取深渊物质（每 1 DM 消耗 1000 EP，EP 净产出一薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
   } else {
     el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
@@ -470,8 +470,12 @@ function makeVehicleItem(u) {
   const cpsEach = u.cps * globalMult() * protoMult;
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
+  // v2.8.13：载具卡标注探采消耗（每辆对应 DM 率 × 1000 EP/DM 折算 ep/s）
+  const dmIdx = BALANCE.vehicles.ids.indexOf(u.id);
+  const dmRate = dmIdx >= 0 ? BALANCE.vehicles.dmRates[dmIdx] : 0;
+  const probeEp = dmRate > 0 ? (dmRate * BALANCE.vehicles.epPerDm / 60) : 0;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}</div>
+    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}${probeEp > 0 ? ` · 探采 -${Number(probeEp.toFixed(1))} ep/s → +${dmRate}/min` : ''}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -1159,7 +1163,7 @@ export function buyResearchUpgrade(id) {
 export function renderResearchUpgrades(container) {
   if (!container) return;
   const list = (BALANCE.researchUpgs || []).slice().sort((a, b) => a.base - b.base);
-  let sig = list.map(u => `${u.id}:${S.rpTheories?.[u.id] || 0}`).join(',');
+  let sig = list.map(u => `${u.id}:${S.rpTheories?.[u.id] || 0}:${Math.floor(S.rp || 0)}`).join(','); // v2.8.13：RP 变化即重建——灰态/可购判定不再滞后
   if (container._lastSig === sig) return; // 增量：内容未变不重建（v2.6.7 纪律）
   container._lastSig = sig;
   container.innerHTML = '';
@@ -1172,7 +1176,7 @@ export function renderResearchUpgrades(container) {
     const div = document.createElement('div');
     div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
     div.dataset.research = u.id;
-    div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)}，当前 ${fmt(S.rp || 0)}）`);
+    div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)} RP）`); // v2.8.13：卡片不再重复展示当前 RP（顶部已有「当前 RP」）
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
       <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
       <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
