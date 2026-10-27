@@ -253,7 +253,7 @@ export function rpDistillRate() {
   // v2.8.6：星渊罗盘「研究点转换效率 +10%/级」接线（v2.8.2 改 desc 后漏接，效率提升 = 所需 EP 减少）
   const compass = (S.relics && S.relics.compass) || 0;
   const eff = 1 + compass * 0.10;
-  return 15000 / Math.pow(1.12, lv) / eff;
+  return 30000 / Math.pow(1.12, lv) / eff; // v2.8.24 ③：蒸馏 EP 消耗 ×2（15000→30000）——EP 满后转化 RP 更有消耗价值
 }
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;

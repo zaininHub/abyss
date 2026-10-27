@@ -132,7 +132,7 @@ export function renderShop(container) {
   // v2.8.2 反馈④：RP 相关升级（组 F 加成 + 灵感蒸馏塔）移入研究点 tab，主商店不再渲染
   const RP_FAMILY_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS.includes(u.id)
-    && (u.cat !== 'purifier' || hasTech('entropy_reduce')));
+    && u.cat !== 'purifier'); // v2.8.24 ①：净化节点仅遗物区 DM 购买，主商店完全排除（v2.8.22 移遗物后 filter 仍保留有熵减协议时渲染 → 兜底组「存储与资源建筑」重复出现）
   // v2.3.1 缺陷⑦修复：链序改定义序（与 eternal v2.3 修复同口径）。
   // 原 v1.3 E「已解锁按成本升序」在 v2.3 渐进披露链下失效：已购项成本上浮后
   // 与未购项按成本交错，chainSplit 的已购前缀 p 判定失真 → 链提示挂错对象

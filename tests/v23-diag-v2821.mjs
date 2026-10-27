@@ -118,8 +118,10 @@ try {
     await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ dm: 1000, ep: 99999999 }));
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 1500));
+    await page.click('#btn-relics'); // v2.8.24 ①：净化节点已完全移出主商店，仅遗物区（v2.8.22 ⑥）
+    await new Promise(r => setTimeout(r, 400));
     const t6 = await page.evaluate(() => {
-      const el = [...document.querySelectorAll('.item')].find(x => x.textContent.includes('净化节点 I'));
+      const el = [...document.querySelectorAll('[data-purifier]')].find(x => x.textContent.includes('净化节点 I'));
       return { has: !!el, dmText: el ? el.textContent.includes('DM') : false, lv: el ? el.textContent.includes('Lv.1/3') || el.textContent.includes('×1') : false };
     });
     rec('T6 净化节点 DM 购买 + 限购（卡面 DM 成本 + 级数上限）', t6.has && t6.dmText, JSON.stringify(t6));

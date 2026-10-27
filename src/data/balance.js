@@ -9,7 +9,7 @@ export const BALANCE = {
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
   thread: {
-    firstCost: 120, baseOutput: 2.0, baseOutputJitter: 2.0, salaryBase: 1.04, salaryPerThreadCap: 0.9, // v2.8.8：线程产出再降（2.0），薪资单线程封顶 0.9/s（消耗渐升但不超过产出）
+    firstCost: 120, baseOutput: 2.0, baseOutputJitter: 2.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
       // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s
@@ -32,7 +32,7 @@ export const BALANCE = {
   // v1.3 模块 D：探采平台联动数值
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],
-    epPerDm: 1000,                      // v2.8.12：探采平台改为消耗 EP 采集——每 1 DM 消耗 1000 EP（EP 净产出不足时暂停）
+    epPerDm: 2500,                      // v2.8.24 ③：采集消耗 ×2.5（1000→2500）——载具采集成为主要 EP 消耗通道，EP 净产出不足时自动暂停
     dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
