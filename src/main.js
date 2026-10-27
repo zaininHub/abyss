@@ -1,7 +1,7 @@
 import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤：SAVE_KEY/SAVE_VERSION 供存档导出/导入
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import {
-  computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec,
+  computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
@@ -363,7 +363,8 @@ function renderTop() {
   }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
-  if (hSalary) hSalary.textContent = fmt(staffSalaryPerSec()) + '/s'; // v2.4.1：薪资消耗（负面红，已含入 cps 净额）
+  if (hCps) hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`; // v2.8.14：来源明细
+  if (hSalary) { hSalary.textContent = fmt(totalDrainPerSec()) + '/s'; hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`; } // v2.8.14：消耗含线程薪资+载具探采，来源明细
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
   if (hRp) hRp.textContent = fmt(S.rp);
@@ -471,7 +472,12 @@ function renderHero() {
       const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
       expStatus.style.display = '';
       expStatus.className = 'rift-exp-hero';
-      expStatus.textContent = `🌌 深入裂隙 Lv.${ex.level} · 剩余 ${left}s · 已获 DM ${ex.gainedDm.toFixed(1)} · 腐化 ${S.corruption.toFixed(1)}%`;
+      if (S.paused) {
+        // v2.8.14：暂停时探索计时冻结，不显示实时倒计时
+        expStatus.textContent = `🌌 深入裂隙 Lv.${ex.level} · 已暂停（探索计时冻结） · 已获 DM ${ex.gainedDm.toFixed(1)} · 腐化 ${S.corruption.toFixed(1)}%`;
+      } else {
+        expStatus.textContent = `🌌 深入裂隙 Lv.${ex.level} · 剩余 ${left}s · 已获 DM ${ex.gainedDm.toFixed(1)} · 腐化 ${S.corruption.toFixed(1)}%`;
+      }
     } else {
       expStatus.style.display = 'none';
       expStatus.textContent = '';
@@ -1172,14 +1178,24 @@ function togglePause() {
   if (!S.paused) {
     S.paused = true;
     S.pausedAt = Date.now();
+    // v2.8.14：暂停时深入裂隙计时冻结（恢复时顺延剩余时长）
+    if (S.riftExpedition) {
+      const left = Math.max(0, (S.riftExpedition.until - Date.now()) / 1000);
+      S.riftExpedition.until = Date.now() + left * 1000;
+    }
     document.getElementById('pauseBtn').textContent = '继续';
     document.body.classList.add('paused');
     log('系统暂停（按离线结算）', 'bad');
     showPauseModal(); // v2.5 ⑥：暂停弹框展示预计离线时间与收入
   } else {
+    // v2.8.14：恢复时深入裂隙按冻结剩余继续计时
+    if (S.riftExpedition) {
+      const left = Math.max(0, (S.riftExpedition.until - Date.now()) / 1000);
+      S.riftExpedition.until = Date.now() + left * 1000;
+    }
     settlePause();
   }
-  dirty.top = true; dirty.prestige = true;
+  dirty.top = true; dirty.prestige = true; dirty.hero = true; // v2.8.14：暂停/恢复时同步刷新英雄区（深入裂隙「已暂停」状态显示）
 }
 
 // v2.5 ⑥：暂停弹框——实时展示已暂停时长与预计离线收入；「恢复并结算」结束暂停

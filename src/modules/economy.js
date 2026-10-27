@@ -627,6 +627,35 @@ export function computeCps() {
   return r;
 }
 
+// ========== v2.8.14：顶部产出/消耗来源明细（按升级类目合并） ==========
+export function cpsBreakdown() {
+  // 与 computeCps 同口径拆分：载具 / 线程 / 其余升级（基础·建筑·家族等合并为「基础产出」）
+  let vehicle = 0, other = 0;
+  for (const u of UPGRADES) {
+    if (!u.cps) continue;
+    let c = u.cps * (S.upgrades[u.id] || 0);
+    if (S.upgrades.dmprotocol && BALANCE.vehicles.ids.includes(u.id)) c *= BALANCE.vehicles.protocolMult;
+    if (BALANCE.vehicles.ids.includes(u.id)) vehicle += c; else other += c;
+  }
+  const thread = staffOutputPerSec(); // 线程基础产出（心态/线程乘区），全局乘区在 computeCps 统一应用
+  const parts = [];
+  if (other > 0.005) parts.push(`基础产出 +${fmt(other)}/s`);
+  if (thread > 0.005) parts.push(`线程 +${fmt(thread)}/s`);
+  if (vehicle > 0.005) parts.push(`载具产出 +${fmt(vehicle)}/s`);
+  return parts;
+}
+export function drainBreakdown() {
+  const parts = [];
+  const sal = staffSalaryPerSec();
+  if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
+  const probe = vehicleDmEpCostPerMin() / 60;
+  if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
+  return parts;
+}
+export function totalDrainPerSec() {
+  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60;
+}
+
 // ========== EP 存储上限 ==========
 // v2.4 KG 模式改造：基础上限 2000 + 存储节点无限升级（第 i 级 +capPer×capGrowth^(i-1)，无封顶）
 // + 缓存优化 +5000/个（无限）+ 数据中心每级上限加成 [0,10K,25K,50K]

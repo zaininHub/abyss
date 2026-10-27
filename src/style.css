@@ -316,7 +316,7 @@ body {
 /* ========== 科技网格 ========== */
 .tech-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)); /* v2.8.10：固定 3 列——6 把钥匙 2 行 3 列排满，消除 auto-fill 宽屏留空 */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* v2.8.14：与升级商店 .shop-grid 同一列宽策略——模块大小一致 */
   gap: 6px;
 }
 

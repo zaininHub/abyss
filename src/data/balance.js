@@ -225,7 +225,7 @@ export const BALANCE = {
     faithChance: 0.20,              // 封印/拥抱信仰概率（宗教解锁后）
     // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
     delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
-    delveEpPerSec: 1.0,         // v2.8.12：深入探索期间消耗 EP（/秒/级）——EP 耗尽则探索失败无奖励
+    delveEpPerSec: 3.0,         // v2.8.14：深入探索期间消耗 EP（/秒/级，1 级 60s ≈ 180 EP）——EP 耗尽则停止获取奖励并失败
     delveCorruptPerLevel: 1.0,      // 每秒腐化累积 %/级
     delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
     delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）

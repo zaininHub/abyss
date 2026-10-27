@@ -133,7 +133,7 @@ export function renderPrestige(container) {
     btn.title = S.collapsed ? '深渊吞噬：必须转生（本局已崩溃，转生 +1 湮灭残片）' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = S.collapsed ? `本局被深渊吞噬，系统已停止产出。转生将获得 ${reward}，跨转生资产保留。` : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP；未达标时按钮暗置，点击会提示还差多少。`);
+  if (note) note.textContent = S.collapsed ? `本局被深渊吞噬，系统已停止产出。转生将获得 ${reward}，跨转生资产保留。` : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`) // v2.8.14：去除「未达标按钮暗置」等设计说明文案;
   const td = container.querySelector('#talent-display');
   if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
 }
