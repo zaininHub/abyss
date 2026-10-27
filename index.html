@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.11</title>
+<title>深渊效能工作台 v2.8.12</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -88,8 +88,6 @@
           <span>专注等级: <b id="focus-lv">0</b></span>
           <span class="cost mono" id="focus-cost">50</span>
         </div>
-        <!-- v2.6.4 ②：深入裂隙状态置顶显示 -->
-        <div id="rift-exp-status" style="display:none"></div>
         <!-- v2.0 EP 容量提示 -->
         <div id="ep-cap-hint" class="ep-cap-hint" style="display:none"></div>
         <!-- v1.3 A：AI 助手面板（研究「AI 管理核心」后显示） -->
@@ -99,6 +97,8 @@
         </div>
         <!-- v2.0 矩阵腐化进度条 -->
         <div id="abyss-collapse" style="display:none;margin:10px 0;padding:12px 16px;border:1px solid var(--red,#e5484d);border-radius:8px;background:rgba(229,72,77,.12);color:var(--red,#ff6b6b);font-size:12.5px;line-height:1.7"></div>
+        <!-- v2.8.12：深入裂隙状态显示到腐化进度条处（原置顶 hero，裂隙 tab 不再展示剩余时间） -->
+        <div id="rift-exp-status" style="display:none"></div>
         <div id="corruption-bar" class="corruption-bar" style="display:none">
           <div class="corruption-row">
             <span class="corruption-label">🧪 矩阵腐化</span>

@@ -259,6 +259,7 @@ body {
 .shop-grid .item:hover { border-color: var(--accent); }
 
 .shop-grid .item.cant { opacity: 0.5; cursor: not-allowed; }
+.shop-grid .item, .shop-grid .item * { cursor: inherit; } /* v2.8.12：方块内子元素继承光标——鼠标在卡内移动不再 text/not-allowed 交替闪烁 */
 
 .shop-grid .item.locked,
 #snap-list .item.locked {

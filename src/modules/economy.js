@@ -468,6 +468,10 @@ export function vehicleDmPerMin() {
 export function collectVehicleDm() {
   return vehicleDmPerMin();
 }
+// v2.8.12：探采平台改为消耗 EP 采集——每 1 DM 消耗 epPerDm EP（ep/min 口径，tick 内折算）
+export function vehicleDmEpCostPerMin() {
+  return vehicleDmPerMin() * BALANCE.vehicles.epPerDm;
+}
 
 // ========== v1.3 L1：科技成本潮汐乘数 ==========
 // v2.8.7：科技树成本多资源（综合产物齐耗，量最大）——cost 为 {rp,ep,dm...} 对象；退潮乘数仅作用于 RP 部分

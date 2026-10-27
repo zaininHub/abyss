@@ -93,11 +93,8 @@ export function delveRift() {
 
 export function abortRiftExpedition() {
   if (!S.riftExpedition) return { ok: false, reason: '未在深入' };
-  const ex = S.riftExpedition;
-  if (ex.gainedDm > 0) { S.dm = (S.dm || 0) + ex.gainedDm; discoverDm(); }
-  S.vs = (S.vs || 0) + (ex.gainedVs || 0);
-  S.riftEmber = (S.riftEmber || 0) + Math.max(1, Math.round(ex.level * 1)) * emberMul();
-  log(`[裂隙] 紧急脱出：带走 ${ex.gainedDm.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}（+${Math.max(1, Math.round(ex.level))} 余烬）`, 'bad');
+  // v2.8.12：紧急脱出不结算任何奖励（已消耗的 EP/DM 不退，已获产出丢弃）——提前退出 = 白费，鼓励完整探索
+  log(`[裂隙] 紧急脱出：探索中止，未获得任何奖励（提前退出无结算）`, 'bad');
   S.riftExpedition = null;
   save(S);
   dirty.rift = true;
@@ -109,6 +106,18 @@ function settleRiftExpedition(dt) {
   const ex = S.riftExpedition;
   if (!ex) return;
   const lv = ex.level;
+  // v2.8.12：深入期间消耗 EP 换取 DM——EP 耗尽则探索立即失败（无奖励）
+  const epUse = BALANCE.rift.delveEpPerSec * lv * dt;
+  const actualEp = Math.min(S.ep, epUse);
+  S.ep -= actualEp;
+  if (actualEp < epUse - 1e-9) {
+    log(`[裂隙] 深入失败：EP 耗尽（探索中止，无奖励）`, 'bad');
+    if (toast) toast('⚠️ EP 耗尽：深入探索失败，无奖励');
+    S.riftExpedition = null;
+    dirty.rift = true;
+    save(S);
+    return;
+  }
   // 产出（DM 恒定 + VS 深潜解锁后）
   ex.gainedDm += BALANCE.rift.delveDmPerLevel * lv * dt;
   if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * lv * dt;
@@ -291,7 +300,7 @@ export function renderRiftPanel(container) {
     const ex = S.riftExpedition;
     const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
     container.innerHTML = `
-      <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)} · 剩余 <b style="color:var(--red, #f85149)">${left}s</b></div>
+      <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)}（剩余时间见腐化进度条上方）</div>
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
       <div class="off-stat"><span>已获 VS（深潜联动）</span><b style="color:var(--cyan)">+${ex.gainedVs.toFixed(2)}</b></div>
       <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '（≤50% 安全）'}</b></div>

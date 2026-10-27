@@ -3,7 +3,8 @@
 // 数值与档位表在 BALANCE.vehicles；产出 vehicleDmPerMin()/collectVehicleDm() 在 economy.js（纯读侧）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { collectVehicleDm, vehicleDmPerMin } from './economy.js';
+import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin } from './economy.js';
+import { computeCps, staffSalaryPerSec } from './economy.js'; // v2.8.12：净流限制（产出一薪资-探采消耗 > 0 才采集）
 
 let logFn = null;
 export function setVehicleLogFn(fn) { logFn = fn; }
@@ -18,9 +19,17 @@ export function tickVehicleCollect(dt) {
   S.vehCollectTimer -= BALANCE.vehicles.collectInterval;
   const dm = collectVehicleDm();
   if (dm > 0) {
-    S.dm = (S.dm || 0) + dm;
-    if (logFn) logFn(`[采集] 载具自动采集：+${Number(dm.toFixed(3))} DM`, 'good');
-    return true;
+    // v2.8.12：探采消耗 EP——净流（产出一薪资-探采消耗）> 0 且余额可支付本周期才采集，否则暂停（DM 不产）
+    const epPerSec = vehicleDmEpCostPerMin() / 60;
+    const epCost = epPerSec * BALANCE.vehicles.collectInterval;
+    const net = computeCps() - staffSalaryPerSec() - epPerSec;
+    if (net > 0 && S.ep >= epCost) {
+      S.ep -= epCost;
+      S.dm = (S.dm || 0) + dm;
+      if (logFn) logFn(`[采集] 载具采集：-${Math.round(epCost)} EP → +${Number(dm.toFixed(3))} DM`, 'good');
+      return true;
+    }
+    if (logFn) logFn(`[采集] 探采暂停：EP 净产出不足（净流 ${Number(net.toFixed(2))}/s 需 > 0）`, 'bad');
   }
   return false;
 }

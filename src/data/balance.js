@@ -32,6 +32,7 @@ export const BALANCE = {
   // v1.3 模块 D：探采平台联动数值
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],
+    epPerDm: 1000,                      // v2.8.12：探采平台改为消耗 EP 采集——每 1 DM 消耗 1000 EP（EP 净产出不足时暂停）
     dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
@@ -224,6 +225,7 @@ export const BALANCE = {
     faithChance: 0.20,              // 封印/拥抱信仰概率（宗教解锁后）
     // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
     delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
+    delveEpPerSec: 1.0,         // v2.8.12：深入探索期间消耗 EP（/秒/级）——EP 耗尽则探索失败无奖励
     delveCorruptPerLevel: 1.0,      // 每秒腐化累积 %/级
     delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
     delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）

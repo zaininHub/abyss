@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost } from './economy.js';
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost } from './economy.js';
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -391,8 +391,9 @@ function updateVehicleCollectHeader() {
   if (!el) return;
   const rate = vehicleDmPerMin();
   if (rate > 0) {
-    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 采集 +${Math.round(rate * 100) / 100}/min`;
-    el.title = '载具按速率稳定产出深渊物质（每 60 秒确定性到账）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
+    const epPerSec = vehicleDmEpCostPerMin() / 60;
+    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 采集 -${Number(epPerSec.toFixed(1))} ep/s → +${Math.round(rate * 100) / 100}/min`;
+    el.title = '探采消耗 EP 换取深渊物质（每 1 DM 消耗 1000 EP，EP 净产出一薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
   } else {
     el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
     el.title = '购买载具后每 60 秒自动采集深渊物质';
