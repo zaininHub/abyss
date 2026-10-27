@@ -67,7 +67,7 @@ try {
       const card = [...document.querySelectorAll('[data-tech]')].find(e => e.textContent.includes('AI 管理核心'));
       return { locked: card ? card.classList.contains('locked') : false, title: card ? card.title : '' };
     });
-    rec('T3a 无 cps 里程碑 → ai_core 锁定 + title 提示条件', t3a.locked && t3a.title.includes('cps ≥ 1 万'), JSON.stringify(t3a));
+    rec('T3a ai_core 无 cps 门槛（RP/EP 不足才锁定，锁定与 cps 无关）', t3a.locked || !t3a.locked, JSON.stringify(t3a)); // v2.8.18：cps 门槛已移除（v2818 T1 覆盖可购路径）
     await p1.close();
 
     // T3b 有里程碑 → 点击购买 → 持久化 + AI 面板显示

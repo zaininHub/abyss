@@ -145,10 +145,11 @@ export function renderShop(container) {
     groups: [{ title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat }, { title: '存储与资源建筑', test: () => true }],
   };
   // v2.3.1 ⑤（rev18 9.3 分组表）：基础产出在前、存储与资源建筑在后；分组纯显示不拆链
+  // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
   renderChainedGroups(container, split, [
     { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
     { title: '存储与资源建筑', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
-  ], makeShopItem, (u, el) => shopItemEls.set(u.id, el));
+  ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });
 
   bindDelegate(container, (id, el) => {
     const u = UPGRADES.find(x => x.id === id);
@@ -250,6 +251,8 @@ function makeShopItem(u) {
   const unlocked = shopUnlocked(u);
   const div = document.createElement('div');
   div.dataset.buy = u.id;
+  // v2.8.18 ④：净化节点等卡面主句保持数值简洁，详细机制放悬浮 title
+  if (u.cat === 'purifier') div.title = `净化节点：每秒清除 ${u.rate || 0}% 矩阵腐化；腐化越低，全局产出惩罚越弱（每 60 秒结算一次）。`;
   if (!unlocked) {
     div.className = 'item locked';
     div.innerHTML = `<div class="name"><span>???</span></div><div class="desc">累计 ${fmt(u.base * 0.3)} EP 解锁</div><div class="cost">—</div>`;
@@ -278,6 +281,21 @@ function makeShopItem(u) {
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
 export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
 
+// v2.8.18 ③：购后满级/一次性已购 → 移入组最下侧「已升级」折叠区（不重建列表，无闪烁）
+function moveToOwnedFold(u, el) {
+  const cont = THREAD_IDS.includes(u.id) ? threadContainer : shopContainer;
+  if (!cont || !cont.__ownedBoxes || !cont.__itemGroup) return false;
+  const gi = cont.__itemGroup[u.id];
+  const box = cont.__ownedBoxes[gi];
+  if (!box || el.parentElement === box) return false;
+  box.appendChild(el);
+  const header = box.previousElementSibling;
+  const cnt = header && header.querySelector ? header.querySelector('.owned-count') : null;
+  if (cnt) cnt.textContent = '×' + box.children.length;
+  if (header) header.style.display = '';
+  return true;
+}
+
 function updateShopItem(u) {
   const el = shopItemEls.get(u.id);
   if (!el) return;
@@ -290,6 +308,7 @@ function updateShopItem(u) {
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
       <div class="desc">${u.desc}</div>
       <div class="cost mono">已满级</div>`;
+    moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
   }
   const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：固定 ×1
@@ -318,7 +337,7 @@ export function renderThreadShop(container) {
   renderChainedGroups(container, split, [
     { title: '消耗优化', test: u => COST_IDS.includes(u.id) },
     { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速
-  ], makeThreadItem, (u, el) => threadItemEls.set(u.id, el));
+  ], makeThreadItem, (u, el) => threadItemEls.set(u.id, el), { verb: '升级' }); // v2.8.18 ③：已购终态收折叠
   bindDelegate(container, (id) => {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) return;
@@ -373,6 +392,7 @@ function updateThreadItem(u) {
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
       <div class="desc">${u.desc}</div>
       <div class="cost mono">已满级</div>`;
+    moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
   }
   const cost = threadCost(u);
@@ -904,7 +924,7 @@ export function renderV21Buildings(container) {
   if (!v21Shown) { container.innerHTML = ''; v21ItemEls.clear(); return; }
   container.innerHTML = '';
   v21ItemEls.clear();
-  v21Section = buildOwnedSection('v21-bld-list', container, '已满级');
+  v21Section = buildOwnedSection('v21-bld-list', container, '满级'); // v2.8.18：verb 去重复「已」
   const real = v21RealList();
   const maxed = real.filter(b => v21Maxed(b, S));
   maxed.sort((a, b) => boughtOrderIndex(S, b.id) - boughtOrderIndex(S, a.id));

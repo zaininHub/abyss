@@ -14,10 +14,8 @@ let techSection = null;   // 已研究折叠区
 let techEls = new Map();  // id -> el（未研究可购项）
 let eternalEls = new Map();
 
-// v2.8.8：AI 管理核心恒显示（达成里程碑 cps≥1e4 前为锁定卡，消除布局空缺）
+// v2.8.18：AI 管理核心恒显示、无 cps 里程碑门槛（RP 50 + 1M EP 即门槛，不足时灰态）——用户多轮反馈「无法升级」根因是 cps≥1e4 门槛在中期不可达
 function techVisible(t) { return true; }
-function aiCoreCpsGate(t) { return t.id === 'ai_core' && !S.milesDone[1e4]; }
-
 export function techReqOk(t) { return t.req.every(r => hasTech(r)); }
 
 export function renderTech(container) {
@@ -71,14 +69,12 @@ function makeTechItem(t) {
   const on = hasTech(t.id);
   const reqOk = techReqOk(t);
   const afford = techAfford(t); // v2.8.7：多资源可购判定
-  const cpsGate = aiCoreCpsGate(t); // v2.8.8：AI 核心 cps 前置（锁定展示）
   const div = document.createElement('div');
   div.dataset.tech = t.id;
-  div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford || cpsGate)) ? ' locked' : '');
-  // v2.8.16：锁定原因 title 合并——cps 里程碑 + 前置科技都显示（此前 cps 条件被「无前置」覆盖，导致 AI 管理核心锁定无提示）
+  div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford)) ? ' locked' : '');
+  // v2.8.18：锁定原因 title——前置科技（cps 门槛已移除，ai_core 仅 RP+EP 判定）
   const techs = getTechs();
   const hints = [];
-  if (cpsGate) hints.push('需里程碑：cps ≥ 1 万');
   if (t.req.length) hints.push(`前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}`);
   div.title = hints.join('；') || '无前置';
   // v2.8.13：科技卡片结构与升级商店 .item 统一（name/desc/cost），UI 设计一致
@@ -101,7 +97,6 @@ function bindTechDelegate(container) {
 export function buyTech(t, el) {
   if (hasTech(t.id)) return;
   if (!techReqOk(t)) return;
-  if (aiCoreCpsGate(t)) return; // v2.8.8：AI 核心需 cps 1e4 里程碑
   // v2.8.7：科技树多资源成本（RP + EP + DM + ES 综合消耗，退潮乘数作用于 RP）
   const cost = techCostOf(t);
   if (!techAfford(t)) return;

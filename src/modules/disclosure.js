@@ -89,23 +89,48 @@ export function chainSplit(mod, items, purchasedOf, S) {
 // 不改变链序、不拆链、不改链判定：条目按「链序中的位置」取可见性（split.visible
 // 已算好），再按类型归组渲染；链内下一项落在哪个组就显示在哪个组。
 // groups: [{ title, test(item) }]，组序即渲染序；组内可见 0 项时整组（含组头）不渲染。
-export function renderChainedGroups(container, split, groups, makeItem, onItem) {
+// v2.8.18 ③：ownedOpts = { verb }（可选）——组内「已购终态」项（一次性已购 / 满级）
+// 收进组最下侧「已×」折叠区，不影响未购/可叠加项展示；未传该参数时行为与旧版完全一致。
+import { S } from '../state.js';
+import { buildOwnedSection } from './listkit.js';
+export function renderChainedGroups(container, split, groups, makeItem, onItem, ownedOpts) {
   const buckets = groups.map(() => []);
   split.visible.forEach((it, i) => {
     let gi = groups.findIndex(g => g.test(it));
     if (gi < 0) gi = groups.length - 1; // 未命中任何组谓词 → 兜底进末组，条目永不丢
     buckets[gi].push({ it, i });
   });
+  // v2.8.18：记录 条目→组 映射 + 各折叠区 box（供购后原地移卡）
+  const itemGroup = container.__itemGroup || (container.__itemGroup = {});
+  const ownedBoxes = container.__ownedBoxes || (container.__ownedBoxes = []);
   groups.forEach((g, gi) => {
-    if (!buckets[gi].length) return; // 组内可见 0 项：整组不渲染（含组头）
+    const active = [], owned = [];
+    for (const { it, i } of buckets[gi]) {
+      if (ownedOpts) itemGroup[it.id] = gi;
+      const ownedCnt = S.upgrades && (S.upgrades[it.id] || 0);
+      const done = ownedCnt > 0 && (it.maxLevel === 1 || (it.maxLevel && ownedCnt >= it.maxLevel));
+      (ownedOpts && done ? owned : active).push({ it, i });
+    }
+    if (!active.length && !owned.length) { ownedBoxes[gi] = null; return; } // 组内可见 0 项：整组不渲染（含组头）
     const h = document.createElement('div');
     h.className = 'group-title';
     h.textContent = g.title;
     container.appendChild(h);
-    for (const { it, i } of buckets[gi]) {
+    for (const { it, i } of active) {
       const el = makeItem(it);
       if (typeof onItem === 'function') onItem(it, el);
       container.appendChild(el);
+    }
+    if (ownedOpts && owned.length) {
+      const sec = buildOwnedSection('owned-' + g.title, container, ownedOpts.verb || '升级');
+      ownedBoxes[gi] = sec.box;
+      for (const { it, i } of owned) {
+        const el = makeItem(it);
+        if (el) { el.classList.add('owned-item'); sec.box.appendChild(el); }
+      }
+      sec.updateCount(owned.length);
+    } else {
+      ownedBoxes[gi] = null;
     }
   });
 }

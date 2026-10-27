@@ -364,8 +364,13 @@ function renderTop() {
   }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
-  if (hCps) hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`; // v2.8.14：来源明细
-  if (hSalary) { hSalary.textContent = fmt(totalDrainPerSec()) + '/s'; hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`; } // v2.8.14：消耗含线程薪资+载具探采，来源明细
+  // v2.8.18：产出/消耗来源直接显示在顶部（按升级类目合并；悬浮 title 保留详细口径）
+  const cpsSrc = document.getElementById('cps-src');
+  if (cpsSrc) cpsSrc.textContent = cpsBreakdown().join(' + ') || '—';
+  if (hCps) hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`;
+  const drainSrc = document.getElementById('drain-src');
+  if (hSalary) { hSalary.textContent = fmt(totalDrainPerSec()) + '/s'; hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`; }
+  if (drainSrc) drainSrc.textContent = drainBreakdown().join(' + ') || '—';
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
   if (hRp) hRp.textContent = fmt(S.rp);
