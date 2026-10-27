@@ -679,8 +679,8 @@ export function addEp(amount) {
     S.runEarned += gained;
     S.allTimeEp += gained;
   }
-  // v2.5.1：任务进度口径改全量——earnedFull 累计含被上限钳制部分（不随显示口径冻结）
-  S.earnedFull = (S.earnedFull || 0) + amount;
+  // v2.8.10：任务进度口径改钳后——EP 达存储上限后 earnedFull 不再累计（任务 EP 积累冻结在真实可得范围内）
+  if (gained > 0) S.earnedFull = (S.earnedFull || 0) + gained;
   // v2.1 溢出池承接 + v2.2 缺陷B修复：上限打满后被丢弃的 EP 经公共函数记账（与 tickCorruption 同口径）
   const overflow = amount - gained;
   if (overflow > 0) accountEpOverflow(overflow);

@@ -56,10 +56,12 @@ function mkState(rawObj) {
     spawnProject();
     const p = S.projects[S.projects.length - 1];
     p.goal = 100; p.status = 'active';
-    S.earnedFull += 150; // 挂机产出全量（ep 已达 cap，runEarned 钳后冻结）
-    S.runEarned += 0;
+    // v2.8.10：任务进度改钳后口径——EP 达存储上限后 earnedFull 不再累计（用户明确：达上限后任务 EP 不增长）
+    const gained = 0; // addEp/main 钳后：cap - ep = 0
+    S.earnedFull += gained;
+    S.runEarned += gained;
     p.progress = (S.earnedFull || 0) - p.earnedFullAt;
-    rec('V2 任务口径：EP 达上限后产出 150 → 进度 150，0/100 任务可完成', p.progress >= 100, `progress=${p.progress}`);
+    rec('V2 任务口径：EP 达上限后产出钳后 → 进度冻结（v2.8.10）', p.progress === 0, `progress=${p.progress}`);
   }
   {
     Object.assign(S, mk());

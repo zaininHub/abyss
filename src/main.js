@@ -462,9 +462,7 @@ function renderHero() {
   if (bigEp) bigEp.textContent = fmt(S.ep);
   if (clickPower) clickPower.textContent = fmt(clickMult());
   if (staffCount) staffCount.textContent = S.cultists.length;
-  // v2.6.4 ⑧：每秒薪资显示（消耗优化购买后立即可感知）
-  const salaryEl = document.getElementById('staff-salary');
-  if (salaryEl) salaryEl.textContent = staffSalaryPerSec().toFixed(2) + '/s';
+  // v2.8.10：每秒薪资总额已由顶部「消耗/s」显示（hero 重复行删除）
   // v2.6.4 ②：深入裂隙状态置顶显示
   const expStatus = document.getElementById('rift-exp-status');
   if (expStatus) {
@@ -728,7 +726,7 @@ function renderRpPanel() {
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${(Math.floor((S.ep || 0) * 0.25) < rpDistillRate()) ? 'disabled' : ''} title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button> // v2.8.10：EP 不足以蒸馏 1 RP 时灰显
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${(Math.floor((S.ep || 0) * 0.25) < rpDistillRate()) ? 'disabled' : ''} title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
   </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
@@ -1443,7 +1441,7 @@ function tick(now) {
   S.ep += gain;
   S.runEarned += credited;
   S.allTimeEp += credited;
-  S.earnedFull = (S.earnedFull || 0) + gain; // v2.5.1：任务进度全量口径（含被上限钳制部分）
+  S.earnedFull = (S.earnedFull || 0) + credited; // v2.8.10：任务进度钳后口径（EP 达上限后不再累计）
   // v2.5.1 反馈④：深渊行者科技「触手协议」——每 60 秒自动点击一次
   if (S.tech && S.tech.tentacle_protocol === true) {
     S._tentacleTimer = (S._tentacleTimer || 0) + dt;

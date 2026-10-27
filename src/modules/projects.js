@@ -92,7 +92,7 @@ export function tickProjects() {
   const before = S.projects.length;
   for (const p of S.projects) {
     if (p.status !== 'active') continue;
-    // v2.5.1：earn_ep 任务进度改全量产出口径（earnedFull）——EP 达存储上限后 runEarned 冻结，原口径任务 0/100 卡死；
+    // v2.8.10：earn_ep 任务进度改钳后口径（earnedFull 随真实可得 EP 累计）——达存储上限后任务进度冻结，符合「达上限后任务 EP 不增长」；
     // v2.5.1 之前创建的存量任务（无 earnedFullAt）回退 runEarned 口径，不清零不误判
     if (p.type === 'earn_ep') {
       p.progress = p.earnedFullAt !== undefined

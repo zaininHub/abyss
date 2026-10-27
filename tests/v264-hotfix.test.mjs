@@ -37,7 +37,8 @@ rec('V6 维修坞流失免疫明确定义', bal.includes('不再免疫流失'), 
 // ⑦ 哨站动态文案
 rec('V7 哨站动态文案（当前→下一级）', rift.includes('当前 ${cur} 分钟 → 下一级 ${next} 分钟'), '');
 // ⑧ 能量合剂薪资显示
-rec('V8 hero 每秒薪资显示', html.includes('id="staff-salary"') && main.includes('staffSalaryPerSec().toFixed(2)'), '');
+// v2.8.11：hero 薪资行删除（薪资总额只显示在顶部消耗/s）
+rec('V8 薪资总额仅顶部显示（hero 行已移除）', !html.includes('id="staff-salary"') && html.includes('id="h-salary"'), '');
 
 const failed = results.filter(r => !r.ok);
 console.log(`\n===== v2.6.4 八项反馈源码断言：${results.length - failed.length}/${results.length} 通过 =====`);

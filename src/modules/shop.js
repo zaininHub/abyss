@@ -1174,7 +1174,7 @@ export function renderResearchUpgrades(container) {
     div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)}，当前 ${fmt(S.rp || 0)}）`);
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
       <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
-      <div class="cost mono">${maxed ? '✦ 已满级' : afford ? cost + ' RP' : '还差 ' + fmt(cost - (S.rp || 0)) + ' RP'}</div>`;
+      <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
     frag.appendChild(div);
   }
   container.appendChild(frag);
