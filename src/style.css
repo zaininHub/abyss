@@ -638,6 +638,10 @@ body {
 }
 
 /* ========== 模态框 ========== */
+.wiki-fab { /* v2.8.16：Wiki 右上角悬浮 */
+  position: fixed; top: 8px; right: 8px; z-index: 120;
+  font-size: 12px; padding: 4px 10px;
+}
 .modal {
   display: none;
   position: fixed;

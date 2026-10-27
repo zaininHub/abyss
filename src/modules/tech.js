@@ -1,5 +1,5 @@
 // v1.3：L1 techCostMult 接入（退潮 ×0.8）+ E 分区（已研究折叠）+ 容器级事件委托
-import { S } from '../state.js';
+import { S, save } from '../state.js'; // v2.8.16：科技购买即持久化
 import { getTechs } from '../core/provider.js';
 import { ETERNALS } from '../data/eternals.js';
 import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford } from './economy.js';
@@ -75,9 +75,12 @@ function makeTechItem(t) {
   const div = document.createElement('div');
   div.dataset.tech = t.id;
   div.className = 'tech' + (on ? ' on' : '') + ((!on && (!reqOk || !afford || cpsGate)) ? ' locked' : '');
-  if (cpsGate) div.title = '需达成里程碑：线程产出 cps ≥ 1 万 后解锁（AI 自动购买模块）';
+  // v2.8.16：锁定原因 title 合并——cps 里程碑 + 前置科技都显示（此前 cps 条件被「无前置」覆盖，导致 AI 管理核心锁定无提示）
   const techs = getTechs();
-  div.title = t.req.length ? `前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}` : '无前置';
+  const hints = [];
+  if (cpsGate) hints.push('需里程碑：cps ≥ 1 万');
+  if (t.req.length) hints.push(`前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}`);
+  div.title = hints.join('；') || '无前置';
   // v2.8.13：科技卡片结构与升级商店 .item 统一（name/desc/cost），UI 设计一致
   div.innerHTML = `<div class="name"><span>${t.name}</span></div><div class="desc">${t.desc}</div>
     <div class="cost mono">${on ? '✓' : techCostText(t)}</div>`;
@@ -108,6 +111,7 @@ export function buyTech(t, el) {
   S.es = (S.es || 0) - (cost.es || 0);
   S.tech[t.id] = true;
   pushBoughtOrder(S, t.id);
+  save(S); // v2.8.16：科技购买即持久化（此前仅靠 5s 自动存档兜底——购买后立即刷新会丢科技，「AI 管理核心」等一次性科技购买后丢失）
   // v2.0：科技序列彩蛋检查
   checkEasterEggs('tech_sequence', S);
   refreshTechState();

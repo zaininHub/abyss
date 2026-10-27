@@ -44,9 +44,9 @@ export const BALANCE = {
   // v2.1：数据中心随 RESCALE 重标定——原 base 1e6 growth 10 在终局上限（≈3.7e11）下远期失衡，
   // 重标为 base 8e4 growth 4（三档 8e4 / 3.2e5 / 1.28e6），并纳入 30% 防死锁钳制（组长硬性要求：DC 三档成本随 cap 曲线重标定）
   buildings: {
-    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 0.95（v2.8.4：只减缓，不再免疫）'] },
+    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 0.95（只减缓，不再免疫）'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
-    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护（v2.8.3：不再免疫流失；腐化满额且 EP 触顶时线程仍会被深渊吞没）'] },
+    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护（不再免疫流失；腐化满额且 EP 触顶时线程仍会被深渊吞没）'] },
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%（触手在缸中缓慢摆动）', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
   },
@@ -116,11 +116,11 @@ export const BALANCE = {
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2（满 2 级 ×2）' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3（1 级即生效）' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
-    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级；成本曲线 v2.7.4 加陡）' },
-    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000（线程强化区购买，无限升级；v2.8.2 成本大福上调）' },
+    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增（+2,000 起，逐级 ×1.12，无限升级；成本曲线随等级加陡）' },
+    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000（线程强化区购买，无限升级）' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 1200, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000（中前期扩容，无限升级；v2.8.2 成本/上限同步放宽）' },
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 1200, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000（中前期扩容，无限升级）' },
     { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000（后期扩容）' },
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
