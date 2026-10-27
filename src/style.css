@@ -638,10 +638,6 @@ body {
 }
 
 /* ========== 模态框 ========== */
-.wiki-fab { /* v2.8.16：Wiki 右上角悬浮 */
-  position: fixed; top: 8px; right: 8px; z-index: 120;
-  font-size: 12px; padding: 4px 10px;
-}
 .modal {
   display: none;
   position: fixed;
@@ -1066,11 +1062,25 @@ body {
 .pet-heart {
   position: fixed;
   pointer-events: none;
-  font-size: 22px;
-  color: #ff3b6b;
-  text-shadow: 0 0 6px rgba(255, 59, 107, .8), 0 0 12px rgba(0, 229, 255, .4);
+  width: 22px; height: 20px;
   z-index: 999;
-  animation: petHeart 1s steps(4, end) forwards;
+  animation: petHeart 0.9s steps(4, end) forwards;
+}
+/* v2.8.17 ③：宠物 idle 动画差异化——每只出战宠物不同动效（不再统一爱心/统一漂浮） */
+.pet-item { position: relative; }
+.pet-anim-a { animation: petFloatA 2.8s ease-in-out infinite; }
+.pet-anim-b { animation: petFloatB 3.4s ease-in-out infinite; }
+.pet-anim-c { animation: petFloatC 2.4s ease-in-out infinite; }
+.pet-anim-d { animation: petFloatD 4s ease-in-out infinite; }
+@keyframes petFloatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-6deg); } }
+@keyframes petFloatB { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+@keyframes petFloatC { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+@keyframes petFloatD { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
+/* 点击粒子（按宠物 spark 字符，彩色无边框） */
+.pet-spark {
+  position: fixed; pointer-events: none;
+  font-size: 16px; color: #7ee787; text-shadow: 0 0 6px rgba(126,231,135,.9);
+  z-index: 999; animation: petHeart 0.8s steps(3, end) forwards;
 }
 @keyframes petHeart {
   0% { transform: translateY(0) scale(1); opacity: 1; }

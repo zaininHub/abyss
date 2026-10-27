@@ -10,7 +10,7 @@ export const RELICS = [
   { id: 'prayer',   name: '永暗祷文', desc: '信仰产出 +15%/级',           effect: 0.15, cap: 5, base: 80,  growth: 1.8, gate: () => true },
   { id: 'compass',  name: '星渊罗盘', desc: '研究点转换效率 +10%/级',      effect: 0.10, cap: 5, base: 150, growth: 1.8, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
   { id: 'eye',      name: '虚空之眼', desc: '离线效率 +12%/级',            effect: 0.12, cap: 5, base: 120, growth: 1.8, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
-  { id: 'tentacle', name: '混沌触须', desc: 'AI 决策间隔 -10%/级（下限 50%）', effect: 0.10, cap: 5, base: 200, growth: 1.8, gate: () => !!(S.tech && S.tech.ai_core) },
+  { id: 'tentacle', name: '混沌触须', desc: 'AI 决策间隔 -10%/级', effect: 0.10, cap: 5, base: 200, growth: 1.8, gate: () => !!(S.tech && S.tech.ai_core) },
   { id: 'brand',    name: '湮灭刻印', desc: '深潜产出 +20%/级',            effect: 0.20, cap: 5, base: 300, growth: 1.8, gate: () => (S.es || 0) >= 1 },
 ];
 

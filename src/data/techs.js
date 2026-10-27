@@ -5,9 +5,9 @@ export const TECHS = [
   {id:'offline1',col:1,cost:{rp:8,ep:5e4},name:'远程协作',desc:'解锁断线信号塔与延时缓存站；自带离线效率 80% 基线',req:[],unlocks:{buildings:['beacon_1','beacon_2','delay_cache']}}, // v2.8.7：科技树多资源消耗
   // v2.5.3：req 由 ['click_up'] 改为 []（价格自成门槛，同 chaos_born 先例）——
   // 此前 RP 已解锁（≥8 RP）但未研究「点击强化」时专注优化灰置，玩家「10 RP 不能升级」困惑
-  {id:'focus_opt',col:1,cost:{rp:8,ep:8e4},name:'专注优化',desc:'解锁「专注心核」（专注成本 -25%）',req:[],unlocks:{buildings:['focus_core']}},
-  {id:'entropy_reduce',col:3,cost:{rp:75,ep:2e6},name:'熵减协议',desc:'解锁「净化节点」族（矩阵腐化对策）',req:[],unlocks:{buildings:[],purifiers:true}},
+  {id:'focus_opt',col:1,cost:{rp:8,ep:8e4},name:'专注优化',desc:'解锁「专注心核」',req:[],unlocks:{buildings:['focus_core']}},
+  {id:'entropy_reduce',col:3,cost:{rp:75,ep:2e6},name:'熵减协议',desc:'解锁「净化节点」族',req:[],unlocks:{buildings:[],purifiers:true}},
   {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:1000},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],unlocks:{buildings:[],system:'expedition2'}},
-  {id:'ai_core',col:4,cost:{rp:50,ep:1e6},name:'AI 管理核心',desc:'解锁 AI 助手（自动升级/招募/领取）',req:[],unlocks:{buildings:[],system:'ai'}},
-  {id:'chaos_shield',col:2,cost:{rp:90,ep:1.5e6},name:'混沌护盾',desc:'解锁「护盾协议」：线程流失概率减半（负面减缓）',req:[],unlocks:{system:'chaos_shield'}}, // v2.8.10：补齐第 6 把钥匙（消除科技树留空）
+  {id:'ai_core',col:4,cost:{rp:50,ep:1e6},name:'AI 管理核心',desc:'解锁 AI 助手',req:[],unlocks:{buildings:[],system:'ai'}},
+  {id:'chaos_shield',col:2,cost:{rp:90,ep:1.5e6},name:'混沌护盾',desc:'解锁「护盾协议」：线程流失概率减半',req:[],unlocks:{system:'chaos_shield'}}, // v2.8.10：补齐第 6 把钥匙
 ];

@@ -45,12 +45,11 @@ try {
     await new Promise(r => setTimeout(r, 2000));
     const t2 = await page.evaluate(() => {
       const b = document.getElementById('btn-wiki');
+      const sys = document.querySelector('.sys-btns');
       const cs = getComputedStyle(b);
-      const rect = b.getBoundingClientRect();
-      const topNav = document.querySelector('.tabs, .nav, header');
-      return { fixed: cs.position === 'fixed', top: cs.top, right: cs.right, x: rect.right, innerW: window.innerWidth, navContains: topNav ? topNav.contains(b) : false };
+      return { inSys: sys ? sys.contains(b) : false, noFixed: cs.position !== 'fixed', right: cs.right };
     });
-    rec('T2 Wiki 按钮右上角 fixed', t2.fixed && t2.right === '8px' && t2.x > t2.innerW - 30 && !t2.navContains, JSON.stringify(t2));
+    rec('T2 Wiki 按钮位于右上角按钮组（sys-btns 内、不再独立 fixed）', t2.inSys && t2.noFixed, JSON.stringify(t2)); // v2.8.17：并入右上角按钮组防挤占快照
     await page.close();
   }
 

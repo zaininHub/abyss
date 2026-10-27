@@ -532,15 +532,11 @@ function renderHero() {
     hireBtn.disabled = S.ep < staffCost();
     hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
   }
-  if (focusLv) focusLv.textContent = S.focusLevel;
+  if (focusLv) focusLv.textContent = `专注 Lv.${S.focusLevel} · 线程产出 +${(S.focusLevel * 20)}%/级`; // v2.8.17 ⑦：加成直接写在等级旁，不再靠悬浮
   if (focusCostEl) focusCostEl.textContent = fmt(focusCost());
-  // v2.8.2 反馈⑥：专注等级购买状态明确——EP 不足暗色 + 标题提示（当前/所需）
+  // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
   const focusBarEl = document.getElementById('focus-bar');
-  if (focusBarEl) {
-    const fAfford = S.ep >= focusCost();
-    focusBarEl.classList.toggle('cant', !fAfford);
-    focusBarEl.title = `专注：提升点击产出（每级 +50% 点击产出）。成本 ${fmt(focusCost())} EP（当前 ${fmt(S.ep)} EP，${fAfford ? '可购买' : 'EP 不足'}），点击此处购买`;
-  }
+  if (focusBarEl) focusBarEl.classList.toggle('cant', !(S.ep >= focusCost()));
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
   const cbar = document.getElementById('corruption-bar');
   if (cbar) {
@@ -975,11 +971,13 @@ function renderWikiContent() {
   document.getElementById('pet-float')?.addEventListener('click', (e) => {
     const item = e.target.closest('.pet-item');
     if (!item) return;
-    const icon = item.textContent.trim() || '♥';
+    const icon = item.textContent.trim() || '';
     const heart = document.createElement('div');
     heart.className = 'pet-heart';
-    // v2.7.5 ③：爱心改用 ♥ 字符（emoji 在系统缺字体时渲染为蓝色方块）
-    heart.textContent = '♥';
+    // v2.8.17 ②③：点击反馈 = 该宠物自身图标上浮（差异化，不再统一爱心）；icon 缺失时退化为内联 SVG 爱心（系统缺字体时 ♥/emoji 会渲染成蓝色方块，SVG 无字体依赖）
+    heart.innerHTML = icon
+      ? `<span style="font-size:18px;line-height:1;display:block">${icon}</span>`
+      : '<svg viewBox="0 0 32 29" width="20" height="18" style="display:block"><path d="M16 29 C5 20 0 14 0 8 C0 3 4 0 8 0 C11 0 15 3 16 6 C17 3 21 0 24 0 C28 0 32 3 32 8 C32 14 27 20 16 29 Z" fill="#ff3b6b"/></svg>';
     item.style.animation = 'none';
     void item.offsetWidth;
     item.style.animation = '';

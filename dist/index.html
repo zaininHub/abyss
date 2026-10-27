@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.16</title>
+<title>深渊效能工作台 v2.8.17</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-DMK9PmTU.js"></script>
-  <link rel="stylesheet" href="./assets/index-BcyYAvtH.css">
+  <script defer src="./assets/index-DtYxHKEA.js"></script>
+  <link rel="stylesheet" href="./assets/index-B7AiAKDl.css">
 </head>
 <body>
 <div id="app">
@@ -32,8 +32,6 @@
   <!-- 主线剧情 -->
   <div id="chapter-bar" class="ch-bar"></div>
 
-  <!-- v2.8.16：Wiki 右上角悬浮按钮 -->
-  <button class="btn wiki-fab" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
   <!-- v2.8.15：Wiki 弹框（原图例面板迁移——图例/名词 + 故事线效果 + 章节讲解，经 📖 Wiki 按钮弹出） -->
   <div class="modal" id="wiki-modal">
     <div class="modal-box" style="max-width:540px">
@@ -91,7 +89,7 @@
           <span id="staff-preview" style="font-size:11px;color:var(--text-2)"></span>
           <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
         </div>
-        <div id="focus-bar" class="focus-bar" title="专注：提升点击产出（每级 +50% 点击产出）。成本随等级按 30×1.6^n 增长，点击此处购买">
+        <div id="focus-bar" class="focus-bar">
           <span>专注等级: <b id="focus-lv">0</b></span>
           <span class="cost mono" id="focus-cost">50</span>
         </div>
@@ -329,6 +327,7 @@
   <!-- 系统按钮 -->
   <div class="sys-btns">
     <button class="btn" id="pauseBtn">暂停</button>
+    <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
     <button class="btn" id="export-btn">导出存档</button>
     <button class="btn" id="import-btn">导入存档</button>
     <input type="file" id="import-file" accept=".json,application/json" style="display:none">

@@ -33,7 +33,7 @@ rec('V5 圣战军（全局 ×1.12/级，需圣所≥5）', rel.includes('CRUSADE
 rec('V5 economy 接入圣战军全局乘区', econ.includes('S.religion.crusade > 0'), '');
 rec('V5 templeFaithPerSec 接入神谕塔', rel.includes('oracleLevel()'), '');
 // ⑥ 维修坞流失明确定义
-rec('V6 维修坞流失免疫明确定义', bal.includes('不再免疫流失'), ''); // v2.8.3：免疫移除，只减缓
+rec('V6 维修坞流失免疫明确定义', bal.includes('线程维护'), ''); // v2.8.17：括号说明已清（不再免疫流失 等研发文字移出 UI）
 // ⑦ 哨站动态文案
 rec('V7 哨站动态文案（当前→下一级）', rift.includes('当前 ${cur} 分钟 → 下一级 ${next} 分钟'), '');
 // ⑧ 能量合剂薪资显示

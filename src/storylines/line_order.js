@@ -13,8 +13,8 @@ export default {
         { id: 'auto_tech', col: 3, cost: 80, name: '自动研究', desc: 'AI 助手新增"自动科技"开关', req: ['ai_core'] },
         { id: 'zero_entropy', col: 4, cost: 120, name: '零熵协议', desc: '腐化惩罚 -25%；潮汐负面效果减半', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
         // v2.8.4：科技树扩充——秩序线长线研究
-        { id: 'axiom_shift', col: 4, cost: 160, name: '公理偏移', desc: '全局产出 ×1.1（长线研究）', req: ['zero_entropy'] },
-        { id: 'stable_protocol', col: 5, cost: 220, name: '稳定协议', desc: '深渊吞噬倒计时延长 2 分钟（腐化满额 + EP 触顶后 7 分钟才崩溃）', req: ['axiom_shift'] },
+        { id: 'axiom_shift', col: 4, cost: 160, name: '公理偏移', desc: '全局产出 ×1.1', req: ['zero_entropy'] },
+        { id: 'stable_protocol', col: 5, cost: 220, name: '稳定协议', desc: '深渊吞噬倒计时延长 2 分钟', req: ['axiom_shift'] },
       ],
     },
     chapters: {
@@ -34,7 +34,7 @@ export default {
       append: [
         { id: 'protocol_bug', name: '协议漏洞', type: 'buff', buffMult: 1.5, dur: 600, desc: '立即获得 10 分钟 ×1.5 产出，但 10 分钟后触发 2 分钟 ×0.5', weight: 1 },
         { id: 'compile_boost', name: '编译加速', type: 'buff', buffMult: 3, dur: 60, desc: 'RP 获取 ×3 持续 60 秒', weight: 1 },
-        { id: 'admin_attack', name: '管理员反击', type: 'debuff', buffMult: 0.3, dur: 30, desc: '30 秒 ×0.3 产出（不可驱散）', weight: 0.5 },
+        { id: 'admin_attack', name: '管理员反击', type: 'debuff', buffMult: 0.3, dur: 30, desc: '30 秒 ×0.3 产出', weight: 0.5 },
         { id: 'open_source', name: '开源协议', type: 'rp', amount: 15, desc: '立即获得 3 个免费重写次数', weight: 1 },
         { id: 'garbage_collect', name: '垃圾回收', type: 'purify', desc: '清除全部腐化，并获得等量 EP', weight: 1 },
         { id: 'recursive_call', name: '递归调用', type: 'ep', amount: 0, desc: '当前 CPS 的 60 秒产出，立即到账', weight: 0.3 },
@@ -42,7 +42,7 @@ export default {
     },
     buildings: {
       append: [
-        { id: 'compiler_temple', name: '编译器神殿', levels: 1, base: 1e6, growth: 1, desc: ['购买后工作台背景增加青色代码雨粒子特效（低调背景氛围，无数值效果）'] },
+        { id: 'compiler_temple', name: '编译器神殿', levels: 1, base: 1e6, growth: 1, desc: ['购买后工作台背景增加青色代码雨粒子特效'] },
         { id: 'protocol_archive', name: '协议档案馆', levels: 3, base: 5e5, growth: 5, desc: ['科技成本 -5%', '科技成本 -10%', '科技成本 -15%；解锁科技树预览'] },
       ],
     },

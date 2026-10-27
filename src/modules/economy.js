@@ -284,7 +284,7 @@ export function focusCostMult() {
 }
 
 export function clickMult() {
-  let m = 1 + S.focusLevel * 0.5;
+  let m = 1; // v2.8.17 ⑦：专注等级不再加成点击（效果迁移至线程产出）
   // v2.1 建筑驱动：指尖力场族（初/中/深/极，×1.5~×5 每级乘算）；click_up 改钥匙
   m *= fxValue('clickMul');
   m *= (1 + S.prestigePoints * 0.1);
@@ -522,6 +522,7 @@ export function staffOutputPerSec() {
   // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
   // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
   let outMult = 1;
+  outMult *= (1 + S.focusLevel * 0.2); // v2.8.17 ⑦：专注等级改为线程产出加成（每级 +20%；原点击加成移除——弱化主动点击宗旨）
   outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
   if (S.upgrades.cpu) outMult *= 1.5;
   if (S.upgrades.gpu) outMult *= 2;

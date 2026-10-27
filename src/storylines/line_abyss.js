@@ -9,15 +9,15 @@ export default {
   data: {
     techs: {
       append: [
-        { id: 'chaos_born', col: 3, cost: 60, name: '混沌之子', desc: '全局 ×3；每 300 秒随机触发一次混沌涌动（全局 ×0.5~×5 持续 30s）', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
-        { id: 'chaos_mind', col: 3, cost: 80, name: '混沌心智', desc: '永久生效不可取消：AI 全面禁用（自动购建/升级/招募全部关闭），混沌直觉接管——每 10 秒随机购入一个最便宜的未拥有升级', req: ['ai_core'] },
+        { id: 'chaos_born', col: 3, cost: 60, name: '混沌之子', desc: '全局 ×3；每 300 秒随机触发一次混沌涌动', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
+        { id: 'chaos_mind', col: 3, cost: 80, name: '混沌心智', desc: '永久生效不可取消：AI 全面禁用，混沌直觉接管——每 10 秒随机购入一个最便宜的未拥有升级', req: ['ai_core'] },
         { id: 'abyss_heart', col: 4, cost: 120, name: '深渊之心', desc: '腐化上限 150%；腐化 >100% 后每 10% 转化 +5% 全局产出', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
         // v2.5.1 反馈④：深渊行者线专属特殊升级（深渊主题强化）
-        { id: 'tentacle_protocol', col: 3, cost: 100, name: '触手协议', desc: '每 60 秒，缸中触手自动轻点一次工作台（一次点击产出）', req: [] },
-        { id: 'abyss_market', col: 4, cost: 150, name: '深渊集市', desc: 'DM 采集 +50%（叠乘）；裂隙封印奖励 ×2', req: ['tentacle_protocol'] },
+        { id: 'tentacle_protocol', col: 3, cost: 100, name: '触手协议', desc: '每 60 秒，缸中触手自动轻点一次工作台', req: [] },
+        { id: 'abyss_market', col: 4, cost: 150, name: '深渊集市', desc: 'DM 采集 +50%；裂隙封印奖励 ×2', req: ['tentacle_protocol'] },
         // v2.8.4：科技树扩充——深渊线长线研究
-        { id: 'void_sight', col: 5, cost: 170, name: '虚空视界', desc: '深潜产出 +25%（长线研究）', req: ['abyss_market'] },
-        { id: 'abyss_will', col: 5, cost: 240, name: '深渊意志', desc: '全局产出 ×1.1（长线研究）', req: ['void_sight'] },
+        { id: 'void_sight', col: 5, cost: 170, name: '虚空视界', desc: '深潜产出 +25%', req: ['abyss_market'] },
+        { id: 'abyss_will', col: 5, cost: 240, name: '深渊意志', desc: '全局产出 ×1.1', req: ['void_sight'] },
       ],
     },
     chapters: {
@@ -38,7 +38,7 @@ export default {
         { id: 'tentacle_click', name: '触须点击', type: 'buff', buffMult: 1, dur: 60, desc: '接下来 60 秒内，每 5 秒自动"点击"一次工作台', weight: 1 },
         { id: 'whisper_buff', name: '低语增益', type: 'buff', buffMult: 2, dur: 120, desc: '随机一项产出 +100% 持续 120 秒', weight: 1 },
         { id: 'deep_dream', name: '深梦', type: 'buff', buffMult: 5, dur: 10, desc: '暂停 10 秒，恢复后获得 10 秒产出 ×5', weight: 0.8 },
-        { id: 'void_gift', name: '虚空赠礼', type: 'dm', amount: 2, desc: 'DM +1~3（随机）', weight: 0.5 },
+        { id: 'void_gift', name: '虚空赠礼', type: 'dm', amount: 2, desc: 'DM +1~3', weight: 0.5 },
         { id: 'parasite', name: '寄生', type: 'buff', buffMult: 1.5, dur: 60, desc: '线程消耗 +30% 持续 60 秒，但产出 +50%', weight: 1 },
         { id: 'true_name', name: '真名', type: 'buff', buffMult: 2, dur: 1800, desc: '屏幕中央显示玩家存档 KEY 的前 4 位，5 秒后消失，获得 30 分钟 ×2 产出', weight: 0.1 },
       ],

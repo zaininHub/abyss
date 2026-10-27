@@ -111,12 +111,13 @@ export function renderPetGrid(container) {
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
       <div class="lv">Lv.${p.level}${isActive ? ' · 出战' : ''}</div>
-      <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`;
+      <div class="lv" style="color:var(--green);font-size:10px">${def ? def.desc : ''}</div>
+      <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`; // v2.8.17：已拥有卡直接显示效果（不靠悬浮）
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
   if (buyable.length > 0) {
-    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）——来源：宠物乐园 / 伊甸花园 产出；解锁：商店购入「宠物乐园」</div>`;
+    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {
       const afford = (S.pt || 0) >= p.price;
       html += `<div class="pet-card${!afford ? ' cant' : ''}" data-pet-buy="${p.id}">
@@ -165,7 +166,8 @@ export function renderPetFloat(container) {
       const def = PETS.find(x => x.id === id);
       const p = S.pets[id];
       const mile = p.level >= 100 ? '神临' : p.level >= 80 ? '异化' : p.level >= 50 ? '觉醒' : p.level >= 25 ? '成长' : '';
-      html += `<div class="pet-item" title="${p.name} Lv.${p.level}${mile ? ` · ${mile}` : ''}${p.level >= 25 ? `（里程碑×${(([[25,1.25],[50,1.5],[80,1.8],[100,2.2]].find(m => p.level >= m[0]) || [0,1])[1]).toFixed(2)}）` : ''}">${def ? def.icon : p.icon}</div>`;
+      const anim = def && def.anim ? def.anim : 'a';
+      html += `<div class="pet-item pet-anim-${anim}" data-pet-anim="${anim}" title="${p.name} Lv.${p.level}${mile ? ` · ${mile}` : ''}">${def ? def.icon : p.icon}</div>`; // v2.8.17 ③：idle 动画差异化（a/b/c/d）；去「里程碑×」研发性悬浮
     }
   }
   // v2.5.7 检查修复：相同内容不重建——否则每帧重设 innerHTML 会不断重启浮动动画

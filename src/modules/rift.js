@@ -298,14 +298,18 @@ export function renderRiftPanel(container) {
   if (!container) return;
   if (S.riftExpedition) {
     const ex = S.riftExpedition;
+    const total = BALANCE.rift.delveDurSec;
     const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
+    const pct = Math.max(0, Math.min(100, (1 - (ex.until - Date.now()) / (total * 1000)) * 100));
     container.innerHTML = `
-      <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)}（剩余时间见腐化进度条上方）</div>
+      <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)}</div>
+      <div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);margin-bottom:2px"><span>探索进度</span><span>剩余 ${left}s</span></div>
+      <div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,var(--cyan,#22d3ee),var(--accent,#a855f7));transition:width .5s"></div></div></div>
+      <button class="btn" id="abort-rift-ex" style="margin-top:6px;width:100%">紧急脱出（保留已获产出）</button>
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
       <div class="off-stat"><span>已获 VS（深潜联动）</span><b style="color:var(--cyan)">+${ex.gainedVs.toFixed(2)}</b></div>
-      <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '（≤50% 安全）'}</b></div>
-      <div style="font-size:11px;color:var(--text-3);margin:6px 0">腐化超 ${BALANCE.rift.delveFailCorrupt}% 结算时将损失 ${Math.round(BALANCE.rift.delveFailLoss * 100)}% 封印成本 EP；可提前脱出保留已获产出。</div>
-      <button class="btn" id="abort-rift-ex" style="margin-top:8px">紧急脱出（保留已获产出）</button>`;
+      <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '安全'}</b></div>
+      <div style="font-size:11px;color:var(--text-3);margin:6px 0">腐化超 ${BALANCE.rift.delveFailCorrupt}% 结算时将损失 ${Math.round(BALANCE.rift.delveFailLoss * 100)}% 封印成本 EP；可提前脱出保留已获产出。</div>`;
     container.querySelector('#abort-rift-ex')?.addEventListener('click', () => {
       abortRiftExpedition();
       renderRiftPanel(container);

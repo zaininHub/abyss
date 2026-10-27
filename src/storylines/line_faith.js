@@ -13,8 +13,8 @@ export default {
         { id: 'prophecy', col: 3, cost: 80, name: '预言系统', desc: 'AI 变成"神谕广播"：每 30 秒预告下一个随机事件名称', req: ['ai_core'] },
         { id: 'miracle_body', col: 4, cost: 120, name: '神迹之躯', desc: '腐化被信仰中和：每 1 点 faith 抵消 1% 腐化惩罚；腐化积累速度 -50%', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
         // v2.8.4：科技树扩充——信仰线长线研究
-        { id: 'divine_light', col: 5, cost: 170, name: '神启之光', desc: '信仰产出 +25%（长线研究）', req: ['miracle_body'] },
-        { id: 'sacred_tech', col: 5, cost: 240, name: '圣物科技', desc: '全局产出 ×1.1（长线研究）', req: ['divine_light'] },
+        { id: 'divine_light', col: 5, cost: 170, name: '神启之光', desc: '信仰产出 +25%', req: ['miracle_body'] },
+        { id: 'sacred_tech', col: 5, cost: 240, name: '圣物科技', desc: '全局产出 ×1.1', req: ['divine_light'] },
       ],
     },
     chapters: {
@@ -34,15 +34,15 @@ export default {
       append: [
         { id: 'pilgrimage', name: '朝圣', type: 'ep', amount: 0, desc: '立即获得 faith × 100 EP', weight: 1 },
         { id: 'crusade', name: '圣战', type: 'buff', buffMult: 2, dur: 30, desc: '30 秒 ×2 产出，但线程消耗 +50%', weight: 1 },
-        { id: 'revelation', name: '启示', type: 'tech', desc: '立即解锁下一个未解锁的公共科技（免费）', weight: 0.5 },
-        { id: 'blessing', name: '祝福', type: 'buff', buffMult: 1.2, dur: 300, desc: '所有线程 mood 锁定为"虔诚"（产出 ×1.2，不随机变化）持续 300 秒', weight: 1 },
+        { id: 'revelation', name: '启示', type: 'tech', desc: '立即解锁下一个未解锁的公共科技', weight: 0.5 },
+        { id: 'blessing', name: '祝福', type: 'buff', buffMult: 1.2, dur: 300, desc: '所有线程 mood 锁定为"虔诚"持续 300 秒', weight: 1 },
         { id: 'martyr', name: '殉道', type: 'ep', amount: 0, desc: '失去 1 个线程，但获得该线程累计产出 ×10 的 EP', weight: 0.8 },
         { id: 'second_coming', name: '再临', type: 'buff', buffMult: 5, dur: 60, desc: '全局 ×5 持续 60 秒', weight: 0.1 },
       ],
     },
     buildings: {
       append: [
-        { id: 'wishing_pool', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['无数值效果；点击可"投币"（消耗 1 EP，播放投币动画，显示随机愿望文本）'] },
+        { id: 'wishing_pool', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['无数值效果；点击可"投币"'] },
         { id: 'gospel_hall', name: '福音大厅', levels: 3, base: 3e5, growth: 6, desc: ['事件频率 +10%', '事件频率 +20%', '事件频率 +30%；正面事件持续时间 +30%'] },
       ],
     },
