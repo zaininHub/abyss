@@ -401,7 +401,10 @@ export function lazyCostMult() {
 
 export function wageLoseChance() {
   // v2.8.3：移除维修坞免疫——线程出逃不再被永久豁免（维修坞仅保留描述性定位）
-  return BALANCE.thread.wages.loseChancePerMin;
+  // v2.8.10：混沌护盾科技——流失概率减半（负面减缓，不免疫）
+  const base = BALANCE.thread.wages.loseChancePerMin;
+  if (S.tech && S.tech.chaos_shield) return base * 0.5;
+  return base;
 }
 // 数据中心：每 10 线程全局产出加成（独立乘数，1/2/3 级 +5%/10%/15%）
 export function datacenterMult() {

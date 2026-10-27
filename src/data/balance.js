@@ -19,8 +19,8 @@ export const BALANCE = {
       keepCostMult: 0.3,    // 休眠期保命成本 = 薪资 ×0.3
       loseAfterSec: 1800,   // 休眠持续 30 分钟 → 流失预警
       loseChancePerMin: 0.1,// 流失预警期每 60s 10% 概率流失 1 线程
-      recoverSec: 180,      // 恢复线：EP ≥ 3min 薪资
-      bufferSec: 60,        // 休眠恢复缓冲 60s → 满薪
+      recoverSec: 60,       // v2.8.10：恢复线降为 1min 薪资（原 3min 缓冲过长，EP 回升后迟迟不流转）
+      bufferSec: 15,        // v2.8.10：休眠恢复缓冲 15s → 满薪（原 60s 过长）
       transitionSec: 5,     // v2.8.7：普通状态转换过渡（欠薪→恢复等需 5s 维持，不瞬间切换）
       restBonusMult: 1.5,   // 休眠/流失 ≥60s 恢复后补偿——产出 ×1.5 持续 120s
       restBonusSec: 120,

@@ -9,4 +9,5 @@ export const TECHS = [
   {id:'entropy_reduce',col:3,cost:{rp:75,ep:2e6},name:'熵减协议',desc:'解锁「净化节点」族（矩阵腐化对策）',req:[],unlocks:{buildings:[],purifiers:true}},
   {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:1000},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],unlocks:{buildings:[],system:'expedition2'}},
   {id:'ai_core',col:4,cost:{rp:50,ep:1e6},name:'AI 管理核心',desc:'解锁 AI 助手（自动升级/招募/领取）',req:[],unlocks:{buildings:[],system:'ai'}},
+  {id:'chaos_shield',col:2,cost:{rp:90,ep:1.5e6},name:'混沌护盾',desc:'解锁「护盾协议」：线程流失概率减半（负面减缓）',req:[],unlocks:{system:'chaos_shield'}}, // v2.8.10：补齐第 6 把钥匙（消除科技树留空）
 ];

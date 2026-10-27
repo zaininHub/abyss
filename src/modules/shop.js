@@ -570,9 +570,15 @@ export function renderOfflineUpgrades(container) {
     offSection.box.appendChild(div);
   }
   offSection.updateCount(owned.length);
-  const renderAvail = (o, reqOk) => `<div class="off-upg" data-buy="${o.id}" style="${reqOk ? 'cursor:pointer' : 'opacity:.5;cursor:not-allowed'}">
-    <span>${o.name}<br><span style="color:var(--text-3)">${o.desc}${!reqOk ? '（需先解锁前置）' : ''}</span></span>
+  const renderAvail = (o, reqOk) => {
+    const resOk = (S.rp || 0) >= o.cost && (S.ep || 0) >= (o.epCost || 0);
+    const can = reqOk && resOk;
+    const hint = !reqOk ? '（需先解锁前置）' : (!resOk ? '（RP/EP 不足）' : '');
+    // v2.8.10：可升级高亮（accent 边框）、不可升级灰显
+    return `<div class="off-upg" data-buy="${o.id}" style="${can ? 'cursor:pointer;border-color:var(--accent,#4a9eff)' : 'opacity:.5;cursor:not-allowed'}">
+    <span>${o.name}<br><span style="color:var(--text-3)">${o.desc}${hint}</span></span>
     <span class="cost">${o.cost} RP + ${fmt(o.epCost || 0)} EP</span></div>`;
+  };
   for (const o of avail) container.insertAdjacentHTML('beforeend', renderAvail(o, true));
   for (const o of locked) container.insertAdjacentHTML('beforeend', renderAvail(o, false));
   // v1.3 修复：离线升级此前没有任何购买监听（不可购买的死 UI），补容器级委托
@@ -911,7 +917,7 @@ export function renderV21Buildings(container) {
   const split = chainSplit('v21', chainList, b => v21UnlockedMark(b), S);
   const groups = [
     ...Object.entries(V21_GROUP_NAMES).map(([letter, title]) =>
-      ({ title: `${letter} · ${title}`, test: b => (b.cat || '') === letter })),
+      ({ title, test: b => (b.cat || '') === letter })), // v2.8.10：组标题去「字母 · 」前缀
     { title: '其他', test: () => true }, // 兜底组：未命中 cat 谓词的条目归入，条目永不丢
   ];
   renderChainedGroups(container, split, groups, makeV21Item, (b, el) => v21ItemEls.set(b.id, el));

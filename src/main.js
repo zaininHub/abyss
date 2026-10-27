@@ -511,17 +511,16 @@ function renderHero() {
       `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
       `恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）`;
   }
-  if (staffCostEl) staffCostEl.textContent = staffSalaryPerSec().toFixed(2) + '/s';
-  const staffOutEl = document.getElementById('staff-out');
-  if (staffOutEl) staffOutEl.textContent = staffOutputPerSec().toFixed(2) + '/s';
-  // v2.8.9：招募预览——下一线程新增产出/消耗（即使 EP 不足也展示，明确购买收益与门槛）
+  // v2.8.10：招募行只展示「下一线程」增量（总产出/消耗移出 hero——顶栏已有，避免重复显示）
   const staffPrevEl = document.getElementById('staff-preview');
   if (staffPrevEl) {
     const n = S.cultists.length;
     const base = BALANCE.thread.baseOutput, jit = BALANCE.thread.baseOutputJitter;
     const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
+    const curOut = staffOutputPerSec();
+    const avgOut = n > 0 ? curOut / n : (base + jit / 2); // 实际单线程产出（mood/加成一致口径）
     const nextSalary = Math.min(0.5 * Math.pow(BALANCE.thread.salaryBase, n), perCap);
-    staffPrevEl.textContent = `下一线程：产出 +${(base + jit / 2).toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
+    staffPrevEl.textContent = `下一线程：产出 +${avgOut.toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
     staffPrevEl.style.color = S.ep < staffCost() ? 'var(--warn,#c8a24a)' : 'var(--text-2)';
   }
   if (hireBtn) {
@@ -729,7 +728,7 @@ function renderRpPanel() {
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${(Math.floor((S.ep || 0) * 0.25) < rpDistillRate()) ? 'disabled' : ''} title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button> // v2.8.10：EP 不足以蒸馏 1 RP 时灰显
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
   </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
@@ -790,6 +789,17 @@ function updateTabLocks() {
 function bindEvents() {
   document.getElementById('hero')?.addEventListener('click', doClick);
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
+  // v2.8.10：线程状态点击弹出四态说明（欠薪/休眠状态悬停提示对点击无响应，改为点击弹窗）
+  document.getElementById('staff-status')?.addEventListener('click', () => {
+    const W = BALANCE.thread.wages;
+    askConfirm('线程状态说明', `线程薪资四态（当前：${(S.wageState || {}).state || 'ok'}）\n` +
+      `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
+      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ×${wageDebtMult()}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
+      `· 强制休眠（橙）：产出 ×0，保命成本 = 薪资 ×${wageKeepCostMult()}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
+      `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程\n` +
+      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}\n` +
+      `恢复：EP ≥ ${W.recoverSec}s 薪资后经 ${W.transitionSec}s 过渡 / ${W.bufferSec}s 缓冲回到满薪（恢复后休眠 ≥60s 触发补偿 ×1.5）`, () => {});
+  });
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   document.getElementById('focus-bar')?.addEventListener('click', buyFocus);
 

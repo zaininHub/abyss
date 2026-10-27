@@ -43,7 +43,7 @@ rimraf(TMP_DIST);
 // v2.3.1 打包洁癖（组长指示 7699323508513393966）：过程脚本不进完整包——
 // probe/patch 类脚本已从仓库删除；前轮遗留的一次性诊断脚本从包内排除（仓库保留）。
 fs.mkdirSync(TMP_FULL, { recursive: true });
-const PKG_EXCLUDE_TESTS = ['v23-diag-bug.mjs', 'v23-diag-check2.mjs', 'v23-diag-v288.mjs', 'v23-diag-v289.mjs'];
+const PKG_EXCLUDE_TESTS = ['v23-diag-bug.mjs', 'v23-diag-check2.mjs', 'v23-diag-v288.mjs', 'v23-diag-v289.mjs', 'v23-diag-v2810.mjs'];
 for (const sub of ['src', 'tests', 'dist']) {
   copyRecursive(path.join(ROOT, sub), path.join(TMP_FULL, sub));
 }
@@ -62,8 +62,8 @@ fs.copyFileSync(path.join(ROOT, '交付说明.md'), path.join(TMP_DIST, '交付�
 fs.copyFileSync(path.join(ROOT, 'README.md'), path.join(TMP_DIST, 'README.md'));
 
 // zip
-const fullZip = path.join(OUT, 'abyss_idle_v2.8.9_full.zip');
-const distZip = path.join(OUT, 'abyss_idle_v2.8.9_dist.zip');
+const fullZip = path.join(OUT, 'abyss_idle_v2.8.10_full.zip');
+const distZip = path.join(OUT, 'abyss_idle_v2.8.10_dist.zip');
 if (fs.existsSync(fullZip)) fs.unlinkSync(fullZip);
 if (fs.existsSync(distZip)) fs.unlinkSync(distZip);
 

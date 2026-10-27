@@ -374,10 +374,10 @@ t('C4：休眠恢复经 30s 缓冲回到满薪（数值）', () => {
   S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 400, bufferSec: 0, loseTimer: 0 };
   tickWages(0.1);
   assert.equal(S.wageState.state, 'debt', 'EP≥60s薪资 应先回到欠薪（缓冲）');
-  assert.ok(Math.abs(S.wageState.bufferSec - 60) < 0.1, `缓冲应为 60s（v2.8.1），实际 ${S.wageState.bufferSec}`);
-  tickWages(59);
+  assert.ok(Math.abs(S.wageState.bufferSec - 15) < 0.1, `缓冲应为 15s（v2.8.10，原 60s 过长），实际 ${S.wageState.bufferSec}`);
+  tickWages(5);
   assert.equal(S.wageState.state, 'debt', '缓冲期内不应直接满薪');
-  tickWages(2);
+  tickWages(12);
   assert.equal(S.wageState.state, 'ok', '缓冲结束应回到满薪');
 });
 t('C-UI：四态徽章 + 倒计时 + tooltip 全覆盖（源码断言）', () => {
