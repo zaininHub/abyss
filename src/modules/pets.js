@@ -175,3 +175,13 @@ export function renderPetFloat(container) {
   _floatHtml = html;
   container.innerHTML = html;
 }
+
+// v2.8.26：宠物商店 PT 可购判断每秒刷新（此前渲染时一次性——PT 花掉后卡仍亮）
+export function refreshPetsAffordability() {
+  const cards = document.querySelectorAll('#pet-grid [data-pet-buy]');
+  for (const card of cards) {
+    const p = PETS.find(x => x.id === card.dataset.petBuy);
+    if (!p) continue;
+    card.classList.toggle('cant', (S.pt || 0) < p.price);
+  }
+}

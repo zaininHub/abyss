@@ -209,7 +209,7 @@ export function renderRpFamily(container) {
   if (!container) return;
   rpFamilyContainer = container;
   const RP_IDS = RP_FAMILY_SRC_IDS;
-  const rpItems = (BALANCE.thread.upgrades || []).filter(u => RP_IDS.includes(u.id))
+  const rpItems = (BALANCE.buildingsV21 || []).filter(u => RP_IDS.includes(u.id)) // v2.8.26：数据源修复——thread.upgrades 不存在（实为裂隙配置），cat F 建筑在 buildingsV21；v2.8.7 声称修复但一直渲染为空
     .slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   const split = chainSplit('rp', rpItems, u => (S.upgrades[u.id] || 0) > 0, S);
   const list = split.visible;
@@ -223,7 +223,7 @@ export function renderRpFamily(container) {
   }
   container.appendChild(frag);
   bindDelegate(container, (id, el) => {
-    const u = (BALANCE.thread.upgrades || []).find(x => x.id === id);
+    const u = (BALANCE.buildingsV21 || []).find(x => x.id === id);
     if (!u || !rpFamilyItemEls.has(id)) return;
     const wasOwned = (S.upgrades[u.id] || 0) > 0;
     const cost = rpFamilyCost(u);
@@ -821,6 +821,15 @@ export function refreshShopAffordability() {
     if (cur >= cfg.tiers.length) continue;
     const next = cfg.tiers[cur];
     el.classList.toggle('cant', S.rp < next.rp || Object.keys(S.milesDone || {}).length < next.milestone);
+  }
+  // v2.8.26：研究点「RP 加成」组灰态每秒刷新（此前仅渲染时判断——同 tab 内买研究升级后 RP 减少，RP 加成卡仍亮）
+  for (const [id, el] of rpFamilyItemEls) {
+    const u = (BALANCE.buildingsV21 || []).find(x => x.id === id);
+    if (!u) continue;
+    const cost = rpFamilyCost(u);
+    el.classList.toggle('cant', S.rp < cost);
+    const c = el.querySelector('.cost');
+    if (c) c.textContent = `${fmt(cost)} RP`;
   }
   // v1.3 D：采集页头期望值随载具数变化（1s 节奏足够）
   updateVehicleCollectHeader();

@@ -29,9 +29,9 @@ import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
-import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点
+import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
-import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds } from './modules/pets.js';
+import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderReincarn } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
@@ -1732,6 +1732,8 @@ function tick(now) {
     }
     refreshTechState();
     refreshShopAffordability(); // v2.1 R4：每秒快刷灰态（不重建 DOM）
+    refreshRelicAffordability(); // v2.8.26：遗物/净化 DM 可购每秒刷新
+    refreshPetsAffordability(); // v2.8.26：宠物 PT 可购每秒刷新
     // v1.3 A：AI 核心研究完成后面板出现（也覆盖晋升保留 ai_core 的场景）
     const aiNow = aiUnlocked();
     if (aiNow !== lastAiUnlocked) { lastAiUnlocked = aiNow; dirty.ai = true; }
@@ -1867,22 +1869,26 @@ function ensureCodeRain() {
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
   const CHARS = '01<>/\{}[]=+*#%&';
-  const COLS = Math.floor(canvas.width / 22);
-  const drops = new Array(COLS).fill(0).map(() => Math.random() * -60);
-  const FONT = 18; // v2.8.25 ③：16→18px——用户真实环境仍看不到，继续提升（0.85 透明度 / 12FPS / 加粗）
+  const COLS = Math.floor(canvas.width / 16); // v2.8.26：列距 22→16（更密——1440 宽 90 列，肉眼无法忽略）
+  const drops = new Array(COLS).fill(0).map(() => Math.random() * -80);
+  const FONT = 20; // v2.8.26：18→20px 不透明亮青（0.85→1.0）——此前交付截图用户肉眼仍不可见，改高对比矩阵雨
   // v2.8.25 ③：resize 重设画布尺寸（此前窗口变化后粒子留白/偏移）
   window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
   _codeRainTimer = setInterval(() => {
     if (!_codeRainStarted) return;
-    ctx.fillStyle = 'rgba(10,8,16,0.045)';
+    ctx.fillStyle = 'rgba(8,6,14,0.03)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold ' + FONT + 'px monospace';
     for (let i = 0; i < COLS; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-      ctx.fillStyle = 'rgba(90, 230, 210, 0.85)';
-      ctx.fillText(ch, i * 22, drops[i] * FONT);
-      drops[i] += 0.38;
-      if (drops[i] * FONT > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      const y = drops[i] * FONT;
+      ctx.fillStyle = 'rgba(102, 255, 224, 1)'; // 不透明亮青（列头部白光 + 身青）
+      ctx.fillText(ch, i * 16, y);
+      // 列首字符白光（经典矩阵雨高亮）
+      ctx.fillStyle = 'rgba(230, 255, 250, 1)';
+      ctx.fillText(ch, i * 16, y - FONT);
+      drops[i] += 0.42;
+      if (y > canvas.height && Math.random() > 0.972) drops[i] = 0;
     }
-  }, 85);
+  }, 60);
 }

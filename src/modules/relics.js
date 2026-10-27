@@ -105,3 +105,32 @@ export function renderRelics(container) {
   html += '</div>';
   container.innerHTML = html;
 }
+
+// v2.8.26：遗物/净化节点 DM 可购判断每秒刷新（此前渲染时一次性——DM 花掉后卡仍亮可点）
+export function refreshRelicAffordability() {
+  const cards = document.querySelectorAll('#relics-panel [data-relic], #relics-panel [data-purifier]');
+  for (const card of cards) {
+    const id = card.dataset.relic || card.dataset.purifier;
+    if (!id) continue;
+    let canBuy = false;
+    if (card.dataset.purifier) {
+      const def = PURIFIER_DEFS.find(x => x[0] === id);
+      if (!def) continue;
+      const lv = (S.upgrades && S.upgrades[id]) || 0;
+      const cost = Math.ceil(def[1] * Math.pow(1.8, lv));
+      const maxed = lv >= 3;
+      canBuy = !maxed && (S.dm || 0) >= cost;
+    } else {
+      const r = RELICS.find(x => x.id === id);
+      if (!r) continue;
+      const lv = relicLevel(id);
+      const gateOk = r.gate();
+      const maxed = lv >= r.cap;
+      const cost = relicCost(id);
+      canBuy = gateOk && !maxed && (S.dm || 0) >= cost;
+    }
+    card.classList.toggle('relic-gated', !canBuy);
+    const btn = card.querySelector('[data-purifier-buy], [data-relic-buy]');
+    if (btn) { btn.classList.toggle('disabled', !canBuy); btn.disabled = !canBuy; }
+  }
+}
