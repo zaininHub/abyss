@@ -773,20 +773,17 @@ export function refreshShopAffordability() {
     // v2.6.5 ③：防抖——灰态不变则跳过 class 写入（消除 hover 抖动）
     const cant = S.ep < cost;
     if (el.classList.contains('cant') !== cant) el.classList.toggle('cant', cant);
-    // 扩容项钳制价随上限动态变化：每秒同步显示价，保证显示价=实扣价恒成立
-    if (CAP_EXPANSION_IDS.includes(id)) {
-      const c = el.querySelector('.cost');
-      if (c && c.textContent !== fmt(cost)) c.textContent = fmt(cost);
-    }
+    const c = el.querySelector('.cost');
+    if (c && c.textContent !== fmt(cost)) c.textContent = fmt(cost); // v2.8.25：thread 成本显示同步（含钳制动态价）
   }
+  // v2.8.25 ④：探采平台（遗物 tab）灰态/成本同步——此前仅购后单卡刷新，EP 变化（其他购买/收入）不刷新 → 图二「EP 不够还显示可购买」
   for (const [id, el] of vehicleItemEls) {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) continue;
-    const owned = S.upgrades[u.id] || 0;
-    const cost = Math.ceil(u.base * Math.pow(u.growth || 1.15, owned) * costMult());
-    // v2.6.5 ③：防抖
-    const vcant = S.ep < cost;
-    if (el.classList.contains('cant') !== vcant) el.classList.toggle('cant', vcant);
+    const cost = Math.ceil(u.base * Math.pow(1.30, S.upgrades[u.id] || 0) * costMult()); // 同 buyVehicle 口径
+    el.classList.toggle('cant', S.ep < cost);
+    const c = el.querySelector('.cost');
+    if (c) c.textContent = fmt(cost);
   }
   for (const [id, el] of dmItemEls) {
     const u = UPGRADES.find(x => x.id === id);

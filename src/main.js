@@ -1867,21 +1867,22 @@ function ensureCodeRain() {
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
   const CHARS = '01<>/\{}[]=+*#%&';
-  const COLS = Math.floor(canvas.width / 24);
+  const COLS = Math.floor(canvas.width / 22);
   const drops = new Array(COLS).fill(0).map(() => Math.random() * -60);
-  const FONT = 16; // v2.8.24 ②：12→16px（此前字符太小太淡，肉眼几乎不可见——多轮「没效果」实为可见度不足）
-  // 约 10 FPS 青色代码雨（setInterval 保证任何环境下都绘制）；0.7 透明度 + 0.05 背景残留拖尾清晰但保持低调
+  const FONT = 18; // v2.8.25 ③：16→18px——用户真实环境仍看不到，继续提升（0.85 透明度 / 12FPS / 加粗）
+  // v2.8.25 ③：resize 重设画布尺寸（此前窗口变化后粒子留白/偏移）
+  window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
   _codeRainTimer = setInterval(() => {
     if (!_codeRainStarted) return;
-    ctx.fillStyle = 'rgba(10,8,16,0.05)';
+    ctx.fillStyle = 'rgba(10,8,16,0.045)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold ' + FONT + 'px monospace';
     for (let i = 0; i < COLS; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-      ctx.fillStyle = 'rgba(80, 220, 200, 0.7)';
-      ctx.fillText(ch, i * 24, drops[i] * FONT);
-      drops[i] += 0.35;
+      ctx.fillStyle = 'rgba(90, 230, 210, 0.85)';
+      ctx.fillText(ch, i * 22, drops[i] * FONT);
+      drops[i] += 0.38;
       if (drops[i] * FONT > canvas.height && Math.random() > 0.975) drops[i] = 0;
     }
-  }, 100);
+  }, 85);
 }

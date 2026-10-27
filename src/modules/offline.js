@@ -1,5 +1,5 @@
 import { S } from '../state.js';
-import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp } from './economy.js';
+import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp, researchMult } from './economy.js';
 
 export function applyOffline() {
   const now = Date.now();
@@ -9,7 +9,7 @@ export function applyOffline() {
   const cps = computeCps();
   let gain = 0;
   if (cps > 0) {
-    const raw = cps * eff * offlineRate();
+    const raw = cps * eff * offlineRate() * researchMult('offline'); // v2.8.25 ②：离线协议（研究点）离线效率 +12%/级
     // v2.1 拍板口径：离线收益受 EP 存储上限约束（防止离线一夜直接爆仓），
     // 统一走 addEp 入口，实发与预览同口径
     gain = addEp(raw);

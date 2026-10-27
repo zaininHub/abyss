@@ -55,6 +55,9 @@ export function templeFaithPerSec() {
   if (olv > 0) r *= Math.pow(1 + ORACLE.effect, olv);
   // v2.7.0 遗物：永暗祷文——信仰产出 +15%/级（DM 超长线消费）
   r *= relicMult('prayer');
+  // v2.8.25 ②：圣颂研究（研究点）——信仰产出 +10%/级（内联读取，避免 religions→economy 循环依赖）
+  const flv = (S.rpTheories && S.rpTheories.rp_faith) || 0;
+  if (flv > 0) r *= (1 + 0.10 * flv);
   return r;
 }
 

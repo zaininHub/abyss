@@ -455,6 +455,7 @@ export function vehicleDmPerMin() {
   // v2.5.1：深渊鱼缸（DM 采集 +20%/级，深渊行者线专属建筑）+ 深渊集市（×1.5，叠乘）
   let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
   if (hasAbyssMarket()) m *= 1.5;
+  m *= researchMult('dm'); // v2.8.25 ②：星尘精炼（研究点）载具 DM 采集 +8%/级
   return sum * m;
 }
 // 单次采集到账（确定性按速率计算，60s 节拍由 vehicles.tickVehicleCollect 承担；小数累加进 S.dm）
@@ -502,6 +503,7 @@ export function staffSalaryPerSec() {
   if (S.upgrades.cache) m *= Math.max(0.65, 0.75 * Math.pow(0.97, (S.upgrades.cache || 0) - 1));
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
+  m *= researchMult('wage'); // v2.8.25 ②：薪酬协商（研究点）线程消耗 -4%/级
   const base = BALANCE.thread.salaryBase;
   const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
   let total = 0;
@@ -691,6 +693,7 @@ export function epStorageCap() {
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
   cap += (S.upgrades['reserve_bin'] || 0) * 8000; // v2.8.2：3000→8000
   cap += (S.upgrades['deep_bin'] || 0) * 5e5;
+  cap *= researchMult('storage'); // v2.8.25 ②：存储协议（研究点）EP 上限 +8%/级
   // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）
   const storageLv = S.upgrades['storage'] || 0;
   for (let i = 1; i <= storageLv; i++) cap += B.storage.capPer * Math.pow(B.storage.capGrowth, i - 1);
