@@ -400,11 +400,13 @@ export function lazyCostMult() {
 }
 
 export function wageLoseChance() {
-  // v2.8.3：移除维修坞免疫——线程出逃不再被永久豁免（维修坞仅保留描述性定位）
-  // v2.8.10：混沌护盾科技——流失概率减半（负面减缓，不免疫）
+  // v2.8.19：维修坞实装「线程维护」——流失概率 -50%（负面减缓，不免疫；此前仅描述性定位，用户反馈效果未实装）
+  // v2.8.10：混沌护盾科技——流失概率再减半（负面减缓，不免疫）
   const base = BALANCE.thread.wages.loseChancePerMin;
-  if (S.tech && S.tech.chaos_shield) return base * 0.5;
-  return base;
+  let m = 1;
+  if (S.upgrades && S.upgrades.dock >= 1) m *= 0.5;
+  if (S.tech && S.tech.chaos_shield) m *= 0.5;
+  return base * m;
 }
 // 数据中心：每 10 线程全局产出加成（独立乘数，1/2/3 级 +5%/10%/15%）
 export function datacenterMult() {
@@ -581,7 +583,7 @@ export function focusCost() {
 
 // ========== 晋升需求 ==========
 export function prestigeNeed() {
-  return Math.floor(3e7 * Math.pow(S.prestige + 1, 3.2)); // v2.8.3：首升需求 1e7→3e7（1-3 天节奏）
+  return Math.floor(1.5e8 * Math.pow(S.prestige + 1, 3.2)); // v2.8.19：首升需求 3e7→1.5e8（经济模拟：纯基础 8h 累计 7.4M，有乘数叠加约 5×；150M 使 1-3 天转生，半天不可达）
 }
 
 export function prestigeGain() {

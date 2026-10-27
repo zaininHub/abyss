@@ -898,6 +898,14 @@ function renderWikiContent() {
   if (wikiBtn && wikiModal) {
     wikiBtn.addEventListener('click', () => { renderWikiContent(); wikiModal.style.display = 'flex'; });
     document.getElementById('wiki-x')?.addEventListener('click', () => { wikiModal.style.display = 'none'; });
+    // v2.8.19：天赋弹框 × 关闭（绑定常驻，不依赖打开流程）
+    document.getElementById('talent-x')?.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const tm = document.getElementById('talent-modal');
+      if (!tm) return;
+      S._prestigeSkips = (S._prestigeSkips || 0) + 1;
+      tm.style.display = 'none';
+    });
     wikiModal.addEventListener('click', (ev) => { if (ev.target === wikiModal) wikiModal.style.display = 'none'; });
   }
   document.getElementById('rift-tab-panel')?.addEventListener('click', (e) => { // v2.6.1：裂隙余烬升级树
@@ -1861,7 +1869,7 @@ function ensureCodeRain() {
     ctx.font = FONT + 'px monospace';
     for (let i = 0; i < cols; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-      ctx.fillStyle = 'rgba(80, 220, 200, 0.10)'; // 青色，极淡
+      ctx.fillStyle = 'rgba(80, 220, 200, 0.22)'; // v2.8.19：可见度上调（老 BUG：0.10 极淡几乎看不见）
       ctx.fillText(ch, i * 18, drops[i] * FONT);
       drops[i] += 0.25; // 慢速下落
       if (drops[i] * FONT > canvas.height && Math.random() > 0.975) drops[i] = 0;

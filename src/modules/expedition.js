@@ -8,8 +8,8 @@ export const GALAXIES = [
   { id: 'mars',     name: '火星前哨',   dur: 120,   cpsReq: 100,  reward: { type: 'ep', mult: 30 },  desc: '稳定收益' },
   { id: 'jupiter',  name: '木星轨道',   dur: 600,   cpsReq: 1e3,  reward: { type: 'rp', amount: 5 }, desc: 'RP 奖励' },
   { id: 'centauri', name: '半人马座',   dur: 3600,  cpsReq: 1e5,  reward: { type: 'rp', amount: 20 }, desc: '大量 RP' },
-  { id: 'edge',     name: '银河边缘',   dur: 14400, cpsReq: 1e6,  reward: { type: 'es', amount: 1 }, desc: '永恒碎片' },
-  { id: 'andromeda', name: '仙女座',    dur: 28800, cpsReq: 1e8,  reward: { type: 'es', amount: 5 }, desc: '丰厚 ES' },
+  { id: 'edge',     name: '银河边缘',   dur: 14400, cpsReq: 1e6,  reward: { type: 'es', amount: 2 }, desc: '永恒碎片' }, // v2.8.19：后期设施奖励上调（原 1 ES/4h 过低）
+  { id: 'andromeda', name: '仙女座',    dur: 28800, cpsReq: 1e8,  reward: { type: 'es', amount: 10 }, desc: '丰厚 ES' }, // v2.8.19：5→10（ES 仍长线克制）
 ];
 
 export function maxExpeditions() { return hasTech('deep_space') ? 2 : 1; }

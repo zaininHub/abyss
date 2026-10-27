@@ -857,7 +857,7 @@ body.paused .pet-grid .pet-card {
 /* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
 #ai-card { padding: 8px 10px; }
 #code-rain {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  position: fixed; inset: 0; z-index: 36; pointer-events: none; /* v2.8.19：z-index 提到内容层之上（半透明飘过，pointer-events 不挡交互）——此前 z-index 0 且极淡，实际看不见 */
 }
 .ai-card h3 { margin-bottom: 6px; font-size: 12.5px; }
 .ai-desc {
@@ -937,6 +937,8 @@ body.paused .pet-grid .pet-card {
 .tentacle-deco .tentacle { transform-origin: 50% 100%; /* v2.5.9 像素克苏鲁检查：平滑摆动 → 四帧痉挛式抽摆 */ animation: tentacle-sway 5s steps(6, end) infinite; /* v2.6.2：四帧 → 六帧更细腻抽摆 */ }
 .tentacle-deco .tentacle-b { animation-duration: 7s; animation-delay: 0.6s; }
 .tentacle-deco .tentacle-c { animation-duration: 9s; animation-delay: 1.2s; }
+.tentacle-deco .tentacle-b { opacity: 0; }
+.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: 0.85; }
 .tentacle-deco .tentacle-c { opacity: 0; }
 .tentacle-deco.tentacle-3 .tentacle-c { opacity: 0.8; }
 /* v2.7.1：hover 交互动画——触手受惊蠕动（覆盖常驻抽摆），逐根错峰 */
