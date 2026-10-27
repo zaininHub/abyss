@@ -830,8 +830,8 @@ t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
 });
 
-t('5.2：cache 新价格 base=5e7（v2.8.7 成本大幅提高）', () => {
-  assert.equal(caU().base, 5e7);
+t('5.2：cache 新价格 base=1e11（v2.8.23 线程强化门槛重排）', () => {
+  assert.equal(caU().base, 1e11);
 });
 
 t('5.4：三故事线变体上限加成（abyss ×1.15 / order ×1.10 / faith 无）', () => {

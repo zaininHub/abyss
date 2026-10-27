@@ -338,8 +338,9 @@ export function renderThreadShop(container) {
   container.innerHTML = '';
   threadItemEls.clear();
   const threadMods = UPGRADES.filter(u => THREAD_IDS.includes(u.id));
-  // v2.3.1 缺陷⑦修复：链序改定义序（原成本升序在成本上浮后漂移，同 renderShop 口径）
-  const sorted = threadMods;
+  // v2.8.23 ①：线程强化链序按解锁门槛（base 升序）——原定义序（subsist1→subsist2→subsist3→cpu…）与门槛错位：
+  // CPU（门槛 6e6）排在消耗三项之后，用户「该解锁的没解锁、不该同时解锁的一串弹」；base 为静态值（不随购买上浮），按 base 排序稳定
+  const sorted = threadMods.slice().sort((a, b) => a.base - b.base);
   // v2.3 渐进披露链：同升级商店口径（定义序即链序）
   const split = chainSplit('thread', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
   // v2.3.1 ⑤（rev18 9.3 分组表）：消耗优化在前（链首能量合剂在此组）、产出强化在后
@@ -473,7 +474,7 @@ export function renderVehicles(container) {
       updateVehicleItem(u); updateVehicleCollectHeader();
       if (!wasOwned) dirty.shop = true;
     }
-    else shopToast(`EP 不足：${u.name} 需要 ${fmt(Math.ceil(u.base * Math.pow(1.15, S.upgrades[u.id] || 0) * costMult()))} EP`);
+    else shopToast(`EP 不足：${u.name} 需要 ${fmt(Math.ceil(u.base * Math.pow(1.30, S.upgrades[u.id] || 0) * costMult()))} EP`); // v2.8.23：与 buyVehicle 1.30 口径一致
   });
   updateVehicleCollectHeader();
 }

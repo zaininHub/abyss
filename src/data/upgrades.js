@@ -60,13 +60,14 @@ export const UPGRADES = [
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:1e14,cps:0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
-  {id:'subsist1',name:'能量合剂',base:1e7,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.7：成本 ×10
-  {id:'subsist2',name:'循环供氧',base:1e8,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v2.8.2：×10
-  {id:'subsist3',name:'生物打印餐',base:1e10,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v2.8.2：×10
-  {id:'cpu',name:'CPU 超频',base:1e6,cps:0,cat:'thread',desc:'所有线程产出 +50%'}, // v2.8.7：成本 ×100
-  {id:'mem',name:'内存扩容',base:5e7,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.7：成本 ×50
-  {id:'gpu',name:'GPU 加速',base:5e7,cps:0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.7：成本 ×50
-  {id:'cache',name:'缓存优化',base:5e7,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%，EP 存储上限 +8000/级'}, // v2.8.7：成本 ×50 + 文案去版本号
+  // v2.8.23 ①：base 阶梯重排（门槛 base×0.3 拉开 5~10× 间隔——此前 cpu/mem/gpu/cache 门槛 3e5~1.5e7 挤在同一段，EP 一到同时解锁一串；价格整体上调，杜绝「几万 EP 买 +50% 无限叠」）
+  {id:'subsist1',name:'能量合剂',base:1e8,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.23：门槛 3e7
+  {id:'subsist2',name:'循环供氧',base:1e10,cps:0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v2.8.23：门槛 3e9
+  {id:'subsist3',name:'生物打印餐',base:5e11,cps:0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v2.8.23：门槛 1.5e11
+  {id:'cpu',name:'CPU 超频',base:2e7,cps:0,cat:'thread',desc:'所有线程产出 +50%'}, // v2.8.23：门槛 6e6
+  {id:'mem',name:'内存扩容',base:5e8,cps:0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.23：门槛 1.5e8
+  {id:'gpu',name:'GPU 加速',base:2e9,cps:0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.23：门槛 6e8
+  {id:'cache',name:'缓存优化',base:1e11,cps:0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%，EP 存储上限 +8000/级'}, // v2.8.23：门槛 3e10
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
   {id:'reserve_bin',name:'备用粮仓',base:1200,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +8,000'},
   {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000'},
