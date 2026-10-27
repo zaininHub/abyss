@@ -226,7 +226,7 @@ export const BALANCE = {
     // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
     delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
     delveEpPerSec: 3.0,         // v2.8.14：深入探索期间消耗 EP（/秒/级，1 级 60s ≈ 180 EP）——EP 耗尽则停止获取奖励并失败
-    delveCorruptPerLevel: 1.0,      // 每秒腐化累积 %/级
+    delveCorruptPerLevel: 0.83,     // v2.8.21 ⑥：每秒腐化累积 %/级——60s 深入自然累积 ≈50%（不手动净化最多到 50% 附近，手动净化可压）
     delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
     delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）
     delveBonusDm: 3,                // 完成额外 DM ×级
@@ -303,9 +303,9 @@ export const BALANCE = {
     penaltyFloor: 0.7,         // 惩罚下限 30%
     max: 100,
     purifiers: [
-      { id: 'purifier1', name: '净化节点 I', base: 5e4, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
-      { id: 'purifier2', name: '净化节点 II', base: 5e6, rate: 2, desc: '每秒清除 2% 腐化' },
-      { id: 'purifier3', name: '净化节点 III', base: 5e8, rate: 5, desc: '每秒清除 5% 腐化' },
+      { id: 'purifier1', name: '净化节点 I', base: 50, dmCost: true, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
+      { id: 'purifier2', name: '净化节点 II', base: 500, dmCost: true, rate: 2, desc: '每秒清除 2% 腐化' },
+      { id: 'purifier3', name: '净化节点 III', base: 5000, dmCost: true, rate: 5, desc: '每秒清除 5% 腐化' },
     ],
   },
 };

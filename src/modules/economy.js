@@ -77,6 +77,18 @@ export function corruptionPenalty() {
   return Math.max(BALANCE.corruption.penaltyFloor, 1 - c * per);
 }
 
+// v2.8.21 ④：模块解锁「发展跃迁」——首次解锁大模块（科技/建筑/宗教/深潜/星际等）触发短暂全局产出爆发
+export function triggerBurst(logFn, toastFn) {
+  if (Date.now() < (S.burstUntil || 0)) return false; // 已有爆发进行中不叠加
+  if ((S.burstCount || 0) >= 3) return false; // 每轮至多 3 次（克制）
+  S.burstCount = (S.burstCount || 0) + 1;
+  S.burstUntil = Date.now() + 60000;
+  S.burstMult = 1.5;
+  if (logFn) logFn('发展跃迁：全局产出 ×1.5（60 秒快速期，模块解锁馈赠）', 'good');
+  if (toastFn) toastFn('⚡ 发展跃迁：全局产出 ×1.5（60s）');
+  return true;
+}
+
 export function purifierCleanRate() {
   let total = 0;
   for (const p of BALANCE.corruption.purifiers) {
@@ -95,11 +107,7 @@ export function purifierCleanRate() {
 export function tickCorruption(dt) {
   const cap = epStorageCap();
   const overflow = Math.max(0, S.ep - cap);
-  if (overflow > 0) {
-    // EP 溢出按比例累积腐化：rate 0.1/s × (溢出/容量) × dt，换算为百分比
-    const add = BALANCE.corruption.accumulateRate * (overflow / cap) * dt;
-    S.corruption = Math.min(BALANCE.corruption.max, (S.corruption || 0) + add * 100);
-  }
+  // v2.8.21 ⑥：EP 达到上限后不再产生腐化（溢出只记入溢出池 5% 转 RP；腐化仅来自深入裂隙与负面政策）
   // v2.8.20 ①：深入裂隙期间净化豁免——净化不可盖过深入腐化速率（否则腐化被清到 0、深入进度条消失且「净化>腐化」失衡）
   const clean = (S.riftExpedition ? 0 : purifierCleanRate()) * dt;
   if (clean > 0) S.corruption = Math.max(0, (S.corruption || 0) - clean);
@@ -214,6 +222,7 @@ export function globalMult() {
   m *= policyMult('collab'); // v2.8.6 B2a：协作网络——协作加成 ×1.2
   m *= fxValue('globalMul');
   if (S.runTalent === 'sharp') m *= 1.5;
+  if (S.burstUntil && Date.now() < S.burstUntil) m *= S.burstMult || 1.5; // v2.8.21 ④：模块解锁「发展跃迁」短暂爆发（×1.5 ×60s，每轮至多 3 次）
   m *= (1 + elv('eff') * 0.05);
   m *= petMult('global');
   m *= bondMult();

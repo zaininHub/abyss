@@ -330,7 +330,8 @@ export function renderAiPanel(container) {
       const swEl = e.target.closest('[data-ai-switch]');
       if (swEl) {
         const key = swEl.dataset.aiSwitch;
-        if (key in S.ai) { S.ai[key] = !S.ai[key]; save(S); renderAiPanel(container); }
+        S.ai[key] = !S.ai[key]; // v2.8.21 ③：不再要求 key 预存在 S.ai（旧档无 autoTech 字段 → 点击无效）；固定开关集合安全
+        save(S); renderAiPanel(container);
         return;
       }
       const rEl = e.target.closest('[data-ai-reserve]');

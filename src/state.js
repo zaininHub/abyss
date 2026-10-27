@@ -75,7 +75,8 @@ export function defaultState() {
     vehCollectTimer: 0,
     // v1.3 模块 A：AI 助手（解锁后生效；默认全关，预留线默认 30%）
     ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: BALANCE.ai.defaultReserve, timer: 0,
-        autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0 },
+        autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0,
+        autoTech: false }, // v2.8.21 ③：自动研究开关默认字段（此前缺失 → `key in S.ai` 判定失败 → 开关点击无效「无法打开」）
     // v1.3 模块 E：一次性条目购入顺序（已升级区按此倒序展示）
     boughtOrder: [],
     // v2.0 故事线

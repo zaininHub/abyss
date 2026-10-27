@@ -364,9 +364,18 @@ function renderTop() {
   }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
-  // v2.8.20 ③：来源不再常驻显示，全部放悬浮 title（产出/消耗数值上方悬浮查看来源）
-  if (hCps) hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`;
-  if (hSalary) { hSalary.textContent = fmt(totalDrainPerSec()) + '/s'; hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`; }
+  // v2.8.21 ⑦：来源悬浮气泡（CSS ::after hover；同时保留原生 title 兜底）
+  if (hCps) {
+    hCps.title = `每秒 EP 产出来源（按类目合并）：${cpsBreakdown().join(' · ') || '无'}（另含全局乘区修正）`;
+    const st = hCps.closest('.stat');
+    if (st) st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}`;
+  }
+  if (hSalary) {
+    hSalary.textContent = fmt(totalDrainPerSec()) + '/s';
+    hSalary.title = `每秒 EP 消耗来源：${drainBreakdown().join(' · ') || '无'}`;
+    const st2 = hSalary.closest('.stat');
+    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}`;
+  }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
   if (hRp) hRp.textContent = fmt(S.rp);
@@ -559,7 +568,7 @@ function renderHero() {
   if (hint) {
     if (S.ep >= cap * 0.95) {
       hint.style.display = '';
-      hint.textContent = `EP 已近上限 (${fmt(cap)})，溢出将产生腐化`;
+      hint.textContent = `EP 已达上限 (${fmt(cap)})，溢出转入 RP 溢出池（5% 转化）`; // v2.8.21 ⑥：EP 上限后不再产生腐化
       hint.style.color = 'var(--bad)';
     } else if (S.ep >= cap * 0.8) {
       hint.style.display = '';
@@ -1832,15 +1841,16 @@ if (document.readyState === 'loading') {
 }
 
 
-// ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（低调背景特效） ==========
-let _codeRainStarted = false, _codeRainRaf = null;
+// ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（背景特效） ==========
+// v2.8.21 ①：setInterval 替代 RAF（headless/低功耗环境 RAF 可能暂停 → 粒子不绘制）；字符可见度 0.22→0.45
+let _codeRainStarted = false, _codeRainTimer = null;
 function ensureCodeRain() {
   const canvas = document.getElementById('code-rain');
   if (!canvas) return;
   const owned = (S.upgrades && S.upgrades.compiler_temple) >= 1;
   if (!owned) {
     canvas.style.display = 'none';
-    if (_codeRainRaf) { cancelAnimationFrame(_codeRainRaf); _codeRainRaf = null; }
+    if (_codeRainTimer) { clearInterval(_codeRainTimer); _codeRainTimer = null; }
     _codeRainStarted = false;
     return;
   }
@@ -1854,23 +1864,18 @@ function ensureCodeRain() {
   const cols = Math.floor(canvas.width / 18);
   const drops = new Array(cols).fill(0).map(() => Math.random() * -60);
   const FONT = 12;
-  let last = 0;
-  function frame(ts) {
+  // 约 8 FPS 慢速字符雨（setInterval 保证任何环境下都绘制）
+  _codeRainTimer = setInterval(() => {
     if (!_codeRainStarted) return;
-    // 低调：约 8 FPS 的慢速字符雨，透明度极低
-    if (ts - last < 125) { _codeRainRaf = requestAnimationFrame(frame); return; }
-    last = ts;
-    ctx.fillStyle = 'rgba(10,8,16,0.06)';
+    ctx.fillStyle = 'rgba(10,8,16,0.08)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.font = FONT + 'px monospace';
     for (let i = 0; i < cols; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-      ctx.fillStyle = 'rgba(80, 220, 200, 0.22)'; // v2.8.19：可见度上调（老 BUG：0.10 极淡几乎看不见）
+      ctx.fillStyle = 'rgba(80, 220, 200, 0.45)';
       ctx.fillText(ch, i * 18, drops[i] * FONT);
-      drops[i] += 0.25; // 慢速下落
+      drops[i] += 0.3;
       if (drops[i] * FONT > canvas.height && Math.random() > 0.975) drops[i] = 0;
     }
-    _codeRainRaf = requestAnimationFrame(frame);
-  }
-  _codeRainRaf = requestAnimationFrame(frame);
+  }, 125);
 }

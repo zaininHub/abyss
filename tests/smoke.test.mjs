@@ -265,14 +265,12 @@ t('R4：每秒调用 refreshShopAffordability 快刷灰态（源码断言）', (
 });
 
 console.log('[7] v2.1.1 修复断言（P1-B 溢出产腐化 / P1-A 裂隙卡片残留）');
-t('P1-B：触顶挂机产出 → 溢出按比例转腐化（数值）', () => {
+t('P1-B：触顶挂机产出 → 溢出不再产腐化（v2.8.21 ⑥ 口径），EP 截断到上限', () => {
   S.upgrades = {}; S.milesDone = {}; S.cultists = [];
   S.ep = 2100; S.corruption = 0;
   tickCorruption(1);
-  assert.ok(S.corruption > 0, `腐化应 >0，实际 ${S.corruption}`);
+  assert.equal(S.corruption, 0, `腐化不应随溢出增长，实际 ${S.corruption}`);
   assert.equal(S.ep, 2000, '溢出 EP 截断到上限');
-  // 期望值：0.1/s × (100/2000) × 1s × 100 = 0.5%
-  assert.ok(Math.abs(S.corruption - 0.5) < 1e-9, `期望 0.5%，实际 ${S.corruption}`);
   S.ep = 50; S.corruption = 0;
 });
 t('P1-B：一次性入口仍截断不产腐化（addEp 口径不变）', () => {

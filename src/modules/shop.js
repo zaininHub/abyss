@@ -42,8 +42,14 @@ export function buyUpgrade(u) {
   if (owned >= maxLv) return false;
   const n = 1; // v2.3.1 ⑥：倍率移除，固定单件购买
   const cost = bulkCostCalc(u, n);
-  if (S.ep < cost) return false;
-  S.ep -= cost;
+  // v2.8.21 ⑥：净化节点等 DM 消耗升级（不耗 EP）
+  if (u.dmCost) {
+    if ((S.dm || 0) < cost) return false;
+    S.dm -= cost;
+  } else {
+    if (S.ep < cost) return false;
+    S.ep -= cost;
+  }
   S.upgrades[u.id] = owned + n;
   S.totalBuys += n;
   S.lazySince = null; // v2.7.1：任意升级/购买解除线程懒惰
@@ -271,12 +277,12 @@ function makeShopItem(u) {
     return div;
   }
   const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：固定 ×1
-  const afford = S.ep >= cost;
+  const afford = u.dmCost ? (S.dm || 0) >= cost : S.ep >= cost; // v2.8.21 ⑥：DM 消耗升级
   div.className = 'item' + (!afford ? ' cant' : '');
   const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || '');
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
     <div class="desc">${cpsStr}</div>
-    <div class="cost mono">${fmt(cost)}</div>`;
+    <div class="cost mono">${fmt(cost)}${u.dmCost ? ' DM' : ''}</div>`;
   return div;
 }
 
@@ -317,7 +323,8 @@ function updateShopItem(u) {
   const cnt = el.querySelector('.count');
   if (cnt) cnt.textContent = levelCountHtml(u);
   const c = el.querySelector('.cost');
-  if (c) c.textContent = fmt(cost);
+  if (c) c.textContent = fmt(cost) + (u.dmCost ? ' DM' : ''); // v2.8.21 ⑥
+  el.classList.toggle('cant', u.dmCost ? (S.dm || 0) < cost : S.ep < cost);
   const d = el.querySelector('.desc');
   if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : (u.desc || '')}`;
   el.classList.toggle('cant', S.ep < cost);

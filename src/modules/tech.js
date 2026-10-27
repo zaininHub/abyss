@@ -6,7 +6,8 @@ import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford } from './econom
 import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned, boughtOrderIndex } from './listkit.js';
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
-import { dirty } from '../main.js'; // v2.3：首次购入推进链前缀 → 窗口刷新
+import { dirty, log } from '../main.js'; // v2.3：首次购入推进链前缀 → 窗口刷新
+import { triggerBurst } from './economy.js'; // v2.8.21 ④：模块解锁发展跃迁
 
 let techContainer = null;
 let eternalContainer = null;
@@ -109,6 +110,7 @@ export function buyTech(t, el) {
   S.es = (S.es || 0) - (cost.es || 0);
   S.tech[t.id] = true;
   pushBoughtOrder(S, t.id);
+  triggerBurst(log); // v2.8.21 ④：首次解锁科技 → 发展跃迁（×1.5 ×60s，每轮至多 3 次）
   save(S); // v2.8.16：科技购买即持久化（此前仅靠 5s 自动存档兜底——购买后立即刷新会丢科技，「AI 管理核心」等一次性科技购买后丢失）
   // v2.0：科技序列彩蛋检查
   checkEasterEggs('tech_sequence', S);

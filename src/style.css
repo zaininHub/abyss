@@ -51,6 +51,14 @@ body {
   gap: 4px;
   align-items: center;
   font-size: 12px;
+  position: relative; /* v2.8.21 ⑦：来源悬浮气泡锚点 */
+}
+.stat[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; top: 100%; left: 0; z-index: 999;
+  background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; font-size: 11px; color: var(--text-2); white-space: nowrap;
+  pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
 
 .stat b { color: var(--accent); }
@@ -321,6 +329,7 @@ body {
   gap: 6px;
 }
 
+.tech-grid .owned-header, .tech-grid .owned-box { grid-column: 1 / -1; } /* v2.8.21 ⑤：已研究折叠占整行（模块底部）——此前 auto-placement 放右侧，展开后横向拉长 */
 .tech-grid .tech {
   background: #1c2128;
   border: 1px solid var(--border);
@@ -659,6 +668,7 @@ body {
 .modal-x:hover { color: var(--red,#f85149); background: rgba(255,255,255,.06); }
 
 .modal-box {
+  position: relative; /* v2.8.21 ②：modal-x（absolute）需相对 modal-box 定位——此前缺 relative，× 按钮错位不可见 */
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -857,7 +867,7 @@ body.paused .pet-grid .pet-card {
 /* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
 #ai-card { padding: 8px 10px; }
 #code-rain {
-  position: fixed; inset: 0; z-index: 36; pointer-events: none; /* v2.8.19：z-index 提到内容层之上（半透明飘过，pointer-events 不挡交互）——此前 z-index 0 且极淡，实际看不见 */
+  position: fixed; inset: 0; z-index: 999; pointer-events: none; /* v2.8.21 ①：z-index 提到最顶层（此前 z36 仍低于内容 z100/200 被盖住 → 用户多轮看不到粒子）*/
 }
 .ai-card h3 { margin-bottom: 6px; font-size: 12.5px; }
 .ai-desc {

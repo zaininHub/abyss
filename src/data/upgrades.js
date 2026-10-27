@@ -83,7 +83,7 @@ export const UPGRADES = [
   {id:'dmprotocol',name:'载具协议',base:0,cps:0,dmCost:B.vehicles.protocolDmCost,desc:'所有载具产出 +50%',cat:'dm'},
   // v2.0 净化节点（矩阵腐化对策，EP 购买、可叠加，速率由 balance.js 配置）
   ...B.corruption.purifiers.map(p => ({
-    id: p.id, name: p.name, base: p.base, cps: 0, cat: 'purifier', desc: p.desc,
+    id: p.id, name: p.name, base: p.base, cps: 0, cat: 'purifier', maxLevel: 3, dmCost: p.dmCost || false, desc: p.desc, // v2.8.21 ⑥：净化节点限购 3 级、DM 消耗（不耗 EP）
   })),
 ];
 
