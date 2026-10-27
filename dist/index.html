@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.14</title>
+<title>深渊效能工作台 v2.8.15</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-z2hJB3rA.js"></script>
+  <script defer src="./assets/index-I-0_CDoe.js"></script>
   <link rel="stylesheet" href="./assets/index-vZGZZVcf.css">
 </head>
 <body>
@@ -32,10 +32,11 @@
   <!-- 主线剧情 -->
   <div id="chapter-bar" class="ch-bar"></div>
 
-  <!-- v2.1 P1：图例面板（默认折叠；覆盖潮汐/腐化/心情/职级/五种货币） -->
-  <details id="legend-panel" class="legend-panel">
-    <summary>📖 图例 / 名词说明（点击展开）</summary>
-    <div class="legend-body">
+  <!-- v2.8.15：Wiki 弹框（原图例面板迁移——图例/名词 + 故事线效果 + 章节讲解，经 📖 Wiki 按钮弹出） -->
+  <div class="modal" id="wiki-modal">
+    <div class="modal-box" style="max-width:540px">
+      <button class="modal-x" id="wiki-x" title="关闭">×</button>
+      <div class="legend-body">
       <div class="legend-sec"><b>五种货币</b>
         <span>⚡ <b>EP</b> 能量点：主资源，有存储上限（购买存储节点/缓存优化、达成里程碑扩容）</span>
         <span>🔬 <b>RP</b> 研究点：科技树货币（任务/里程碑/灵感工坊）</span>
@@ -66,8 +67,11 @@
       <div class="legend-sec"><b>职级 / 晋升</b>
         <span>本局累计达标可晋升：重置升级但获得职级点数（每点全局 +10%）与永恒碎片，并可三选一天赋</span>
       </div>
+      <div class="legend-sec"><b>故事线选择区别</b><span id="wiki-storylines"></span></div>
+      <div class="legend-sec"><b>主线章节讲解</b><span id="wiki-chapters"></span></div>
     </div>
-  </details>
+    </div>
+  </div>
 
   <!-- 主网格 -->
   <div class="grid">
@@ -144,6 +148,7 @@
         <button class="btn" id="btn-achievement">成就</button>
         <button class="btn" id="btn-offline">离线</button>
         <button class="btn" id="btn-expedition">星图</button>
+        <button class="btn" id="btn-wiki">📖 Wiki</button>
         <button class="btn" id="btn-storyline">故事线</button>
         <button class="btn" id="btn-religion" style="display:none">宗教</button>
         <button class="btn" id="btn-policy" style="display:none">政策</button>

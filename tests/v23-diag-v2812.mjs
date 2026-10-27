@@ -51,7 +51,7 @@ try {
       return h ? h.textContent : null;
     });
     // 摩托 0.05 DM/min × 1000 = 50 EP/min → -0.8 ep/s
-    rec('T2a 探采页头显示 -ep/s 消耗', t2a && t2a.includes('采集 -') && t2a.includes('ep/s') && t2a.includes('+0.05/min'), t2a);
+    rec('T2a 探采页头显示 -EP/s + DM/s 消耗', t2a && t2a.includes('探采 -') && t2a.includes('EP/s → +') && t2a.includes('DM/s'), t2a); // v2.8.15：单位统一 EP/s + DM/s
     // 净流不足暂停：无线程产出（cps=0）+ 探采消耗 0.83/s → net < 0 → 不采集
     await page.evaluate(() => { localStorage.setItem('abyss_idle_v2', JSON.stringify(Object.assign(JSON.parse(localStorage.getItem('abyss_idle_v2')), { ep: 5e5, cultists: [], vehCollectTimer: 59 }))); });
     await page.reload({ waitUntil: 'load' });

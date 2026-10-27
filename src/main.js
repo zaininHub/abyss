@@ -42,6 +42,7 @@ import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, buyRiftUpgrade } from './modules/rift.js';
 import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
 import { UPGRADES } from './data/upgrades.js';
+import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
 import { PETS } from './data/pets.js';
 import { MOOD_MULT } from './data/threads.js';
 import { BALANCE } from './data/balance.js';
@@ -863,6 +864,41 @@ function bindEvents() {
   document.getElementById('btn-delve')?.addEventListener('click', () => switchTab('delve'));
   bindDelvePanel(document.getElementById('delve-panel')); // v2.6.0：深潜面板事件委托
   document.getElementById('btn-rift-tab')?.addEventListener('click', () => switchTab('rift-tab'));
+  // v2.8.15：Wiki 弹框内容——故事线选择区别 + 主线章节解锁状态
+function renderWikiContent() {
+  const sl = document.getElementById('wiki-storylines');
+  if (sl && !sl._done) {
+    const LINES = [
+      ['默认线', '标准矩阵发展：不立誓不锁线，可一路推进主线 21 章到终章。'],
+      ['秩序重构者', '以绝对理性重写矩阵规则（立誓「秩序之柱」）。新编译器路线：全局 ×3 起点、AI 自动科技/自动购买、负面效果仅减缓（零熵协议不再免疫）、乘区稳定可预期。'],
+      ['深渊行者', '深入深渊，封印裂隙，收集深渊物质（立誓「深渊之锚」）。混沌路线：混沌之子随机乘区、混沌心智接管 AI、裂隙余烬/DM 采集强化、触手协议自动点击——危险但回报丰厚。'],
+      ['信仰传播者', '传播信仰，培养异兽，建造神殿（立誓「信仰圣所」）。精神路线：神权协议全局 ×3 且信仰 ×2、信仰长线升级、异兽/神殿联动。'],
+    ];
+    sl._done = true;
+    sl.innerHTML = LINES.map(([n, d]) => `<div style="margin:2px 0 6px"><b style="color:var(--accent)">${n}</b>：<span style="color:var(--text-2)">${d}</span></div>`).join('');
+  }
+  const ch = document.getElementById('wiki-chapters');
+  if (ch && !ch._done) {
+    ch._done = true;
+    const seen = (S.chaptersUnlocked && S.chaptersUnlocked[S.storyline]) || [];
+    ch.innerHTML = CHAPTERS.map((c) => {
+      let ok = false;
+      try { ok = !!c.cond(S); } catch (e) { /* 忽略 */ }
+      const idx = parseInt(c.id, 10) || 0;
+      if (seen.includes(idx)) ok = true;
+      return `<div style="margin:2px 0"><span style="color:${ok ? 'var(--green)' : 'var(--text-3)'}">${ok ? '✓' : '🔒'} ${c.name}</span>${ok ? `<span style="color:var(--text-2);font-size:10.5px">：${c.desc}</span>` : ''}</div>`;
+    }).join('');
+  }
+}
+
+// v2.8.15：Wiki 弹框——图例/名词 + 故事线效果 + 主线章节讲解
+  const wikiBtn = document.getElementById('btn-wiki');
+  const wikiModal = document.getElementById('wiki-modal');
+  if (wikiBtn && wikiModal) {
+    wikiBtn.addEventListener('click', () => { renderWikiContent(); wikiModal.style.display = 'flex'; });
+    document.getElementById('wiki-x')?.addEventListener('click', () => { wikiModal.style.display = 'none'; });
+    wikiModal.addEventListener('click', (ev) => { if (ev.target === wikiModal) wikiModal.style.display = 'none'; });
+  }
   document.getElementById('rift-tab-panel')?.addEventListener('click', (e) => { // v2.6.1：裂隙余烬升级树
     const upEl = e.target.closest('[data-rift-upg]');
     if (!upEl) return;

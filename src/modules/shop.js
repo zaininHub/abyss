@@ -9,7 +9,7 @@ import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleD
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
-import { dirty } from '../main.js'; // v2.0 修复：buyDmUpgrade 后置 dirty.shop 重渲染
+import { dirty, log } from '../main.js'; // v2.0 修复：buyDmUpgrade 后置 dirty.shop 重渲染；v2.8.15：命运选择写日志
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
@@ -392,7 +392,7 @@ function updateVehicleCollectHeader() {
   const rate = vehicleDmPerMin();
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
-    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 采集 +${Math.round(rate * 100) / 100} DM/min（消耗 ${Number(epPerSec.toFixed(1))} ep/s）`; // v2.8.13：文案明确「采集产出 + 消耗」，去除歧义箭头
+    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
     el.title = '探采消耗 EP 换取深渊物质（每 1 DM 消耗 1000 EP，EP 净产出一薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
   } else {
     el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
@@ -458,6 +458,12 @@ function makeVehicleLockedCard(u) {
   return div;
 }
 
+// v2.8.15：DM/s 格式化——极小数保留足够精度（0.0008 而非 0）
+function fmtDmPerSec(v) {
+  if (v <= 0) return '0';
+  if (v < 0.01) return v.toFixed(4).replace(/\.?0+$/, '');
+  return Number(v.toFixed(3)).toString();
+}
 function makeVehicleItem(u) {
   const owned = S.upgrades[u.id] || 0;
   const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
@@ -475,7 +481,7 @@ function makeVehicleItem(u) {
   const dmRate = dmIdx >= 0 ? BALANCE.vehicles.dmRates[dmIdx] : 0;
   const probeEp = dmRate > 0 ? (dmRate * BALANCE.vehicles.epPerDm / 60) : 0;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}${probeEp > 0 ? ` · 探采 -${Number(probeEp.toFixed(1))} ep/s → +${dmRate}/min` : ''}</div>
+    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}${probeEp > 0 ? ` · 探采 -${Number(probeEp.toFixed(1))} EP/s → +${fmtDmPerSec(dmRate / 60)} DM/s` : ''}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -993,6 +999,7 @@ export function buyCrossroadBuilding(id) {
     let msg = `已立誓：${pkg?.name || b.name}——本轮锁定该命运线，转生后岔路口将重新开放，可再次选择`;
     if (ch5) msg += `\n【${ch5.name}】${ch5.desc}`;
     shopToast(msg);
+    log(msg.split('\n')[0], 'good'); // v2.8.15：命运选择内容同步写入系统日志（弹窗内容）
     dirty.shop = true; dirty.tech = true; dirty.story = true;
     return true;
   }

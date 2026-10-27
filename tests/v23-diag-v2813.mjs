@@ -108,7 +108,7 @@ try {
       const all = [...document.querySelectorAll('[data-buy]')].find(e => e.textContent.includes('外勤摩托队'));
       return { card: all ? all.textContent.replace(/\s+/g, ' ') : '' };
     });
-    rec('T4 载具升级卡标注探采 -ep/s 消耗', t4.card.includes('探采 -0.8 ep/s'), t4.card);
+    rec('T4 载具升级卡标注探采 -EP/s 消耗', t4.card.includes('探采 -0.8 EP/s → +0.0008 DM/s'), t4.card); // v2.8.15：单位 EP/s + DM/s
     await page.close();
   }
 
@@ -136,7 +136,7 @@ try {
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 2200));
     const t6 = await page.evaluate(() => { const h = document.getElementById('vehicle-collect'); return h ? h.textContent : ''; });
-    rec('T6 探采页头文案明确（采集 +X DM/min（消耗 Y ep/s））', t6.includes('DM/min（消耗') && t6.includes('当前 DM:'), t6);
+    rec('T6 探采页头文案明确（探采 -X EP/s → +Y DM/s）', t6.includes('探采 -0.8 EP/s → +0.0008 DM/s') && t6.includes('当前 DM:'), t6); // v2.8.15：单位统一
     await page.close();
   }
   console.log(`\n[v23-diag-v2813] ${pass}/${pass + fail} 项通过`);
