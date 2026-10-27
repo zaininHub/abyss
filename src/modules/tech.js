@@ -52,6 +52,9 @@ export function renderTech(container) {
     techEls.set(t.id, div);
     container.appendChild(div);
   }
+  // v2.8.20 ⑦：已研究折叠区移到类目下方（可购项之后；buildOwnedSection 默认挂顶部，这里重挂到底部）
+  container.appendChild(techSection.header);
+  container.appendChild(techSection.box);
   bindTechDelegate(container);
 }
 
@@ -110,6 +113,7 @@ export function buyTech(t, el) {
   // v2.0：科技序列彩蛋检查
   checkEasterEggs('tech_sequence', S);
   refreshTechState();
+  if (t.id === 'auto_tech') dirty.ai = true; // v2.8.20 ⑥：购买「自动研究」后 AI 面板即时重渲染（此前需刷新页面才出现开关）
   // v1.3 E：一次性项购后 1s 移入「已研究」折叠区
   const target = el || techEls.get(t.id);
   if (target && techSection) {

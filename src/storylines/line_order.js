@@ -43,7 +43,7 @@ export default {
     buildings: {
       append: [
         { id: 'compiler_temple', name: '编译器神殿', levels: 1, base: 1e6, growth: 1, desc: ['购买后工作台背景增加青色代码雨粒子特效'] },
-        { id: 'protocol_archive', name: '协议档案馆', levels: 3, base: 5e5, growth: 5, desc: ['科技成本 -5%', '科技成本 -10%', '科技成本 -15%；解锁科技树预览'] },
+        { id: 'protocol_archive', name: '协议档案馆', levels: 3, base: 5e5, growth: 5, desc: ['科技成本 -5%', '科技成本 -10%', '科技成本 -15%'] }, // v2.8.20 ⑩：移除未实现的「解锁科技树预览」承诺（科技树已渐进解锁展示，预览非必须）
       ],
     },
     pets: {

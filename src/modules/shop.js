@@ -157,6 +157,8 @@ export function renderShop(container) {
     const wasOwned = (S.upgrades[u.id] || 0) > 0; // v2.3：首次购入改变已购前缀 p → 链窗口/链提示结构性刷新
     if (buyUpgrade(u)) {
       updateShopItem(u); // v1.3 E：购后原地更新（×N / 成本 / 灰态），不重建列表
+      // v2.8.20 ⑨：购买后立即刷新全部主商店卡（成本资源变化 → 灰显即时同步）
+      for (const [sid, sel] of shopItemEls) { const su = UPGRADES.find(x => x.id === sid); if (su && sel) updateShopItem(su); }
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {

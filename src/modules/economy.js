@@ -100,7 +100,8 @@ export function tickCorruption(dt) {
     const add = BALANCE.corruption.accumulateRate * (overflow / cap) * dt;
     S.corruption = Math.min(BALANCE.corruption.max, (S.corruption || 0) + add * 100);
   }
-  const clean = purifierCleanRate() * dt;
+  // v2.8.20 ①：深入裂隙期间净化豁免——净化不可盖过深入腐化速率（否则腐化被清到 0、深入进度条消失且「净化>腐化」失衡）
+  const clean = (S.riftExpedition ? 0 : purifierCleanRate()) * dt;
   if (clean > 0) S.corruption = Math.max(0, (S.corruption || 0) - clean);
   if (overflow > 0) {
     // v2.2 缺陷B修复：超 cap 存量 EP 不再直接丢弃，走与 addEp 相同的溢出池口径

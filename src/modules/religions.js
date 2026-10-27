@@ -34,16 +34,13 @@ export function religionWakeCost() {
 
 export function unlockReligion() {
   if (religionUnlocked()) return { ok: false, reason: '已解锁' };
-  if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级且 RP 已觉醒' }; // v2.8.19：去除 EP 库存限制
-  const cost = religionWakeCost();
-  if (S.ep < cost) return { ok: false, reason: `唤醒信仰需消耗 ${cost.toLocaleString()} EP（当前 EP 不足）` };
-  S.ep -= cost;
+  if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级且 RP 已觉醒' }; // v2.8.20 ④：唤醒不再消耗 EP（完全去除 EP 条件）
   S.religion = S.religion || {};
   S.religion.unlocked = true;
   if (S.resDiscovered) S.resDiscovered.faith = true;
   save(S);
-  rlog('信仰觉醒：消耗 ' + cost.toLocaleString() + ' EP 唤醒信仰……宗教系统解锁', 'good');
-  if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁（消耗 ' + cost.toLocaleString() + ' EP）');
+  rlog('信仰觉醒：宗教系统解锁（存储节点 ≥3 级 + RP 已觉醒，无需 EP）', 'good'); // v2.8.20 ④：唤醒不再消耗 EP
+  if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁');
   return { ok: true };
 }
 
@@ -181,16 +178,15 @@ export function renderReligionPanel(container) {
   if (!container) return;
   if (!religionUnlocked()) {
     const ok = canUnlockReligion();
-    const wakeCost = religionWakeCost();
     container.innerHTML = `
-      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……存储节点 ≥3 级且 RP 已觉醒后，可消耗 EP 唤醒信仰。</div>
+      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……存储节点 ≥3 级且 RP 已觉醒后，信仰即可唤醒（无需 EP）。</div>
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
         存储节点：${S.upgrades.storage || 0}/3 级 ${(S.upgrades.storage || 0) >= 3 ? '✓' : '（未达标）'}<br>
         RP 觉醒：${(S.resDiscovered && S.resDiscovered.rp) ? '✓' : '（未觉醒）'}<br>
-        唤醒消耗：${fmt(wakeCost)} EP ${ok && S.ep >= wakeCost ? '✓' : ''}
+        唤醒消耗：免费
       </div>
-      <button class="btn ${ok && S.ep >= wakeCost ? '' : 'disabled'}" data-religion-unlock="1" ${ok && S.ep >= wakeCost ? '' : 'disabled'} title="消耗 ${fmt(wakeCost)} EP 唤醒信仰">唤醒信仰（${fmt(wakeCost)} EP）</button>
-      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒，并消耗 ${fmt(wakeCost)} EP。条件未达成时入口保持可见，达成后点击唤醒。</div>`;
+      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" ${ok ? '' : 'disabled'} title="唤醒信仰（免费）">唤醒信仰</button>
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒。条件未达成时入口保持可见，达成后点击唤醒。</div>`;
     return;
   }
   const branch = branchOf();
@@ -228,20 +224,24 @@ export function renderReligionPanel(container) {
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
     </div>
+    ${seal >= 1 ? `
     <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验（信仰 → 虔诚 → 超验，KG 四层转化）</div>
     <div class="off-stat"><span>虔诚（永久）</span><b style="color:var(--purple)">${S.devotion || 0}</b></div>
     <div class="off-stat"><span>超验层级</span><b style="color:var(--purple)">Lv.${transcendLevel()}（赞颂转化率 ×${praiseRate().toFixed(2)}）</b></div>
     <div class="off-stat"><span>信仰容量</span><b>${Math.round(faithCap())}（赞颂需 ≥ ${Math.round(faithCap() * PRAISE.thresholdRatio)}）</b></div>
     <div class="religion-seal-row">
-      <span>赞颂：消耗全部信仰 → 虔诚（虔诚加成全局 ${(devotionMult() - 1 >= 0 ? '+' : '')}${((devotionMult() - 1) * 100).toFixed(1)}%，软上限 ${Math.round(PRAISE.devSoftCap * (1 + 0.10 * secretSanctumLv('black_sanctum')) * 100)}%）</span>
+      <span>赞颂：消耗全部信仰 → 虔诚（虔诚加成全局 ${(devotionMult() - 1 >= 0 ? '+' : '')}${((devotionMult() - 1) * 100).toFixed(1)}%）</span>
       <button class="btn ${(S.faith || 0) < faithCap() * PRAISE.thresholdRatio ? 'disabled' : ''}" data-religion-praise="1"
         title="需信仰 ≥ 容量 80%；消耗全部信仰转化虔诚（永久保留）">赞颂（${fmt(Math.floor((S.faith || 0) * praiseRate()))} 虔诚）</button>
     </div>
+    ${(S.devotion || 0) > 0 ? `
     <div class="religion-seal-row">
       <span>超验：Lv.${transcendLevel()} → ${transcendLevel() + 1}（成本 ${transcendCost()} 虔诚）</span>
       <button class="btn ${(S.devotion || 0) < transcendCost() ? 'disabled' : ''}" data-religion-transcend="1"
         title="消耗虔诚提升超验层级——赞颂转化率提升、解锁隐密圣学门槛">超验</button>
-    </div>
+    </div>` : '<div style="font-size:11px;color:var(--text-2);margin-top:4px">赞颂一次（虔诚 &gt; 0）后解锁「超验」。</div>'}
+    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">赞颂与超验将在圣印首次升级后解锁。</div>'}
+    ${transcendLevel() >= 1 ? `
     <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">隐密圣学（跨周期保留 · 门槛每轮重达）</div>
     ${SECRET_SANCTUMS.map(s2 => {
       const lv = secretSanctumLv(s2.id);
@@ -253,17 +253,22 @@ export function renderReligionPanel(container) {
           title="${s2.desc}">${lv > 0 ? `升级（${fmt(cost)} 余烬）` : `建造（${fmt(cost)} 余烬）`}</button>
       </div>`;
     }).join('')}
+    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">隐密圣学将在首次超验（虔诚转化）后解锁。</div>'}
+    ${sealLevel() >= 3 || ((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
+    ${sealLevel() >= 3 ? `
     <div class="religion-seal-row">
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（信仰产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
-      <button class="btn ${oracleLevel() >= ORACLE.cap || sealLevel() < 3 || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
+      <button class="btn ${oracleLevel() >= ORACLE.cap || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
         title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} 信仰）`}</button>
-    </div>
+    </div>` : '<div style="font-size:11px;color:var(--text-2)">神谕塔将在圣印 ≥3 级后解锁。</div>'}
+    ${((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div class="religion-seal-row">
       <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ×${(1 + CRUSADE.effect * crusadeLevel()).toFixed(2)}）</span>
-      <button class="btn ${crusadeLevel() >= CRUSADE.cap || ((S.religion && S.religion.temple) || 0) < 5 || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
+      <button class="btn ${crusadeLevel() >= CRUSADE.cap || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
         title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} 信仰）`}</button>
-    </div>
+    </div>` : '<div style="font-size:11px;color:var(--text-2)">圣战军将在信仰圣所 ≥5 级后解锁。</div>'}
+    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">神谕塔（圣印 ≥3）与圣战军（圣所 ≥5）将随深耕逐步解锁。</div>'}
     <div style="font-size:11px;color:var(--text-2);margin-top:8px">全流程：仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ 圣印/圣所 → 神谕塔（圣印≥3）与圣战军（圣所≥5）深耕 → 章节「神格」与终局共振。</div>`;
 }
 

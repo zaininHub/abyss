@@ -26,7 +26,7 @@ export function tickVehicleCollect(dt) {
     if (net > 0 && S.ep >= epCost) {
       S.ep -= epCost;
       S.dm = (S.dm || 0) + dm;
-      if (logFn) logFn(`载具采集：-${Math.round(epCost)} EP → +${Number(dm.toFixed(3))} DM`, 'good'); // v2.8.15：去除 [采集] 前缀（用户口径）
+      // v2.8.20 ②：采集到账不再打印日志（用户多轮要求「不要打印了」；保留探采暂停异常提示）
       return true;
     }
     if (logFn) logFn(`探采暂停：EP 净产出不足（净流 ${Number(net.toFixed(2))}/s 需 > 0），DM 未采集`, 'bad'); // v2.8.15：前缀与采集日志统一

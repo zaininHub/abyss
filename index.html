@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.19</title>
+<title>深渊效能工作台 v2.8.20</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -12,8 +12,8 @@
   <!-- 顶部栏（v2.1 P1：全部图标配文字标签 + hover 说明，hover 覆盖率 100%） -->
   <div class="topbar">
     <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「存储节点/缓存优化」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
-    <div class="stat" title="每秒 EP 产出：已含全局乘数、腐化惩罚、潮汐相位等全部修正后的实际值。"><b>产出/s</b><span id="h-cps">0</span><div class="stat-src" id="cps-src"></div></div>
-    <div class="stat" title="每秒 EP 消耗：当前全部线程薪资支出合计（负面效果），已计入上方「产出/s」净额。"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span><div class="stat-src" id="drain-src"></div></div>
+    <div class="stat" title="每秒 EP 产出来源（按类目合并）：基础产出 · 线程 · 载具产出（另含全局乘区修正）。"><b>产出/s</b><span id="h-cps">0</span></div>
+    <div class="stat" title="每秒 EP 消耗来源：线程薪资 · 载具探采（负面效果，已计入上方「产出/s」净额）。"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span></div>
     <div class="stat" title="本局累计获得 EP：从上次晋升（转生）起计算，晋升收益按此结算；晋升后清零。"><b>本局</b><span id="h-run">0</span></div>
     <div class="stat" title="职级（晋升点数）：晋升获得的永久点数，每点全局产出 +10%。"><b>职级</b><span id="h-rank">0</span></div>
     <div class="stat" title="RP（研究点）：科技树货币。完成任务、达成里程碑、灵感工坊产出获得。"><b>🔬RP</b><span id="h-rp">0</span></div>

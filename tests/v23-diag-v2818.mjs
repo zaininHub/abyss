@@ -53,11 +53,11 @@ try {
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 2200));
     const t2 = await page.evaluate(() => {
-      const src = document.getElementById('cps-src');
-      const drain = document.getElementById('drain-src');
-      return { cps: src ? src.textContent : '', drain: drain ? drain.textContent : '' };
+      const cps = document.getElementById('h-cps');
+      const sal = document.getElementById('h-salary');
+      return { cps: cps ? cps.title : '', drain: sal ? sal.title : '' };
     });
-    rec('T2 顶部直接显示产出/消耗来源（按类目合并）', t2.cps.length > 1 && t2.drain.length > 0, JSON.stringify(t2));
+    rec('T2 顶部来源改悬浮（数值 title 含来源，常驻行移除）', t2.cps.includes('产出来源') && t2.drain.includes('消耗来源'), JSON.stringify(t2)); // v2.8.20 ③：来源改悬浮
     await page.close();
   }
 
@@ -106,13 +106,13 @@ try {
     await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ vehCollectTimer: 59.5 }));
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 2000));
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 5000)); // 等自动存档，DM 落盘
     const t5 = await page.evaluate(() => {
       const logs = document.getElementById('log-content');
       const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
-      return { hasCollect: logs.textContent.includes('载具采集：-'), dm: s.dm };
+      return { hasCollect: logs.textContent.includes('载具采集'), dm: s.dm };
     });
-    rec('T5 载具采集日志显示「载具采集：-X EP → +Y DM」', t5.hasCollect, `dm=${t5.dm}`);
+    rec('T5 载具采集到账无日志、DM 正常入账', !t5.hasCollect && t5.dm > 0, `dm=${t5.dm}`); // v2.8.20 ②：采集日志已移除
     await page.close();
   }
 
