@@ -46,8 +46,8 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   await page.click('#btn-tech');
   await new Promise(r => setTimeout(r, 300));
   const techCards = await page.$$eval('#tech-tree > *', els => els.map(e => e.textContent));
-  const aiCoreHidden = !techCards.some(t => t.includes('AI 管理核心'));
-  rec('E/A 未达 cps≥1e4 里程碑时 ai_core 不可见', aiCoreHidden, `科技卡数=${techCards.length}`);
+  const aiCoreShown = techCards.some(t => t.includes('AI 管理核心'));
+  rec('E/A ai_core 恒显示（v2.8.18：RP 50 + 1M EP 判定、无 cps 门槛；不足时灰态）', aiCoreShown, `科技卡数=${techCards.length}`);
   const ownedHeader = await page.$$eval('#tech-tree .owned-header', els => els.length);
   rec('E 新档科技树无已研究折叠头（×0 不渲染）', true, `owned-header 数=${ownedHeader}（信息性）`);
   await page.evaluate(() => localStorage.clear());
@@ -77,7 +77,7 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   await page2.setViewport({ width: 1920, height: 1080 });
   await page2.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mkSave(0));
   await page2.goto(url, { waitUntil: 'load' });
-  await new Promise(r => setTimeout(r, 4000)); // 欠薪累计 >1s 即入 debt
+  await new Promise(r => setTimeout(r, 7000)); // 欠薪累计 >1s 即入 debt（v2.8.7 状态转换 5s 过渡）
   const debtBadge = await page2.$eval('#staff-status', el => ({ text: el.textContent, title: el.title }));
   rec('C 欠薪态徽章=「欠薪 ×0.7」+ 倒计时', debtBadge.text.includes('欠薪') && /×0\.7/.test(debtBadge.text), `text="${debtBadge.text}"`);
   rec('C 欠薪态 tooltip 含休眠倒计时说明', /休眠/.test(debtBadge.title), `title 前80字="${debtBadge.title.slice(0, 80)}"`);
@@ -124,7 +124,7 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   await page.click('#btn-tech');
   await new Promise(r => setTimeout(r, 300));
   const techTxt = await page.$eval('#tech-tree', el => el.textContent);
-  rec('L1 退潮科技卡显示「（基准」折扣口径', techTxt.includes('基准'), '科技卡含基准价标注');
+  rec('L1 退潮科技卡含 RP 成本标注（退潮乘数作用于 RP，v2.8.7）', techTxt.includes('RP'), '科技卡含 RP 成本标注');
   const tideTitle = await page.$eval('#h-tide', el => el.title);
   rec('L1 潮汐 hover 提示含科技成本效果', /科技成本/.test(tideTitle), `title 前100字="${tideTitle.slice(0, 100)}"`);
 
@@ -204,7 +204,7 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   await new Promise(r => setTimeout(r, 1500));
   rec('D0 采集档加载无 JS 报错', errors.length === 0, errors.join('; '));
   const vc = await page.$eval('#vehicle-collect', el => ({ text: el.textContent, title: el.title }));
-  rec('D2 采集页头：当前 DM + 期望 +1/min（v2.0.2 格式）', vc.text.includes('当前 DM:') && vc.text.includes('+1/min'), `text="${vc.text}"`);
+  rec('D2 采集页头：当前 DM + 期望 +DM/s（v2.8.26 per-s 格式）', vc.text.includes('当前 DM:') && vc.text.includes('→ +'), `text="${vc.text}"`);
   rec('D2 采集页头 tooltip 含各载具期望率', /0\.05/.test(vc.title), vc.title.slice(0, 60));
   await page.evaluate(() => localStorage.clear());
   await page.close();

@@ -73,8 +73,9 @@ try {
       const b = document.querySelector('[data-religion-unlock]');
       return b ? { disabledAttr: b.disabled, hasClass: b.classList.contains('disabled') } : null;
     });
-    rec('V3 未达标唤醒按钮 disabled 属性=true', wakeBtn && wakeBtn.disabledAttr === true && wakeBtn.hasClass === true, JSON.stringify(wakeBtn));
-    // 点击唤醒（未达标）→ 不消失、不误解锁
+    // v2.8.20 ④：唤醒不再消耗 EP——存储≥3 + RP 觉醒即可（EP 库存无要求）
+    rec('V3 唤醒按钮可点（v2.8.20 无 EP 条件：存储≥3 + RP 觉醒）', wakeBtn !== null, JSON.stringify(wakeBtn));
+    // 点击唤醒 → 立即解锁，入口保留
     await page.evaluate(() => { const b = document.querySelector('[data-religion-unlock]'); if (b) b.click(); });
     await sleep(300);
     const afterClick = await page.evaluate(() => {
@@ -82,7 +83,7 @@ try {
       const b = document.getElementById('btn-religion');
       return { unlocked: !!(s.religion && s.religion.unlocked), tabShown: b && b.style.display !== 'none' };
     });
-    rec('V3 点击未达标唤醒不解锁且入口不消失', afterClick.unlocked === false && afterClick.tabShown === true, JSON.stringify(afterClick));
+    rec('V3 点击唤醒解锁成功且入口不消失', afterClick.unlocked === true && afterClick.tabShown === true, JSON.stringify(afterClick));
     await page.close();
   }
 } catch (e) {

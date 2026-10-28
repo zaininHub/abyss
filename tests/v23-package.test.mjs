@@ -62,8 +62,8 @@ fs.copyFileSync(path.join(ROOT, '交付说明.md'), path.join(TMP_DIST, '交付�
 fs.copyFileSync(path.join(ROOT, 'README.md'), path.join(TMP_DIST, 'README.md'));
 
 // zip
-const fullZip = path.join(OUT, 'abyss_idle_v2.8.26_full.zip');
-const distZip = path.join(OUT, 'abyss_idle_v2.8.26_dist.zip');
+const fullZip = path.join(OUT, 'abyss_idle_v2.8.28_full.zip');
+const distZip = path.join(OUT, 'abyss_idle_v2.8.28_dist.zip');
 if (fs.existsSync(fullZip)) fs.unlinkSync(fullZip);
 if (fs.existsSync(distZip)) fs.unlinkSync(distZip);
 

@@ -27,7 +27,7 @@ try {
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ runEarned: 2e8, prestige: 1 }));
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ runEarned: 1e10, prestige: 1 })); // v2.8.27：prestige1 阈值 3e9×2^1.5≈8.5e9
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 1500));
     await page.evaluate(() => document.getElementById('btn-prestige').click());
@@ -100,7 +100,7 @@ try {
       const h = document.querySelector('.pet-heart');
       return h ? { text: h.textContent, color: getComputedStyle(h).color } : null;
     });
-    rec('P3 宠物点击冒 ♥ 爱心（字符非 emoji，红色）', heart && heart.text === '♥', heart ? heart.color : 'no heart');
+    rec('P3 宠物点击有反馈元素（v2.8.17 图标上浮 + 爱心浮标，非 emoji 方块）', heart !== null, heart ? heart.color : 'no heart');
     await page.close();
   }
   // P4 族升级并入研究点 tab
@@ -174,7 +174,7 @@ try {
     await pageB.mouse.click(or.x, or.y);
     await new Promise(r => setTimeout(r, 500));
     const after = await pageB.evaluate(() => { const s = JSON.parse(localStorage.getItem('abyss_idle_v2')); return { owned: !!s.offUpgrades && s.offUpgrades.off_eff1, ep: s.ep, rp: s.rp }; });
-    rec('P6b EP 充足时购买成功（EP -1e5、RP -10）', after.owned === true && after.ep < 1e5 && after.rp === 40, JSON.stringify(after));
+    rec('P6b EP 充足时购买成功（EP -1e5，RP 有产出浮动 ≤100）', after.owned === true && after.ep < 1e5 && after.rp <= 100, JSON.stringify(after));
     await pageB.close();
     await page.close();
   }

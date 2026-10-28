@@ -94,7 +94,7 @@ console.log('\n[A] 6.1 新档开局（file:// 冷启动）');
     const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
     return el ? el.querySelector('.cost').textContent : '';
   });
-  rec('A4 存储节点首级价格展示 150', parseNum(costTxt) === 150, `cost="${costTxt}"`);
+  rec('A4 存储节点首级价格展示 450（v2.8.27 base 150→450）', parseNum(costTxt) === 450, `cost="${costTxt}"`);
   const epBefore = parseEpText(await readEp(page));
   await page.evaluate(() => {
     const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
@@ -102,8 +102,8 @@ console.log('\n[A] 6.1 新档开局（file:// 冷启动）');
   });
   await new Promise(r => setTimeout(r, 500));
   const epAfter = parseEpText(await readEp(page));
-  rec('A5 真实购买首级：扣款 150 且上限 2000→5000（v2.8.2 capPer 3000）',
-    Math.abs((epBefore.ep - epAfter.ep) - 150) < 15 && Math.abs(epAfter.cap - 5000) < 1,
+  rec('A5 真实购买首级：扣款 450 且上限 2000→7000（v2.8.27 capPer 5000）',
+    Math.abs((epBefore.ep - epAfter.ep) - 450) < 15 && Math.abs(epAfter.cap - 7000) < 1,
     `${epBefore.ep}/${epBefore.cap} → ${epAfter.ep}/${epAfter.cap}`);
   await page.screenshot({ path: SHOT_DIR + 'A_新档开局_首级购买.png' });
   await page.close();
@@ -120,9 +120,9 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
   rec('B0 注入档启动零错误', errs.length === 0, errs.join(';'));
   await page.click('#btn-shop');
   await new Promise(r => setTimeout(r, 400));
-  // 连买 5 级存储节点：每级价格 < 当前上限×30%（防死锁实测）
+  // 连买 3 级存储节点：每级价格 < 当前上限×30%（防死锁实测）；v2.8.27 成本 ×3 后首轮 EP 截断 2000 只够 3 次
   let allUnder = true, levelOk = true, trace = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     const st = parseEpText(await readEp(page));
     const info = await page.evaluate(() => {
       const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
@@ -139,10 +139,10 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
       const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
       el.click();
     });
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 700)); // v2.8.27：成本 ×3 后等待渲染刷新（防点击未命中）
   }
-  rec('B1 连买 5 级：等级 Lv.0→4 递增', levelOk, trace.join(' → '));
-  rec('B2 连买 5 级：每级价格 < 上限×30%（6.1 验收）', allUnder, trace.join(' → '));
+  rec('B1 连买 3 级：等级 Lv.0→3 递增（EP 截断 2000 内）', levelOk, trace.join(' → '));
+  rec('B2 连买 3 级：每级价格 < 上限×30%（6.1 验收）', allUnder, trace.join(' → '));
   await page.screenshot({ path: SHOT_DIR + 'B_级制购买推演.png' });
   await page.close();
 }
@@ -152,9 +152,9 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
   // B3 缓存优化：满 20 级存储档（cap 146,105），买 cache 1 级（成本 1e5）→ 上限 +5000
   // v2.3.1 ⑤ 口径适配：展开态注入失效（加载即清除），改注入线程链前 6 项已购 → p=6、K=7，cache 进窗口
   const { page, errs } = await openPage({
-    ep: 140000, rp: 0, es: 0, dm: 0, cultists: [],
+    ep: 300000, rp: 0, es: 0, dm: 0, cultists: [], // v2.8.27：EP ≥ cache 钳制价 220K
     upgrades: { storage: 20, subsist1: 1, subsist2: 1, subsist3: 1, cpu: 1, mem: 1, gpu: 1 }, buildings: {}, tech: {},
-    allTimeEp: 5e6, chapter: '3', storyline: 'default', _forkTriggered: true, lastSeen: Date.now(),
+    allTimeEp: 1e12, // v2.8.27：cache 门槛 9e10 chapter: '3', storyline: 'default', _forkTriggered: true, lastSeen: Date.now(),
   });
   const capBoot = parseEpText(await readEp(page));
   const capBeforeCache = capBoot.cap;
@@ -165,7 +165,7 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
     if (!el) return null;
     return { cls: el.className, text: el.textContent.slice(0, 60) };
   });
-  rec('B3a 满 20 级档启动：上限 = 309,330（v2.8.2 曲线，页头 K 格式显示精度 ±150）', Math.abs(capBoot.cap - 309330) < 150,
+  rec('B3a 满 20 级档启动：上限 = 735,140（v2.8.27 曲线，页头 K 格式显示精度 ±150）', Math.abs(capBoot.cap - 735140) < 150,
     `h-ep="${capBoot.ep} / ${capBoot.cap}"`);
   const click3 = await page.evaluate(() => {
     const el = [...document.querySelectorAll('#thread-shop > *')].find(e => e.textContent.includes('缓存优化'));
@@ -183,9 +183,9 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
 {
   // B4 数据中心 dcBonus 三档：maxLevel=20 后 cache 超买注入档被截断（cap≤246K < dc1 成本 1e6），
   // 改为三档真实启动断言（0 里程碑 + default 线，无乘数干扰，档位差精确 +10K/+15K/+25K）
-  const capPer = 3000, capGrowth = 1.15; // v2.8.2
+  const capPer = 5000, capGrowth = 1.18; // v2.8.27
   let storageSum = 0; for (let i = 1; i <= 20; i++) storageSum += capPer * Math.pow(capGrowth, i - 1);
-  const base = 2000 + 20 * 8000 + storageSum; // storage20+cache20 满级基座（v2.8.2 cache 8000/级）
+  const base = 2000 + 20 * 8000 + storageSum; // storage20+cache20 满级基座（cache 8000/级）
   for (const [dcLv, bonus] of [[0, 0], [1, 10000], [2, 25000], [3, 50000]]) {
     const { page, errs } = await openPage({
       ep: 200000, rp: 0, es: 0, dm: 0, cultists: [],
@@ -208,8 +208,8 @@ console.log('\n[B] 6.1/6.2 级制购买推演（连买 5 级 / cache / 数据中
     milesDone, allTimeEp: 5e7, chapter: '3', storyline: 'line_abyss', _forkTriggered: true, lastSeen: Date.now(),
   });
   const st = parseEpText(await readEp(page));
-  rec('B4b v2.8.2 无 dc 满配上限 ≈ 1,754,121（469,330 基座 ×1.15 abyss ×3.25 里程碑）',
-    errs.length === 0 && Math.abs(st.cap - 1754121) <= 20000, `h-ep="${st.ep} / ${st.cap}"`);
+  rec('B4b v2.8.27 无 dc 满配上限 ≈ 3,350,000（895,100 基座 ×1.15 abyss ×3.25 里程碑）',
+    errs.length === 0 && Math.abs(st.cap - 3350000) <= 30000, `h-ep="${st.ep} / ${st.cap}"`);
   await page.close();
 }
 
@@ -237,7 +237,7 @@ console.log('\n[C] 6.2 DM 三处展示（深渊商店 / 裂隙面板 / 探采页
   rec('C2 深渊商店已无 #dm-balance 余额元素', dmBal === 'missing', `实际 "${dmBal}"`);
   // C3 探采页头当前 DM + 采集期望（v2.4.2：当前 DM 小数显示）
   const vc = await page.$eval('#vehicle-collect', el => el.textContent);
-  rec('C3 探采页头含「当前 DM: 7.00 · 采集 +1/min」', vc.includes('当前 DM: 7') && vc.includes('+1/min'), `text="${vc}"`);
+  rec('C3 探采页头含「当前 DM: 7.00 · 采集 → +」', vc.includes('当前 DM: 7') && vc.includes('→ +'), `text="${vc}"`);
   // C4 封印裂隙 → DM 到账 → 1s 内同步（深渊商店余额元素已移除）
   const dm0 = parseNum(await page.$eval('#h-dm', el => el.textContent));
   await page.click('#seal-rift');
@@ -265,7 +265,7 @@ console.log('\n[D] 6.3 满 20 级锁定（购买入口锁定）');
   await page.click('#btn-shop');
   await new Promise(r => setTimeout(r, 500));
   const st = parseEpText(await readEp(page));
-  rec('D1 v2.8.2 满 20 级上限 = 309,330（309.33K）', Math.abs(st.cap - 309330) < 150, `cap=${st.cap}`);
+  rec('D1 v2.8.27 满 20 级上限 = 735,140（735.14K）', Math.abs(st.cap - 735140) < 150, `cap=${st.cap}`);
   const card = await page.evaluate(() => {
     const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
     if (!el) return null;
@@ -295,7 +295,7 @@ console.log('\n[D] 6.3 满 20 级锁定（购买入口锁定）');
 // ========== E. 6.4 旧档 v2.0.1（storage=13）映射同级 ==========
 console.log('\n[E] 6.4 旧档兼容（v2.0.1 实存 13 节点 → 13 级）');
 {
-  const cap13 = Math.round(2000 + 3000 * (Math.pow(1.15, 13) - 1) / 0.15); // v2.8.2
+  const cap13 = Math.round(2000 + 5000 * (Math.pow(1.18, 13) - 1) / 0.18); // v2.8.27
   const { page, errs } = await openPage({
     ep: 1000, rp: 0, es: 0, dm: 0, cultists: [],
     upgrades: { storage: 13, scribble: 5 }, buildings: {}, tech: {},
@@ -303,7 +303,7 @@ console.log('\n[E] 6.4 旧档兼容（v2.0.1 实存 13 节点 → 13 级）');
   });
   rec('E1 旧档（13 节点）加载零错误', errs.length === 0, errs.join(';'));
   const st = parseEpText(await readEp(page));
-  rec('E2 v2.8.2 旧档 13 节点按 13 级重算上限 ≈ 105,056', Math.abs(st.cap - cap13) < 100, `cap=${st.cap} 期望≈${cap13}`);
+  rec('E2 v2.8.27 旧档 13 节点按 13 级重算上限 ≈ 213,090', Math.abs(st.cap - cap13) < 100, `cap=${st.cap} 期望≈${cap13}`);
   // 0 线程薪资状态机 3 秒不报错（6.4 边界）
   await new Promise(r => setTimeout(r, 3000));
   rec('E3 0 线程运行 3s 零错误（薪资状态机边界）', errs.length === 0, errs.join(';'));
@@ -362,7 +362,7 @@ console.log('\n[H] cache 钳制真实路径（实扣 = min(裸价, floor(cap×0.
   const { page, errs } = await openPage({
     ep: 309330, rp: 0, es: 0, dm: 0, cultists: [],
     upgrades: { storage: 20, subsist1: 1, subsist2: 1, subsist3: 1, cpu: 1, mem: 1, gpu: 1 }, buildings: {}, tech: {},
-    allTimeEp: 5e6, chapter: '3', storyline: 'default', _forkTriggered: true, lastSeen: Date.now(),
+    allTimeEp: 1e12, // v2.8.27：cache 门槛 9e10 chapter: '3', storyline: 'default', _forkTriggered: true, lastSeen: Date.now(),
   });
   rec('H1a storage20 态启动零错误', errs.length === 0, errs.join(';'));
   const capBoot = parseEpText(await readEp(page));
@@ -372,8 +372,8 @@ console.log('\n[H] cache 钳制真实路径（实扣 = min(裸价, floor(cap×0.
     const el = [...document.querySelectorAll('#thread-shop > *')].find(e => e.textContent.includes('缓存优化'));
     return el ? el.querySelector('.cost').textContent : '';
   });
-  const clamp1 = Math.floor(309330 * 0.3); // v2.8.2 92,799（裸价 1,000,000 > 钳制价）
-  rec('H1 cache 显示价 = 钳制价 43,831（非裸价 100,000）', Math.abs(parseNum(disp1) - clamp1) <= 1,
+  const clamp1 = Math.floor(735140 * 0.3); // v2.8.27 220,542（裸价 3e11 > 钳制价）
+  rec('H1 cache 显示价 = 钳制价（非裸价 3e11）', Math.abs(parseNum(disp1) - clamp1) <= 100, // K 格式精度
     `display="${disp1}" 期望=${clamp1}（裸价 100,000 应被钳制）`);
   const stBefore = parseEpText(await readEp(page));
   await page.evaluate(() => {
@@ -393,13 +393,13 @@ console.log('\n[H] cache 钳制真实路径（实扣 = min(裸价, floor(cap×0.
   // H4：全局最满状态（storage20+cache17+dc3+9里程碑+abyss，最大上限 1,050,630）第 18 级可购买
   const milesDone = { 5: true, 10: true, 100: true, 1000: true, 10000: true, 100000: true, 1000000: true, 10000000: true, 100000000: true };
   const { page, errs } = await openPage({
-    ep: 1851171, rp: 0, es: 0, dm: 0, cultists: [],
+    ep: 3.5e6, rp: 0, es: 0, dm: 0, cultists: [], // v2.8.27：注入 ≥ 新 cap（3,440,000 内截断）
     upgrades: { storage: 20, cache: 17 }, buildings: { datacenter: 3 }, tech: {},
     milesDone, allTimeEp: 5e7, chapter: '3', storyline: 'line_abyss', _forkTriggered: true, lastSeen: Date.now(),
   });
   rec('H4a 全满状态启动零错误', errs.length === 0, errs.join(';'));
   const capMax = parseEpText(await readEp(page));
-  rec('H4b v2.8.2 全局最大上限 ≈ 1,851,171', Math.abs(capMax.cap - 1851171) <= 20000,
+  rec('H4b v2.8.27 全局最大上限 ≈ 3,440,000', Math.abs(capMax.cap - 3440000) <= 20000,
     `h-ep="${capMax.ep} / ${capMax.cap}"（页头 M 格式 2 位小数，显示精度 ±10K）`);
   await page.click('#btn-shop');
   await new Promise(r => setTimeout(r, 400));
@@ -408,9 +408,9 @@ console.log('\n[H] cache 钳制真实路径（实扣 = min(裸价, floor(cap×0.
     if (!el) return null;
     return { cost: el.querySelector('.cost').textContent, cnt: el.querySelector('.count')?.textContent || '' };
   });
-  const clamp2 = 555390; // v2.8.2：cap≈1,851,300 ×30%（裸价 ceil(1e6×1.30^17)≈10.8M 被钳制）
-  rec('H4c 第 18 级显示价 = 钳制价（裸价 ~10.8M 不再形成终局硬墙，v2.8.2）',
-    dispInfo && Math.abs(parseNum(dispInfo.cost) - clamp2) <= 2,
+  const clamp2 = Math.floor(3440000 * 0.3); // v2.8.27：cap≈3,440,000 ×30%（裸价 3e11×1.3^16 被钳制）
+  rec('H4c 第 18 级显示价 = 钳制价（裸价被钳制，无终局硬墙）',
+    dispInfo && Math.abs(parseNum(dispInfo.cost) - clamp2) <= 3000, // M 格式精度
     `display="${dispInfo?.cost}" ${dispInfo?.cnt} 期望=${clamp2}`);
   const stB = parseEpText(await readEp(page));
   const buyOk = await page.evaluate(() => {

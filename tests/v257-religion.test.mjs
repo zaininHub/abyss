@@ -42,7 +42,7 @@ function mkState(extra = {}) {
   rec('V1 storage 1 级（不满足 ≥3）+ RP 未觉醒 → 不可解锁', relMod.canUnlockReligion() === false, `ep=100000,cap=${econ.epStorageCap()}`);
   // storage 3 级 + RP 觉醒 + 库存 < 80% → 不可解锁
   Object.assign(S, mkState({ ep: 1000, upgrades: { storage: 3 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false } }));
-  rec('V1 storage 3 级 + RP 觉醒但库存不足 80% → 不可解锁', relMod.canUnlockReligion() === false, `ep=1000,cap=${econ.epStorageCap()}`);
+  rec('V1 storage 3 级 + RP 觉醒 → 可解锁（v2.8.20 移除 80% 库存限制）', relMod.canUnlockReligion() === true, `ep=1000,cap=${econ.epStorageCap()}`);
   // storage 3 级 + RP 觉醒 + 库存 ≥ 80% → 可解锁
   const cap = econ.epStorageCap();
   Object.assign(S, mkState({ ep: Math.ceil(cap * 0.8), upgrades: { storage: 3 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false } }));

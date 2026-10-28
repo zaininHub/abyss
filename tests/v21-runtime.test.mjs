@@ -80,11 +80,11 @@ t('打满上限后 addEp 溢出全额累计入 epOverflowTotal', () => {
   assert.equal(S.ep, cap); assert.equal(S.epOverflowTotal, 5000);
   assert.ok(S.rp >= rp0, 'RP 不应减少');
 });
-t('v2.8.2 溢出不再自动转 RP（只记账 + 解锁标记；RP 靠蒸馏/建筑/任务）', () => {
+t('v2.8.22 溢出转 RP（与蒸馏同效率）：溢出 200K → 尾数池满 1 RP 即转', () => {
   const cap = epStorageCap();
   S.ep = cap; const rp0 = S.rp;
-  addEp(200000); // 溢出 200K 仅累计记账，RP 不变
-  assert.equal(S.rp, rp0, `RP 不应变化（实际 +${S.rp - rp0}）`);
+  addEp(200000); // 溢出 200K 进池，floor(200000/rpDistillRate) 转 RP
+  assert.ok(S.rp >= rp0 + 6, `RP 应增加 ≥6（实际 +${S.rp - rp0}）`);
   assert.ok((S.epOverflowTotal || 0) >= 200000, `溢出应累计 ${S.epOverflowTotal}`);
 });
 
@@ -103,9 +103,8 @@ t('终章条件：end_shrine>=1 或 hasTech(true_end) 双通道', () => {
 t('techCount 计入 unlockedBuildings（旧档章节进度兼容）', () => {
   assert.ok(/unlockedBuildings/.test(chapSrc));
 });
-t('溢出统计挂点：探采页头 v21-overflow-stat + renderTop 每秒刷新', () => {
-  assert.ok(idxSrc.includes('v21-overflow-stat'));
-  assert.ok(mainSrc.includes('v21-overflow-stat'));
+t('溢出统计挂点：v2.8.8 后探采页头不再显示溢出转换文案（溢出仅记账，RP 走蒸馏/建筑/任务）', () => {
+  assert.ok(!mainSrc.includes('v21-overflow-stat'));
 });
 t('addEp 为溢出承接唯一入口（economy 内实现，不走 UI 层）', () => {
   assert.ok(econSrc.includes('epOverflowTotal'));
@@ -121,10 +120,10 @@ t('computeCps 单线程数值 > 0（修复后集成断言）', () => {
 });
 
 console.log('[4] 钥匙数据完整性（科技=钥匙红线）');
-t('钥匙科技恰 5 项（v2.6.3 反馈①：click_up 移除）：offline1/focus_opt/entropy_reduce/deep_space/ai_core', () => {
-  assert.equal(TECHS.length, 5);
+t('钥匙科技 6 项（v2.8.10 补齐 chaos_shield 第 6 把钥匙）', () => {
+  assert.equal(TECHS.length, 6);
   assert.deepEqual(TECHS.map(x => x.id).sort(),
-    ['ai_core', 'deep_space', 'entropy_reduce', 'focus_opt', 'offline1']);
+    ['ai_core', 'chaos_shield', 'deep_space', 'entropy_reduce', 'focus_opt', 'offline1']);
 });
 t('unlocks.buildings 引用的建筑全部存在于 buildingsV21 注册表', () => {
   const ids = new Set(V21_BUILDINGS.map(b => b.id));

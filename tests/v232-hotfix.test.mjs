@@ -187,7 +187,7 @@ const inject = (page, save) => {
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 900 });
-  await inject(page, saveBase({ upgrades: { scooter: 10, convoy: 2 } }));
+  await inject(page, saveBase({ upgrades: { scooter: 10, convoy: 2, scribble: 300 } })); // v2.8.x：探采需 EP 净产出>探采消耗才运行；scribble 300×0.12/s=36/s > 探采 29.2/s
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
   const c = await page.evaluate(() => ({
@@ -195,18 +195,23 @@ const inject = (page, save) => {
     title: document.getElementById('vehicle-collect')?.title || '',
   }));
   const mathRate = 10 * 0.05 + 2 * 0.1;
-  const shown = (c.header.match(/\+([\d.]+)\/min/) || [])[1] || '';
-  rec('RP6 探采页头显示值与 vehicleDmPerMin 数学口径一致（10摩托×0.05 + 2车队×0.1 = 0.7/min）',
-    parseFloat(shown) === Math.round(mathRate * 100) / 100, JSON.stringify({ header: c.header, shown, mathRate }));
-  rec('RP6 页头 title 说明确定性按速率产出（v2.4：不再掷骰，「（期望）」标注已移除）',
-    c.title.includes('0.05/0.1/0.25/0.5') && c.title.includes('确定性到账') && !c.header.includes('（期望）'), JSON.stringify({ title: c.title }));
-  // v2.4 确定性到账对账：等待 60s 采集窗口，实际到账与显示速率一致（旧版掷骰方差口径废止）
-  await sleep(62000);
-  const dmAfter = await page.evaluate(() => {
-    const st = JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}');
-    return { dm: st.dm || 0, shown: document.getElementById('vehicle-collect')?.textContent || '' };
-  });
-  rec('RP6 v2.4 确定性到账对账：60s 后 DM 到账 ≈ 速率 0.7（无掷骰方差，短窗即对得上）',
+  const shown = (c.header.match(/→ \+([\d.]+)/) || [])[1] || '';
+  rec('RP6 探采页头显示值与速率口径一致（v2.8.7 用户口径：/s；10摩托×0.05+2车队×0.1 = 0.7/min = 0.012/s）',
+    parseFloat(shown) === Math.round((mathRate / 60) * 1000) / 1000, JSON.stringify({ header: c.header, shown, mathRate }));
+  rec('RP6 页头 title 说明按速率产出（v2.4：不再掷骰，「（期望）」标注已移除）',
+    c.title.includes('0.05/0.1/0.25/0.5') && !c.header.includes('（期望）'), JSON.stringify({ title: c.title }));
+  // v2.4 确定性到账对账：轮询等待 60s 采集窗口到账（全量并发 CPU 争用会拉长真实等待，
+  // 固定 sleep 62s 在全量时可能不足——改条件轮询，最长 180s）
+  let dmAfter = { dm: 0, shown: '' };
+  for (let i = 0; i < 36; i++) {
+    await sleep(5000);
+    dmAfter = await page.evaluate(() => {
+      const st = JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}');
+      return { dm: st.dm || 0, shown: document.getElementById('vehicle-collect')?.textContent || '' };
+    });
+    if (Math.abs(dmAfter.dm - 0.7) < 0.31) break;
+  }
+  rec('RP6 v2.4 确定性到账对账：60s 采集窗口后 DM 到账 ≈ 速率 0.7（无掷骰方差，短窗即对得上）',
     Math.abs(dmAfter.dm - 0.7) < 0.31, JSON.stringify({ dm: dmAfter.dm, shown: dmAfter.shown, expect: 0.7 }));
   await page.screenshot({ path: EV + '/rp6-dm-header.png', fullPage: false });
   await page.close();

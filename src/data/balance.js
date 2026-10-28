@@ -2,14 +2,14 @@
 export const BALANCE = {
   // 初始与前期
   initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）
-  scribble: { base: 40, cps: 0.25 },   // v2.8.3：基础卡 base×4/cps×0.83（首升 1-3 天节奏）
-  script: { base: 320, cps: 1.7 },   // v2.8.3
-  parallel: { base: 3600, cps: 7 },   // v2.8.3
+  scribble: { base: 120, cps: 0.12 },  // v2.8.27：首轮 7-10 天节奏——基础成本 ×3、产出 ×0.5（原 v2.8.3 base 40/cps 0.25）
+  script: { base: 960, cps: 0.85 },  // v2.8.27：×3 / ×0.5
+  parallel: { base: 10800, cps: 3.5 }, // v2.8.27：×3 / ×0.5
   atrium: { base: 5e4, rate: 0.15 },
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
   thread: {
-    firstCost: 120, baseOutput: 2.0, baseOutputJitter: 2.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
+    firstCost: 360, baseOutput: 1.0, baseOutputJitter: 1.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.27：线程成本 ×3、基础产出 ×0.5（首轮 7-10 天） // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
       // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s
@@ -209,7 +209,7 @@ export const BALANCE = {
   // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
   // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
   // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
-  storage: { base: 150, growth: 1.25, capPer: 3000, capGrowth: 1.15, maxLevel: 20 }, // v2.8.2：capPer 2000→3000、capGrowth 1.12→1.15（中期上限宽松）
+  storage: { base: 450, growth: 1.25, capPer: 5000, capGrowth: 1.18, maxLevel: 20 }, // v2.8.27：base ×3（成本口径）、capPer 3000→5000、capGrowth 1.15→1.18（7-10 天周期上限充足）
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],

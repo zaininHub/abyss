@@ -131,8 +131,10 @@ export function techGlobalMult() {
 export function delveTechMult() { return hasTech('void_sight') ? 1.25 : 1; }
 // v2.8.4：神启之光——信仰产出 +25%
 export function faithTechMult() { return hasTech('divine_light') ? 1.25 : 1; }
-// v2.8.4：稳定协议——深渊吞噬倒计时 +2 分钟（7 分钟）
-export function collapseMs() { return hasTech('stable_protocol') ? 420000 : 300000; }
+// v2.8.22 ⑦：深渊吞噬倒计时 60 秒基准（稳定协议 +2 分钟 → 180s）；tickCollapse 同源
+// 旧 v2.8.4 语义（300s/420s）已废弃，数值同步 60s 口径
+// v2.8.4：稳定协议——深渊吞噬倒计时 +2 分钟（60s → 180s）
+export function collapseMs() { return hasTech('stable_protocol') ? 180000 : 60000; }
 
 // v2.8.4：ES 发现锚点（首次晋升获得 ES 时点亮；未解锁前永恒矩阵区块不显示）
 export function discoverEs() {
@@ -174,7 +176,7 @@ export function tickCollapse(dt) {
     return;
   }
   if (!S._collapseAt) {
-    S._collapseAt = Date.now() + 60000; // 60 秒倒计时（倒计时内净化/消耗可自救）
+    S._collapseAt = Date.now() + collapseMs(); // 60 秒倒计时（v2.8.22 ⑦；稳定协议 +2 分钟）——倒计时内净化/消耗可自救
     if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：腐化已满额，60 秒后本局被深渊吞没（净化腐化或立即转生可脱离）', 'bad');
     if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：60 秒后崩溃——净化腐化或立即转生可脱离');
   }
@@ -575,8 +577,16 @@ export function focusCost() {
 }
 
 // ========== 晋升需求 ==========
+// v2.8.27 ②：全资源存储上限（建筑扩容，EP 购买）——基础上限 + 建筑每级增量
+export function rpCap() { return 5000 + ((S.upgrades && S.upgrades.rp_vault) || 0) * 500; }
+export function dmCap() { return 1000 + ((S.upgrades && S.upgrades.dm_vault) || 0) * 100; }
+export function ptCap() { return 1000 + ((S.upgrades && S.upgrades.pt_vault) || 0) * 200; }
+export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
+export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
+export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }
+
 export function prestigeNeed() {
-  return Math.floor(1.5e8 * Math.pow(S.prestige + 1, 3.2)); // v2.8.19：首升需求 3e7→1.5e8（经济模拟：纯基础 8h 累计 7.4M，有乘数叠加约 5×；150M 使 1-3 天转生，半天不可达）
+  return Math.floor(3e9 * Math.pow(S.prestige + 1, 1.5)); // v2.8.27：首升 1.5e8→3e9、增长指数 3.2→1.5——首轮 7-10 天转生、后续 3-5 天（模拟：cps×0.5+cost×3 下 13.5 模拟天）
 }
 
 export function prestigeGain() {
@@ -730,7 +740,7 @@ function accountEpOverflow(overflow) {
     const gained = Math.floor(S._overflowRpPool / rate);
     if (gained > 0) {
       S._overflowRpPool -= gained * rate;
-      S.rp = (S.rp || 0) + gained;
+      addRp(gained); // v2.8.27 ②：RP 存储上限（矩阵存储库扩容）
     }
   }
 }

@@ -1,5 +1,5 @@
 import { S } from '../state.js';
-import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp, researchMult } from './economy.js';
+import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp, researchMult, addRp, addDm, addPt } from './economy.js';
 
 export function applyOffline() {
   const now = Date.now();
@@ -21,7 +21,7 @@ export function applyOffline() {
   let bonusRp = 0;
   if (hours >= 1) {
     bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
-    if (bonusRp > 0) S.rp += bonusRp;
+    if (bonusRp > 0) addRp(bonusRp); // v2.8.27 ②：RP 上限
   }
   if (gain < 1 && bonusRp === 0) return null;
   S.lastOfflineSec = Math.floor(eff);

@@ -69,7 +69,7 @@ const inject = (page, save) => {
   });
   rec('V1 商店可购卡 cursor:pointer', cur.shopItem === 'pointer', `shopItem=${cur.shopItem}`);
   rec('V1 任务卡 cursor:pointer', cur.proj === 'pointer', `proj=${cur.proj}`);
-  rec('V1 v21 建筑卡 cursor:pointer（存在时）', cur.v21 === 'pointer' || cur.v21 === '(missing)', `v21=${cur.v21}`);
+  rec('V1 v21 建筑卡 cursor 明确（pointer 可点 / not-allowed 锁定·v2.8.x 链窗揭示）', ['pointer','not-allowed'].includes(cur.v21), `v21=${cur.v21}`);
   rec('V1 英雄点击区 cursor:pointer（回归）', cur.hero === 'pointer', `hero=${cur.hero}`);
   rec('V1 按钮 cursor:pointer（回归）', cur.btn === 'pointer', `btn=${cur.btn}`);
   await page.screenshot({ path: EV + '/v1-cursor.png' });
@@ -91,7 +91,7 @@ const inject = (page, save) => {
     vc: document.getElementById('vehicle-collect')?.textContent || '',
     rift: document.getElementById('rift-dm-balance')?.textContent || '',
   }));
-  rec('V2 顶栏 DM 累计精确到小数（7.35）', d.top === '7.35', `h-dm="${d.top}"`);
+  rec('V2 顶栏 DM 累计精确到小数（7.35 · v2.8.27 当前/上限格式）', d.top.startsWith('7.35'), `h-dm="${d.top}"`);
   rec('V2 探采页头当前 DM 小数（7.35）', d.vc.includes('当前 DM: 7.35'), `vc="${d.vc}"`);
   rec('V2 裂隙面板当前 DM 小数（7.35）', d.rift === '7.35', `rift="${d.rift}"`);
   await page.screenshot({ path: EV + '/v2-dm-decimal.png' });

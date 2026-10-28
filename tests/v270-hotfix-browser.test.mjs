@@ -15,8 +15,8 @@ const baseA = { _version: 6, chapter: '5', storyline: 'line_abyss', ep: 5e4, rp:
   pets: {}, activePets: [], fusesDone: 0, delve: {}, activeRift: null, riftsSealed: 2, riftEmber: 0, riftUpgrades: {},
   resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: true, faith: true, pt: true, dm: true },
   lastSeen: Date.now(), startTime: Date.now(), faith: 1, unlockedBuildings: { abyss_anchor: true, end_shrine: true } };
-// 存档B：晋升截图场景——本局累计 37.76M ≥ 需求 10M → 2 PP，按钮应可点、模态应弹出、转生应生效
-const baseB = { _version: 6, chapter: '5', storyline: 'line_abyss', ep: 1e5, rp: 5, es: 0, dm: 5, prestige: 0, runEarned: 37.76e6,
+// 存档B：晋升截图场景——本局累计 9e9 ≥ 需求 3e9（v2.8.27）→ 2 PP，按钮应可点、模态应弹出、转生应生效
+const baseB = { _version: 6, chapter: '5', storyline: 'line_abyss', ep: 1e5, rp: 5, es: 0, dm: 5, prestige: 0, runEarned: 9e9, // v2.8.27：首轮晋升阈值 3e9（原 10M）
   upgrades: { scribble: 3 }, buildings: { abyss_anchor: 1, end_shrine: 1 },
   tech: { ai_core: true }, ai: {}, cultists: [], religion: { unlocked: true, branch: 'sun', sun: true, seal: 1 },
   pets: {}, activePets: [], fusesDone: 0, delve: {}, activeRift: null, riftsSealed: 2, riftEmber: 0, riftUpgrades: {},

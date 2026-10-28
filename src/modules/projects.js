@@ -120,9 +120,12 @@ export function tickProjects() {
     return true;
   });
   if (S.projects.length !== before) changed = true;
-  const activeCount = S.projects.filter(p => p.status === 'active').length;
+  // v2.8.28：任务版无论任务状态如何（active 进行中 / pending 完成未领取）都占位——
+  // 完成多个任务但未领取奖励时不再发放新任务，领取（claimed）或过期（expired）后才腾出位置。
+  // 上限保持 maxProjects()（默认 3 条，项目平行台升级可提高并行数）。
+  const occupiedCount = S.projects.length;
   // v2.4.2：任务发放减速——冷却 10 分钟 + 1% 概率（原 120s + 2%，反馈「任务发放速率减缓」）
-  if (activeCount < maxProjects() && now - lastSpawnAt > PROJECT_SPAWN_COOLDOWN && Math.random() < 0.01) {
+  if (occupiedCount < maxProjects() && now - lastSpawnAt > PROJECT_SPAWN_COOLDOWN && Math.random() < 0.01) {
     spawnProject();
     changed = true;
   }
@@ -136,7 +139,7 @@ export function claimProject(p) {
   if (r.kind === 'ep') addEp(r.amount);
   else if (r.kind === 'rp') {
     // v2.8.7：防御——RP 未解锁（理论上生成已门控）时回退 EP 等值奖励
-    if (S.resDiscovered && S.resDiscovered.rp) S.rp += r.amount;
+    if (S.resDiscovered && S.resDiscovered.rp) addRp(r.amount); // v2.8.27 ②：RP 上限
     else addEp(Math.min(r.amount * 100, epStorageCap()));
   }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }

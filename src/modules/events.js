@@ -47,7 +47,7 @@ export function applyEvent(ev, durMult = 1) {
     S.clickBuffMult = ev.mult;
     S.clickBuffUntil = Date.now() + ev.dur * 1000 * durMult;
   } else if (ev.type === 'rp') {
-    S.rp += Math.ceil(ev.amount * luckyMult * (1 + fxValue('eventRewardAdd'))); // v2.1 建筑驱动：机会感知器·锐 +50%/级
+    addRp(Math.ceil(ev.amount * luckyMult * (1 + fxValue('eventRewardAdd')))); // v2.8.27 ②：RP 上限 // v2.1 建筑驱动：机会感知器·锐 +50%/级
   } else if (ev.type === 'focus') {
     S.focusLevel += ev.amount;
   } else if (ev.type === 'freelevel') {

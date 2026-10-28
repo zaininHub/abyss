@@ -11,7 +11,7 @@ import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier,
 function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift'); } // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
-import { researchMult } from './economy.js';
+import { researchMult, addDm } from './economy.js';
 import { log, toast, dirty } from '../main.js';
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
@@ -133,7 +133,7 @@ function settleRiftExpedition(dt) {
       if (toast) toast('🌊 腐化吞噬：深入探索失败，损失 EP');
     } else {
       const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * lv;
-      S.dm = (S.dm || 0) + dmTotal;
+      addDm(dmTotal); // v2.8.27 ②：DM 上限
       if (dmTotal > 0) discoverDm();
       if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
       S.riftEmber = (S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul();
@@ -192,7 +192,7 @@ export function tickRift(dt) {
 // ---- v2.6.1 奖励结算（封印/拥抱共用：DM + RP + VS + 信仰 + 余烬） ----
 function grantRiftRewards(r, emberGain, embrace) {
   const dmGain = sealDmReward(r) * riftDmMult();
-  S.dm = (S.dm || 0) + dmGain;
+  addDm(dmGain); // v2.8.27 ②：DM 上限
   if (dmGain > 0) discoverDm();
   // RP：锚点解锁后 + level × 0.5（透镜同加成）
   if (S.resDiscovered && S.resDiscovered.rp) {

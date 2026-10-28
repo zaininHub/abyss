@@ -46,7 +46,7 @@ const browser = await puppeteer.launch({
     localStorage.setItem('abyss_idle_v2', JSON.stringify({
       _version: 6, chapter: '1', storyline: 'default',
       ep: 100, rp: 0, es: 0, faith: 0, pt: 0, dm: 0, prestigePoints: 0,
-      upgrades: { intern: 2, scribble: 30, atrium: 1 },  // 47×2 + 0.3×30 = 103/s ≥ 100；atrium=1 为 RP 显示锚点（v2.3.1 ①）
+      upgrades: { intern: 5, scribble: 30, atrium: 1 },  // v2.8.27：intern cps 40→20，5 级才 cps≥100；atrium=1 为 RP 显示锚点
       milesDone: {}, tech: {},
       resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false },
       lastSeen: Date.now(), startTime: Date.now(),
@@ -76,7 +76,7 @@ const browser = await puppeteer.launch({
     localStorage.setItem('abyss_idle_v2', JSON.stringify({
       _version: 6, chapter: '1', storyline: 'default',
       ep: 1e9, rp: 7, es: 0, faith: 0, pt: 0, dm: 0, prestigePoints: 0,
-      upgrades: { intern: 2 }, milesDone: { '5': true, '10': true, '100': true }, tech: {},
+      upgrades: { intern: 5 }, milesDone: { '5': true, '10': true, '100': true }, tech: {}, // v2.8.27：intern cps 40→20，5 级才 ≥100
       resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false },
       lastSeen: Date.now(), startTime: Date.now(),
     }));

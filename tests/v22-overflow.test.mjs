@@ -24,7 +24,7 @@ const { epStorageCap, addEp, tickCorruption } = await import('../src/modules/eco
 function resetBaseline() {
   S.upgrades = {}; S.buildings = {}; S.milesDone = {}; S.storyline = 'default';
   S.ep = 0; S.rp = 0; S.corruption = 0;
-  S.epOverflowTotal = 0; S._overflowRpAcc = 0;
+  S.epOverflowTotal = 0; S._overflowRpPool = 0;
   S.runEarned = 0; S.allTimeEp = 0;
 }
 const CAP = epStorageCap(); // 期望 2000
@@ -42,12 +42,12 @@ t('超 cap 存量：tickCorruption 后 S.ep === cap 且 epOverflowTotal 增量 =
   assert.strictEqual(S.epOverflowTotal, overflow, `epOverflowTotal 应记 ${overflow}，实际 ${S.epOverflowTotal}`);
 });
 
-t('v2.8.2 溢出不转 RP：overflow=1e6 仅记账，RP 不变', () => {
+t('v2.8.23 溢出转 RP：overflow=1e6 → RP 增加（与蒸馏同效率，clamp 上限内）+ 溢出全额记账', () => {
   resetBaseline();
   const overflow = 1e6;
   S.ep = CAP + overflow;
   tickCorruption(0.1);
-  assert.strictEqual(S.rp, 0, `RP 不应变化，实际 +${S.rp}`);
+  assert.ok(S.rp > 0, `RP 应增加，实际 ${S.rp}`);
   assert.strictEqual(S.epOverflowTotal, overflow, '溢出应全额记账');
 });
 
@@ -57,15 +57,15 @@ t('两路径逐位一致：同 overflow 值经 addEp 与 tickCorruption 的 RP/�
   const overflow = 1234567.89; // 故意选非整值，逼出浮点尾数差异
   S.ep = CAP;
   addEp(overflow);
-  const a = { rp: S.rp, total: S.epOverflowTotal, acc: S._overflowRpAcc };
+  const a = { rp: S.rp, total: S.epOverflowTotal, acc: S._overflowRpPool };
   // 路径 B：tickCorruption（存量超 cap）
   resetBaseline();
   S.ep = CAP + overflow;
   tickCorruption(0.1);
-  const b = { rp: S.rp, total: S.epOverflowTotal, acc: S._overflowRpAcc };
+  const b = { rp: S.rp, total: S.epOverflowTotal, acc: S._overflowRpPool };
   assert.strictEqual(a.rp, b.rp, `RP 增量不一致：addEp ${a.rp} vs tick ${b.rp}`);
   assert.strictEqual(a.total, b.total, `epOverflowTotal 不一致：${a.total} vs ${b.total}`);
-  assert.strictEqual(a.acc, b.acc, `_overflowRpAcc 尾数不一致（逐位）：${a.acc} vs ${b.acc}`);
+  assert.strictEqual(a.acc, b.acc, `_overflowRpPool 尾数不一致（逐位）：${a.acc} vs ${b.acc}`);
 });
 
 t('多轮溢出持续累计（第二次 tick 再记一笔）', () => {
@@ -95,15 +95,14 @@ t('ep 恰等于 cap：零溢出零记账（边界）', () => {
   assert.strictEqual(S.epOverflowTotal, 0);
 });
 
-t('腐化积累语义不变：溢出时按溢出比例累积腐化（截断前计算）', () => {
+t('v2.8.21 腐化语义：EP 触顶不再产生腐化（溢出只走记账/转 RP）', () => {
   resetBaseline();
-  const overflow = CAP; // overflow/cap = 1
+  const overflow = CAP;
   S.ep = CAP + overflow;
   S.corruption = 0;
-  tickCorruption(1); // dt=1s
-  const expect = 0.1 * (overflow / CAP) * 1 * 100; // accumulateRate × 比例 × dt × 100
-  assert.ok(Math.abs(S.corruption - expect) < 1e-9, `腐化应为 ${expect}，实际 ${S.corruption}`);
-  assert.strictEqual(S.ep, CAP, '腐化记账后 ep 仍应截断到 cap');
+  tickCorruption(1);
+  assert.strictEqual(S.corruption, 0, `腐化应为 0，实际 ${S.corruption}`);
+  assert.strictEqual(S.ep, CAP, '记账后 ep 仍应截断到 cap');
 });
 
 t('addEp 部分入账回归：ep=cap-100 注入 1000 → 入账 100、溢出 900 记账', () => {
@@ -113,7 +112,7 @@ t('addEp 部分入账回归：ep=cap-100 注入 1000 → 入账 100、溢出 900
   assert.strictEqual(gained, 100);
   assert.strictEqual(S.ep, CAP);
   assert.strictEqual(S.epOverflowTotal, 900);
-  assert.strictEqual(S.rp, 0, 'v2.8.2 溢出不转 RP');
+  assert.ok(S._overflowRpPool > 0, '溢出转 RP：900 EP 尾数滞留溢出池');
 });
 
 console.log('[3] 源码级断言（公共记账单点）');
@@ -128,9 +127,9 @@ t('accountEpOverflow 恰 1 处定义 + 恰 2 处调用（addEp 与 tickCorruptio
 t('旧截断行已移除：tick 路径不再直接丢弃溢出 EP', () => {
   assert.ok(!econSrc.includes('if (S.ep > cap) S.ep = cap'), '旧截断行仍存在');
 });
-t('记账口径注释同源（v2.8.2：溢出仅累计统计 + 解锁标记，无 RP 转换）', () => {
-  assert.ok(econSrc.includes('移除「溢出 → RP」自动转换'), '公共函数内应注明无溢出转换');
-  assert.ok(!econSrc.includes('_overflowRpAcc'), '不应残留溢出转换累加器');
+t('记账口径注释同源（v2.8.23：溢出经 accountEpOverflow 按 5% 转 RP，累加器保留）', () => {
+  assert.ok(econSrc.includes('记入溢出池（5% 转 RP）'), '公共函数内应注明溢出转换口径');
+  assert.ok(econSrc.includes('accountEpOverflow'), '溢出记账单点函数应存在');
 });
 
 for (const [name, fn] of tests) {

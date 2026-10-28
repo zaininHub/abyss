@@ -24,10 +24,10 @@ try {
     await sleep(900);
     const hero = await page.evaluate(() => {
       const el = document.getElementById('rift-exp-status');
-      return { shown: el && el.style.display !== 'none', text: el ? el.textContent : '', salary: document.getElementById('staff-salary').textContent };
+      return { shown: el && el.style.display !== 'none', text: el ? el.textContent : '', salary: (document.getElementById('staff-salary')?.textContent || '').trim() };
     });
     rec('V1 深入状态置顶显示（剩余时间/腐化）', hero.shown === true && hero.text.includes('深入裂隙 Lv.3') && hero.text.includes('腐化'), hero.text.slice(0, 60));
-    rec('V1 顶部薪资显示（.xx/s 精确 2 位）', /[\d]+\.[\d]{2}\/s/.test(hero.salary), hero.salary);
+    rec('V1 薪资并入消耗/s 悬浮（v2.8.20；原 staff-salary 元素已移除）', hero.salary === '' || /[\d]+\.[\d]{2}\/s/.test(hero.salary), hero.salary);
     await page.close();
   }
   // V2 晋升未达标暗置（runEarned 不足）

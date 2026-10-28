@@ -4,7 +4,7 @@
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin } from './economy.js';
-import { computeCps, staffSalaryPerSec } from './economy.js'; // v2.8.12：净流限制（产出一薪资-探采消耗 > 0 才采集）
+import { computeCps, staffSalaryPerSec, addDm } from './economy.js'; // v2.8.12：净流限制 + v2.8.27 ②：DM 上限
 
 let logFn = null;
 export function setVehicleLogFn(fn) { logFn = fn; }
@@ -25,7 +25,7 @@ export function tickVehicleCollect(dt) {
     const net = computeCps() - staffSalaryPerSec() - epPerSec;
     if (net > 0 && S.ep >= epCost) {
       S.ep -= epCost;
-      S.dm = (S.dm || 0) + dm;
+      addDm(dm); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
       // v2.8.20 ②：采集到账不再打印日志（用户多轮要求「不要打印了」；保留探采暂停异常提示）
       return true;
     }

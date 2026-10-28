@@ -28,8 +28,8 @@ try {
   }, over));
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
-  // EP 6e6：仅 cpu（门槛 6e6）进入解锁窗口
-  await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(6e6, { upgrades: { storage: 500 } }));
+  // EP 2e7：仅 cpu（门槛 1.8e7 = 60M×0.3）进入解锁窗口
+  await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(2e7, { upgrades: { storage: 500 } }));
   await page.goto(BASE, { waitUntil: 'load' });
   await new Promise(r => setTimeout(r, 1200));
   await page.click('#btn-shop');
@@ -39,9 +39,9 @@ try {
     const txt = grid ? grid.textContent : '';
     return { hasCpu: txt.includes('CPU 超频'), hasMem: txt.includes('内存扩容'), hasGpu: txt.includes('GPU 加速') };
   });
-  rec('T3 线程强化分段解锁（EP 6e6 仅 CPU 超频可见）', t3a.hasCpu && !t3a.hasMem && !t3a.hasGpu, JSON.stringify(t3a));
-  // EP 1.5e8：mem 进入窗口，但 gpu/cache 仍未解锁（门槛 6e8 / 3e10）
-  await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(1.5e8, { upgrades: { storage: 500, cpu: 1, subsist1: 1 } })); // 链窗口 K=3：cpu→能量合剂→内存
+  rec('T3 线程强化分段解锁（EP 2e7 仅 CPU 超频可见）', t3a.hasCpu && !t3a.hasMem && !t3a.hasGpu, JSON.stringify(t3a));
+  // EP 5e8：mem 进入窗口，但 gpu/cache 仍未解锁（门槛 1.8e9 / 9e10）
+  await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(5e8, { upgrades: { storage: 500, cpu: 1, subsist1: 1 } })); // 链窗口 K=3：cpu→能量合剂→内存
   await page.goto(BASE, { waitUntil: 'load' });
   await new Promise(r => setTimeout(r, 1200));
   await page.click('#btn-shop');
@@ -51,7 +51,7 @@ try {
     const txt = grid ? grid.textContent : '';
     return { hasMem: txt.includes('内存扩容'), hasGpu: txt.includes('GPU 加速'), hasCache: txt.includes('缓存优化') };
   });
-  rec('T4 线程强化分段解锁（EP 1.5e8 含内存、GPU/缓存仍未解锁）', t3b.hasMem && !t3b.hasGpu && !t3b.hasCache, JSON.stringify(t3b));
+  rec('T4 线程强化分段解锁（EP 5e8 含内存、GPU/缓存仍未解锁）', t3b.hasMem && !t3b.hasGpu && !t3b.hasCache, JSON.stringify(t3b));
   // 购买扣费：cpu 首购 = 2e7×1.30^0 = 2e7
   await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(2.5e7, { upgrades: { storage: 500 } }));
   await page.goto(BASE, { waitUntil: 'load' });
@@ -64,7 +64,7 @@ try {
     const cpuCard = cards.find(c => c.textContent.includes('CPU 超频'));
     return cpuCard ? cpuCard.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) : 'NO CARD';
   });
-  rec('T5 CPU 超频首购卡面价格显示', /20\.00M|2[0e]\s*[KM]|20000000|20\.0M/i.test(t3c), t3c);
+  rec('T5 CPU 超频首购卡面价格显示', /60\.00M|6[0e]\s*[KM]|60000000|60\.0M/i.test(t3c), t3c); // v2.8.27：base ×3（20M→60M）
   // T6：DOM 稳定性（内存泄漏代理：切换/弹窗/购买循环后节点不增长）
   await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave(1e9));
   await page.goto(BASE, { waitUntil: 'load' });

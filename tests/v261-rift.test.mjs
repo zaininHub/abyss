@@ -18,7 +18,7 @@ rec('V2 余烬共振 VS ×(1+0.5/级)', src.includes('1 + 0.5 * riftUpgradeLevel
 rec('V3 深入成本（EP=封印×0.5 + DM=级×2）', src.includes('Math.ceil(r.sealCost * 0.5)') && src.includes('r.level * 2'), 'delveRift');
 rec('V3 深入产出（DM 0.5×级/s + VS 0.2×级/s 深潜联动）', src.includes('delveDmPerLevel * lv * dt') && src.includes('delveVsPerLevel * lv * dt'), 'settle');
 rec('V3 腐化累积（1%/级/s）+ 阈值 50% 损失 30% 封印成本', src.includes('delveCorruptPerLevel * lv * dt') && src.includes('delveFailCorrupt') && src.includes('ex.sealCost * BALANCE.rift.delveFailLoss'), 'risk');
-rec('V3 脱出保留产出 + 余烬', src.includes('S.dm = (S.dm || 0) + ex.gainedDm') && src.includes('S.riftExpedition = null'), 'abort');
+rec('V3 紧急脱出不奖励（v2.6.5：脱出无产出/余烬，仅结束探索）', !src.includes('S.dm = (S.dm || 0) + ex.gainedDm') && src.includes('S.riftExpedition = null'), 'abort');
 // V4 多元奖励
 rec('V4 封印/拥抱共享奖励结算（DM+RP+VS+信仰+余烬）', src.includes('grantRiftRewards') && src.includes('S.riftEmber = (S.riftEmber || 0) + emberGain'), 'grant');
 rec('V4 RP 锚点前置（rp 已发现才给）', src.includes('S.resDiscovered && S.resDiscovered.rp'), 'rp-gate');

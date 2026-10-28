@@ -33,9 +33,9 @@ function mkState(rawObj) {
 {
   const mk = (runEarned, over = {}) => mkState({ _version: 6, chapter: '6', storyline: 'default', ep: 1000, rp: 0, runEarned, prestige: 0, upgrades: {}, buildings: {}, tech: {}, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: false, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now(), ...over });
   {
-    Object.assign(S, mk(450000000)); // v2.8.19：3×150M
+    Object.assign(S, mk(9e9)); // v2.8.27：3×3e9（首升门槛 3e9）
     const pp = economy.prestigeGain(), rp = economy.prestigeRpGain(), es = economy.esGain();
-    rec('V1 晋升奖励：450M 累计（3×150M 需求）→ 2 PP / 2 RP / 2 ES（v2.8.19 首升门槛 150M）', pp === 2 && rp === 2 && es === 4, `pp=${pp},rp=${rp},es=${es}`);
+    rec('V1 晋升奖励：9B 累计（3×3e9 需求）→ 2 PP / 2 RP / 21 ES（v2.8.27 首升门槛 3e9）', pp === 2 && rp === 2 && es === 21, `pp=${pp},rp=${rp},es=${es}`);
   }
   {
     Object.assign(S, mk(5000000));
@@ -43,7 +43,7 @@ function mkState(rawObj) {
     rec('V1 晋升门槛：未达标（5M<30M）→ 0 PP / 0 RP / 0 ES', pp === 0 && rp === 0 && es === 0, `pp=${pp},rp=${rp},es=${es}`);
   }
   {
-    Object.assign(S, mk(15e9)); // v2.8.19：首升需求 150M → 100× = 15e9
+    Object.assign(S, mk(3e11)); // v2.8.27：首升需求 3e9 → 100× = 3e11
     rec('V1 晋升曲线：100×需求 → 10 PP（sqrt round 高段收敛）', economy.prestigeGain() === 10, `pp=${economy.prestigeGain()}`);
   }
 }
@@ -115,7 +115,7 @@ const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromiu
 {
   const page = await browser.newPage();
   const saveBase = {
-    _version: 6, chapter: '6', storyline: 'line_abyss', ep: 1500, rp: 0, runEarned: 450000000, // v2.8.19：3×150M
+    _version: 6, chapter: '6', storyline: 'line_abyss', ep: 1500, rp: 0, runEarned: 9e9, // v2.8.27：3×3e9
     upgrades: {}, milesDone: {}, tech: {}, buildings: {}, prestige: 0, prestigePoints: 0,
     crossroad: 'locked', crossroadLockedBy: 'abyss_anchor',
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: true },
@@ -129,7 +129,7 @@ const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromiu
     const b = document.getElementById('prestige-btn');
     return b ? { disabled: b.disabled, text: b.textContent } : null;
   });
-  rec('V5 晋升按钮：450M 档可点（disabled=false）', btn && btn.disabled === false, JSON.stringify(btn));
+  rec('V5 晋升按钮：9B 档可点（disabled=false）', btn && btn.disabled === false, JSON.stringify(btn));
   await page.evaluate(() => document.getElementById('prestige-btn')?.click());
   await sleep(300);
   const modal = await page.evaluate(() => getComputedStyle(document.getElementById('talent-modal')).display);

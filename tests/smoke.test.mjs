@@ -142,20 +142,20 @@ t('熵减协议把惩罚率 /1.5', () => {
 });
 
 console.log('[5] 经济与线程');
-t('线程招募成本 120 × 1.25^n（v2.8.3）', () => {
+t('线程招募成本 360 × 1.25^n（v2.8.27）', () => {
   S.cultists = [];
-  assert.equal(staffCost(), 120);
+  assert.equal(staffCost(), 360); // v2.8.27：firstCost 120→360
   S.cultists.push({ output: 2.5, mood: '正常' });
-  assert.equal(staffCost(), 150); // 120×1.25
+  assert.equal(staffCost(), 450); // 360×1.25
 });
 t('v2.0.2 EP 容量 = (基础2000 + 缓存×5000 + 存储级制累计 + DC加成) × (1 + 0.25×里程碑数)', () => {
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   assert.equal(epStorageCap(), 2000);
   S.upgrades['cache'] = 1;          assert.equal(epStorageCap(), 10000);  // v2.8.2：2000 + 8000
-  S.upgrades['storage'] = 2;        assert.equal(epStorageCap(), 16450);  // v2.8.2：+3000 + 3000×1.15
-  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 26450);  // + 10K（数据中心 1 级）
+  S.upgrades['storage'] = 2;        assert.equal(epStorageCap(), 20900);  // v2.8.27：capPer 5000×1.18（2000 + 5000 + 5900）
+  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 30900);  // v2.8.27：cache 8000 + storage 5000+5900 + DC 10000
   S.milesDone = { m1: true, m2: true };
-  assert.equal(epStorageCap(), Math.floor(26450 * 1.5)); // × (1 + 0.25×2)
+  assert.equal(epStorageCap(), Math.floor(30900 * 1.5)); // × (1 + 0.25×2)
   S.upgrades = {}; S.milesDone = {}; S.buildings = {};
 });
 t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
@@ -198,18 +198,18 @@ t('R1：线程裸产出不再叠加全局乘数（单线程 = 3）', () => {
 t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 3000 / ×1.15 递增 / 无 maxLevel 封顶；v2.8.2）', () => {
   const st = UPGRADES.find(u => u.id === 'storage');
   assert.ok(st, 'UPGRADES 应含 storage 项');
-  assert.equal(st.base, 150);
+  assert.equal(st.base, 450); // v2.8.27：存储 base 150→450
   assert.equal(st.growth, 1.25);
   assert.ok(!st.maxLevel, 'v2.4 KG 模式：storage 不再有 maxLevel 封顶（无限升级）');
-  assert.equal(BALANCE.storage.capPer, 3000); // v2.8.2
-  assert.equal(BALANCE.storage.capGrowth, 1.15); // v2.8.2
+  assert.equal(BALANCE.storage.capPer, 5000); // v2.8.27
+  assert.equal(BALANCE.storage.capGrowth, 1.18); // v2.8.27
   // maxLevel 字段保留仅供存档兼容参考，不再作为购买上限
   assert.equal(BALANCE.storage.maxLevel, 20);
   // 升级商店 storage 卡为无限购买：cost 公式可逐级推演（任意级数均可购买，受 30% 钳制）
   S.upgrades = { storage: 0 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), 150, '首购价不变');
+  assert.equal(unitCost(st, 0), 450, '首购价 450（v2.8.27 base 150→450）');
   S.upgrades = { storage: 25 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), Math.min(Math.ceil(150 * Math.pow(1.25, 25)), Math.floor(epStorageCap() * 0.3)), '25 级仍可购（无 20 级封顶）');
+  assert.equal(unitCost(st, 0), Math.min(Math.ceil(450 * Math.pow(1.25, 25)), Math.floor(epStorageCap() * 0.3)), '25 级仍可购（无 20 级封顶）');
   S.upgrades = {};
 });
 t('v2.0.2：防死锁——新档 storage 首购 ≤ 上限×30%', () => {
@@ -221,7 +221,7 @@ t('v2.0.2：防死锁——新档 storage 首购 ≤ 上限×30%', () => {
   S.upgrades = {}; S.milesDone = {};
 });
 t('D1：addEp 收敛上限且只按实际入账累计（runEarned/allTimeEp）', () => {
-  S.upgrades = {}; S.milesDone = {};
+  S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   S.ep = 1950;
   const re0 = S.runEarned || 0, at0 = S.allTimeEp || 0;
   const gained = addEp(100);
@@ -266,7 +266,7 @@ t('R4：每秒调用 refreshShopAffordability 快刷灰态（源码断言）', (
 
 console.log('[7] v2.1.1 修复断言（P1-B 溢出产腐化 / P1-A 裂隙卡片残留）');
 t('P1-B：触顶挂机产出 → 溢出不再产腐化（v2.8.21 ⑥ 口径），EP 截断到上限', () => {
-  S.upgrades = {}; S.milesDone = {}; S.cultists = [];
+  S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default'; S.cultists = [];
   S.ep = 2100; S.corruption = 0;
   tickCorruption(1);
   assert.equal(S.corruption, 0, `腐化不应随溢出增长，实际 ${S.corruption}`);
@@ -274,7 +274,7 @@ t('P1-B：触顶挂机产出 → 溢出不再产腐化（v2.8.21 ⑥ 口径）�
   S.ep = 50; S.corruption = 0;
 });
 t('P1-B：一次性入口仍截断不产腐化（addEp 口径不变）', () => {
-  S.upgrades = {}; S.milesDone = {};
+  S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   S.ep = 2000; S.corruption = 0;
   assert.equal(addEp(500), 0, '满仓一次性入账为 0');
   assert.equal(S.corruption, 0, '一次性入口不产腐化');
@@ -729,7 +729,7 @@ t('5.1：epStorageCap() 返回 ≥ 2000（新基础上限）', () => {
 
 t('5.1：0 级时第 1 级价格 = 150 EP（unitCost(storage,0)===150）', () => {
   resetCapState();
-  assert.equal(unitCost(stU(), 0), 150);
+  assert.equal(unitCost(stU(), 0), 450); // v2.8.27
   resetCapState();
 });
 
@@ -754,7 +754,7 @@ t('5.1：19 级时末级（第 20 级）价格/上限 ≤ 30%', () => {
 t('5.1：20 级满级总上限 = 309,331（v2.8.2 曲线 capPer 3000×1.15^n）', () => {
   resetCapState();
   S.upgrades['storage'] = 20;
-  assert.equal(epStorageCap(), 309331); // v2.8.2 曲线（3000×1.15^n 累计）
+  assert.equal(epStorageCap(), 735140); // v2.8.27 曲线（5000×1.18^n 累计）
   resetCapState();
 });
 
@@ -782,11 +782,11 @@ t('5.1：3 个里程碑时上限乘数 = 1.75（+25%×3）', () => {
 t('5.1：旧档兼容——v2.0.1 实存 13 节点直接映射 13 级；v2.4 超 20 旧档全额计入不再截断', () => {
   resetCapState();
   S.upgrades['storage'] = 13; // v2.0.1 最深推演 13 节点
-  const expected = Math.round(2000 + 3000 * (Math.pow(1.15, 13) - 1) / 0.15); // v2.8.2 曲线（基准 2000 + 存储累计，round 对齐 epStorageCap）
+  const expected = Math.round(2000 + 5000 * (Math.pow(1.18, 13) - 1) / 0.18); // v2.8.27 曲线（基准 2000 + 存储累计）
   assert.equal(epStorageCap(), expected);
   // v2.4 KG 模式：>20 的旧值按级制公式全额计入（不再截断到满级）
   S.upgrades['storage'] = 25;
-  const expected25 = Math.round(2000 + 3000 * (Math.pow(1.15, 25) - 1) / 0.15); // v2.8.2
+  const expected25 = Math.round(2000 + 5000 * (Math.pow(1.18, 25) - 1) / 0.18); // v2.8.27
   assert.ok(Math.abs(epStorageCap() - expected25) <= 1, `v2.4 旧档 25 级全额计入（期望 ${expected25}，实际 ${epStorageCap()}）`);
   resetCapState();
 });
@@ -823,7 +823,7 @@ t('5.2：unitCost(cache, n) ≤ epStorageCap()×0.3（任意数量）', () => {
 t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
   S.upgrades['intern'] = 40; // v2.8.2：5e4×1.30^40 ≈ 18G，远超上限×30%
-  const raw = Math.ceil(2e5 * Math.pow(1.30, 40));
+  const raw = Math.ceil(6e5 * Math.pow(1.30, 40)); // v2.8.27：intern base ×3
   const capLimit = Math.floor(epStorageCap() * 0.3);
   const u = UPGRADES.find(x => x.id === 'intern');
   assert.ok(unitCost(u, 0) === raw && raw > capLimit, `非扩容项应按原价 ${raw}（> 上限30% ${capLimit}），实际 ${unitCost(u, 0)}`);
@@ -831,7 +831,7 @@ t('5.2：非扩容项（intern）不受 30% 约束', () => {
 });
 
 t('5.2：cache 新价格 base=1e11（v2.8.23 线程强化门槛重排）', () => {
-  assert.equal(caU().base, 1e11);
+  assert.equal(caU().base, 3e11); // v2.8.27 base ×3
 });
 
 t('5.4：三故事线变体上限加成（abyss ×1.15 / order ×1.10 / faith 无）', () => {

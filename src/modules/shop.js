@@ -930,7 +930,7 @@ function updateV21Item(b) {
   el.classList.toggle('cant', S.ep < cost);
 }
 
-function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); } // 镜像项走升级商店
+function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade' && b.cat !== 'D'); } // 镜像项走升级商店 + v2.8.27 ①：cat D 存储扩容统一主商店（「存储与资源建筑」唯一入口，效能建筑「存储与扩容」分区移除）
 
 // v2.3.1 ⑤（rev18 9.3）：效能建筑 cat A-X 分组显示名（研发命名，回填设计文档 9.3 表）。
 // 组序 = 字母序（A→I，X 岔路镜像实际渲染于岔路口分区不进本列表）；「其他」为兜底组，未命中组谓词的条目归入、组内可见 0 项整组不渲染。
@@ -1214,32 +1214,78 @@ export function buyResearchUpgrade(id) {
   save(S);
   return { ok: true };
 }
+// v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
+// 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局（累计 4 级）
+const RP_GROUPS = [
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
+  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith'],             unlock: { prev: 'prod', need: 4 } },
+  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift'],                                      unlock: { prev: 'res', need: 4 } },
+];
+let rpFold = {}; // 类目折叠状态（会话级，不落盘）
+
+function rpGroupLv(key) {
+  const g = RP_GROUPS.find(x => x.key === key);
+  if (!g) return 0;
+  return g.ids.reduce((n, id) => n + ((S.rpTheories && S.rpTheories[id]) || 0), 0);
+}
+function rpGroupShown(g) {
+  if (!g.unlock) return true;
+  return rpGroupLv(g.unlock.prev) >= g.unlock.need;
+}
 export function renderResearchUpgrades(container) {
   if (!container) return;
-  const list = (BALANCE.researchUpgs || []).slice().sort((a, b) => a.base - b.base);
-  let sig = list.map(u => `${u.id}:${S.rpTheories?.[u.id] || 0}:${Math.floor(S.rp || 0)}`).join(','); // v2.8.13：RP 变化即重建——灰态/可购判定不再滞后
+  const sig = RP_GROUPS.map(g =>
+    `${g.key}:${rpGroupShown(g) ? 1 : 0}:${rpFold[g.key] ? 1 : 0}:${g.ids.map(id => (S.rpTheories?.[id] || 0)).join('.')}`
+  ).join('|') + `:${Math.floor(S.rp || 0)}`; // v2.8.13：RP 变化即重建——灰态/可购判定不再滞后
   if (container._lastSig === sig) return; // 增量：内容未变不重建（v2.6.7 纪律）
   container._lastSig = sig;
   container.innerHTML = '';
   const frag = document.createDocumentFragment();
-  for (const u of list) {
-    const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
-    const maxed = lv >= u.cap;
-    const cost = researchUpgCost(u.id);
-    const afford = (S.rp || 0) >= cost;
-    const div = document.createElement('div');
-    div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
-    div.dataset.research = u.id;
-    div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)} RP）`); // v2.8.13：卡片不再重复展示当前 RP（顶部已有「当前 RP」）
-    div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
-      <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
-      <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
-    frag.appendChild(div);
+  for (const g of RP_GROUPS) {
+    if (!rpGroupShown(g)) {
+      const lock = document.createElement('div');
+      lock.className = 'rp-group-lock';
+      lock.textContent = `🔒 ${g.name} 未显现——累计 ${g.unlock.need} 级「${RP_GROUPS.find(x => x.key === g.unlock.prev).name}」研究后解锁`;
+      frag.appendChild(lock);
+      continue;
+    }
+    const title = document.createElement('div');
+    title.className = 'rp-group-title';
+    title.dataset.rpFold = g.key;
+    title.innerHTML = `<span class="rp-fold-arrow">${rpFold[g.key] ? '▶' : '▼'}</span><b>${g.name}</b>`;
+    title.title = g.ids.map(id => (BALANCE.researchUpgs.find(u => u.id === id)?.name || id)).join(' / ');
+    frag.appendChild(title);
+    if (rpFold[g.key]) continue; // 折叠：仅保留标题
+    const grid = document.createElement('div');
+    grid.className = 'shop-grid';
+    for (const id of g.ids) {
+      const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
+      if (!u) continue;
+      const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
+      const maxed = lv >= u.cap;
+      const cost = researchUpgCost(u.id);
+      const afford = (S.rp || 0) >= cost;
+      const div = document.createElement('div');
+      div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
+      div.dataset.research = u.id;
+      div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)} RP）`); // v2.8.13：卡片不再重复展示当前 RP（顶部已有「当前 RP」）
+      div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
+        <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
+        <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
+      grid.appendChild(div);
+    }
+    frag.appendChild(grid);
   }
   container.appendChild(frag);
   if (!container._bound) {
     container._bound = true;
     container.addEventListener('click', (ev) => {
+      const foldEl = ev.target.closest('[data-rp-fold]');
+      if (foldEl && container.contains(foldEl)) {
+        rpFold[foldEl.dataset.rpFold] = !rpFold[foldEl.dataset.rpFold];
+        renderResearchUpgrades(container);
+        return;
+      }
       const el = ev.target.closest('[data-research]');
       if (!el || !container.contains(el)) return;
       const r = buyResearchUpgrade(el.dataset.research);

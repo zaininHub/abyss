@@ -76,11 +76,11 @@ async function withSave(rawObj, fn) {
       if (tab) tab.click();
       return new Promise(res => setTimeout(() => {
         const list = document.getElementById('research-upgrade-list');
-        res({ title: !!document.getElementById('research-upgrade-title'), cards: list ? list.querySelectorAll('.item').length : 0, text: (list?.textContent || '').slice(0, 50), pane: document.getElementById('tab-rp')?.style.display });
+        res({ title: !!document.getElementById('research-upgrade-title'), cards: list ? list.querySelectorAll('.item').length : 0, locks: list ? list.querySelectorAll('.rp-group-lock').length : 0, text: (list?.textContent || '').slice(0, 50), pane: document.getElementById('tab-rp')?.style.display });
       }, 300));
     });
   });
-  rec('B4 研究升级区块：标题 + 5 项卡（含熵减研究 Lv.1）', got.title && got.cards >= 5 && /熵减研究/.test(got.text), JSON.stringify(got));
+  rec('B4 研究升级区块（v2.8.28 分批次）：标题 + 产出强化批 1 四卡 + 后续 2 类目锁定', got.title && got.cards === 4 && got.locks === 2 && /熵减研究/.test(got.text), JSON.stringify(got));
 }
 
 // B5 深渊遗存区块（轮回模块内，晋升≥1 显示）

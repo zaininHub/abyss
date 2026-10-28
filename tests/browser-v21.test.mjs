@@ -45,7 +45,7 @@ await new Promise(r => setTimeout(r, 300));
 const epAfterHire = await page.$eval('#h-ep', el => el.textContent);
 const nAfterHire = parseFloat(epAfterHire.replace(/,/g, ''));
 // 薪资每秒扣款 + 初始 40 成本：EP 应低于点击所得（相对 n1 已扣 40）
-rec('招募线程扣款 120 EP（v2.8.3）', n1 - nAfterHire >= 115 && n1 - nAfterHire <= 125, `点击后 ${n1} → 招募后 ${nAfterHire}（Δ=${(n1 - nAfterHire).toFixed(1)}，含 1s 内薪资）`);
+rec('招募线程扣款 360 EP（v2.8.27 firstCost）', n1 - nAfterHire >= 355 && n1 - nAfterHire <= 365, `点击后 ${n1} → 招募后 ${nAfterHire}（Δ=${(n1 - nAfterHire).toFixed(1)}，含 1s 内薪资）`);
 // 线程产出：等待 3 秒，EP 应持续增长（R1：产出不再双重乘数爆炸）
 await new Promise(r => setTimeout(r, 3000));
 const ep3s = await page.$eval('#h-ep', el => el.textContent);
@@ -94,12 +94,12 @@ const epAfterBuy = curNumOf(capAfterTxt);
 function curNumOf(s) { const m = s.split('/')[0].trim().match(/^([\d.,]+)\s*([KM]?)/); if (!m) return -1; return parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'K' ? 1e3 : m[2] === 'M' ? 1e6 : 1); } // v2.3.1：fmt 后缀乘回
 function capNumOf(s) { const m = s.match(/\/\s*([\d.,]+K?M?)/); if (!m) return -1; const v = m[1]; const mult = v.includes('K') ? 1000 : v.includes('M') ? 1e6 : 1; return Math.round(parseFloat(v.replace(/[KM,]/g, '')) * mult); }
 const capB = capNumOf(capBeforeTxt), capA = capNumOf(capAfterTxt);
-const ratioOk = Math.abs(capA / capB - 2.5) < 0.02; // (2000+3000)/2000，v2.8.2 capPer 3000
+const ratioOk = Math.abs(capA / capB - 3.5) < 0.02; // (2000+5000)/2000，v2.8.27 capPer 5000
 // v2.3.2 断言加固：扣款测量加 cps 产出补偿——400ms 窗口内挂机产出（链内购入后 cps≈13/s → +5 EP）
 // 叠加 #h-ep 的 K 格式舍入（±5）会挤爆原 ±10 容差（实测显示价与实扣均为 150，纯测量性问题）
 const cpsVal = parseFloat(await page.$eval('#h-cps', el => el.textContent)) || 0;
-const deductOk = Math.abs((epBeforeBuy - epAfterBuy) + cpsVal * 0.4 - 150) < 10; // 扣款 =150（v2.0.2 首级价）+ 产出回补
-rec('R3：购买存储节点 → 上限×2.5（2000→5000，v2.8.2 capPer 3000）+ 扣款 150（含 cps 产出补偿）', bought === 'clicked' && ratioOk && deductOk,
+const deductOk = Math.abs((epBeforeBuy - epAfterBuy) + cpsVal * 0.4 - 450) < 10; // 扣款 =450（v2.8.27 storage base 450）+ 产出回补
+rec('R3：购买存储节点 → 上限×3.5（2000→7000，v2.8.27 capPer 5000）+ 扣款 450（含 cps 产出补偿）', bought === 'clicked' && ratioOk && deductOk,
   `${capBeforeTxt} → ${capAfterTxt}（cap比=${(capA / capB).toFixed(2)}，扣款=${(epBeforeBuy - epAfterBuy).toFixed(0)}，cps=${cpsVal}/s）`);
 
 // ---- 6. EP 满仓截断（D1）：点击至溢出，EP 不超过上限 ----
@@ -113,8 +113,8 @@ rec('D1：满仓点击不溢出上限', curNumOf(epNow) <= capNumOf(epNow), `EP 
 await page.evaluate(() => { try { document.getElementById('hero').closest('#app'); localStorage.clear(); } catch (e) {} });
 
 // ---- 7. hover 覆盖率：顶栏统计项 + 图例面板 ----
-const legendExists = await page.evaluate(() => !!document.getElementById('legend-panel'));
-rec('图例面板（details#legend-panel）存在', legendExists);
+const legendExists = await page.evaluate(() => !!document.getElementById('wiki-modal'));
+rec('v2.8.15 图例移至 Wiki 弹框（#wiki-modal 存在）', legendExists);
 const hoverStats = await page.evaluate(() => {
   const stats = [...document.querySelectorAll('.stat')];
   return { total: stats.length, withTitle: stats.filter(s => (s.title || '').length > 10).length };
@@ -162,7 +162,7 @@ rec('P1-A：封印后裂隙卡片立即消失（≤500ms，无残留）', riftGo
 await new Promise(r => setTimeout(r, 4000));
 const corruptionTxt = await page2.evaluate(() => document.getElementById('corruption-num')?.textContent || '');
 const corruptionVal = parseFloat(corruptionTxt);
-rec('P1-B：触顶挂机产出累积腐化 >0（数值）', corruptionVal > 0, `腐化 = ${corruptionTxt}（4s 实测）`);
+rec('P1-B：触顶挂机不产腐化（v2.8.21：EP 触顶溢出只转 RP，腐化=0）', corruptionVal === 0, `腐化 = ${corruptionTxt}（4s 实测）`);
 // 触顶期间 EP 仍被截断在上限内（先加后截不破坏上限约束）
 const epCapped = await page2.$eval('#h-ep', el => el.textContent);
 rec('P1-B：触顶期间 EP 仍受上限截断', curNumOf(epCapped) <= capNumOf(epCapped) * 1.001, `EP = ${epCapped}`);

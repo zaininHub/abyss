@@ -138,9 +138,11 @@ const inject = (page, save) => {
   await inject(page, saveBase());
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
-  await page.click('#btn-rp');
+  await page.waitForSelector('#btn-rp', { timeout: 30000 }).catch(() => {});
+  await page.evaluate((id) => document.getElementById(id.slice(1)).click(), '#btn-rp');
   await sleep(300);
-  const locked = await page.evaluate(() => document.getElementById('rp-panel').textContent);
+  await page.waitForFunction(() => !!document.getElementById('rp-panel'), { timeout: 8000 }).catch(() => {});
+  const locked = await page.evaluate(() => (document.getElementById('rp-panel')?.textContent || ''));
   rec('V4 未解锁：研究点面板显示解锁条件', locked.includes('未解锁') && locked.includes('溢出'), `text="${locked.slice(0, 30)}…"`);
   await page.screenshot({ path: EV + '/v4-rp-locked.png' });
   await page.close();
@@ -150,9 +152,11 @@ const inject = (page, save) => {
   await page2.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1500);
   const toastTxt = await page2.evaluate(() => document.getElementById('toast').textContent);
-  await page2.click('#btn-rp');
+  await page2.waitForSelector('#btn-rp', { timeout: 30000 }).catch(() => {});
+  await page2.evaluate((id) => document.getElementById(id.slice(1)).click(), '#btn-rp');
   await sleep(300);
-  const open = await page2.evaluate(() => document.getElementById('rp-panel').textContent);
+  await page2.waitForFunction(() => !!document.getElementById('rp-panel'), { timeout: 8000 }).catch(() => {});
+  const open = await page2.evaluate(() => (document.getElementById('rp-panel')?.textContent || ''));
   rec('V4 溢出解锁：toast 出现「新资源：研究点 RP」', toastTxt.includes('研究点 RP'), `toast="${toastTxt}"`);
   rec('V4 溢出解锁：研究点面板显示当前 RP 与蒸馏效率（v2.7.4 ⑦ RP 蒸馏改造后文案）', open.includes('当前 RP') && open.includes('蒸馏效率'), `text="${open.slice(0, 40)}…"`);
   await page2.screenshot({ path: EV + '/v4-rp-open.png' });
@@ -171,7 +175,8 @@ const inject = (page, save) => {
   await inject(page, saveBase({ ep: 12345, _riftSeen: true }));
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
-  await page.click('#export-btn');
+  await page.waitForSelector('#export-btn', { timeout: 30000 }).catch(() => {});
+  await page.evaluate((id) => document.getElementById(id.slice(1)).click(), '#export-btn');
   await sleep(500);
   const expToast = await page.evaluate(() => document.getElementById('toast').textContent);
   rec('V5 运行时：导出触发 toast「存档已导出」', expToast.includes('存档已导出'), `toast="${expToast}"`);
@@ -185,7 +190,8 @@ const inject = (page, save) => {
   await inject(page, saveBase({ ep: 1500, cultists: [{ name: 'T0', output: 3, mood: '正常', moodTimer: 999 }] }));
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
-  await page.click('#pauseBtn');
+  await page.waitForSelector('#pauseBtn', { timeout: 30000 }).catch(() => {});
+  await page.evaluate((id) => document.getElementById(id.slice(1)).click(), '#pauseBtn');
   await sleep(400);
   const modalState = await page.evaluate(() => ({
     display: getComputedStyle(document.getElementById('pause-modal')).display,
@@ -196,7 +202,8 @@ const inject = (page, save) => {
   await page.screenshot({ path: EV + '/v6-pause-modal.png' });
   // 恢复结算：暂停 6 秒后恢复（dt>5 → 结算 EP）
   await sleep(6000);
-  await page.click('#pause-resume');
+  await page.waitForSelector('#pause-resume', { timeout: 30000 }).catch(() => {});
+  await page.evaluate((id) => document.getElementById(id.slice(1)).click(), '#pause-resume');
   await sleep(400);
   const after = await page.evaluate(() => ({
     modalHidden: getComputedStyle(document.getElementById('pause-modal')).display,

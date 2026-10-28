@@ -114,10 +114,10 @@ console.log('\n[B] file:// 真实点击试玩（招募/升级/AI/裂隙/建筑�
     `staff ${before.staff}→${afterHire.staff}, ep ${before.ep}→${afterHire.ep}`);
 
   // B2 升级（专注）
-  const f0 = +await page.$eval('#focus-lv', el => el.textContent);
+  const f0 = parseInt(await page.$eval('#focus-lv', el => (el.textContent.match(/Lv\.?(\d+)/) || [])[1] || '0'), 10); // v2.8.27：文本 '专注 Lv.X' 用正则取数字
   await page.click('#focus-bar');
   await new Promise(r => setTimeout(r, 400));
-  const f1 = +await page.$eval('#focus-lv', el => el.textContent);
+  const f1 = parseInt(await page.$eval('#focus-lv', el => (el.textContent.match(/Lv\.?(\d+)/) || [])[1] || '0'), 10);
   rec('B2 升级：专注等级 +1', f1 === f0 + 1, `focus ${f0}→${f1}`);
 
   // B3 AI 交互（切换预留线档位）

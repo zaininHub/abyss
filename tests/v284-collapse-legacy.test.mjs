@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { S } from '../src/state.js';
 import { BALANCE } from '../src/data/balance.js';
 import {
-  tickCorruption, collapseRemainMs, collapseMs, esDiscovered, discoverEs,
+  tickCorruption, tickCollapse, collapseRemainMs, collapseMs, esDiscovered, discoverEs,
   researchMult, legacyGlobalMult, legacyCapMult, legacyRiftMult,
   techGlobalMult, delveTechMult, faithTechMult, computeCps,
   wageDebtMult, tideMult, corruptionPenalty, epStorageCap,
@@ -20,40 +20,40 @@ const reset = () => Object.assign(S, {
   storyline: 'default', storylinesCompleted: [],
 });
 
-test('v2.8.4 ① 崩溃倒计时：腐化满额+EP触顶 → 5 分钟倒计时启动', () => {
+test('v2.8.22 ① 崩溃倒计时：腐化满额 → 60 秒倒计时启动（tickCollapse 驱动）', () => {
   reset();
   S.corruption = 100;
   S.ep = cap();
-  tickCorruption(1);
+  tickCollapse(1);
   assert.ok(S._collapseAt && collapseRemainMs() > 0, '倒计时已启动');
-  assert.equal(collapseMs(), 300000, '基准 5 分钟');
-  assert.equal(collapseRemainMs() <= 300000 && collapseRemainMs() > 299000, true, '剩余 ≈ 5 分钟');
+  assert.equal(collapseMs(), 60000, '基准 60 秒（v2.8.22）');
+  assert.equal(collapseRemainMs() <= 60000 && collapseRemainMs() > 59000, true, '剩余 ≈ 60 秒');
 });
 
-test('v2.8.4 ① 稳定协议科技：倒计时延长至 7 分钟', () => {
+test('v2.8.22 ① 稳定协议科技：倒计时延长至 180 秒', () => {
   reset();
   S.tech.stable_protocol = true;
-  assert.equal(collapseMs(), 420000, '稳定协议 → 7 分钟');
+  assert.equal(collapseMs(), 180000, '稳定协议 → 180 秒');
 });
 
-test('v2.8.4 ① 倒计时结束 → 强制崩溃；EP 降至 50% 以下自救取消', () => {
+test('v2.8.22 ① 倒计时结束 → 强制崩溃；腐化降至满额以下自救取消', () => {
   reset();
   S.corruption = 100;
   S.ep = cap();
-  tickCorruption(1);
+  tickCollapse(1);
   S._collapseAt = Date.now() - 1; // 倒计时耗尽
-  tickCorruption(1);
+  tickCollapse(1);
   assert.equal(S.collapsed, true, '倒计时结束强制崩溃');
   assert.equal(collapseRemainMs(), 0, '崩溃后剩余 0');
-  // 自救：未崩溃前 EP 消耗到 <50% 取消
+  // 自救：未崩溃前腐化净化到 <100% 取消（v2.8.22 自救口径=净化腐化）
   reset();
   S.corruption = 100;
   S.ep = cap();
-  tickCorruption(1);
-  S.ep = Math.floor(cap() * 0.4);
-  tickCorruption(1);
+  tickCollapse(1);
+  S.corruption = 50;
+  tickCollapse(1);
   assert.equal(S.collapsed, false, '未崩溃');
-  assert.equal(S._collapseAt, null, '自救取消倒计时');
+  assert.equal(S._collapseAt, null, '净化腐化取消倒计时');
 });
 
 test('v2.8.4 ① 崩溃后 computeCps 归零（所有系统停止产出）', () => {
@@ -87,11 +87,11 @@ test('v2.8.4 ③ ES 门控：首次晋升获得 ES → discoverEs 点亮', () =>
 
 test('v2.8.4 ④ 研究升级：5 项、成本递增、乘区生效', () => {
   reset();
-  assert.equal(BALANCE.researchUpgs.length, 5, '研究升级 5 项');
+  assert.equal(BALANCE.researchUpgs.length, 10, '研究升级 10 项（v2.8.25 扩充）');
   // 数据层：成本随等级递增（growth>1）且上限合理（长线）
   for (const u of BALANCE.researchUpgs) {
     assert.ok(u.growth > 1, `${u.id} 成本递增`);
-    assert.ok(u.cap >= 8, `${u.id} 等级上限（长线）`);
+    assert.ok(u.cap >= 5, `${u.id} 等级上限（v2.8.25 长线 5-10）`);
   }
   // 乘区：加乘（ep/thread）与叠乘（global）
   S.rpTheories = { rp_entropy: 1 };

@@ -149,13 +149,13 @@ t('各组高端楼（C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、�
     assert.ok(last <= 1.2e6, `${id} 末级价 ${last} > 1.2e6`);
   }
 });
-t('非钳制建筑全量：任一级价格 ≤ 1.2e6（m=6 期上限口径）或 ≤ 终局上限', () => {
+t('非钳制建筑全量：任一级价格 ≤ 1e7（终局档 base 6e6 允许）', () => {
   const clamped = new Set([...BALANCE.v21CapClampIds, 'storage', 'cache']);
   for (const b of V21_BUILDINGS) {
     if (b.via === 'upgrade' || clamped.has(b.id)) continue;
     for (let n = 0; n < b.cap; n++) {
       const price = b.base * Math.pow(b.growth, n);
-      assert.ok(price <= 1.2e6, `${b.id} 第 ${n + 1} 级价 ${price} > 1.2e6`);
+      assert.ok(price <= 1e7, `${b.id} 第 ${n + 1} 级价 ${price} > 1e7（终局档 base 6e6 允许）`);
     }
   }
 });
@@ -240,17 +240,17 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
   for (let i = 0; i < miles; i++) S.milesDone['m' + i] = true;
   S.storyline = storyline || 'line_abyss';
 }
-t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 2,387,201（v2.8.2 曲线）', () => {
+t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 3,611,402（v2.8.27 曲线）', () => {
   setCapState(12, 20, 2, 8, 0, 0, 6);
-  assert.equal(epStorageCap(), 2387201, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 3611402, `实际 ${epStorageCap()}`);
 });
-t('S2 终局锚点：全满配 m=9 → epStorageCap = 374,129,428,499（v2.8.2 曲线）', () => {
+t('S2 终局锚点：全满配 m=9 → epStorageCap ≈ 374,131,019,960（v2.8.27 曲线，容差 2e6）', () => {
   setCapState(20, 20, 3, 20, 20, 20, 9);
-  assert.equal(epStorageCap(), 374129428499, `实际 ${epStorageCap()}`);
+  assert.ok(Math.abs(epStorageCap() - 374131019960) < 2e6, `实际 ${epStorageCap()}`);
 });
-t('开局锚点：storage1/其余 0 → 5,750（v2.8.2 capPer 3000 曲线）', () => {
+t('开局锚点：storage1/其余 0 → 8,050（v2.8.27 capPer 5000 曲线）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
-  assert.equal(epStorageCap(), 5750);
+  assert.equal(epStorageCap(), 8050);
 });
 
 console.log('[6] 防死锁 30% 钳制（组长硬性要求：组D 三梯任意阶段买得起）');
@@ -296,7 +296,7 @@ t('v21Level / v21Maxed / buildingCostV21 基础读侧', () => {
   const b = V21_BUILDINGS.find(x => x.id === 'warmup_node');
   assert.equal(v21Level('warmup_node', S), 3);
   assert.equal(v21Maxed(b, S), false);
-  assert.equal(buildingCostV21(b, S, 1), Math.ceil(100 * Math.pow(1.15, 3)));
+  assert.equal(buildingCostV21(b, S, 1), Math.ceil(20000 * Math.pow(1.30, 3))); // v2.8.7 warmup base 2e4/growth 1.30
   S.buildings = { warmup_node: 5 };
   assert.equal(v21Maxed(b, S), true);
   S.buildings = {};

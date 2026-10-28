@@ -1,7 +1,7 @@
 import { S } from '../state.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
-import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs } from './economy.js';
+import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp } from './economy.js';
 import { spawnProject } from './projects.js';
 
 export function canPrestige() {
@@ -16,7 +16,7 @@ export function doPrestige(talentId) {
   const esg = esGain();
   S.prestigePoints += gain;
   S.prestige++;
-  S.rp += rpg;
+  addRp(rpg); // v2.8.27 ②：RP 上限（晋升奖励克制）
   if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
   // v2.8.4：崩溃转生结算湮灭残片（新资源，暂无消费用途，仅保留，克制——每次崩溃转生 +1）
   if (S.collapsed) S.abyssSplinter = (S.abyssSplinter || 0) + 1;

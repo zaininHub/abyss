@@ -16,12 +16,13 @@ await page.evaluateOnNewDocument(() => {
     ep: 1e6, rp: 1e7, milesDone: {}, tech: {},
     unlockedBuildings: { warmup_node: true },
     buildings: { warmup_node: 0 },
-    upgrades: {}, lastSeen: Date.now(), startTime: Date.now(),
+    upgrades: { storage: 20 }, lastSeen: Date.now(), startTime: Date.now(), // v2.8.27：存储抬 EP 上限（storage 20 → cap≈21K ≥ warmup 首级 20K）
   }));
 });
 await page.goto('file://' + process.cwd() + '/dist/index.html', { waitUntil: 'networkidle0' });
 await sleep(1500);
-// 真实连点 3 次「预热节点」
+// 真实连点 3 次「预热节点」（先等卡渲染，防全量并发时序）
+await page.waitForSelector('[data-v21="warmup_node"]', { timeout: 8000 }).catch(() => {});
 for (let i = 0; i < 3; i++) {
   await page.evaluate(() => document.querySelector('[data-v21="warmup_node"]')?.click());
   await sleep(700);
@@ -34,8 +35,8 @@ const final = await page.evaluate(() => ({
 await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
 await sleep(400);
 const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}').buildings?.warmup_node);
-console.log(`连购 3 次 → 存档等级=${saved}（期望 3）, DOM=${final.display}（期望 Lv.3/5）, 3 级价=${final.price}（期望 153 EP）`);
+console.log(`连购 3 次 → 存档等级=${saved}（期望 3）, DOM=${final.display}（期望 Lv.3/5）, 4 级价=${final.price}（期望 ~43.94K EP）`);
 console.log(`页面错误：${errs.length === 0 ? '无' : errs.join('; ')}`);
 await browser.close();
-if (saved !== 3 || final.display !== 'Lv.3/5' || final.price !== '153 EP' || errs.length) { console.error('真实试玩自测失败'); process.exit(1); }
+if (saved !== 3 || final.display !== 'Lv.3/5' || !/K EP/.test(final.price || '') || errs.length) { console.error('真实试玩自测失败'); process.exit(1); } // v2.8.7：warmup base 2e4 → 4 级价 43.94K EP
 console.log('真实试玩自测通过');

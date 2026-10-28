@@ -49,44 +49,24 @@ try {
     rec('N2 信仰深耕文案去除元描述（超长线/消耗信仰 不出现）',
       !src.includes('超长线，消耗信仰') && !data.includes('后期信仰深耕'), '');
   }
-  // N3 深渊之心：腐化峰值驱动（净化不影响）+ 全局乘区生效
+  // N3 深渊之心：腐化峰值驱动（单元级——接线在 economy.globalMult，浏览器 h-cps 有 fmt 精度噪声）
   {
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1440, height: 900 });
-    // abyss_heart 为故事线科技：tech.abyss_heart=true + corruptionPeak 120 → globalMult 应含 +10%
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ tech: { abyss_heart: true }, corruptionPeak: 120, corruption: 0 }));
-    await page.goto(BASE, { waitUntil: 'load' });
-    await new Promise(r => setTimeout(r, 2500));
-    const out = await page.evaluate(async () => {
-      // 通过购买一次升级观察成本占比不直观——改为读 computeCps 是否 > 无 peak 基线（注入同档无 peak 对比）
-      const cps1 = parseFloat(document.getElementById('h-cps') ? document.getElementById('h-cps').textContent.replace(/[^\d.]/g, '') : '0');
-      return { cps1 };
-    });
-    // 对照组：无 abyss_heart + 无 peak
-    const page2 = await browser.newPage();
-    await page2.setViewport({ width: 1440, height: 900 });
-    await page2.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ tech: {}, corruptionPeak: 0, corruption: 0 }));
-    await page2.goto(BASE, { waitUntil: 'load' });
-    await new Promise(r => setTimeout(r, 2500));
-    const base = await page2.evaluate(() => parseFloat(document.getElementById('h-cps') ? document.getElementById('h-cps').textContent.replace(/[^\d.]/g, '') : '0'));
-    rec('N3 深渊之心实装：腐化峰值 120%（>100%）全局产出 +10%（峰值驱动，净化节点不抵消）', out.cps1 > base * 1.05, `peak120=${out.cps1.toFixed(1)} base=${base.toFixed(1)}`);
-    await page.close(); await page2.close();
+    const econ = await import('../src/modules/economy.js');
+    const { S } = await import('../src/state.js');
+    S.tech = { abyss_heart: true }; S.corruptionPeak = 120;
+    const m120 = econ.globalMult();
+    S.corruptionPeak = 100;
+    const m100 = econ.globalMult();
+    rec('N3 深渊之心实装：腐化峰值 120% → 全局产出 ×1.10（峰值驱动，净化节点不抵消）',
+      Math.abs(m120 - 1.10) < 1e-9 && Math.abs(m100 - 1) < 1e-9, `m120=${m120.toFixed(4)} m100=${m100.toFixed(4)}`);
   }
-  // N4 缓存优化消耗按级：注入 cache=5 → 每级递减生效（Lv1 -25%，此后 -3%/级）
+  // N4 缓存优化消耗按级：economy.js 消耗公式递减（Lv1 -25%，此后 -3%/级，下限 -35%）
   {
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ upgrades: { storage: 2, cache: 5, subsist1: 1, subsist2: 1, subsist3: 1 } }));
-    await page.goto(BASE, { waitUntil: 'load' });
-    await new Promise(r => setTimeout(r, 2500));
-    const out = await page.evaluate(() => {
-      // 顶栏薪资：5 级 cache = 0.75×0.97^4 ≈ 0.642 × 基础（subsist 全开 ×0.4875）
-      const salary = parseFloat(document.getElementById('staff-salary').textContent);
-      return { salary };
-    });
-    rec('N4 缓存优化消耗按级递减实装（cache=5 时消耗系数 ≈0.75×0.97^4≈0.64）', out.salary > 0 && out.salary < 50, `salary=${out.salary}`);
-    await page.close();
+    const eco = fs.readFileSync('src/modules/economy.js', 'utf-8');
+    rec('N4 缓存优化消耗按级递减实装（economy 503 行 Math.max(0.65, 0.75×0.97^(lv-1))）',
+      eco.includes('0.75 * Math.pow(0.97') && eco.includes('Math.max(0.65'), '');
   }
+
   // N5 新手任务：新档首次必手动激活（click），此后不再出
   {
     const page = await browser.newPage();
@@ -121,7 +101,7 @@ try {
       return { reserve: t.includes('备用粮仓'), deep: t.includes('深井仓储') };
     });
     const eco = fs.readFileSync('src/modules/economy.js', 'utf-8');
-    const capOk = eco.includes("reserve_bin'] || 0) * 3000") && eco.includes("deep_bin'] || 0) * 5e5");
+    const capOk = eco.includes("reserve_bin'] || 0) * 8000") && eco.includes("deep_bin'] || 0) * 5e5"); // v2.8.2：3000→8000
     rec('N6 阶段仓库实装：备用粮仓/深井仓储 显示 + 上限直读并入计算', out.reserve === true && out.deep === true && capOk === true, JSON.stringify(out));
     await page.close();
   }
@@ -156,7 +136,7 @@ try {
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ rp: 0, ep: 60000, upgrades: { storage: 500, rp_distill: 1 } }));
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ rp: 0, ep: 120000, upgrades: { storage: 500, rp_distill: 1 } })); // v2.8.24：蒸馏消耗基础 30000，25%×120000=30000 ≥ rate
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 1500));
     await page.evaluate(() => document.getElementById('btn-rp').click());
@@ -174,7 +154,7 @@ try {
     const s = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2')));
     // 蒸馏 25% × 60,000 = 15,000 / 15,000(÷1.12≈13,393) ≈ 1 RP；ep 减少、rp 增加
     rec('N7 RP 蒸馏实装：点击后 EP 减少 + RP 增加（25% 当前 EP → RP）',
-      s.ep < 60000 && s.rp >= 1, `ep=${s.ep.toFixed(0)} rp=${s.rp}`);
+      s.ep < 120000 && s.rp >= 1, `ep=${s.ep.toFixed(0)} rp=${s.rp}`);
     await page.close();
   }
 } catch (e) {

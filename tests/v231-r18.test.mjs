@@ -138,8 +138,8 @@ console.log('\n[P3] 固定 ×1 购买结算');
   // 注入 ep=900（<1000 → fmt 输出精确整数，规避 K 格式 10 EP 粒度精度不足）；
   // 未购任何产出项 → 开局 cps=0，购买后 cps 微量（草稿 0.1/s 量级），±2 容差覆盖。
   // 逐次结算断言：每次购买前后精确 ΔEP === 当次卡面成本（单价函数 ceil(base·1.15^owned·costMult)）。
-  const { page, errs } = await openPage(mkSave({ ep: 900 }));
-  const epOf = () => page.$eval('#h-ep', el => parseFloat(el.textContent.split('/')[0].replace(/,/g, '')));
+  const { page, errs } = await openPage(mkSave({ ep: 2200 })); // v2.8.27：草稿 120→×3 后 5 连买共 1086，注入须 ≥1100
+  const epOf = () => page.$eval('#h-ep', el => { const t = el.textContent.split('/')[0].trim(); const m = t.match(/^([\d.,]+)\s*([KM]?)/); let v = parseFloat(m[1].replace(/,/g, '')); if (m[2] === 'K') v *= 1e3; if (m[2] === 'M') v *= 1e6; return v; });
   const readCost = () => page.evaluate(() => {
     const el = [...document.querySelectorAll('#shop-list .item')].find(e => e.textContent.includes('草稿记录'));
     if (!el) return -1;

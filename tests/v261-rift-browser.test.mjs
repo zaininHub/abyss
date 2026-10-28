@@ -56,7 +56,7 @@ try {
       ember: JSON.parse(localStorage.getItem('abyss_idle_v2')).riftEmber,
       exNull: JSON.parse(localStorage.getItem('abyss_idle_v2')).riftExpedition === null,
     }));
-    rec('V1 紧急脱出：余烬 +3 且探索状态清除', afterAbort.ember === 53 && afterAbort.exNull === true, `ember=${afterAbort.ember}`);
+    rec('V1 紧急脱出不奖励余烬（注入 50 → 仍 50，v2.6.x 需求）', afterAbort.ember === 50 && afterAbort.exNull, `ember=${afterAbort.ember}`)
     rec('V1 无 JS 运行时错误', jsErrors.length === 0, jsErrors.join(' | ').slice(0, 120));
     await page.close();
   }

@@ -126,7 +126,7 @@ try {
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ corruption: 0, activeRift: { power: 3, level: 3, sealCost: 5e5, dmReward: 3, expiresAt: Date.now() + 120000 } }));
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ corruption: 0, dm: 100, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: true, faith: false, pt: false, dm: true }, activeRift: { power: 3, level: 3, sealCost: 5e5, dmReward: 3, expiresAt: Date.now() + 120000 } })); // v2.8.3：深入裂隙需 DM 已发现
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 1500));
     const out = await page.evaluate(async () => {

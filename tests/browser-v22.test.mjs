@@ -148,9 +148,9 @@ console.log('\n[C] 族升级购档');
     const out = document.querySelector('#family-upgrade-list [data-family="output"]');
     return { outTxt: out ? out.textContent : '', famCount: document.querySelectorAll('#family-upgrade-list [data-family]').length };
   });
-  rec('C1 v2.4 族升级分区仅 1 族（output 产出族；扩容族 D 已并入无限建筑，不再入族）', famBefore.famCount === 1, `族数=${famBefore.famCount}`);
-  rec('C2 产出族文案为白名单口径（协作大厅/节能电池，无「暴击」字样）',
-    famBefore.outTxt.includes('协作大厅') && famBefore.outTxt.includes('节能电池') && !famBefore.outTxt.includes('暴击'), famBefore.outTxt.slice(0, 40));
+  rec('C1 v2.4 族升级分区 1 族 × 2 档独立卡（output；扩容族 D 已并入无限建筑，不再入族）', famBefore.famCount === 2, `族数=${famBefore.famCount}`);
+  rec('C2 产出族文案简洁（含产出族/档位，无「暴击」——v2.8.8 每档独立卡）',
+    famBefore.outTxt.includes('产出族') && famBefore.outTxt.includes('档位 T1') && !famBefore.outTxt.includes('暴击'), famBefore.outTxt.slice(0, 40));
   // 产出族 T1（350k）
   await page.evaluate(() => document.querySelector('#family-upgrade-list [data-family="output"]').click());
   await new Promise(r => setTimeout(r, 400));
@@ -167,7 +167,8 @@ console.log('\n[C] 族升级购档');
   rec('C4 v2.4 无扩容族：familyUpgrades 不含 D 键', !('D' in famAfter.fu), JSON.stringify(famAfter.fu));
   const rpExpected = 2500000 - 350000 - 900000;
   rec(`C5 RP 按白名单价扣减（2500000-350000-900000=${rpExpected}）`, famAfter.rp === rpExpected, `rp=${famAfter.rp}`);
-  rec('C6 产出族满档显示（T2 后满档/上限 +7 不再出现——白名单终稿 T2 后即满档）', famAfter.outTxt.includes('满档') || famAfter.outTxt.includes('T2/2'), famAfter.outTxt.slice(0, 40));
+  const maxedTxt = await page.evaluate(() => { const el = document.querySelector('#family-upgrade-list .owned-item'); return el ? el.textContent : ''; });
+  rec('C6 产出族满档显示（T2 后渲染 owned-item「满档」卡）', maxedTxt.includes('满档'), maxedTxt.slice(0, 40));
   rec('C7 族升级购档零 JS 错误', errs.length === 0, errs.join(';'));
   await page.screenshot({ path: SHOT_DIR + 'C_族升级购档.png' });
   await page.close();

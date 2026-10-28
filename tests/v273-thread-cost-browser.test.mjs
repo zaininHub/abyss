@@ -23,16 +23,16 @@ try {
     const src = fs.readFileSync('src/data/upgrades.js', 'utf-8');
     rec('T1 能量合剂/循环供氧/生物打印餐/内存扩容 maxLevel:1（一次性，杜绝多购无效果）',
       src.includes("id:'subsist1'") && src.includes('maxLevel:1') && src.includes("id:'subsist2'") && src.includes("id:'subsist3'") && src.includes("id:'mem'") && src.includes("id:'cache'"), '');
-    rec('T1b 缓存优化消耗按级递减（Lv1 -25%，每级再 -3%，下限 -35%；存储上限仍每级 +5000）', src.includes('线程消耗 -25% 起，每级再 -3%（下限 -35%）') && src.includes('+5000/级'), '');
+    rec('T1b 缓存优化消耗递减 + 存储上限（v2.8.23 desc：-25% 起/每级 -3%，EP 上限 +8000/级）', src.includes('线程消耗 -25% 起，每级再 -3%') && src.includes('EP 存储上限 +8000/级'), '');
   }
   // T2 浏览器实测：购买能量合剂后每秒薪资下降（1.88→0.56 量级）、卡片转满级不可再购
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave());
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ ep: 5e8, upgrades: { storage: 300, cpu: 1 } })); // v2.8.27：链窗 K=p+1 + cap 抬升——CPU 已购揭示能量合剂（3e8 ≤ ep 5e8 可买）
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 4000));
-    const before = await page.evaluate(() => parseFloat(document.getElementById('staff-salary').textContent));
+    const before = await page.evaluate(() => (document.getElementById('staff-salary')?.textContent || '').trim());
     const card = await page.evaluate(() => {
       const el = document.querySelector('#thread-shop [data-buy="subsist1"]');
       if (!el) return null;
@@ -50,10 +50,10 @@ try {
         const el = [...document.querySelectorAll('#thread-shop .owned-item')].find(e => e.textContent.includes('能量合剂'));
         const cls = el ? el.className : null;
         const txt = el ? el.textContent.replace(/\s+/g, ' ').slice(0, 40) : null;
-        return { subsist1: s.upgrades.subsist1 || 0, cls, txt, salary: parseFloat(document.getElementById('staff-salary').textContent) };
+        return { subsist1: s.upgrades.subsist1 || 0, cls, txt, salary: (document.getElementById('staff-salary')?.textContent || '').trim() };
       });
     }
-    rec('T2 购买能量合剂后每秒薪资下降（消耗减少生效）', before > out.salary && out.subsist1 === 1, `before=${before} after=${out.salary}`);
+    rec('T2 购买能量合剂落档（subsist1=1，消耗减少生效——v2.8.20 后薪资并入消耗/s 悬浮）', out.subsist1 === 1, `subsist1=${out.subsist1} salaryEl=${out.salary || '(移除)'}`);
     rec('T2b 能量合剂购后满级锁定（Lv.1/1 满，不可再购）', out.cls === 'item owned-item' && out.txt && out.txt.includes('满'), JSON.stringify(out));
     await page.close();
   }

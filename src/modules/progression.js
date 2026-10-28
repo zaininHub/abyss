@@ -1,6 +1,7 @@
 // v2.0 特殊任务系统 + 彩蛋系统
 // 设计文档 §6 特殊任务 + §7 彩蛋
 import { S, save } from '../state.js';
+import { addRp, addDm, addPt } from './economy.js'; // v2.8.27 ②：资源上限
 
 // ========== 特殊任务定义（6个：3通用 + 3线专属） ==========
 export const SPECIAL_TASKS = [
@@ -152,9 +153,9 @@ export function checkSpecialTasks(S, log, toast) {
     try {
       if (task.condition(S)) {
         S._specialTasksDone[task.id] = true;
-        if (task.reward.rp) S.rp = (S.rp || 0) + task.reward.rp;
+        if (task.reward.rp) addRp(task.reward.rp);
         if (task.reward.ep) S.ep = Math.min(S.ep + task.reward.ep, 1e15);
-        if (task.reward.dm) S.dm = (S.dm || 0) + task.reward.dm;
+        if (task.reward.dm) addDm(task.reward.dm);
         if (task.reward.fa) S.faith = (S.faith || 0) + task.reward.fa;
         if (log) log(`特殊任务：${task.name} - ${task.desc}`, 'good');
         if (toast) toast(`✓ ${task.name}`);
@@ -177,9 +178,9 @@ export function checkEasterEggs(trigger, S, log, toast, markDirty) {
     if (triggered) {
       S._easterEggsFound[egg.id] = true;
       if (egg.reward) {
-        if (egg.reward.rp) S.rp = (S.rp || 0) + egg.reward.rp;
+        if (egg.reward.rp) addRp(egg.reward.rp);
         if (egg.reward.ep) S.ep = Math.min(S.ep + egg.reward.ep, 1e15);
-        if (egg.reward.pt) S.pt = (S.pt || 0) + egg.reward.pt;
+        if (egg.reward.pt) addPt(egg.reward.pt);
       }
       if (log && egg.reward && egg.reward.msg) log(`🥚 ${egg.reward.msg}`, 'good');
       if (toast && egg.reward && egg.reward.msg) toast(`🥚 ${egg.reward.msg}`);

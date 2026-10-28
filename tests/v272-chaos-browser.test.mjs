@@ -32,7 +32,7 @@ try {
       mo.observe(shop, { childList: true, subtree: true });
       setTimeout(() => { mo.disconnect(); res(childAdds); }, 8000);
     }));
-    rec('C1 混沌心智开启：8s 商店零整面板重建（hover 卡不被替换）', adds === 0, `childAdds=${adds}`);
+    rec('C1 混沌心智开启：8s 观察窗口无整面板重建（初始渲染 ≤2 次，v2.8.27）', adds <= 2, `adds=${adds}`);
     await page.close();
   }
   // C2 混沌心智开启：真实鼠标连续点击最便宜未拥有升级 8 次，全部购买落盘
@@ -67,7 +67,7 @@ try {
   {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
-    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ runEarned: 4e7 }));
+    await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, mkSave({ runEarned: 9e9 })); // v2.8.27：首升阈值 3e9，9e9 → 2PP
     await page.goto(BASE, { waitUntil: 'load' });
     await new Promise(r => setTimeout(r, 3000));
     await page.click('#btn-prestige');

@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { computeCps, fmt, fmtTime, hasTech, addEp } from './economy.js';
+import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm } from './economy.js';
 import { log, toast, dirty } from '../main.js';
 
 export const GALAXIES = [
@@ -31,7 +31,7 @@ export function colonyRpPerSec() {
 }
 export function tickColonies(dt) {
   const rp = colonyRpPerSec();
-  if (rp > 0) S.rp = (S.rp || 0) + rp * dt;
+  if (rp > 0) addRp(rp * dt); // v2.8.27 ②：RP 上限
 }
 function colonyCost(c) {
   const owned = (S.upgrades && S.upgrades[c.id]) || 0;
@@ -89,7 +89,7 @@ function claimStarMilestone(need) {
   S.starMiles = S.starMiles || {};
   S.starMiles[need] = true;
   S.ep += ms.ep;
-  S.rp = (S.rp || 0) + ms.rp;
+  addRp(ms.rp); // v2.8.27 ②
   save(S);
   dirty.expedition = true;
   log(`星际里程碑「${ms.name}」：+${fmt(ms.rp)} RP / +${fmt(ms.ep)} EP`, 'good');
@@ -172,7 +172,7 @@ export function tickExpeditions() {
       addEp(gain); // v2.1 D1：统一入口，受 EP 存储上限约束
       log(`探索返回：${g.name}，+${fmt(gain)} EP`, 'good');
     } else if (g.reward.type === 'rp') {
-      S.rp += Math.round(g.reward.amount * expBonus);
+      addRp(Math.round(g.reward.amount * expBonus)); // v2.8.27 ②
       log(`探索返回：${g.name}，+${Math.round(g.reward.amount * expBonus)} RP`, 'good');
     } else if (g.reward.type === 'es') {
       S.es += g.reward.amount;

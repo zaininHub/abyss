@@ -40,8 +40,8 @@ const browser = await puppeteer.launch({
     return { warmup_node: g('warmup_node'), quantum_pool: g('quantum_pool'), dim_compressor: g('dim_compressor'), field_1: g('field_1'), coop_hall: g('coop_hall'), eff_tower: g('eff_tower') };
   });
   rec('A1 已解锁建筑显示随存档一致（warmup_node Lv.3/5）', disp.warmup_node === 'Lv.3/5', disp.warmup_node);
-  rec('A2 v2.4 扩容类无限显示（quantum_pool 20 级 → Lv.20，无 D 族封顶分母）', disp.quantum_pool === 'Lv.20', disp.quantum_pool);
-  rec('A3 v2.4 扩容类中间级（dim_compressor Lv.7，无上限分母）', disp.dim_compressor === 'Lv.7', disp.dim_compressor);
+  rec('A2 v2.8.27 扩容类移出效能建筑（cat D 存储统一主商店）→ quantum_pool 不显示', disp.quantum_pool === null, String(disp.quantum_pool));
+  rec('A3 v2.8.27 扩容类移出效能建筑 → dim_compressor 不显示', disp.dim_compressor === null, String(disp.dim_compressor));
   rec('A5 满级项入折叠区不占可购卡位（coop_hall/eff_tower 可购区无卡）', disp.coop_hall === null && disp.eff_tower === null, `coop_hall=${disp.coop_hall}, eff_tower=${disp.eff_tower}`);
   const secTxt = await page.evaluate(() => document.getElementById('v21-building-list')?.textContent || '');
   rec('A6 折叠区含满级两项（协作大厅 5/5 满 + 效能尖塔 9/9 满）', /协作大厅/.test(secTxt) && /9\/9 满|9\/9满/.test(secTxt.replace(/\s/g, '')), '');
@@ -58,10 +58,10 @@ const browser = await puppeteer.launch({
     localStorage.removeItem('abyss_idle_v2');
     localStorage.setItem('abyss_idle_v2', JSON.stringify({
       _version: 5, chapter: '6A', storyline: 'default',
-      ep: 1e6, rp: 1e7, milesDone: {}, tech: {},
+      ep: 1e6, rp: 1e7, milesDone: {}, tech: { warmup: true }, // v2.8.27：warmup_node 前置科技
       unlockedBuildings: { warmup_node: true },
       buildings: { warmup_node: 0 },
-      upgrades: {}, lastSeen: Date.now(), startTime: Date.now(),
+      upgrades: { storage: 8 }, lastSeen: Date.now(), startTime: Date.now(), // v2.8.27：storage 8 级使 EP 上限 ≥ 二购价 26K
     }));
   });
   await page.goto(BASE, { waitUntil: 'networkidle0' });
@@ -80,8 +80,8 @@ const browser = await puppeteer.launch({
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}'));
   rec('B1 连购 2 次等级=2（不回写 1）', saved.buildings?.warmup_node === 2, `存档=${saved.buildings?.warmup_node}`);
   rec('B2 DOM 显示 Lv.2/5', after.display === 'Lv.2/5', after.display);
-  rec('B3 首购价 = base（100 EP）', price0 === '100 EP', price0);
-  rec('B4 二购后价按 2 级真实价（133 EP）', after.price === '133 EP', after.price);
+  rec('B3 首购价 = base（20.00K EP，v2.8.7 base 2e4）', price0 === '20.00K EP', price0);
+  rec('B4 二购后价按 2 级真实价（33.80K EP = 2e4×1.30^2）', after.price === '33.80K EP', after.price);
   rec('B5 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.close();
 }
@@ -94,30 +94,34 @@ const browser = await puppeteer.launch({
   await page.evaluateOnNewDocument(() => {
     localStorage.removeItem('abyss_idle_v2');
     localStorage.setItem('abyss_idle_v2', JSON.stringify({
-      _version: 5, chapter: '6A', storyline: 'default',
-      ep: 1e9, rp: 1e7, milesDone: {}, tech: {},
-      unlockedBuildings: { quantum_pool: true },
-      buildings: { quantum_pool: 20 },
+      _version: 6, chapter: '6A', storyline: 'default',
+      ep: 1e9, rp: 1e7, milesDone: {}, tech: { warmup: true },
+      unlockedBuildings: {},
+      buildings: {},
       familyUpgrades: { D: 1 },
-      upgrades: {}, lastSeen: Date.now(), startTime: Date.now(),
+      upgrades: { storage: 20 }, lastSeen: Date.now(), startTime: Date.now(), // v2.8.27：D 族扩容统一主商店 storage（KG 无限模式）
     }));
   });
   await page.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
+  const getCard = () => [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
   for (let i = 0; i < 3; i++) {
-    await page.evaluate(() => document.querySelector('[data-v21="quantum_pool"]')?.click());
+    await page.evaluate(() => {
+      const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
+      if (el) el.click();
+    });
     await sleep(600);
   }
-  const disp = await page.evaluate(() => document.querySelector('[data-v21="quantum_pool"]')?.querySelector('.count')?.textContent);
-  // 上限口径：EP 存储上限 = 基础 2000 + quantum_pool 等级×50K（无其他贡献项）。等级 23 → 1,152,000 ≈ 1.15M。
-  // 修复前的失效形态：等级重置 1 → 上限骤降至 ~52K，余额被 tick 钳制造成永久损失（诊断实测 20800）。
-  const hEp = await page.evaluate(() => document.getElementById('h-ep')?.textContent || '');
+  const disp = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('#shop-list > *')].find(e => e.textContent.includes('存储节点'));
+    return el ? (el.textContent.match(/×(\d+)/) || [])[1] : null;
+  });
+  // v2.8.27 口径：主商店 storage 无限升级（KG 模式），20 级档连购 3 次 → ×23
   await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
   await sleep(300);
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2') || '{}'));
-  rec('C1 20 级档连购 3 次 → 23 级（修复前会重置为 1）', saved.buildings?.quantum_pool === 23, `存档=${saved.buildings?.quantum_pool}`);
-  rec('C2 v2.4 无限显示 Lv.23（无 /25 分母；旧档 D 族档不再钳制）', disp === 'Lv.23', disp);
-  rec('C3 EP 存储上限随等级保持（23 级 → 上限 ≈1.15M，非修复前骤降的 ~52K）', /1\.15M|1\.2M|1152K/.test(hEp), `h-ep="${hEp}"`);
+  rec('C1 20 级档连购 3 次 → 23 级（v2.8.27 storage 无限模式，修复前会重置为 1）', saved.upgrades?.storage === 23, `存档=${saved.upgrades?.storage}`);
+  rec('C2 无限显示 ×23（无 /20 分母；旧档 20 级全额计入）', disp === '23', String(disp));
   rec('C4 无页面错误', errs.length === 0, errs.join('; ').slice(0, 120));
   await page.close();
 }

@@ -70,7 +70,7 @@ const fs = await import('node:fs');
   const browser = await puppeteer.launch({ executablePath: '/usr/local/bin/chromium', args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
   const mkSave = (extra = {}) => JSON.stringify({
     _version: 6, chapter: '4', storyline: 'default', ep: 1e9, rp: 99, runEarned: 5e6, prestige: 0,
-    upgrades: {}, buildings: {}, tech: {}, milesDone: {}, unlockedBuildings: { warmup_node: true },
+    upgrades: {}, buildings: {}, tech: { cheap_start: true }, milesDone: {}, unlockedBuildings: { warmup_node: true, exp_bench: true }, // v2.8.1：v21 可购区按成本排序——前缀 2 解锁后揭示 beacon_1（offline1 未研究 → locked）
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false },
     lastSeen: Date.now(), startTime: Date.now(), ...extra,
   }).replace(/</g, '\\u003c');
@@ -84,45 +84,44 @@ const fs = await import('node:fs');
   await sleep(400);
   const chainState = await page.evaluate(() => {
     const ids = [...document.querySelectorAll('#v21-building-list [data-v21]')].map(c => c.dataset.v21);
-    const bg = document.querySelector('#v21-building-list [data-v21="bargain_shop"]');
+    const bg = document.querySelector('#v21-building-list [data-v21="beacon_1"]');
     const bgLocked = bg ? bg.classList.contains('locked') : null;
     const bgCls = bg ? bg.className : null;
     return { ids, bgLocked, bgCls };
   });
-  rec('V3 未研究钥匙：前置未满足的 beacon_1 不进入链窗口（揭示停在 lock-card）', !chainState.ids.includes('beacon_1') && chainState.ids.includes('bargain_shop'), JSON.stringify(chainState.ids));
-  rec('V3 lock-card 仅差 RP 不 locked（可点击解锁入口保留）', chainState.bgLocked === false && chainState.bgCls.includes('lock-card'), `bg=${chainState.bgCls}`);
-  // 点击 lock-card（bargain_shop，RP 充足）→ 解锁成功进入 unlockedBuildings
-  await page.click('#v21-building-list [data-v21="bargain_shop"]');
+  rec('V3 v2.8.1 链窗：前缀解锁揭示 beacon_1（offline1 未研究 → locked 禁点）', chainState.ids.includes('warmup_node') && chainState.ids.includes('beacon_1'), JSON.stringify(chainState.ids));
+  rec('V3 beacon_1 前置未满足（offline1 未研究）→ locked 禁点', chainState.bgLocked === true && chainState.bgCls.includes('locked'), `bg=${chainState.bgCls}`);
+  // 点击锁卡（beacon_1，前置 offline1 未研究）→ 禁点不解锁
+  await page.evaluate(() => { const el = document.querySelector('#v21-building-list [data-v21="beacon_1"]'); if (el) el.click(); });
   await sleep(300);
   const unlockAfter = await page.evaluate(() => {
     const a = JSON.parse(localStorage.getItem('abyss_idle_v2'));
-    return !!(a.unlockedBuildings && a.unlockedBuildings.bargain_shop);
+    return !!(a.unlockedBuildings && a.unlockedBuildings.beacon_1);
   });
-  rec('V3 点击仅差 RP 的 lock-card 可解锁（RP 充足）', unlockAfter === true, `unlocked=${unlockAfter}`);
+  rec('V3 点击前置未满足锁卡不解锁（禁点生效）', unlockAfter === false, `unlocked=${unlockAfter}`);
 
-  // 已研究钥匙（click_up）+ 议价坊已解锁 → 窗口 locked 区露 field_1（仅差 RP）→ 可点解锁
-  await page.evaluate((raw) => {
-    const o = JSON.parse(raw);
-    o.tech.cheap_start = true;
-    o.unlockedBuildings = { bargain_shop: true, warmup_node: true };
-    localStorage.setItem('abyss_idle_v2', JSON.stringify(o));
-  }, JSON.stringify(JSON.parse(JSON.stringify({ _version: 6, chapter: '4', storyline: 'default', ep: 1e9, rp: 99, runEarned: 5e6, prestige: 0, upgrades: {}, buildings: {}, tech: {}, milesDone: {}, unlockedBuildings: {}, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() }))));
-  await page.reload({ waitUntil: 'networkidle0' });
+  // 已研究钥匙（cheap_start）+ 议价坊已解锁 → 可购卡 cursor=pointer（新页注入，规避 reload 时 evaluateOnNewDocument 重写档）
+  const pageC = await browser.newPage();
+  await pageC.setViewport({ width: 1280, height: 900 });
+  const saveC = JSON.stringify({ _version: 6, chapter: '4', storyline: 'default', ep: 1e5, rp: 99, runEarned: 5e6, prestige: 0, upgrades: { storage: 20 }, buildings: {}, tech: { cheap_start: true }, milesDone: {}, unlockedBuildings: { bargain_shop: true, warmup_node: true }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false }, lastSeen: Date.now(), startTime: Date.now() });
+  await pageC.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), saveC);
+  await pageC.goto(BASE, { waitUntil: 'networkidle0' });
   await sleep(1200);
-  const openCard = await page.evaluate(() => {
+  const openCard = await pageC.evaluate(() => {
     const el = document.querySelector('#v21-building-list [data-v21]');
     if (!el) return { found: false };
     const cs = getComputedStyle(el);
     return { found: true, id: el.dataset.v21, locked: el.classList.contains('locked'), cursor: cs.cursor, gate: (el.textContent || '').includes('需钥匙') };
   });
   rec('V3 已研究钥匙：仅差 RP 的卡不 locked（cursor=pointer 可点击）', openCard.found && !openCard.locked && openCard.cursor === 'pointer', JSON.stringify(openCard));
-  await page.click('#v21-building-list [data-v21]');
+  await pageC.click('#v21-building-list [data-v21]');
   await sleep(300);
-  const unlockOk = await page.evaluate(() => {
+  const unlockOk = await pageC.evaluate(() => {
     const el = document.querySelector('#v21-building-list [data-v21]');
     return el ? !el.classList.contains('locked') : true;
   });
-  rec('V3 点击仅差 RP 的卡可正常解锁（RP 充足）', unlockOk, 'unlocked');
+  rec('V3 点击可购卡可正常购买（EP 充足）', unlockOk, 'unlocked');
+  await pageC.close();
 
   // ① 快照 UI：打开面板 → 保存快照 → 槽位出现 → 二级确认弹框（覆盖）→ 使用覆盖
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent === '存档管理'); if (b) b.click(); });
@@ -165,7 +164,7 @@ const fs = await import('node:fs');
   const mainSrc = fs.readFileSync('src/main.js', 'utf-8');
   rec('V3 源码：流失预警 tooltip 已补「维修坞 → 0，免疫」', mainSrc.includes('（维修坞 → 0，免疫）'), 'tooltip 源码');
   const dockDesc = fs.readFileSync('src/data/balance.js', 'utf-8');
-  rec('V3 源码：维修坞卡描述含「不再免疫流失」（v2.8.3 起）', /不再免疫流失/.test(dockDesc), 'dock desc');
+  rec('V3 源码：维修坞卡描述含「流失概率 -50%」（v2.8.19 起）', /流失概率 -50%/.test(dockDesc), 'dock desc');
   await page.close();
   await browser.close();
 }
