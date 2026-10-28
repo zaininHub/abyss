@@ -790,6 +790,15 @@ export function refreshShopAffordability() {
     if (!u) continue;
     el.classList.toggle('cant', (S.dm || 0) < u.dmCost);
   }
+  // v2.8.26 ④：RP 加成组（研究点 tab）灰态/成本同步——此前 RP 变化后不刷新（「到处都出现」可购判断问题之一）
+  for (const [id, el] of rpFamilyItemEls) {
+    const u = (BALANCE.buildingsV21 || []).find(x => x.id === id);
+    if (!u) continue;
+    const cost = rpFamilyCost(u);
+    el.classList.toggle('cant', (S.rp || 0) < cost);
+    const c = el.querySelector('.cost');
+    if (c && c.textContent !== fmt(cost) + ' RP') c.textContent = fmt(cost) + ' RP';
+  }
   // v1.3 B：设施灰态快刷
   const buildings = getBuildings();
   for (const [id, el] of bldItemEls) {

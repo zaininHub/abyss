@@ -245,6 +245,21 @@ export function embraceRift() {
 }
 
 // ---- 渲染：裂隙事件卡（主界面浮卡） ----
+// v2.8.26 ④：裂隙余烬升级/深入按钮可购判定每秒同步（余烬/DM 变化即时灰显）——此前仅渲染时判定
+export function refreshRiftAffordability() {
+  if (S.riftExpedition) return; // 深入中不刷升级按钮
+  for (const row of document.querySelectorAll('[data-rift-upg]')) {
+    const u = BALANCE.rift.upgrades[row.dataset.riftUpg];
+    if (!u) continue;
+    const lv = riftUpgradeLevel(u.id);
+    const cost = lv >= u.cap ? null : riftUpgradeCost(u.id);
+    const btn = row.querySelector('button');
+    if (btn) { btn.disabled = cost === null || (S.riftEmber || 0) < cost; btn.classList.toggle('disabled', cost !== null && (S.riftEmber || 0) < cost); }
+  }
+  const delve = document.getElementById('delve-rift');
+  if (delve) { const noDm = !(S.resDiscovered && S.resDiscovered.dm); delve.disabled = noDm; delve.classList.toggle('disabled', noDm); }
+}
+
 export function renderRift(container) {
   if (!container) return;
   const card = document.getElementById('rift-card');

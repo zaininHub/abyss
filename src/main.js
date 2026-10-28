@@ -18,7 +18,7 @@ import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot,
 // v2.0：故事线管理器
 import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePackage } from './core/storylineManager.js';
 import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn } from './modules/projects.js';
-import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn } from './modules/religions.js';
+import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn, refreshReligionAffordability } from './modules/religions.js'; // v2.8.26 ④
 import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
 import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
@@ -39,7 +39,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, buyRiftUpgrade } from './modules/rift.js';
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade } from './modules/rift.js';
 import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -1734,6 +1734,8 @@ function tick(now) {
     refreshShopAffordability(); // v2.1 R4：每秒快刷灰态（不重建 DOM）
     refreshRelicAffordability(); // v2.8.26：遗物/净化 DM 可购每秒刷新
     refreshPetsAffordability(); // v2.8.26：宠物 PT 可购每秒刷新
+    refreshReligionAffordability(); // v2.8.26 ④：宗教按钮可购每秒同步
+    refreshRiftAffordability(); // v2.8.26 ④：裂隙余烬/深入按钮可购每秒同步
     // v1.3 A：AI 核心研究完成后面板出现（也覆盖晋升保留 ai_core 的场景）
     const aiNow = aiUnlocked();
     if (aiNow !== lastAiUnlocked) { lastAiUnlocked = aiNow; dirty.ai = true; }
@@ -1869,26 +1871,31 @@ function ensureCodeRain() {
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
   const CHARS = '01<>/\{}[]=+*#%&';
-  const COLS = Math.floor(canvas.width / 16); // v2.8.26：列距 22→16（更密——1440 宽 90 列，肉眼无法忽略）
+  const COLS = Math.floor(canvas.width / 10); // v2.8.26：列距 16→10——1440 宽 144 列，字符雨密度再翻倍（上一轮截图仍被用户判定「没有」）
   const drops = new Array(COLS).fill(0).map(() => Math.random() * -80);
-  const FONT = 20; // v2.8.26：18→20px 不透明亮青（0.85→1.0）——此前交付截图用户肉眼仍不可见，改高对比矩阵雨
-  // v2.8.25 ③：resize 重设画布尺寸（此前窗口变化后粒子留白/偏移）
+  const drops2 = new Array(COLS).fill(0).map(() => Math.random() * -80 + 40); // 双层雨：每列两串字符错位下落，同屏字符 ×2
+  const FONT = 18; // 18px 配合 10px 列距——字符紧凑成流
+  // resize 重设画布尺寸
   window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
   _codeRainTimer = setInterval(() => {
     if (!_codeRainStarted) return;
-    ctx.fillStyle = 'rgba(8,6,14,0.03)';
+    ctx.fillStyle = 'rgba(8,6,14,0.10)'; // 拖尾加深——字符尾迹连成光流
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold ' + FONT + 'px monospace';
     for (let i = 0; i < COLS; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
       const y = drops[i] * FONT;
-      ctx.fillStyle = 'rgba(102, 255, 224, 1)'; // 不透明亮青（列头部白光 + 身青）
-      ctx.fillText(ch, i * 16, y);
-      // 列首字符白光（经典矩阵雨高亮）
-      ctx.fillStyle = 'rgba(230, 255, 250, 1)';
-      ctx.fillText(ch, i * 16, y - FONT);
-      drops[i] += 0.42;
+      ctx.fillStyle = 'rgba(102, 255, 224, 1)';
+      ctx.fillText(ch, i * 10, y);
+      ctx.fillStyle = 'rgba(230, 255, 250, 1)'; // 列首白光
+      ctx.fillText(ch, i * 10, y - FONT);
+      drops[i] += 0.35;
       if (y > canvas.height && Math.random() > 0.972) drops[i] = 0;
+      const y2 = drops2[i] * FONT;
+      ctx.fillStyle = 'rgba(80, 220, 200, 0.95)';
+      ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], i * 10, y2);
+      drops2[i] += 0.35;
+      if (y2 > canvas.height && Math.random() > 0.972) drops2[i] = 0;
     }
   }, 60);
 }

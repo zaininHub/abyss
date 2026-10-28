@@ -174,6 +174,34 @@ export function tickReligion(dt) {
 }
 
 // ========== 面板 ==========
+// v2.8.26 ④：宗教面板按钮可购判定每秒同步（信仰/EP/虔诚/余烬变化即时灰显/点亮）——此前仅渲染时判定
+export function refreshReligionAffordability() {
+  if (!religionUnlocked() || !branchOf()) return;
+  const seal = sealLevel(), sealMax = sealMaxLevel();
+  const sealCost = seal >= sealMax ? null : sealUpgradeCost(seal);
+  const setD = (b, x) => { b.disabled = x; b.classList.toggle('disabled', x); };
+  const b1 = document.querySelector('[data-religion-seal]');
+  if (b1) setD(b1, sealCost === null || (S.faith || 0) < sealCost);
+  const templeLv = (S.religion && S.religion.temple) || 0;
+  const tCost = templeLv >= TEMPLE.cap ? null : templeCost();
+  const b2 = document.querySelector('[data-religion-temple]');
+  if (b2) setD(b2, tCost === null || S.ep < tCost);
+  const b3 = document.querySelector('[data-religion-praise]');
+  if (b3) setD(b3, (S.faith || 0) < faithCap() * PRAISE.thresholdRatio);
+  const b4 = document.querySelector('[data-religion-transcend]');
+  if (b4) setD(b4, (S.devotion || 0) < transcendCost());
+  for (const b of document.querySelectorAll('[data-religion-sanctum]')) {
+    const s2 = SECRET_SANCTUMS.find(x => x.id === b.dataset.religionSanctum);
+    if (!s2) continue;
+    const cost = secretSanctumCost(s2.id);
+    setD(b, transcendLevel() < s2.needTranscend || (S.devotion || 0) < s2.devGate || (S.riftEmber || 0) < cost);
+  }
+  const b5 = document.querySelector('[data-religion-oracle]');
+  if (b5) setD(b5, oracleLevel() >= ORACLE.cap || (S.faith || 0) < oracleCost());
+  const b6 = document.querySelector('[data-religion-crusade]');
+  if (b6) setD(b6, crusadeLevel() >= CRUSADE.cap || (S.faith || 0) < crusadeCost());
+}
+
 export function renderReligionPanel(container) {
   if (!container) return;
   if (!religionUnlocked()) {
