@@ -34,7 +34,7 @@ import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, 
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
-import { renderReincarn } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
+import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent } from './modules/events.js';
@@ -1795,7 +1795,7 @@ let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
 function tick(now) {
   frame++;
-  const dt = Math.min(10, (now - lastTick) / 1000); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时（休眠/薪资状态真实计数），离线结算仍走独立通道
+  const dt = Math.max(0, Math.min(10, (now - lastTick) / 1000)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
   lastTick = now;
   if (S.paused) {
     updatePausePreview(); // v2.5 ⑥：暂停弹框实时刷新（预计离线时间/收入）
@@ -2183,7 +2183,13 @@ if (document.readyState === 'loading') {
 }
 
 // v2.9.1：暴露游戏状态到 window 供调试 / 自动化测试访问（存档类游戏，无敏感信息）
-if (typeof window !== 'undefined') { window.S = S; window.__gameDirty = dirty; }
+if (typeof window !== 'undefined') {
+  window.S = S; window.__gameDirty = dirty;
+  // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
+  window.__tick = tick;
+  window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
+  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain };
+}
 
 
 // ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（背景特效） ==========
