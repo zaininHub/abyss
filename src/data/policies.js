@@ -29,6 +29,15 @@ export const POLICY_GROUPS = [
       { id: 'sacrifice', name: '牺牲',     effect: { devotion: 1.5, global: -0.10 }, desc: '虔诚获取 ×1.5，全局 -10%' },
     ],
   },
+  // v3.0.0 扩展：第 4 组「集市」——政策组 3 → 4（+33%），与深渊集市模块联动
+  {
+    id: 'market', name: '集市', unlock: (S) => !!(S.bazaar && S.bazaar.unlocked), hint: '需深渊集市已开张',
+    policies: [
+      { id: 'tariff',   name: '关税同盟', effect: { bazaarRate: 0.15, ep: -0.10 },      desc: '集市汇率 +15%，EP 产出 -10%' },
+      { id: 'freetrade',name: '自由贸易', effect: { bazaarStock: 2, bazaarRefresh: 0.50 }, desc: '集市库存 +2/位，刷新成本 +50%' },
+      { id: 'monopoly', name: '垄断协议', effect: { bazaarRefresh: -0.40, bazaarGain: -0.20 }, desc: '刷新成本 -40%，成交所得 -20%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }

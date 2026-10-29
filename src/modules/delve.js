@@ -1,11 +1,11 @@
 // v2.6.0：终局层「深渊深潜」模块——解锁 / 下潜上浮 / 深潜产出与腐化 / 升级树 / 里程碑 / 面板
 import { S, save } from '../state.js';
 import { policyMult } from '../data/policies.js';
-import { fmt, echoLv, delveTechMult, researchMult } from './economy.js';
+import { fmt, echoLv, delveTechMult, researchMult, epStorageCap } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：湮灭刻印——深潜产出乘区
 import {
-  DELVE, diveCost, vsPerSec, delveCorruptRate, delveUpgradeCost,
+  DELVE, diveCost, diveEpCost, delveEpUpkeep, vsPerSec, delveCorruptRate, delveUpgradeCost, milestoneVs,
 } from '../data/delve.js';
 
 let logFn = null;
@@ -48,19 +48,34 @@ export function unlockDelve() {
   return { ok: true };
 }
 
-// 下潜：消耗 DM（成本随层深指数涨），开启深潜产出与腐化累积
+// v3.0.0 ①：下潜当前成本快照（EP 主成本 + DM 辅助成本）——面板与 startDelve 共用同一口径
+export function diveCostNow() {
+  const depth = delveDepth();
+  return {
+    dm: diveCost(depth),
+    ep: diveEpCost(depth, epStorageCap(), delveUpgradeLv('hull')),
+  };
+}
+// v3.0.0 ①：深潜维持开销（EP/秒，深潜中生效）
+export function delveUpkeepNow(depth) {
+  return delveEpUpkeep(Math.max(1, depth || delveDepth()), epStorageCap(), delveUpgradeLv('hull'));
+}
+
+// 下潜：消耗 EP（主成本，随层深按存储上限比例涨）+ DM（辅助成本，随层深指数涨），开启深潜产出与腐化累积
 export function startDelve() {
   if (!delveUnlocked()) return { ok: false, reason: '未解锁' };
   if (delveActive()) return { ok: false, reason: '已在深潜中' };
-  const cost = diveCost(delveDepth());
+  const { dm: cost, ep: epCost } = diveCostNow();
+  if ((S.ep || 0) < epCost) return { ok: false, reason: `EP 不足：下潜至 Lv.${delveDepth() + 1} 需 ${fmt(epCost)} EP（当前 ${fmt(S.ep || 0)}）` };
   if ((S.dm || 0) < cost) return { ok: false, reason: `DM 不足：下潜至 Lv.${delveDepth() + 1} 需 ${fmt(cost)} DM（当前 ${fmt(S.dm || 0)}）` };
+  S.ep -= epCost;
   S.dm -= cost;
   // v2.9.0 修复：下潜成功即层深 +1——此前 depth 从不递增（恒 0），层深里程碑/深渊政策组/轮回遗存维度全部失效
   S.delve.depth = (S.delve.depth || 0) + 1;
   S.delve.active = true;
   save(S);
-  dlog(`下潜至 Lv.${delveDepth()}（-${fmt(cost)} DM）：虚空碎片产出开启，腐化随层深累积`, 'good');
-  return { ok: true, cost };
+  dlog(`下潜至 Lv.${delveDepth()}（-${fmt(epCost)} EP / -${fmt(cost)} DM）：虚空碎片产出开启，腐化与 EP 维持随层深累积`, 'good');
+  return { ok: true, cost, epCost };
 }
 
 // 上浮：停止产出与腐化累积，层深保留
@@ -83,16 +98,30 @@ export function tickDelve(dt) {
   // v2.8.6 B2a：观测主义——腐化 +0.02/s（拿深潜产出强的代价）
   const obsMult = policyMult('corruption');
   if (obsMult > 1 && S.corruption < 100) S.corruption = Math.min(100, (S.corruption || 0) + 0.02 * dt);
-  // 层深里程碑（一次性 VS 奖励）
+  // v3.0.0 ①：深潜维持开销——每秒烧 EP（层深驱动）。EP 耗尽 → 算力枯竭，强制上浮（防死锁，不吞层深）
+  const upkeep = delveEpUpkeep(depth, epStorageCap(), delveUpgradeLv('hull'));
+  if (upkeep > 0) {
+    S.ep = Math.max(0, (S.ep || 0) - upkeep * dt);
+    if ((S.ep || 0) <= 0) {
+      stopDelve();
+      dlog(`算力枯竭：EP 被维持开销抽干（-${fmt(upkeep)}/s），深潜强制上浮（层深 Lv.${depth} 保留）`, 'bad');
+      if (toastFn) toastFn('⚠️ 算力枯竭：EP 耗尽，深潜强制上浮');
+      save(S);
+      return;
+    }
+  }
+  // 层深里程碑（一次性 VS 奖励；v3.0.0：回声定位 +20%/级）
   const d = delveDepth();
+  const sonarLv = delveUpgradeLv('sonar');
   for (const m of DELVE.milestones) {
     if (d >= m.depth && !(S.delve && S.delve.mileDone && S.delve.mileDone[m.depth])) {
       S.delve = S.delve || {};
       S.delve.mileDone = S.delve.mileDone || {};
       S.delve.mileDone[m.depth] = true;
-      S.vs = (S.vs || 0) + m.vs;
-      dlog(`深潜 Lv.${m.depth} 达成：深渊之眼凝视，+${fmt(m.vs)} 虚空碎片`, 'good');
-      if (toastFn) toastFn(`🌌 深潜里程碑 Lv.${m.depth}：+${fmt(m.vs)} VS`);
+      const gain = milestoneVs(m, sonarLv);
+      S.vs = (S.vs || 0) + gain;
+      dlog(`深潜 Lv.${m.depth} 达成：深渊之眼凝视，+${fmt(gain)} 虚空碎片`, 'good');
+      if (toastFn) toastFn(`🌌 深潜里程碑 Lv.${m.depth}：+${fmt(gain)} VS`);
     }
   }
 }
@@ -133,20 +162,24 @@ export function renderDelvePanel(container) {
   }
   const depth = delveDepth();
   const active = delveActive();
-  const nextCost = diveCost(depth);
+  const { dm: nextCost, ep: nextEpCost } = diveCostNow();
+  const upkeep = delveUpkeepNow(depth);
   const rate = vsPerSec(Math.max(1, depth), delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult(); // v2.9.0：产出按当前真实层深（此前恒按第 1 层）
   const cr = delveCorruptRate(Math.max(1, depth), delveUpgradeLv('purge'));
+  const afford = (S.ep || 0) >= nextEpCost && (S.dm || 0) >= nextCost;
   let html = `
-    <div class="delve-desc">深渊深潜：消耗 DM 下潜，越深虚空碎片产出越高，但腐化随层深累积（净化核心可抵消）。上浮保留层深，产出停止。</div>
+    <div class="delve-desc">深渊深潜：消耗 <b style="color:var(--cyan)">EP</b>（主成本，随层深按存储上限比例涨）+ DM（辅助）下潜，越深虚空碎片产出越高，但腐化与 <b style="color:var(--warn,#d29922)">EP 维持开销</b>随层深累积（净化核心抵腐化、耐压舱抵维持）。上浮保留层深，产出停止。</div>
     <div class="off-stat"><span>虚空碎片（VS）</span><b style="color:var(--cyan)">${fmt(S.vs || 0)}</b></div>
     <div class="off-stat"><span>层深</span><b>Lv.${depth}${active ? ' · 深潜中' : ''}</b></div>
+    <div class="off-stat"><span>EP 存量 / 上限</span><b>${fmt(S.ep || 0)} / ${fmt(epStorageCap())}</b></div>
     <div class="off-stat"><span>DM 存量</span><b>${fmt(S.dm || 0)}</b></div>
     ${active ? `
       <div class="off-stat"><span>VS 产出</span><b style="color:var(--green)">+${rate.toFixed(2)}/s</b></div>
+      <div class="off-stat"><span>EP 维持开销</span><b style="color:var(--warn,#d29922)">-${fmt(upkeep)}/s</b></div>
       <div class="off-stat"><span>深潜腐化</span><b style="color:var(--red, #f85149)">+${cr.toFixed(2)}%/s</b></div>` : ''}
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">${active ? '深潜中' : `下次下潜：${fmt(nextCost)} DM（至 Lv.${depth + 1}）`}</div>
-    <button class="btn ${active ? '' : (S.dm || 0) < nextCost ? 'disabled' : ''}" data-delve-toggle="1"
-      title="${active ? '上浮：停止产出与腐化' : '消耗 DM 下潜一层'}">${active ? '上浮' : `下潜（${fmt(nextCost)} DM）`}</button>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">${active ? '深潜中（EP 归零将强制上浮）' : `下次下潜至 Lv.${depth + 1}：${fmt(nextEpCost)} EP + ${fmt(nextCost)} DM`}</div>
+    <button class="btn ${active ? '' : afford ? '' : 'disabled'}" data-delve-toggle="1"
+      title="${active ? '上浮：停止产出与腐化' : `消耗 ${fmt(nextEpCost)} EP + ${fmt(nextCost)} DM 下潜一层`}">${active ? '上浮' : `下潜（${fmt(nextEpCost)} EP · ${fmt(nextCost)} DM）`}</button>
     <div style="margin:12px 0 6px;font-size:11px;color:var(--text-2)">终局升级（虚空碎片）</div>`;
   for (const [id, u] of Object.entries(DELVE.upgrades)) {
     const lv = delveUpgradeLv(id);

@@ -4,6 +4,7 @@ import { S } from '../state.js';
 import { BALANCE } from './balance.js';
 import { PRAISE, SECRET_SANCTUMS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
 import { POLICY_GROUPS } from './policies.js';
+import { BAZAAR, RES_LABEL } from './bazaar.js'; // v3.0.0：深渊集市
 import { fmt } from '../modules/economy.js';
 import { delveDepth } from '../modules/delve.js';
 
@@ -23,6 +24,7 @@ function unlocked(key) {
     case 'prestige': return (S.prestige || 0) >= 1;
     case 'reincarn': return (S.reincarned || 0) >= 1;
     case 'policy': return POLICY_GROUPS.some(g => { try { return g.unlock(S); } catch { return false; } });
+    case 'bazaar': return !!(S.bazaar && S.bazaar.unlocked); // v3.0.0
     default: return true;
   }
 }
@@ -104,10 +106,26 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `
     <h4>深渊深潜（终局层，层深/VS 跨转生保留）</h4>
-    <p>解锁：ES ≥ 3 + DM 已发现 + 宗教已信奉。消耗 DM 下潜（成本 ${100}×1.35^层深），<b>下潜即层深 +1</b>（v2.9.0 修复）；越深 VS 产出越高（基础 ${0.5}/s × (1+0.5×层)），但腐化随层深累积（${0.02}%/层/s，净化核心 -30%/级）。</p>
-    <p>当前层深：Lv.${delveDepth()}。里程碑：10 层 +50 VS / 25 层 +200 / 50 层 +1000 / 100 层 +5000（深渊之眼终局徽记）。</p>
-    <h4>深潜升级树（VS 消耗）</h4>
-    <p>深潜器（VS+50%/级）/ 虚空强化（全局 ×1.10/级）/ 净化核心（腐化 -30%/级）/ 深渊共鸣（圣印+2/级·信仰×1.5/级）/ 拟态矩阵（AI 间隔 -20%/级）/ 星辰余烬（离线上限 +20%/级）。</p>
+    <p>解锁：ES ≥ 3 + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × 4% × 1.12^层深（封顶 75% 上限，耐压舱 -8%/级），DM 成本 ${100}×1.35^层深；<b>下潜即层深 +1</b>（v2.9.0 修复）；越深 VS 产出越高（基础 ${0.5}/s × (1+0.5×层)）。</p>
+    <p><b>深潜维持开销</b>（v3.0.0）：深潜中每秒烧掉「存储上限 × 0.02% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${0.02}%/层/s（净化核心 -30%/级）。</p>
+    <p class="wiki-hint">为什么改成吃 EP：终局前 EP 只有「买升级」一个出口，深潜与 EP 主经济完全脱钩——现在存储上限重新成为下潜的真实约束（想潜得深，先扩容）。</p>
+    <p>当前层深：Lv.${delveDepth()}。里程碑：10 层 +50 VS / 25 层 +200 / 50 层 +1000 / 75 层 +2500 / 100 层 +5000（深渊之眼终局徽记）/ 150 层 +20000（回声定位 +20%/级）。</p>
+    <h4>深潜升级树（VS 消耗，8 项）</h4>
+    <p>深潜器（VS+50%/级）/ 虚空强化（全局 ×1.10/级）/ 净化核心（腐化 -30%/级）/ 深渊共鸣（圣印+2/级·信仰×1.5/级）/ 拟态矩阵（AI 间隔 -20%/级）/ 星辰余烬（离线上限 +20%/级）/ <b>耐压舱</b>（EP 维持 -25%/级·下潜 EP 成本 -8%/级）/ <b>回声定位</b>（VS+35%/级·里程碑 +20%/级）。</p>
+  ` },
+  { id: 'bazaar', name: '深渊集市', unlock: 'bazaar', body: () => `
+    <h4>深渊集市（v3.0.0 大模块 · 参考 KG 贸易与资源转换）</h4>
+    <p>解锁：职级 ≥ 1 且已发现研究点（RP）。六位商人常驻矩阵夹层，做<b>单向资源兑换</b>——把富余的换成稀缺的。</p>
+    <table class="wiki-tbl"><tr><th>商人</th><th>兑换</th><th>库存</th><th>等级门槛</th></tr>
+      ${BAZAAR.dealers.map(d => `<tr><td>${d.icon} ${d.name}</td><td>${RES_LABEL[d.from]} → ${RES_LABEL[d.to]}</td><td>${d.stock}</td><td>${d.tier > 0 ? 'Lv.' + d.tier : '—'}</td></tr>`).join('')}
+    </table>
+    <h4>汇率波动（每 ${BAZAAR.shuffleSec}s）</h4>
+    <p>每位商人有独立汇率倍率，区间 [${(1 - BAZAAR.volatility).toFixed(2)} + 0.05×等级, ${(1 + BAZAAR.volatility).toFixed(2)}]，作用在<b>每批所得</b>上（×1.20 = 多得 20%）。集市等级只抬高波动下限，<b>永不消除波动</b>。</p>
+    <h4>库存与刷新</h4>
+    <p>每批成交消耗 1 点库存；库存每 ${BAZAAR.stockRegenSec}s 自然 +1（至上限）。手动刷新立即补满库存并重掷汇率：EP 成本 = 存储上限 × ${(BAZAAR.refreshEpRatio * 100).toFixed(0)}% × ${BAZAAR.refreshGrowth}^本轮刷新次数，或消耗 ${BAZAAR.echoRefresh} 点回响（不计入刷新次数）。</p>
+    <h4>集市等级（跨周期保留）</h4>
+    <p>按累计成交笔数升级：${BAZAAR.tiers.map((n, i) => `Lv.${i}（${n} 笔）`).join(' / ')}。等级抬高汇率波动下限并解锁高阶商人（典当核心 Lv.1 / 余烬掮客 Lv.1 / 虚空商行 Lv.2）。<b>成交笔数与等级跨周期保留，库存/汇率/刷新次数每轮重置</b>。</p>
+    <p class="wiki-hint">虚空商行只在深潜解锁后才收货（VS 未发现时无意义）。集市政策组（关税同盟 / 自由贸易 / 垄断协议）每轮可重选，会改写汇率、库存与刷新成本。</p>
   ` },
   { id: 'prestige', name: '晋升与轮回', unlock: 'prestige', body: () => `
     <h4>晋升转生（第一层循环）</h4>

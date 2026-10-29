@@ -3,6 +3,7 @@ import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp } from './economy.js';
 import { spawnProject } from './projects.js';
+import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
 
 export function canPrestige() {
   // v2.9.0 优化③：深渊吞噬锁定——倒计时/抉择/崩溃期间晋升不可脱离深渊（仅命运抉择可终结；
@@ -47,6 +48,7 @@ export function doPrestige(talentId) {
   S.policies = {};
   S.policyRerolls = {};
   S.vowPolicyBoost = false;
+  resetBazaarRun(); // v3.0.0：集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
   S.pets = {};
   S.activePets = [];
   S.buffMult = 1; S.buffUntil = 0;

@@ -22,6 +22,7 @@ import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion
 import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
 import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
+import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked } from './data/religions.js';
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
@@ -273,6 +274,11 @@ function render() {
     const dvEl = document.getElementById('delve-panel');
     if (dvEl) renderDelvePanel(dvEl);
     dirty.delve = false;
+  }
+  if (dirty.bazaar) { // v3.0.0：深渊集市面板
+    const bzEl = document.getElementById('bazaar-panel');
+    if (bzEl) renderBazaarPanel(bzEl);
+    dirty.bazaar = false;
   }
   if (dirty.rift) {
     const riftEl = document.getElementById('rift-panel');
@@ -707,6 +713,10 @@ function switchTab(id) {
     const rtPanel = document.getElementById('rift-tab-panel');
     if (rtPanel) renderRiftPanel(rtPanel);
   }
+  if (id === 'bazaar') { // v3.0.0：深渊集市
+    const bzPanel = document.getElementById('bazaar-panel');
+    if (bzPanel) renderBazaarPanel(bzPanel);
+  }
 }
 
 function refreshTabVisibility() {
@@ -733,6 +743,9 @@ function refreshTabVisibility() {
   // v2.8.6 B2a：政策 tab——有开放政策组才显示
   const polBtn = document.getElementById('btn-policy');
   if (polBtn) polBtn.style.display = policyOpenGroups().length > 0 ? '' : 'none';
+  // v3.0.0：深渊集市 tab——解锁或可解锁时显示
+  const bzBtn = document.getElementById('btn-bazaar');
+  if (bzBtn) bzBtn.style.display = (bazaarUnlocked() || canUnlockBazaar()) ? '' : 'none';
 }
 
 // v2.5 ④：研究点（RP）独立栏目——EP 首次溢出解锁；展示余额 / 溢出转换 / 用途说明
@@ -1012,6 +1025,9 @@ function bindEvents() {
   document.getElementById('btn-delve')?.addEventListener('click', () => switchTab('delve'));
   bindDelvePanel(document.getElementById('delve-panel')); // v2.6.0：深潜面板事件委托
   document.getElementById('btn-rift-tab')?.addEventListener('click', () => switchTab('rift-tab'));
+  // v3.0.0：深渊集市
+  document.getElementById('btn-bazaar')?.addEventListener('click', () => switchTab('bazaar'));
+  bindBazaarPanel(document.getElementById('bazaar-panel'));
   // v2.9.0：Wiki 重构为侧栏分章 + 内容区（参考 KG 体系化百科）；锁定章节灰显并给门控提示
   const wikiBtn = document.getElementById('btn-wiki');
   const wikiModal = document.getElementById('wiki-modal');
@@ -1047,7 +1063,8 @@ function bindEvents() {
   function hintFor(key) {
     const m = { rp:'让 EP 溢出一次解锁研究点', es:'完成首次晋升', faith:'信奉宗教分支', pt:'购入宠物乐园',
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
-      prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）' };
+      prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）',
+      bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0
     return m[key] || '推进主线解锁';
   }
   function renderStorylineAppendix() {
@@ -1674,6 +1691,10 @@ function checkAch() {
     { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
     { id: 'collapsed', name: '被深渊吞噬',    desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
     { id: 'idle60', name: '静默一分钟',    desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
+    // v3.0.0：深渊集市
+    { id: 'bazaar1',    name: '初次交易',     desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },
+    { id: 'bazaar_t3',  name: '集市巨贾',     desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: s => (s.bazaar && s.bazaar.trades) >= 60 },
+    { id: 'bazaar100',  name: '百笔成交',     desc: '在深渊集市累计完成 100 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 100 },
   ];
   let unlocked = false;
   for (const a of tests) {
@@ -1712,6 +1733,9 @@ function renderAchievementPanel(container) {
     { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）' },
     { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' }, // v2.9.0
     { id: 'gaze_abyss', name: '凝视深渊', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' }, // v2.9.0
+    { id: 'bazaar1',   name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易' }, // v3.0.0
+    { id: 'bazaar_t3', name: '集市巨贾', icon: '💼', desc: '集市等级达到 Lv.3（累计 60 笔成交）' }, // v3.0.0
+    { id: 'bazaar100', name: '百笔成交', icon: '📈', desc: '在深渊集市累计完成 100 笔交易' }, // v3.0.0
   ];
   const got = defs.filter(d => S.achievements[d.id]);
   const n = got.length;
@@ -1856,8 +1880,10 @@ function tick(now) {
   // v2.5.7 宗教：圣所信仰产出 + 入口/面板状态刷新
   tickReligion(dt);
   policyTickRefresh(); // v2.8.6 B2a：政策开放组变化刷新
-  // v2.6.0 深潜：深潜产出/腐化/里程碑
+  // v2.6.0 深潜：深潜产出/腐化/里程碑（v3.0.0：含 EP 维持开销）
   tickDelve(dt);
+  // v3.0.0：深渊集市——汇率波动 / 库存自然恢复
+  tickBazaar(dt);
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 5) {
     S._religCheckTimer = 0;
@@ -1865,6 +1891,8 @@ function tick(now) {
     dirty.religion = true;
     // v2.6.0：深潜面板随产出/腐化/里程碑低频刷新（HTML 相同由渲染层跳过重建）
     if (delveUnlocked()) dirty.delve = true;
+    // v3.0.0：集市面板随汇率波动/库存恢复低频刷新
+    if (bazaarUnlocked()) dirty.bazaar = true;
   }
 
   // 深渊裂隙
@@ -2111,12 +2139,13 @@ function startApp() {
   setDelveLogFn(log);
   setCollapseHooks(log, toast, showCollapseChoice); // v2.8.3：深渊吞噬日志/toast；v2.9.0：终结抉择弹框
   setDelveToastFn(toast); // v2.6.0：深潜日志/toast
+  setBazaarLogFn(log); setBazaarToastFn(toast); // v3.0.0：深渊集市
 
   dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true; dirty.relics = true; // v2.7.0：深渊遗物
   dirty.pets = true; dirty.prestige = true; dirty.projects = true; dirty.story = true;
   dirty.rift = true; dirty.expedition = true; dirty.riftTab = true;
   dirty.tide = true; dirty.corruption = true; dirty.ai = true;
-  dirty.religion = true; dirty.delve = true;
+  dirty.religion = true; dirty.delve = true; dirty.bazaar = true; // v3.0.0：集市
 
   // v2.1：旧档迁移一次性提示（PM 4.2 玩家沟通口径；localStorage 防重）
   if (S._v21Migrated && !localStorage.getItem('v21_migrated_toast')) {

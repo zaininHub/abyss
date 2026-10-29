@@ -8,6 +8,7 @@
 import { S, save } from '../state.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { fmt } from './economy.js';
+import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
 import { BALANCE } from '../data/balance.js';
 import { toast, dirty, askConfirm } from '../main.js';
 import { spawnProject } from './projects.js';
@@ -94,6 +95,7 @@ export function doReincarn() {
   S.policies = {};
   S.policyRerolls = {};
   S.vowPolicyBoost = false;
+  resetBazaarRun(); // v3.0.0：集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
   // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
   // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
   S.resDiscovered = {

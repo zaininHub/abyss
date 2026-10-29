@@ -36,6 +36,7 @@ export function defaultState() {
     chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
     devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）
     policies: {}, policyRerolls: {}, vowPolicyBoost: false, policyRuns: [], // v2.8.6 B2a：周期政策（每轮重选）+ 政策走向历史
+    bazaar: { unlocked: false, trades: 0, refreshCount: 0, shuffleTimer: 0, regenTimer: 0, rates: {}, stock: {} }, // v3.0.0：深渊集市（成交笔数跨周期，库存/汇率每轮重置）
     religion: {}, faith: 0,
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,
@@ -306,7 +307,7 @@ export function load() {
     const migrated = migrateSave(raw);
     const defs = defaultState();
     // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen', 'relics']; // v2.7.0 遗物跨转生保留
+    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen', 'relics', 'bazaar']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
     for (const k of crossRun) {
       if (migrated[k] !== undefined) defs[k] = migrated[k];
     }
@@ -314,7 +315,7 @@ export function load() {
     const newFields = ['tidePhase', 'tideTimer', 'corruption', 'wageState', 'buildings', 'vehCollectTimer', 'ai', 'boughtOrder', 'unlockedBuildings', 'buildingOverflow', 'epOverflowTotal', '_overflowRpAcc', 'delve', 'vs',
                        'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone', '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', '_farewellBought',
                        'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
-                       'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled',
+                       'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar',
                        'faithTemples', 'miraclesTriggered', 'prophecyNext',
                        '_prestigeSkips', '_idleSec', '_catClicks', '_lastActionAt', 'resDiscovered']; // v2.3.2 反馈②：_vehicleNames 移除
     for (const k of newFields) {
