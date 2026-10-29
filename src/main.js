@@ -736,8 +736,8 @@ function renderRpPanel() {
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${(Math.floor((S.ep || 0) * 0.25) < rpDistillRate()) ? 'disabled' : ''} title="消耗当前 EP 的 25%，按蒸馏效率转化为 RP">蒸馏 25% EP</button>
-      <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
+      <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
     </div>
   </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
@@ -840,9 +840,9 @@ function bindEvents() {
   // v2.7.4 ⑦：RP 蒸馏——消耗 25% 当前 EP 转化 RP（主动消耗，防溢出）
   document.getElementById('rp-panel')?.addEventListener('click', (e) => {
     if (!e.target || e.target.id !== 'rp-distill-btn') return;
-    const spend = Math.floor((S.ep || 0) * 0.25);
     const rate = rpDistillRate();
-    if (spend < rate) { if (toast) toast('EP 不足：需至少蒸馏出 1 RP'); return; }
+    const spend = Math.max(Math.floor((S.ep || 0) * 0.25), rate); // v2.8.30：25% 不足 1 RP 时按最低 1 RP 额蒸馏（ep ≥ 蒸馏率即可点）
+    if (spend < rate || (S.ep || 0) < spend) { if (toast) toast('EP 不足：需至少蒸馏出 1 RP'); return; }
     const rp = Math.floor(spend / rate);
     S.ep -= spend;
     S.rp = (S.rp || 0) + rp;

@@ -332,8 +332,7 @@ export function renderRiftPanel(container) {
     });
     return;
   }
-  let html = `<div class="rift-tab-desc">深渊裂隙：最深处连接着虚空之底。封印/拥抱/深入均积累裂隙余烬（跨转生保留，余烬获取与腐化状态无关——免疫腐化仅免除深入惩罚，不断余烬供给），升级裂隙科技。</div>
-    <div class="off-stat"><span>裂隙余烬</span><b style="color:var(--accent)">${S.riftEmber || 0}</b></div>
+  let html = `<div class="rift-tab-desc" style="color:var(--good);font-weight:bold">裂隙余烬：${S.riftEmber || 0}（跨转生保留 · 封印/拥抱/深入积累）</div>
     <div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${Math.round(riftSpawnSec() / 60)} 分钟</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技（余烬）</div>`;

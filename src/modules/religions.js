@@ -29,7 +29,7 @@ export function canUnlockReligion() {
 }
 
 export function religionWakeCost() {
-  return 50000; // v2.8.30：宗教唤醒为固定值（不随上限动态变化）
+  return 200000; // v2.8.30：唤醒价格大幅上涨（50K→200K，固定值）
 }
 
 export function unlockReligion() {
@@ -218,7 +218,7 @@ export function renderReligionPanel(container) {
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
         存储节点：${S.upgrades.storage || 0}/3 级 ${(S.upgrades.storage || 0) >= 3 ? '✓' : '（未达标）'}<br>
         RP 觉醒：${(S.resDiscovered && S.resDiscovered.rp) ? '✓' : '（未觉醒）'}<br>
-        唤醒消耗：${fmt(religionWakeCost())} EP（固定值）
+        唤醒消耗：${fmt(religionWakeCost())} EP
       </div>
       <button class="btn ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'}" data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'} title="${ok ? (S.ep || 0) >= religionWakeCost() ? '唤醒信仰（消耗大量 EP）' : 'EP 不足' : '前置未达标'}">唤醒信仰</button>
       <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒、EP ≥ 唤醒消耗。条件未达成时入口保持可见。</div>`;
