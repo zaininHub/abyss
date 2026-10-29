@@ -152,10 +152,10 @@ t('v2.0.2 EP 容量 = (基础2000 + 缓存×5000 + 存储级制累计 + DC加成
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   assert.equal(epStorageCap(), 2000);
   S.upgrades['cache'] = 1;          assert.equal(epStorageCap(), 10000);  // v2.8.2：2000 + 8000
-  S.upgrades['storage'] = 2;        assert.equal(epStorageCap(), 20900);  // v2.8.27：capPer 5000×1.18（2000 + 5000 + 5900）
-  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 30900);  // v2.8.27：cache 8000 + storage 5000+5900 + DC 10000
+  S.upgrades['storage'] = 2;        assert.equal(epStorageCap(), 15375);  // v2.8.30：cache 8000 + storage 2500+2875
+  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 25375);  // v2.8.30：storage 15375 + DC 10000
   S.milesDone = { m1: true, m2: true };
-  assert.equal(epStorageCap(), Math.floor(30900 * 1.5)); // × (1 + 0.25×2)
+  assert.equal(epStorageCap(), 38063); // v2.8.30：25375 × 1.5（m1+m2 里程碑）
   S.upgrades = {}; S.milesDone = {}; S.buildings = {};
 });
 t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
@@ -188,11 +188,11 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
 });
 
 console.log('[6] v2.1 修复断言（R1 乘数 / R3 上限死锁 / D1 统一入口 / 口径拍板 / R2+R4 源码）');
-t('R1：线程裸产出不再叠加全局乘数（单线程 = 3）', () => {
+t('R1：线程裸产出不再叠加全局乘数（单线程基础 3 × 0.8 = 2.4；v2.8.30 线程降温）', () => {
   S.cultists = [{ output: 3, mood: '正常' }];
-  assert.equal(staffOutputPerSec(), 3);
-  S.prestigePoints = 10; // globalMult ≥ 2，若仍双重套用会变成 ≥6
-  assert.equal(staffOutputPerSec(), 3);
+  assert.ok(Math.abs(staffOutputPerSec() - 2.4) < 1e-9, `线程产出 ${staffOutputPerSec()}`);
+  S.prestigePoints = 10; // globalMult ≥ 2，若仍双重套用会变成 ≥4.8
+  assert.ok(Math.abs(staffOutputPerSec() - 2.4) < 1e-9, `线程产出 ${staffOutputPerSec()}`);
   S.prestigePoints = 0; S.cultists = [];
 });
 t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 3000 / ×1.15 递增 / 无 maxLevel 封顶；v2.8.2）', () => {
@@ -201,8 +201,8 @@ t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 30
   assert.equal(st.base, 3000); // v2.8.30：存储 base 450→3000（前期成本大幅拉陡）
   assert.equal(st.growth, 1.45);
   assert.ok(!st.maxLevel, 'v2.4 KG 模式：storage 不再有 maxLevel 封顶（无限升级）');
-  assert.equal(BALANCE.storage.capPer, 5000); // v2.8.27
-  assert.equal(BALANCE.storage.capGrowth, 1.18); // v2.8.27
+  assert.equal(BALANCE.storage.capPer, 2500); // v2.8.30：加成降低（5000→2500）
+  assert.equal(BALANCE.storage.capGrowth, 1.15); // v2.8.30（1.18→1.15）
   // maxLevel 字段保留仅供存档兼容参考，不再作为购买上限
   assert.equal(BALANCE.storage.maxLevel, 20);
   // 升级商店 storage 卡为无限购买：cost 公式可逐级推演（任意级数均可购买，受 30% 钳制）
@@ -755,7 +755,7 @@ t('5.1：19 级时末级（第 20 级）价格/上限 ≤ 30%', () => {
 t('5.1：20 级满级总上限 = 309,331（v2.8.2 曲线 capPer 3000×1.15^n）', () => {
   resetCapState();
   S.upgrades['storage'] = 20;
-  assert.equal(epStorageCap(), 735140); // v2.8.27 曲线（5000×1.18^n 累计）
+  assert.equal(epStorageCap(), 258109); // v2.8.30 曲线（2000 + 2500×1.15^n 累计，n=0..19）
   resetCapState();
 });
 
@@ -783,11 +783,11 @@ t('5.1：3 个里程碑时上限乘数 = 1.75（+25%×3）', () => {
 t('5.1：旧档兼容——v2.0.1 实存 13 节点直接映射 13 级；v2.4 超 20 旧档全额计入不再截断', () => {
   resetCapState();
   S.upgrades['storage'] = 13; // v2.0.1 最深推演 13 节点
-  const expected = Math.round(2000 + 5000 * (Math.pow(1.18, 13) - 1) / 0.18); // v2.8.27 曲线（基准 2000 + 存储累计）
+  const expected = Math.round(2000 + 2500 * (Math.pow(1.15, 13) - 1) / 0.15); // v2.8.30 曲线（基准 2000 + 存储累计）
   assert.equal(epStorageCap(), expected);
   // v2.4 KG 模式：>20 的旧值按级制公式全额计入（不再截断到满级）
   S.upgrades['storage'] = 25;
-  const expected25 = Math.round(2000 + 5000 * (Math.pow(1.18, 25) - 1) / 0.18); // v2.8.27
+  const expected25 = Math.round(2000 + 2500 * (Math.pow(1.15, 25) - 1) / 0.15); // v2.8.30
   assert.ok(Math.abs(epStorageCap() - expected25) <= 1, `v2.4 旧档 25 级全额计入（期望 ${expected25}，实际 ${epStorageCap()}）`);
   resetCapState();
 });

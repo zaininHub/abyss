@@ -86,9 +86,9 @@ export const BALANCE = {
     { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: '每级 EP 上限 +100,000,000，全局产出 +3% 每级' },
     { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: '每级 EP 上限 +10,000,000,000，DM 采集效率 +30% 每级' },
     // ---- 组 E · 线程产出（5 座）----
-    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.10 }, desc: '每级线程产出 +10%' },
-    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.5 },  desc: '每级线程产出 ×1.5' },
-    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 2 },    desc: '每级线程产出 ×2' },
+    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' }, // v2.8.30：线程产出降温（0.10→0.08）
+    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' }, // v2.8.30：线程产出降温（1.5→1.3）
+    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' }, // v2.8.30：线程产出降温（2→1.8）
     { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
     // ---- 组 F · RP 加成（5 座）----
@@ -120,7 +120,7 @@ export const BALANCE = {
     { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 20000, growth: 1.60, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000' }, // v2.8.30：base 1200→20000、growth 1.60
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 20000, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 4000 }, desc: '每级 EP 上限 +4,000' }, // v2.8.30：价格陡峭、加成减半（8000→4000）
     { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000' },
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
@@ -209,7 +209,7 @@ export const BALANCE = {
   // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
   // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
   // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
-  storage: { base: 3000, growth: 1.45, capPer: 5000, capGrowth: 1.18, maxLevel: 20 }, // v2.8.30：成本曲线大幅拉陡（base 450→3000、growth 1.25→1.45），前期 EP 上限扩容变贵
+  storage: { base: 3000, growth: 1.45, capPer: 2500, capGrowth: 1.15, maxLevel: 20 }, // v2.8.30：价格陡峭的同时加成降低（capPer 5000→2500、capGrowth 1.18→1.15）
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],

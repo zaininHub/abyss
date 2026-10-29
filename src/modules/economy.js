@@ -272,8 +272,8 @@ export function costMult() {
 }
 
 export function focusCostMult() {
-  // v2.1 建筑驱动：专注心核（1 级 ×0.75）；focus_opt 科技改钥匙，效果迁移建筑
-  return fxValue('focusCost');
+  // v2.1 建筑驱动：专注心核（1 级 ×0.75）；v2.8.30：focus_opt 科技直接生效（解锁后成本 -25%，与建筑叠加）
+  return fxValue('focusCost') * (S.tech && S.tech.focus_opt ? 0.75 : 1);
 }
 
 export function clickMult() {
@@ -539,7 +539,7 @@ export function staffOutputPerSec() {
   let total = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
-    total += (c.output || 3) * mood * outMult;
+    total += (c.output || 3) * 0.8 * mood * outMult; // v2.8.30：线程基础产出 -20%（整体降温）
   }
   return total;
 }
