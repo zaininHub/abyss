@@ -1301,8 +1301,10 @@ export function renderResearchUpgrades(container) {
       div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
       div.dataset.research = u.id;
       div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)} RP）`); // v2.8.13：卡片不再重复展示当前 RP（顶部已有「当前 RP」）
+      const eff = (L) => u.fx ? (u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, L)).toFixed(2) : (u.fx.v > 0 ? '+' : '') + Math.round(u.fx.v * L * 100) + '%') : ''; // v2.8.30 ③：许愿池（fx null）仅显示描述
+      const nextEff = lv < u.cap ? eff(lv + 1) : null;
       div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
-        <div class="desc">${u.desc}（当前 ${u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, lv)).toFixed(2) : '+' + Math.round(u.fx.v * lv * 100) + '%'}）</div>
+        <div class="desc">${u.desc}${nextEff ? ` → 下一级 ${nextEff}` : maxed ? '（已满级）' : ''}</div>
         <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
       grid.appendChild(div);
     }

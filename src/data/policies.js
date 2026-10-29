@@ -32,7 +32,21 @@ export const POLICY_GROUPS = [
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }
-export function groupPolicyId(groupId) { return (S.policies && S.policies[groupId]) || null; }
+export function groupPolicyId(groupId) { // v2.8.30 ③：政策链化——S.policies[gid] = { id, lv }（兼容旧字符串存档）
+  const v = (S.policies && S.policies[groupId]) || null;
+  return typeof v === 'string' ? v : (v && v.id) || null;
+}
+export function policyLv(groupId) { // 链位置（1 起）
+  const v = (S.policies && S.policies[groupId]) || null;
+  return typeof v === 'string' ? 1 : (v && v.lv) || 0;
+}
+export function nextPolicyInGroup(groupId, pid) { // 组内链下一项（层层解锁下一级政策）
+  const g = groupByName(groupId);
+  if (!g) return null;
+  const idx = g.policies.findIndex(p => p.id === pid);
+  if (idx < 0 || idx >= g.policies.length - 1) return null;
+  return g.policies[idx + 1];
+}
 export function selectedPolicy(groupId) {
   const g = groupByName(groupId);
   if (!g) return null;

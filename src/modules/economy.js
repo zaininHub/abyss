@@ -238,6 +238,7 @@ export function globalMult() {
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
+  if (S.storyline === 'line_faith') m *= 3; // v2.8.30 ③：神权协议——全局 ×3（信仰传播者线）
   return m;
 }
 

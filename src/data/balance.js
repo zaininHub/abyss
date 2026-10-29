@@ -301,11 +301,12 @@ export const BALANCE = {
     { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 100, growth: 1.7, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
     { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 120, growth: 1.7, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
     // v2.8.25 ②：研究点内容扩充（5→10 项）——消耗 RP、cap 5-10、成本指数涨；效果全接线
-    { id: 'rp_wage',        name: '薪酬协商',   cap: 10, base: 70, growth: 1.6,  fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/级' },
+    { id: 'rp_wage',        name: '薪酬协商',   cap: 10, base: 70, growth: 1.6,  fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
     { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90, growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: '信仰产出 +10%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
+    { id: 'wish_well',      name: '许愿池',     cap: 1,  base: 500, growth: 1,   fx: null,                          desc: '万一呢？' }, // v2.8.30 ③：许愿池——右侧投币（100 EP/次，0.01% 得 100K EP）
   ],
   corruption: {
     accumulateRate: 0.1,       // 每秒按溢出比例累积

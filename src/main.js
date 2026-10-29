@@ -167,6 +167,7 @@ function updateCrossroad() {
 }
 
 function render() {
+  ensureWishWell(); // v2.8.30 ③：许愿池（购买研究升级后即时出现/移除）
   if (dirty.top) { renderTop(); dirty.top = false; }
   if (dirty.hero) { renderHero(); dirty.hero = false; }
   if (dirty.ai) { // v1.3 A：AI 面板（未解锁时整卡隐藏）
@@ -310,6 +311,7 @@ function discoverCheck() {
 
 // ========== 顶部栏 ==========
 function renderTop() {
+  initWishWell(); // v2.8.30 ③：许愿池
   updateTabLocks(); // v2.0：渐进开放标签页锁定状态
   // v2.3.1 ①（rev18 9.1）：顶栏资源显示 = 锚点完成（anchorShown 双读：即时谓词 ∨ 持久标记）。
   // 锚点完成当帧即亮出（不等 discoverCheck 落档），且连历史盲获得累计一并显示。
@@ -343,6 +345,12 @@ function renderTop() {
   const hFaith = document.getElementById('h-faith');
   const hPt = document.getElementById('h-pt');
   const hDm = document.getElementById('h-dm');
+  const hDev = document.getElementById('h-devotion');
+  const devStat = document.getElementById('devotion-stat');
+  if (hDev && devStat) { // v2.8.30 ③：虔诚顶部展示（>0 才显示）
+    devStat.style.display = (S.devotion || 0) > 0 ? '' : 'none';
+    hDev.textContent = S.devotion || 0;
+  }
   const hEmber = document.getElementById('h-ember');
   const emberStat = document.getElementById('ember-stat');
   if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
@@ -805,6 +813,50 @@ function updateTabLocks() {
     }
   }
 }
+
+// ========== v2.8.30 ③：许愿池（研究升级解锁，右侧浮动投币） ==========
+let wishCoolUntil = 0;
+function ensureWishWell() {
+  let w = document.getElementById('wish-well');
+  const owned = (S.rpTheories && S.rpTheories.wish_well) > 0;
+  if (!owned) { if (w) w.remove(); return; }
+  if (!w) {
+    w = document.createElement('button');
+    w.id = 'wish-well';
+    w.textContent = '🪙 许愿池';
+    w.title = '投一枚硬币（100 EP）：万一呢？';
+    w.style.cssText = 'position:fixed;right:14px;top:40%;z-index:200;padding:10px 14px;border:1px solid var(--accent,#4a9eff);border-radius:8px;background:#1c2128;color:var(--accent);cursor:pointer;font-size:12px;box-shadow:0 2px 12px rgba(0,0,0,.4);transition:transform .3s';
+    w.addEventListener('click', () => {
+      const now = Date.now();
+      if (now < wishCoolUntil) { toast('投币动画进行中，稍等片刻…'); return; }
+      if ((S.ep || 0) < 100) { toast('EP 不足（需 100 EP）'); return; }
+      S.ep -= 100;
+      wishCoolUntil = now + 3000;
+      w.disabled = true;
+      w.style.opacity = '.6';
+      w.textContent = '🪙 投币中…';
+      w.style.transform = 'rotate(360deg)';
+      setTimeout(() => {
+        const win = Math.random() < 0.0001;
+        if (win) {
+          S.ep = (S.ep || 0) + 100000;
+          toast('✨ 奇迹发生了！+100K EP');
+          log('许愿池：奇迹发生！+100K EP', 'good');
+        } else {
+          toast('水花都没有…（-100 EP）');
+        }
+        save(S); dirty.top = true;
+        w.disabled = false;
+        w.style.opacity = '1';
+        w.textContent = '🪙 许愿池';
+        w.style.transform = 'rotate(0deg)';
+      }, 3000);
+    });
+    document.body.appendChild(w);
+  }
+  w.style.display = '';
+}
+function initWishWell() { ensureWishWell(); }
 
 // ========== 事件绑定 ==========
 function bindEvents() {

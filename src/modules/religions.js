@@ -173,6 +173,7 @@ export function faithDrainPerSec() {
   let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0));
   mult *= policyMult('faith');
   mult *= (1 + 0.10 * secretSanctumLv('star_hall'));
+  if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（消耗同步）
   return r * mult * TEMPLE.faithEpPerUnit;
 }
 export function tickReligion(dt) {
@@ -183,6 +184,7 @@ export function tickReligion(dt) {
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
+    if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
     // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）——EP 不足则停止产出（与 faithDrainPerSec 同口径）
     const epUse = r * dt * mult * TEMPLE.faithEpPerUnit;
     if ((S.ep || 0) >= epUse) {
@@ -275,7 +277,7 @@ export function renderReligionPanel(container) {
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
     </div>
     ${seal >= 1 ? `
-    <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验（信仰 → 虔诚 → 超验，KG 四层转化）</div>
+    <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验</div>
     <div class="off-stat"><span>虔诚（永久）</span><b style="color:var(--purple)">${S.devotion || 0}</b></div>
     <div class="off-stat"><span>超验层级</span><b style="color:var(--purple)">Lv.${transcendLevel()}（赞颂转化率 ×${praiseRate().toFixed(2)}）</b></div>
     <div class="off-stat"><span>信仰容量</span><b>${Math.round(faithCap())}（赞颂需 ≥ ${Math.round(faithCap() * PRAISE.thresholdRatio)}）</b></div>
