@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost } from './economy.js';
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec } from './economy.js'; // v2.8.30 ③：禁购检查
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -36,6 +36,7 @@ function shopToast(msg) { if (toastFn) toastFn(msg); }
 
 // ========== 核心购买（口径不变；v2.3.1 ⑥ 固定 ×1） ==========
 export function buyUpgrade(u) {
+  if (computeCps() - totalDrainPerSec() <= 0) { shopToast('产出不足：总消耗 ≥ 产出，无法购买升级'); return { ok: false, reason: '产出不足' }; } // v2.8.30 ③：总消耗≥产出禁购
   const owned = S.upgrades[u.id] || 0;
   // v2.0.2：级制封顶——满级后购买入口锁定
   const maxLv = u.maxLevel || Infinity;
@@ -678,6 +679,7 @@ let bldItemEls = new Map();  // id -> el（未满级建筑）
 let bldSection = null;
 
 export function buyBuilding(b) {
+  if (computeCps() - totalDrainPerSec() <= 0) { shopToast('产出不足：总消耗 ≥ 产出，无法购买'); return { ok: false, reason: '产出不足' }; } // v2.8.30 ③：总消耗≥产出禁购
   const lv = (S.buildings?.[b.id]) || 0;
   if (lv >= b.levels) return false;
   const cost = buildingCost(b, S, costMult());

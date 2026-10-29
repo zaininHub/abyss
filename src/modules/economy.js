@@ -6,6 +6,7 @@ import { MOOD_MULT } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { devotionMult } from '../data/religions.js';
+import { faithDrainPerSec } from './religions.js'; // v2.8.30 ③：信仰生产 EP 消耗（悬浮/禁购）
 import { fxValue, fxBest } from '../core/effectEngine.js';
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
@@ -698,10 +699,12 @@ export function drainBreakdown() {
   if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
   const probe = vehicleDmEpCostPerMin() / 60;
   if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
+  const faith = faithDrainPerSec(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
+  if (faith > 0.005) parts.push(`信仰生产 -${fmt(faith)}/s`);
   return parts;
 }
 export function totalDrainPerSec() {
-  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60;
+  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60 + faithDrainPerSec();
 }
 
 // ========== EP 存储上限 ==========

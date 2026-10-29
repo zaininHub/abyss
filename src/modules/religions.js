@@ -165,6 +165,16 @@ export function buySecretSanctum(id) {
 }
 
 // 每帧信仰产出（圣所确定性产出；神龛/万神殿/远征/晋升为既有源，不重复处理）
+// v2.8.30 ③：信仰生产每秒 EP 消耗（与 tickReligion 同口径，供消耗悬浮/禁购检查）
+export function faithDrainPerSec() {
+  if (!religionUnlocked()) return 0;
+  const r = templeFaithPerSec();
+  if (r <= 0) return 0;
+  let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0));
+  mult *= policyMult('faith');
+  mult *= (1 + 0.10 * secretSanctumLv('star_hall'));
+  return r * mult * TEMPLE.faithEpPerUnit;
+}
 export function tickReligion(dt) {
   if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
@@ -173,7 +183,7 @@ export function tickReligion(dt) {
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
-    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）——EP 不足则停止产出
+    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）——EP 不足则停止产出（与 faithDrainPerSec 同口径）
     const epUse = r * dt * mult * TEMPLE.faithEpPerUnit;
     if ((S.ep || 0) >= epUse) {
       S.ep -= epUse;
