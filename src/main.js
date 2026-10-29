@@ -726,13 +726,13 @@ function renderRpPanel() {
   if (!anchorShown('rp', S)) {
     panel.innerHTML = `<div class="panel" style="padding:14px">
       <h3 style="margin-top:0;color:var(--dim)">🔬 研究点（RP）未解锁</h3>
-      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">让 EP 溢出存储上限一次即可解锁。<br>
-      解锁后：消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。</p>
+      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">让 EP 溢出存储上限一次，解锁「矩阵存储库」（研究点仓库）。<br>
+      购入仓库后：可消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。</p>
     </div>`;
     return;
   }
   panel.innerHTML = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0">🔬 研究点（RP） <span title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:help;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
+    <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
@@ -740,6 +740,11 @@ function renderRpPanel() {
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor((S.ep || 0) * 0.25 / rpDistillRate())) : 0} RP</span>
     </div>
   </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
+  // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
+  panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
+    askConfirm('研究点（RP）说明',
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 数据熔炉建筑：被动产出 RP\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：矩阵存储库每级 +500，达到上限后停止积累。', () => {});
+  });
 }
 
 // v2.0：渐进开放标签页锁定状态更新
@@ -818,8 +823,12 @@ function bindEvents() {
     const idx = Number(btn.dataset.claim);
     const p = S.projects[idx];
     if (p && p.status === 'pending') {
-      claimProject(p);
+      const res = claimProject(p);
       dirty.projects = true; dirty.top = true;
+      // v2.8.28 修复：EP 奖励领取时已达存储上限 → 溢出自动转入 RP 蒸馏池，明确提示避免「无法领取」困惑
+      if (res && res.ok && res.amount > 0 && res.epGained < res.amount) {
+        toast(`任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 自动转入 RP 蒸馏池`);
+      }
     }
   });
 

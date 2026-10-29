@@ -120,9 +120,15 @@ function bindDelegate(container, onBuy) {
 }
 
 // ========== 渲染：主商店（可叠加项：永留可购区，成本升序 + ??? 最后） ==========
+// v2.8.28 修复：资源仓库建筑按对应解锁链门控——EP 首次溢出前不显示「矩阵存储库」；
+// DM 解锁（首辆载具）前不显示「星尘金库」；宠物乐园购入前不显示「饵料仓库」；已购/已解锁不受影响。
 function shopUnlocked(u) {
   const owned = S.upgrades[u.id] || 0;
-  return owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
+  if (owned > 0) return true;
+  if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
+  if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
+  if (u.id === 'pt_vault') return !!((S.upgrades && S.upgrades.petland) || (S.resDiscovered && S.resDiscovered.pt));
+  return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
 
 export function renderShop(container) {
@@ -143,7 +149,12 @@ export function renderShop(container) {
   // 门槛是静态值（不随已购成本上浮变化），规避 v2.3.1「已购成本上浮后与未购项交错」问题，链窗口判定不受影响
   const sorted = items.slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   // v2.3 渐进披露链：链序 = 定义序；窗口内渲染（K = p + 1），已购永不隐藏，链内下一项挂链提示
-  const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
+  // v2.8.28 修复：资源仓库（矩阵存储库/星尘金库/饵料仓库）在对应资源解锁后强制可见（跳过链窗口）——
+  // 资源解锁 = 购买对应仓库（EP 溢出后矩阵存储库即解锁），避免玩家已满足前置却因链窗口看不到可购仓库
+  const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0
+    || (u.id === 'rp_vault' && (S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp)))
+    || (u.id === 'dm_vault' && ((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm)))
+    || (u.id === 'pt_vault' && ((S.upgrades && S.upgrades.petland) || (S.resDiscovered && S.resDiscovered.pt))), S);
   // v2.6.7：记录链窗口状态（供 refreshShopChain 增量揭示，避免整面板重建）
   shopContainer._chain = {
     ids: new Set(split.visible.map(u => u.id)),

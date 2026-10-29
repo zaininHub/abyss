@@ -1,6 +1,6 @@
-import { S } from '../state.js';
+import { S, save } from '../state.js';
 import { PROJECT_TYPES, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
-import { computeCps, fmt, addEp, projRewardMult, epStorageCap } from './economy.js';
+import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap } from './economy.js';
 import { anchorShown } from './disclosure.js'; // v2.5 ③：未解锁资源不出对应奖励任务
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
@@ -133,17 +133,20 @@ export function tickProjects() {
 }
 
 export function claimProject(p) {
-  if (p.status !== 'pending') return;
+  if (p.status !== 'pending') return { ok: false };
   const r = p.reward;
+  let epGained = 0;
   // v2.1 D1：EP 奖励走统一入口 addEp（受存储上限约束 + 统一记账）
-  if (r.kind === 'ep') addEp(r.amount);
+  if (r.kind === 'ep') epGained = addEp(r.amount);
   else if (r.kind === 'rp') {
     // v2.8.7：防御——RP 未解锁（理论上生成已门控）时回退 EP 等值奖励
-    if (S.resDiscovered && S.resDiscovered.rp) addRp(r.amount); // v2.8.27 ②：RP 上限
-    else addEp(Math.min(r.amount * 100, epStorageCap()));
+    if (anchorShown('rp', S)) addRp(r.amount); // v2.8.27 ②：RP 上限；v2.8.28 修复：统一用 anchorShown 口径（resDiscovered.rp 无写入点曾导致 RP 奖励永远走回退）
+    else epGained = addEp(Math.min(r.amount * 100, epStorageCap()));
   }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }
   p.status = 'claimed';
+  save(S); // v2.8.28 修复：领取即落盘——消除 5s 节流保存窗口（领取后刷新不再丢失奖励）
+  return { ok: true, epGained, amount: r.kind === 'ep' ? r.amount : 0 };
 }
 
 // v2.4.1：任务目标规范化——启动时对存量 earn_ep 任务重算（旧档/旧公式产生的

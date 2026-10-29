@@ -731,6 +731,9 @@ function accountEpOverflow(overflow) {
   // v2.5 ④：EP 首次溢出 = 研究点 RP 解锁（持久标记，随存档落盘；新档需首次溢出才开启 RP 栏目）
   if (overflow > 0 && !S._rpOverflowSeen) {
     S._rpOverflowSeen = true;
+    // v2.8.28 修复：新档首次溢出 → 标记「已引入 RP 仓库」，解锁链改为购买「矩阵存储库」后才解锁研究点；
+    // 旧档（已有 _rpOverflowSeen、无此标记）保持原解锁不回退（见 disclosure.anchorDone('rp')）
+    if (S._rpVaultIntroduced === undefined && (S.upgrades?.rp_vault || 0) < 1) S._rpVaultIntroduced = true;
   }
   // v2.8.22 ⑤：EP 达到上限后的溢出转化 RP，效率与蒸馏一致（1 RP = 蒸馏率 EP，蒸馏塔升级/星渊罗盘效率同步生效），
   // 满 1 RP 转出、尾数滞留池中（与蒸馏同口径，避免溢出自然产 RP 绕过蒸馏塔投入）

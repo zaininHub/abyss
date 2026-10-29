@@ -42,7 +42,7 @@ export const CHAIN_PREVIEW = '沿链条逐步解锁';
 export function anchorDone(key, S) {
   const up = (S && S.upgrades) || {};
   switch (key) {
-    case 'rp':    return (S && S._rpOverflowSeen === true) || (up.atrium || 0) >= 1; // v2.5 ④：RP ← EP 首次溢出解锁（旧档「灵感工坊购入」兼容，不回退）
+    case 'rp':    return (up.rp_vault || 0) >= 1 || (S && S._rpOverflowSeen === true && S._rpVaultIntroduced === undefined) || (up.atrium || 0) >= 1; // v2.8.28 修复：RP 解锁链 = 购买「矩阵存储库」→ 解锁研究点；旧档已溢出（无 _rpVaultIntroduced 标记）与「灵感工坊购入」保持解锁不回退
     case 'pt':    return (up.petland || 0) >= 1; // PT ← 宠物乐园购入
     case 'faith': return (up.shrine  || 0) >= 1; // FA ← 路边神龛购入
     case 'dm':    return (up.scooter || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入
