@@ -35,9 +35,9 @@ export function sealMaxLevel() {
   return max;
 }
 
-// 圣印升级信仰消耗：10 → 20 → 40 → …（×2 递增）
+// v2.8.30 ③：圣印升级信仰消耗大幅提高并陡峭化：100 → 250 → 625 → …（×2.5 递增）
 export function sealUpgradeCost(level) {
-  return Math.round(10 * Math.pow(2, level));
+  return Math.round(100 * Math.pow(2.5, level));
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级

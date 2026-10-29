@@ -92,11 +92,11 @@ export const BALANCE = {
     { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
     // ---- 组 F · RP 加成（5 座）----
-    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, rpCost: 8,  growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' }, // v2.8.7：RP 加成组改 RP 购买
-    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, rpCost: 15, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
-    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  rpCost: 25, growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
-    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  rpCost: 40, growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,rpCost: 60, growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, rpCost: 100, growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' }, // v2.8.30 ②：晋升 RP 加成大幅涨价（8→100）防过早解锁
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, rpCost: 200, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  rpCost: 300, growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  rpCost: 500, growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,rpCost: 800, growth: 1.28, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----

@@ -188,7 +188,7 @@ export function renderShop(container) {
 // v2.8.2 反馈④：研究点 tab 渲染 RP 加成组（组 F + 灵感蒸馏塔），按解锁门槛（base 升序）排
 // v2.8.7 修复：数据源改 BALANCE.thread.upgrades（原 UPGRADES 数组不含 cat F——列表一直为空）；
 // 成本改 RP 购买（第 22 项：不做「RP 解锁后 EP 购买」）
-const RP_FAMILY_SRC_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
+const RP_FAMILY_SRC_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute']; // v2.8.30 ②：灵感蒸馏塔（非晋升）移出 RP 加成组，主商店/蒸馏按钮保留
 function rpFamilyCost(u) {
   const owned = (S.upgrades[u.id] || 0);
   return Math.ceil((u.rpCost || 8) * Math.pow(u.growth || 1.18, owned));

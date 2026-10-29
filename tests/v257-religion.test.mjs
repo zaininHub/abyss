@@ -47,6 +47,7 @@ function mkState(extra = {}) {
   const cap = econ.epStorageCap();
   Object.assign(S, mkState({ ep: Math.ceil(cap * 0.8), upgrades: { storage: 3 }, resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: true, es: false, faith: false, pt: false, dm: false } }));
   rec('V1 storage 3 级 + RP 觉醒 + 库存 ≥80% 上限可解锁', relMod.canUnlockReligion() === true, `ep=${Math.ceil(cap*0.8)}/cap=${cap}`);
+  S.ep = 300000; // v2.8.30：唤醒固定 200K EP，补足执行额度
   const u = relMod.unlockReligion();
   rec('V1 unlockReligion 置位 + faith 锚点', u.ok === true && religionUnlocked() && S.resDiscovered.faith === true, JSON.stringify(S.religion));
 }
@@ -75,9 +76,9 @@ function mkState(extra = {}) {
 {
   Object.assign(S, mkState({ ep: 1e6, upgrades: { storage: 1 }, faith: 1000, religion: { unlocked: true, branch: 'sun', sun: true } }));
   rec('V3 早期圣印上限 3', sealMaxLevel() === 3, `max=${sealMaxLevel()}`);
-  rec('V3 圣印升级费用 10/20/40', sealUpgradeCost(0) === 10 && sealUpgradeCost(1) === 20 && sealUpgradeCost(2) === 40, `cost0=${sealUpgradeCost(0)}`);
+  rec('V3 圣印升级费用 100/250/625', sealUpgradeCost(0) === 100 && sealUpgradeCost(1) === 250 && sealUpgradeCost(2) === 625, `cost0=${sealUpgradeCost(0)}`);
   const s1 = relMod.upgradeSeal();
-  rec('V3 圣印升 1 级成功（-10 信仰）', s1.ok === true && S.religion.seal === 1 && S.faith === 990, s1.reason || '');
+  rec('V3 圣印升 1 级成功（-100 信仰）', s1.ok === true && S.religion.seal === 1 && S.faith === 900, s1.reason || '');
   rec('V3 圣印加成生效（×2 分支 × 1.08 圣印 = 2.16）', Math.abs(econ.globalMult() - 2.16) < 1e-9, `globalMult=${econ.globalMult()}`);
   // 纯圣印加成（无分支）：1.08
   Object.assign(S, mkState({ ep: 1e6, upgrades: { storage: 1 }, religion: { unlocked: true, seal: 1 } }));
@@ -104,7 +105,7 @@ function mkState(extra = {}) {
   rec('V4 tickReligion(10s) 产出 +1 信仰（v2.6.4 ③ 减缓口径）', Math.abs(S.faith - (f0 + 1)) < 1e-9, `faith ${f0}→${S.faith}`);
   const cost1 = templeCost();
   const t1 = relMod.buyTemple();
-  rec('V4 圣所购买升 3 级（EP 扣减）', t1.ok === true && S.religion.temple === 3 && S.ep === 1e9 - cost1, t1.reason || '');
+  rec('V4 圣所购买升 3 级（EP 扣减，含信仰生产 10s 耗 2000 EP）', t1.ok === true && S.religion.temple === 3 && S.ep === 1e9 - 2000 - cost1, t1.reason || '');
   // 满级禁购
   Object.assign(S, mkState({ ep: 1e9, upgrades: { storage: 1 }, religion: { unlocked: true, branch: 'sun', sun: true, temple: TEMPLE.cap } }));
   const t2 = relMod.buyTemple();

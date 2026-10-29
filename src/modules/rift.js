@@ -327,7 +327,6 @@ export function renderRiftPanel(container) {
     const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
     const pct = Math.max(0, Math.min(100, (1 - (ex.until - Date.now()) / (total * 1000)) * 100));
     container.innerHTML = `
-      <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)}</div>
       <div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);margin-bottom:2px"><span>探索进度</span><span>剩余 ${left}s</span></div>
       <div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,var(--cyan,#22d3ee),var(--accent,#a855f7));transition:width .5s"></div></div></div>
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
