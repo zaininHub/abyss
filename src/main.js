@@ -366,7 +366,7 @@ function renderTop() {
   // v2.8.22 ④：来源悬浮气泡（只留自定义 CSS 气泡，移除原生 title —— 双弹窗）；气泡含来源 + 加成明细
   if (hCps) {
     const st = hCps.closest('.stat');
-    if (st) st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
+    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${S.focusLevel * 20}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮
   }
   if (hSalary) {
     hSalary.textContent = fmt(totalDrainPerSec()) + '/s';
@@ -539,7 +539,7 @@ function renderHero() {
     hireBtn.disabled = S.ep < staffCost();
     hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
   }
-  if (focusLv) focusLv.textContent = `专注 Lv.${S.focusLevel} · 线程产出 +${(S.focusLevel * 20)}%/级`; // v2.8.17 ⑦：加成直接写在等级旁，不再靠悬浮
+  if (focusLv) { focusLv.textContent = `专注 Lv.${S.focusLevel} · 线程产出总加成 +${(S.focusLevel * 20)}%`; focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)'; focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal'; } // v2.8.30 ④：总加成明显展示（等级旁绿色加粗）
   if (focusCostEl) focusCostEl.textContent = fmt(focusCost());
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
   const focusBarEl = document.getElementById('focus-bar');

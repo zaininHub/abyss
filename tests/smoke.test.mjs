@@ -198,8 +198,8 @@ t('R1：线程裸产出不再叠加全局乘数（单线程 = 3）', () => {
 t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 3000 / ×1.15 递增 / 无 maxLevel 封顶；v2.8.2）', () => {
   const st = UPGRADES.find(u => u.id === 'storage');
   assert.ok(st, 'UPGRADES 应含 storage 项');
-  assert.equal(st.base, 450); // v2.8.27：存储 base 150→450
-  assert.equal(st.growth, 1.25);
+  assert.equal(st.base, 3000); // v2.8.30：存储 base 450→3000（前期成本大幅拉陡）
+  assert.equal(st.growth, 1.45);
   assert.ok(!st.maxLevel, 'v2.4 KG 模式：storage 不再有 maxLevel 封顶（无限升级）');
   assert.equal(BALANCE.storage.capPer, 5000); // v2.8.27
   assert.equal(BALANCE.storage.capGrowth, 1.18); // v2.8.27
@@ -207,16 +207,16 @@ t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 30
   assert.equal(BALANCE.storage.maxLevel, 20);
   // 升级商店 storage 卡为无限购买：cost 公式可逐级推演（任意级数均可购买，受 30% 钳制）
   S.upgrades = { storage: 0 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), 450, '首购价 450（v2.8.27 base 150→450）');
+  assert.equal(unitCost(st, 0), 600, '首购价 3000 被 30% 防死锁钳制为 600（cap 2000）'); // v2.8.30
   S.upgrades = { storage: 25 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), Math.min(Math.ceil(450 * Math.pow(1.25, 25)), Math.floor(epStorageCap() * 0.3)), '25 级仍可购（无 20 级封顶）');
+  assert.equal(unitCost(st, 0), Math.min(Math.ceil(3000 * Math.pow(1.45, 25)), Math.floor(epStorageCap() * 0.3)), '25 级仍可购（无 20 级封顶）');
   S.upgrades = {};
 });
 t('v2.0.2：防死锁——新档 storage 首购 ≤ 上限×30%', () => {
   S.upgrades = {}; S.milesDone = {};
   const cap = epStorageCap(); // 2000
   const st = UPGRADES.find(u => u.id === 'storage');
-  const cost = Math.ceil(st.base * Math.pow(st.growth, 0)); // 首购 150
+  const cost = unitCost(st, 0); // 首购（含 30% 防死锁钳制）
   assert.ok(cost <= cap * 0.3, `storage 首购 ${cost} 应 ≤ ${cap * 0.3}`);
   S.upgrades = {}; S.milesDone = {};
 });
@@ -729,7 +729,7 @@ t('5.1：epStorageCap() 返回 ≥ 2000（新基础上限）', () => {
 
 t('5.1：0 级时第 1 级价格 = 150 EP（unitCost(storage,0)===150）', () => {
   resetCapState();
-  assert.equal(unitCost(stU(), 0), 450); // v2.8.27
+  assert.equal(unitCost(stU(), 0), 600); // v2.8.30：base 3000 被 30% 防死锁钳制（cap 2000）
   resetCapState();
 });
 

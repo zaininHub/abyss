@@ -29,17 +29,21 @@ export function canUnlockReligion() {
 }
 
 export function religionWakeCost() {
-  return Math.max(1e3, Math.floor(epStorageCap() * 0.2)); // v2.8.7：唤醒费随上限缩放（小 cap 下限 1e3，避免「达标但不够唤醒费」死锁）
+  return Math.max(5e3, Math.floor(epStorageCap() * 0.5)); // v2.8.30 ⑦：唤醒需消耗大量 EP（上限 50%，下限 5000）
 }
 
 export function unlockReligion() {
   if (religionUnlocked()) return { ok: false, reason: '已解锁' };
-  if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级且 RP 已觉醒' }; // v2.8.20 ④：唤醒不再消耗 EP（完全去除 EP 条件）
+  if (!canUnlockReligion()) return { ok: false, reason: '需存储节点 ≥3 级且 RP 已觉醒' };
+  // v2.8.30 ⑦：唤醒消耗大量 EP（存储上限 50%）
+  const cost = religionWakeCost();
+  if ((S.ep || 0) < cost) return { ok: false, reason: `EP 不足：唤醒需 ${fmt(cost)} EP（存储上限的 50%）` };
+  S.ep -= cost;
   S.religion = S.religion || {};
   S.religion.unlocked = true;
   if (S.resDiscovered) S.resDiscovered.faith = true;
   save(S);
-  rlog('信仰觉醒：宗教系统解锁（存储节点 ≥3 级 + RP 已觉醒，无需 EP）', 'good'); // v2.8.20 ④：唤醒不再消耗 EP
+  rlog(`信仰觉醒：消耗 ${fmt(cost)} EP 唤醒宗教系统（存储节点 ≥3 级 + RP 已觉醒）`, 'good');
   if (toastFn) toastFn('🙏 信仰觉醒：宗教系统已解锁');
   return { ok: true };
 }
@@ -176,6 +180,9 @@ export function tickReligion(dt) {
 // ========== 面板 ==========
 // v2.8.26 ④：宗教面板按钮可购判定每秒同步（信仰/EP/虔诚/余烬变化即时灰显/点亮）——此前仅渲染时判定
 export function refreshReligionAffordability() {
+  // v2.8.30 ⑦：唤醒按钮（未解锁态）EP 不足实时灰显
+  const w = document.querySelector('[data-religion-unlock]');
+  if (w) { w.disabled = !canUnlockReligion() || (S.ep || 0) < religionWakeCost(); w.classList.toggle('disabled', w.disabled); }
   if (!religionUnlocked() || !branchOf()) return;
   const seal = sealLevel(), sealMax = sealMaxLevel();
   const sealCost = seal >= sealMax ? null : sealUpgradeCost(seal);
@@ -207,14 +214,14 @@ export function renderReligionPanel(container) {
   if (!religionUnlocked()) {
     const ok = canUnlockReligion();
     container.innerHTML = `
-      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……存储节点 ≥3 级且 RP 已觉醒后，信仰即可唤醒（无需 EP）。</div>
+      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……存储节点 ≥3 级且 RP 已觉醒后，需消耗大量 EP 唤醒。</div>
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
         存储节点：${S.upgrades.storage || 0}/3 级 ${(S.upgrades.storage || 0) >= 3 ? '✓' : '（未达标）'}<br>
         RP 觉醒：${(S.resDiscovered && S.resDiscovered.rp) ? '✓' : '（未觉醒）'}<br>
-        唤醒消耗：免费
+        唤醒消耗：${fmt(religionWakeCost())} EP（存储上限的 50%）
       </div>
-      <button class="btn ${ok ? '' : 'disabled'}" data-religion-unlock="1" ${ok ? '' : 'disabled'} title="唤醒信仰（免费）">唤醒信仰</button>
-      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒。条件未达成时入口保持可见，达成后点击唤醒。</div>`;
+      <button class="btn ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'}" data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'} title="${ok ? (S.ep || 0) >= religionWakeCost() ? '唤醒信仰（消耗大量 EP）' : 'EP 不足' : '前置未达标'}">唤醒信仰</button>
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒、EP ≥ 唤醒消耗。条件未达成时入口保持可见。</div>`;
     return;
   }
   const branch = branchOf();

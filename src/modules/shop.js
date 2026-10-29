@@ -433,14 +433,29 @@ function updateVehicleCollectHeader() {
   const el = document.getElementById('vehicle-collect');
   if (!el) return;
   const rate = vehicleDmPerMin();
+  const enabled = S._probeEnabled !== false; // v2.8.30：探采开关（默认开启）
+  let info;
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
-    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
+    info = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
     el.title = '探采消耗 EP 换取深渊物质（每 1 DM 消耗 1000 EP，EP 净产出一薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
   } else {
-    el.textContent = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
+    info = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
     el.title = '购买载具后每 60 秒自动采集深渊物质';
   }
+  // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取暂停
+  const btnCls = enabled ? '' : ' off';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>${info}</span>
+      <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${enabled ? '探采中' : '已暂停'}</button>
+    </div>`;
+  const tb = el.querySelector('#probe-toggle');
+  if (tb) tb.addEventListener('click', () => {
+    S._probeEnabled = S._probeEnabled === false ? true : false;
+    save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
+    updateVehicleCollectHeader();
+    dirty.top = true;
+  });
 }
 
 export function renderVehicles(container) {
@@ -516,15 +531,19 @@ function makeVehicleItem(u) {
   div.className = 'item' + (!afford ? ' cant' : '');
   // v1.3 D：载具协议加成实时体现在描述里
   const protoMult = S.upgrades.dmprotocol ? BALANCE.vehicles.protocolMult : 1;
+  if (protoMult > 1) div.title = '载具协议 ×1.5（DM 采集速率提升）'; // v2.8.30：协议加成移入悬浮，卡片主文案精简
   const cpsEach = u.cps * globalMult() * protoMult;
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
-  // v2.8.13：载具卡标注探采消耗（每辆对应 DM 率 × 1000 EP/DM 折算 ep/s）
+  // v2.8.30：探采卡文案精简为两行（消耗负红 / 产出正绿），障碍信息移除
   const dmIdx = BALANCE.vehicles.ids.indexOf(u.id);
   const dmRate = dmIdx >= 0 ? BALANCE.vehicles.dmRates[dmIdx] : 0;
   const probeEp = dmRate > 0 ? (dmRate * BALANCE.vehicles.epPerDm / 60) : 0;
+  const lines = probeEp > 0
+    ? `<div class="veh-line" style="color:var(--bad)">−${Number(probeEp.toFixed(1))} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate / 60)} DM/s</div>`
+    : `<div class="veh-line">${fmt(cpsEach)} EP/s</div>`;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${fmt(cpsEach)} EP/s${protoMult > 1 ? '（协议×1.5）' : ''}${probeEp > 0 ? ` · 探采 -${Number(probeEp.toFixed(1))} EP/s → +${fmtDmPerSec(dmRate / 60)} DM/s` : ''}</div>
+    <div class="desc">${lines}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }

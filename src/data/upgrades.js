@@ -73,7 +73,7 @@ export const UPGRADES = [
   {id:'gpu',name:'GPU 加速',base:6000000000.0,cps:0.0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.23：门槛 6e8
   {id:'cache',name:'缓存优化',base:300000000000.0,cps:0.0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%，EP 存储上限 +8000/级'}, // v2.8.23：门槛 3e10
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
-  {id:'reserve_bin',name:'备用粮仓',base:3600,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +8,000'},
+  {id:'reserve_bin',name:'备用粮仓',base:20000,growth:1.60,cps:0,cat:'D',desc:'每级 EP 上限 +8,000'}, // v2.8.30：base 3600→20000、growth 1.60
   {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},

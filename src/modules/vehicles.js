@@ -13,6 +13,8 @@ export { vehicleDmPerMin };
 
 // 每 60s 触发一次确定性采集到账；返回本帧是否到账（供脏标记）
 export function tickVehicleCollect(dt) {
+  // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取全部暂停
+  if (S._probeEnabled === false) { S.vehCollectTimer = 0; return false; }
   if (vehicleDmPerMin() <= 0) { S.vehCollectTimer = 0; return false; } // 无载具不计时
   S.vehCollectTimer = (S.vehCollectTimer || 0) + dt;
   if (S.vehCollectTimer < BALANCE.vehicles.collectInterval) return false;
