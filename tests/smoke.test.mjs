@@ -411,7 +411,8 @@ t('D1：轨道飞行器封印 Lv2 裂隙 DM = 2+1 = 3；无载具回归一致（
   S.upgrades = {};
 });
 t('D2：采集按数值确定性产出（v2.4：不再概率掷骰，显示与到账同口径）', () => {
-  S.upgrades = { scooter: 10 };
+  S.upgrades = { scooter: 10, parallel: 20 }; // v2.8.30：epPerDm 2500→6000 后净流收紧，补基础产出使净流 >0 且余额可支付
+  S.ep = 1e6;
   assert.ok(Math.abs(vehicleDmPerMin() - 0.5) < 1e-9, '10 辆摩托队速率 = 10×0.05 = 0.5 DM/min');
   assert.ok(Math.abs(collectVehicleDm() - 0.5) < 1e-9, '确定性到账 = 速率（每 60s 一次）');
   // 多效果上限建筑加成：深渊蓄能池 Lv.2 → DM 采集效率 +30%

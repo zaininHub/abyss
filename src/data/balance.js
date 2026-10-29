@@ -32,7 +32,7 @@ export const BALANCE = {
   // v1.3 模块 D：探采平台联动数值
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],
-    epPerDm: 2500,                      // v2.8.24 ③：采集消耗 ×2.5（1000→2500）——载具采集成为主要 EP 消耗通道，EP 净产出不足时自动暂停
+    epPerDm: 6000,                      // v2.8.30：采集消耗 ×2.4（2500→6000）——大幅增加遗物 EP 消耗，产出/消耗比进一步收紧
     dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）

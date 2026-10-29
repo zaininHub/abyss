@@ -514,12 +514,25 @@ export function staffSalaryPerSec() {
   return total * m * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }
 
+// v2.8.30：专注每级加成曲线——低等级加成少、逐段递增至上限 20%/级（达到上限后固定不变）
+export function focusPerLevel(lv) {
+  if (lv <= 5) return 0.08;
+  if (lv <= 10) return 0.12;
+  return 0.20;
+}
+export function focusTotalBonus(lv) {
+  let t = 0;
+  for (let i = 1; i <= lv; i++) t += focusPerLevel(i);
+  return t;
+}
+
 export function staffOutputPerSec() {
   // v2.1 R1 修复：这里只应用线程专属乘数（团队协作/CPU/GPU）。
   // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
   // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
   let outMult = 1;
-  outMult *= (1 + S.focusLevel * 0.2); // v2.8.17 ⑦：专注等级改为线程产出加成（每级 +20%；原点击加成移除——弱化主动点击宗旨）
+  // v2.8.30：专注每级加成从少到多（8%/12%/20% 分段递增），达到上限后固定 20%/级
+  outMult *= (1 + focusTotalBonus(S.focusLevel));
   outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
   if (S.upgrades.cpu) outMult *= 1.5;
   if (S.upgrades.gpu) outMult *= 2;
