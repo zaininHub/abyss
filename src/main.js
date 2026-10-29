@@ -343,6 +343,12 @@ function renderTop() {
   const hFaith = document.getElementById('h-faith');
   const hPt = document.getElementById('h-pt');
   const hDm = document.getElementById('h-dm');
+  const hEmber = document.getElementById('h-ember');
+  const emberStat = document.getElementById('ember-stat');
+  if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
+    emberStat.style.display = S._riftSeen ? '' : 'none';
+    hEmber.textContent = S.riftEmber || 0;
+  }
   const hBuff = document.getElementById('h-buff');
   // v2.7.5 ⑧：顶部轮回次数 + 悬停弹框显示回响加成（全局 +5%/点）
   const hReincarn = document.getElementById('h-reincarn');

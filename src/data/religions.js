@@ -41,7 +41,7 @@ export function sealUpgradeCost(level) {
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级
-export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 1e5, growth: 1.25, cap: 10, faithPerSec: 0.05 }; // v2.6.4 ③：0.15 → 0.05（信仰超长线，缓慢累计）
+export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 1e5, growth: 1.25, cap: 10, faithPerSec: 0.05, faithEpPerUnit: 2000 }; // v2.8.30 ②：信仰生产消耗 EP（每 1 信仰耗 2000 EP/s，参考 DM 采集机制） // v2.6.4 ③：0.15 → 0.05（信仰超长线，缓慢累计）
 export function templeCost() {
   const lv = (S.religion && S.religion.temple) || 0;
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));

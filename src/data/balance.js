@@ -218,7 +218,7 @@ export const BALANCE = {
   // v2.1 R3-D 裂隙封印成本改为当前上限的 30%~50%（脱离 log10(cps) 曲线）
   rift: {
     sealRatioMin: 0.3, sealRatioMax: 0.5,
-    spawnSec: 1200,                 // 基础出现间隔（20 分钟；哨站升级逐级 -25%，下限 360s）
+    spawnSec: 1800,                 // 基础出现间隔（30 分钟；哨站升级逐级 -25%，下限 600s）// v2.8.30 ④：原 20 分钟频率过高→30 分钟
     levelNames: ['浅层裂隙', '中层裂隙', '深层裂隙', '深渊裂隙', '虚空之隙'],
     rpPerLevel: 0.5,                // 封印 RP 奖励（/级；RP 锚点解锁后生效）
     vsChance: 0.25,                 // 封印/拥抱 VS 概率（深潜解锁后）

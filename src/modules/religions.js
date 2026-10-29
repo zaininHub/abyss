@@ -173,7 +173,12 @@ export function tickReligion(dt) {
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
-    S.faith = (S.faith || 0) + r * dt * mult;
+    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）——EP 不足则停止产出
+    const epUse = r * dt * mult * TEMPLE.faithEpPerUnit;
+    if ((S.ep || 0) >= epUse) {
+      S.ep -= epUse;
+      S.faith = (S.faith || 0) + r * dt * mult;
+    }
   }
 }
 
@@ -253,7 +258,7 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"

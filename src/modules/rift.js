@@ -45,7 +45,7 @@ export function riftUpgradeCost(id) {
 }
 export function riftSpawnSec() {
   const lv = riftUpgradeLevel('sentinel');
-  return Math.max(360, BALANCE.rift.spawnSec * Math.pow(0.75, lv));
+  return Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv)); // v2.8.30 ④：下限 10 分钟
 }
 export function riftDmMult() {
   return 1 + 0.2 * riftUpgradeLevel('lens');
@@ -340,8 +340,7 @@ export function renderRiftPanel(container) {
     });
     return;
   }
-  let html = `<div class="rift-tab-desc" style="color:var(--good);font-weight:bold">裂隙余烬：${S.riftEmber || 0}（跨转生保留 · 封印/拥抱/深入积累）</div>
-    <div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
+  let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${Math.round(riftSpawnSec() / 60)} 分钟</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技（余烬）</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
@@ -352,7 +351,7 @@ export function renderRiftPanel(container) {
     if (id === 'sentinel') {
       const cur = Math.round(riftSpawnSec() / 60);
       if (lv < u.cap) {
-        const next = Math.round(Math.max(360, BALANCE.rift.spawnSec * Math.pow(0.75, lv + 1)) / 60);
+        const next = Math.round(Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv + 1)) / 60);
         desc = `裂隙出现间隔缩短 25%/级：当前 ${cur} 分钟 → 下一级 ${next} 分钟`; // v2.8.13：去除「下限」文案
       } else {
         desc = `裂隙出现间隔缩短 25%/级：已达最短 ${cur} 分钟`;

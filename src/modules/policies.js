@@ -57,16 +57,16 @@ export function renderPolicyPanel(container) {
       <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 秩序组（需职级 ≥1）<br>· 深渊组（需深潜 ≥1 层）<br>· 信仰组（需信仰解锁）</div>`;
     return;
   }
-  let html = `<div class="religion-desc">周期政策：每轮可重选（转生/轮回后清空），组内互斥单选；正负成对——拿强项必吃弱项。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立：改选成本半价'}</span></div>`;
+  let html = `<div class="religion-desc">周期政策：每轮选定后不可改选（转生/轮回后清空），组内互斥单选；正负成对——拿强项必吃弱项。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
   for (const g of groups) {
     const chosen = groupPolicyId(g.id);
-    html += `<div style="margin:10px 0 4px;font-size:11px;color:var(--accent);font-weight:600">${g.name}（${chosen ? '已选定 · 可改选' : '未选定'}）</div>`;
+    html += `<div style="margin:10px 0 4px;font-size:11px;color:var(--accent);font-weight:600">${g.name}（${chosen ? '已选定 · 不可改选' : '未选定'}）</div>`;
     for (const p of g.policies) {
       const isCur = chosen === p.id;
       const locked = !!chosen && !isCur; // 组内互斥
-      html += `<div class="item ${isCur ? 'policy-on' : locked ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" style="${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
+      html += `<div class="item ${isCur ? 'policy-on' : locked ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
         <div class="name"><span>${isCur ? '✓ ' : ''}${p.name}</span><span class="count">${p.desc}</span></div>
-        <div style="font-size:10.5px;color:var(--text-3)">${locked ? `已选 ${chosen === p.id ? '' : g.policies.find(x => x.id === chosen)?.name}，改选可换（${policyRerollCost(g.id)} 回响/虔诚）` : '点击选定'}</div>
+        <div style="font-size:10.5px;color:var(--text-3)">${locked ? `已选 ${g.policies.find(x => x.id === chosen)?.name}，本轮不可改选` : '点击选定'}</div>
       </div>`;
     }
   }
@@ -84,8 +84,8 @@ export function bindPolicyPanel(container) {
     const cur = groupPolicyId(gid);
     let r;
     if (cur === pid) return;
-    if (cur) r = changePolicy(gid, pid);
-    else r = selectPolicy(gid, pid);
+    if (cur) { if (toastFn) toastFn('本轮政策已选定，不可改选'); renderPolicyPanel(container); return; }
+    r = selectPolicy(gid, pid);
     if (!r.ok && toastFn) toastFn(r.reason);
     renderPolicyPanel(container);
   });
