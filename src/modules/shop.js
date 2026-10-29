@@ -445,10 +445,13 @@ function updateVehicleCollectHeader() {
     el.title = '购买载具后每 60 秒自动采集深渊物质';
   }
   // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取暂停
+  // v2.9.0 Bug④：EP 不足自动暂停的即时状态提示（自动恢复后提示消失）
+  const autoPaused = enabled && rate > 0 && S._probeAutoPaused;
   const btnCls = enabled ? '' : ' off';
+  const stateText = !enabled ? '已暂停' : (autoPaused ? '探采中' : '探采中');
   el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span>${info}</span>
-      <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${enabled ? '探采中' : '已暂停'}</button>
+      <span>${info}${autoPaused ? ' <span style="color:var(--warn)">（EP 不足·自动暂停中，充足后自动恢复）</span>' : ''}</span>
+      <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${stateText}</button>
     </div>`;
   const tb = el.querySelector('#probe-toggle');
   if (tb) tb.addEventListener('click', () => {
@@ -1249,7 +1252,8 @@ export function buyResearchUpgrade(id) {
 // v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
 // 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局（累计 4 级）
 const RP_GROUPS = [
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
+  // v2.9.0：许愿池并入「产出强化」组——此前未入任何分组 → 商店不渲染 → 买不到 → 许愿池永不出现（Bug 根因）
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'wish_well'], unlock: null },
   { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith'],             unlock: { prev: 'prod', need: 4 } },
   { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift'],                                      unlock: { prev: 'res', need: 4 } },
 ];

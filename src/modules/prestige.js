@@ -5,8 +5,9 @@ import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverE
 import { spawnProject } from './projects.js';
 
 export function canPrestige() {
-  // v2.8.4：崩溃后必须转生——被深渊吞噬时豁免门槛（本局已失败，转生是唯一脱离路径）
-  if (S.collapsed) return true;
+  // v2.9.0 优化③：深渊吞噬锁定——倒计时/抉择/崩溃期间晋升不可脱离深渊（仅命运抉择可终结；
+  // 此前 collapsed 豁免门槛 + doPrestige 清除 collapsed = 转生一键逃离吞噬，与新机制冲突）
+  if (S._collapseAt || S.collapsed || S._collapseChoicePending) return false;
   return prestigeGain() >= 1;
 }
 
@@ -18,8 +19,7 @@ export function doPrestige(talentId) {
   S.prestige++;
   addRp(rpg); // v2.8.27 ②：RP 上限（晋升奖励克制）
   if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
-  // v2.8.4：崩溃转生结算湮灭残片（新资源，暂无消费用途，仅保留，克制——每次崩溃转生 +1）
-  if (S.collapsed) S.abyssSplinter = (S.abyssSplinter || 0) + 1;
+  // v2.9.0：湮灭残片改由「同归于尽」抉择结算发放（main.js），晋升不再发放/清除吞噬状态
   S.runTalent = talentId;
   S.ep = 0;
   S.runEarned = 0;
@@ -35,7 +35,7 @@ export function doPrestige(talentId) {
   // v1.3：薪资状态机随线程清空重置
   S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   S.corruption = 0; // v2.6.0 review：转生新轮从干净状态开始（旧轮腐化惩罚不带入新轮）
-  S.collapsed = false; S._collapseTimer = 0; // v2.8.3：深渊吞噬脱离（晋升重置本局）
+  // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
   S.vehCollectTimer = 0;
   // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
   // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
@@ -109,10 +109,11 @@ export function renderPrestige(container) {
   const gain = prestigeGain();
   const rpg = prestigeRpGain();
   const esg = esGain();
-  const ready = S.collapsed || gain >= 1; // v2.8.4：崩溃后必须转生（豁免门槛）
+  const abyssLock = !!(S._collapseAt || S.collapsed || S._collapseChoicePending); // v2.9.0：吞噬锁定（转生不可脱离）
+  const ready = !abyssLock && gain >= 1;
   const lack = Math.max(0, need - S.runEarned);
   const pct = Math.min(100, S.runEarned / need * 100);
-  const reward = `${gain} PP · ${rpg} RP${esg >= 1 ? ' · ' + esg + ' ES' : ''}${S.collapsed ? ' · 湮灭残片 ×1' : ''}`;
+  const reward = `${gain} PP · ${rpg} RP${esg >= 1 ? ' · ' + esg + ' ES' : ''}`;
   const run = container.querySelector('#prg-run');
   if (run) run.textContent = fmt(S.runEarned);
   const nd = container.querySelector('#prg-need');
@@ -126,14 +127,14 @@ export function renderPrestige(container) {
   const bar = container.querySelector('#prg-bar-fill');
   if (bar) bar.style.width = pct + '%';
   const st = container.querySelector('#prg-status');
-  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = S.collapsed ? '深渊吞噬：本局已失败，必须转生（+1 湮灭残片）' : (ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`); }
+  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = abyssLock ? '深渊吞噬：已被深渊锁定——转生不可脱离，直面命运抉择' : (ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`); }
   const btn = container.querySelector('#prestige-btn');
   if (btn) {
     btn.className = 'btn prestige-btn' + (ready ? '' : ' no');
-    btn.title = S.collapsed ? '深渊吞噬：必须转生（本局已崩溃，转生 +1 湮灭残片）' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
+    btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = S.collapsed ? `本局被深渊吞噬，系统已停止产出。转生将获得 ${reward}，跨转生资产保留。` : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`) // v2.8.14：去除「未达标按钮暗置」等设计说明文案;
+  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
   const td = container.querySelector('#talent-display');
   if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
 }

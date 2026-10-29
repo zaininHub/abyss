@@ -98,7 +98,9 @@ export function tickCorruption(dt) {
   const overflow = Math.max(0, S.ep - cap);
   // v2.8.21 ⑥：EP 达到上限后不再产生腐化（溢出只记入溢出池 5% 转 RP；腐化仅来自深入裂隙与负面政策）
   // v2.8.20 ①：深入裂隙期间净化豁免——净化不可盖过深入腐化速率（否则腐化被清到 0、深入进度条消失且「净化>腐化」失衡）
-  const clean = (S.riftExpedition ? 0 : purifierCleanRate()) * dt;
+  // v2.9.0：吞噬倒计时期间净化节点同样被深渊压制（被动净化不得偷偷解除倒计时——倒计时一旦启动即锁定，
+  // 唯二解除路径：主动净化（消耗 EP）将腐化压至满额以下，或倒计时终结后的命运抉择）
+  const clean = (S.riftExpedition || S._collapseAt || S._collapseChoicePending ? 0 : purifierCleanRate()) * dt;
   if (clean > 0) S.corruption = Math.max(0, (S.corruption || 0) - clean);
   if (overflow > 0) {
     // v2.2 缺陷B修复：超 cap 存量 EP 不再直接丢弃，走与 addEp 相同的溢出池口径
@@ -109,11 +111,13 @@ export function tickCorruption(dt) {
 }
 
 // ===== v2.8.3 深渊吞噬（轮回失败机制）=====
-// 腐化满额（≥100%）且 EP 达到上限时：线程每 60s 被深渊强制吞没 1 条（免疫无效），
-// 出逃殆尽后本局崩溃：所有系统停止产出，给出成就；玩家只能晋升转生/轮回脱离。
-let collapseLogFn = null, collapseToastFn = null;
+// v2.9.0 重做：腐化满额（≥100%）→ 60s 崩溃倒计时（稳定协议科技 180s），倒计时一旦启动即锁定——
+// 倒计时期间被动净化被深渊压制（此前净化节点同帧把腐化清到 100 以下 → 倒计时秒取消 → 实际永不触发，Bug 根因）；
+// 唯二解除：① 主动净化（消耗 EP）压至满额以下；② 倒计时终结 → 命运抉择（贿赂深渊 / 同归于尽）。
+// 倒计时/抉择/崩溃期间，晋升与轮回均被深渊锁定（转生不可脱离深渊）。
+let collapseLogFn = null, collapseToastFn = null, collapseChoiceFn = null;
 // v2.8.4：深渊吞噬倒计时基准 5 分钟（稳定协议科技 +2 分钟）
-export function setCollapseHooks(logFn, toastFn) { collapseLogFn = logFn; collapseToastFn = toastFn; }
+export function setCollapseHooks(logFn, toastFn, choiceFn) { collapseLogFn = logFn; collapseToastFn = toastFn; collapseChoiceFn = choiceFn || null; }
 export function collapseRemainMs() {
   if (S.collapsed) return 0;
   if (!S._collapseAt) return null;
@@ -166,22 +170,18 @@ export function legacyCapMult() { return 1 + legacyLv('relic_vault') * 2.0; }
 export function legacyRiftMult() { return 1 + legacyLv('relic_anchor') * 0.25; }
 export function tickCollapse(dt) {
   if (S.collapsed) return;
-  // v2.8.22 ⑦：重做——腐化满额（100%）即进入 60 秒「深渊吞噬」倒计时（不再要求 EP 触顶；
-  // 旧版需腐化满额且 EP 触顶且倒计时 5 分钟，但腐化仅深入产生、平时趋 0，崩溃机制实际永不触发——
-  // 现在深入叠加腐化至满额即可真实触发，60s 内净化/消耗自救或转生）
-  if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) {
-    if (S._collapseAt) {
-      S._collapseAt = null; S._collapseTimer = 0;
-      if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已取消：腐化被净化至满额以下，深渊暂时退去', 'good');
-    }
+  if (S._collapseChoicePending) return; // 抉择弹框打开中（计时已被模态暂停冻结）
+  // v2.9.0：倒计时一旦启动即锁定——腐化回落不再取消（被动净化在倒计时期间已被压制）；
+  // 仅主动净化（cancelCollapse）或终结抉择可解除
+  if (!S._collapseAt) {
+    if ((S.corruption || 0) < (BALANCE.corruption.max || 100)) return;
+    S._collapseAt = Date.now() + collapseMs(); // 60 秒倒计时（稳定协议 180s）
+    S._collapseTimer = 0;
+    if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：已被深渊腐化，崩溃临近——主动净化（消耗 EP）可自救，转生无法脱离', 'bad');
+    if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：已被深渊腐化——主动净化自救，或直面终结');
     return;
   }
-  if (!S._collapseAt) {
-    S._collapseAt = Date.now() + collapseMs(); // 60 秒倒计时（v2.8.22 ⑦；稳定协议 +2 分钟）——倒计时内净化/消耗可自救
-    if (collapseLogFn) collapseLogFn('⚠️ 深渊吞噬倒计时启动：腐化已满额，60 秒后本局被深渊吞没（净化腐化或立即转生可脱离）', 'bad');
-    if (collapseToastFn) collapseToastFn('⚠️ 深渊吞噬倒计时：60 秒后崩溃——净化腐化或立即转生可脱离');
-  }
-  // 每 20s 吞没 1 线程（出逃殆尽提前崩溃）
+  // 每 20s 吞没 1 线程（倒计时中的氛围压迫；不再因出逃殆尽提前崩溃——终结只由倒计时触发）
   S._collapseTimer = (S._collapseTimer || 0) + dt;
   if (S._collapseTimer >= 20 && (S.cultists || []).length > 0) {
     S._collapseTimer = 0;
@@ -189,13 +189,31 @@ export function tickCollapse(dt) {
     if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（倒计时中）`, 'bad');
     if (collapseToastFn) collapseToastFn(`🌊 线程【${lost.name}】被深渊吞没！`);
   }
-  // 倒计时结束 或 线程出逃殆尽 → 强制崩溃
-  if (Date.now() >= S._collapseAt || (S.cultists || []).length === 0) {
-    S.collapsed = true;
-    S.cultists = [];
-    if (collapseLogFn) collapseLogFn('深渊吞噬：本局宣告失败，所有系统停止产出——你被深渊吞噬了（必须转生）', 'bad');
-    if (collapseToastFn) collapseToastFn('🌑 深渊吞噬：本局宣告失败，所有系统停止产出。必须转生以脱离');
+  // 倒计时终结 → 命运抉择（贿赂深渊 / 同归于尽；弹框由 main.js 接管，期间一切计时暂停）
+  if (Date.now() >= S._collapseAt) {
+    S._collapseAt = null;
+    S._collapseTimer = 0;
+    S._collapseChoicePending = true;
+    if (collapseLogFn) collapseLogFn('深渊吞噬倒计时终结：深渊将你拖入矩阵之底——做出你的抉择', 'bad');
+    if (collapseChoiceFn) collapseChoiceFn();
   }
+}
+
+// 主动净化自救：倒计时中将腐化压至满额以下 → 解除吞噬倒计时（唯一的倒计时自救路径）
+export function cancelCollapse() {
+  if (!S._collapseAt) return false;
+  S._collapseAt = null;
+  S._collapseTimer = 0;
+  if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已解除：腐化被主动净化压至满额以下，深渊暂时退去', 'good');
+  return true;
+}
+
+// ===== v2.9.0 优化①：主动净化经济——消耗 EP 净化腐化，腐化越严重析出 DM 越多（平方曲线） =====
+export function purgeCostFor(cutPct) { // EP 成本 = 存储上限 × 0.6% × 净化百分点（净化 50% ≈ 30% 上限）
+  return Math.ceil(epStorageCap() * (BALANCE.corruption.purge?.epCostPerPct || 0.006) * cutPct);
+}
+export function purgeDmFor(cutPct) { // DM 析出 = cut² × 0.02（50% → 50 DM；10% → 2 DM——越严重越丰厚）
+  return Math.round(cutPct * cutPct * (BALANCE.corruption.purge?.dmPerPctSq || 0.02) * 100) / 100;
 }
 
 // ========== 全局乘数 ==========
@@ -262,6 +280,9 @@ export function rpDistillRate() {
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;
 }
+// v2.9.0 大项②：回响·仓储共鸣（EP 上限 ×1.25/级）/ 回响·薪酬共鸣（线程消耗 ×0.94/级）——跨轮回长线
+export function echoStorageMult() { return Math.pow(1.25, echoLv('echo_storage')); }
+export function echoWageMult() { return Math.pow(0.94, echoLv('echo_wage')); }
 
 export function costMult() {
   let m = 1;
@@ -494,7 +515,12 @@ export function staffCost() {
   return Math.max(5, Math.ceil(staffCostBase() * policyMult('recruit')));
 }
 function staffCostBase() {
-  return BALANCE.thread.firstCost * Math.pow(1.25, S.cultists.length);
+  const n = S.cultists.length;
+  const base = BALANCE.thread.firstCost * Math.pow(1.25, n);
+  // v2.9.1：前 3 级线程降价（新手期加速起步）——招募第 1/2/3 个（n=0/1/2）分别 ×0.5/0.65/0.8
+  // 第 4 个起恢复全额曲线，与既有薪资/成本断言兼容（n≥3 时系数 = 1）
+  const earlyDiscount = n < 3 ? [0.5, 0.65, 0.8][n] : 1;
+  return base * earlyDiscount;
 }
 
 export function staffSalaryPerSec() {
@@ -508,6 +534,7 @@ export function staffSalaryPerSec() {
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
   m *= researchMult('wage'); // v2.8.25 ②：薪酬协商（研究点）线程消耗 -4%/级
+  m *= echoWageMult(); // v2.9.0：回响·薪酬共鸣 ×0.94/级（跨轮回）
   const base = BALANCE.thread.salaryBase;
   const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
   let total = 0;
@@ -738,6 +765,7 @@ export function epStorageCap() {
   else if (S.storyline === 'line_order') cap *= 1.10;
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
   cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
+  cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）
   return Math.round(cap);
 }
 

@@ -160,8 +160,12 @@ export function tickRift(dt) {
   }
   const cps = computeCps();
   const spawnSec = riftSpawnSec();
+  // v2.9.0 Bug⑤：腐化满额（100%）时不触发新裂隙——此时走深渊吞噬/崩溃路径，
+  // 裂隙若照常出现会与吞噬倒计时叠加（一边吞噬一边领裂隙奖励，机制互相抵消）；吞噬倒计时/抉择/崩溃期间同样封锁
+  const abyssDevouring = S.collapsed || S._collapseAt || S._collapseChoicePending
+    || (S.corruption || 0) >= (BALANCE.corruption.max || 100);
   // 深渊裂隙：随机出现（间隔受哨站升级缩短）
-  if (!S.activeRift && Math.random() < dt / spawnSec) {
+  if (!S.activeRift && !abyssDevouring && Math.random() < dt / spawnSec) {
     const level = riftLevelOf(cps);
     // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
     const cap = epStorageCap();

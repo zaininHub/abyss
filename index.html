@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.8.29</title>
+<title>深渊效能工作台 v2.9.1</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -33,44 +33,15 @@
   <!-- 主线剧情 -->
   <div id="chapter-bar" class="ch-bar"></div>
 
-  <!-- v2.8.15：Wiki 弹框（原图例面板迁移——图例/名词 + 故事线效果 + 章节讲解，经 📖 Wiki 按钮弹出） -->
+  <!-- v2.9.0：Wiki 弹框（参考 KG 体系化百科——侧栏分章 + 内容区 + 渐进解锁；锁定章节灰显） -->
   <div class="modal" id="wiki-modal">
-    <div class="modal-box" style="max-width:540px">
+    <div class="modal-box wiki-box">
       <button class="modal-x" id="wiki-x" title="关闭">×</button>
-      <div class="legend-body">
-      <div class="legend-sec"><b>五种货币</b>
-        <span>⚡ <b>EP</b> 能量点：主资源，有存储上限（购买存储节点/缓存优化、达成里程碑扩容）</span>
-        <span>🔬 <b>RP</b> 研究点：科技树货币（任务/里程碑/灵感工坊）</span>
-        <span>💎 <b>ES</b> 永恒碎片：晋升结算，永恒矩阵专用</span>
-        <span>🍪 <b>异兽饼干</b>：喂养异兽</span>
-        <span>🌀 <b>DM</b> 深渊物质：封印裂隙获得，深渊商店专用</span>
+      <h3 style="margin-top:0;color:var(--purple);letter-spacing:1px">📖 深渊效能 · 百科</h3>
+      <div class="wiki-wrap">
+        <nav class="wiki-nav" id="wiki-nav"></nav>
+        <div class="wiki-body" id="wiki-body"></div>
       </div>
-      <div class="legend-sec"><b>深渊潮汐</b>（150s/相位 × 4 循环）
-        <span>🌊 涨潮：产出 +30%，薪资 +50%，正面事件时长 ×1.5</span>
-        <span>🌀 平潮：无修正</span>
-        <span>⛰️ 退潮：产出 −30%，薪资 −20%，科技成本 −20%</span>
-        <span>⚡ 乱流：薪资 +30%，负面事件权重 ×2</span>
-      </div>
-      <div class="legend-sec"><b>矩阵腐化</b>
-        <span>EP 超过存储上限会按溢出比例累积腐化；腐化每 1% 全局产出 −0.3%（下限 −30%）</span>
-        <span>对策：主动净化按钮（每次最多清 50%）、净化节点建筑、控制 EP 不溢出</span>
-      </div>
-      <div class="legend-sec"><b>线程薪资四态</b>
-        <span>🟢 满薪：EP ≥ 10s 薪资，无惩罚</span>
-        <span>🟡 欠薪降效：产出 ×0.7，连续 60s 进入休眠</span>
-        <span>🟠 强制休眠：产出 ×0，仅扣保命成本（薪资 ×0.3）</span>
-        <span>🔴 流失预警：休眠 300s 后每 60s 10% 概率流失 1 线程（维修坞可免疫）</span>
-        <span>恢复：EP ≥ 60s 薪资即逐级恢复（休眠恢复经 30s 缓冲）；设施建筑可缓解各态惩罚</span>
-      </div>
-      <div class="legend-sec"><b>线程心情</b>
-        <span>超频 ×2.0 / 优化 ×1.5 / 高效 ×1.2 / 正常 ×1.0 / 阻塞 ×0.5 / 死锁 ×0.1（与薪资四态正交叠加）</span>
-      </div>
-      <div class="legend-sec"><b>职级 / 晋升</b>
-        <span>本局累计达标可晋升：重置升级但获得职级点数（每点全局 +10%）与永恒碎片，并可三选一天赋</span>
-      </div>
-      <div class="legend-sec"><b>故事线选择区别</b><span id="wiki-storylines"></span></div>
-      <div class="legend-sec"><b>主线章节讲解</b><span id="wiki-chapters"></span></div>
-    </div>
     </div>
   </div>
 
@@ -109,8 +80,8 @@
           <div class="corruption-row">
             <span class="corruption-label">🧪 矩阵腐化</span>
             <span class="corruption-num mono" id="corruption-num">0%</span>
-            <button class="btn-mini" id="corruption-purge" title="主动释放溢出 EP，归零部分腐化">主动净化</button>
-            <button class="btn-mini" id="abort-rift-ex" style="display:none;color:var(--bad);border-color:var(--bad)" title="紧急脱出：探索中止，保留已获产出">紧急脱出</button>
+            <button class="btn-mini" id="corruption-purge" title="主动净化：消耗 EP 清除腐化（每次最多 50%，成本约为 0.6%×净化量×EP 上限），腐化越严重析出 DM 越多；吞噬倒计时中净化至满额以下可自救">主动净化</button>
+            <button class="btn-mini" id="abort-rift-ex" style="display:none;color:var(--bad);border-color:var(--bad)" title="紧急脱出：中止深入探索（二次确认，确认期间一切计时暂停；提前脱出无结算奖励）">紧急脱出</button>
           </div>
           <div class="corruption-track">
             <div class="corruption-fill" id="corruption-fill" style="width:0%"></div>
@@ -312,6 +283,25 @@
       <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">保存当前进度为快照（最多 3 个）；「读取」= 用快照覆盖当前本地游戏；「导入」= 用外部存档覆盖当前。保存新快照时槽位已满会覆盖最早的快照。</p>
       <button class="btn" id="snap-save" style="width:100%;margin-bottom:10px">保存当前进度</button>
       <div id="snap-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+
+  <!-- v2.9.0：深渊吞噬·命运抉择弹框（倒计时终结触发；无 × 不可点背景关闭，二选一） -->
+  <div id="collapse-modal" class="modal">
+    <div class="modal-box collapse-box">
+      <h3 style="margin-top:0">🌑 深渊吞噬 · 命运抉择</h3>
+      <div style="font-size:13px;line-height:1.9;margin:8px 0 6px;color:var(--text-2)">
+        腐化已达满额，深渊将你拖入矩阵之底。<b style="color:var(--red)">转生不可脱离深渊</b>——唯有抉择：<br>
+        <span style="font-size:11.5px;color:var(--text-3)">抉择期间一切计时暂停。贿赂可保全局继续；同归于尽则本局湮灭、强制转生。</span>
+      </div>
+      <button class="collapse-choice bribe" id="collapse-bribe">
+        <span class="cc-name">💰 贿赂深渊</span>
+        <span class="cc-desc">上缴 90% EP，成为深渊的朋友——本局继续，腐化回落至 50%。<br>达成成就：「恶魔的朋友」</span>
+      </button>
+      <button class="collapse-choice mutual" id="collapse-mutual">
+        <span class="cc-name">💥 同归于尽</span>
+        <span class="cc-desc">立即触发崩溃，杀死深渊——本局湮灭并强制转生（湮灭残片 +1）。<br>达成成就：「凝视深渊」</span>
+      </button>
     </div>
   </div>
 

@@ -5,7 +5,7 @@ import { S } from '../src/state.js';
 import { BALANCE } from '../src/data/balance.js';
 import {
   tickCorruption, tickCollapse, collapseRemainMs, collapseMs, esDiscovered, discoverEs,
-  researchMult, legacyGlobalMult, legacyCapMult, legacyRiftMult,
+  researchMult, legacyGlobalMult, legacyCapMult, legacyRiftMult, cancelCollapse,
   techGlobalMult, delveTechMult, faithTechMult, computeCps,
   wageDebtMult, tideMult, corruptionPenalty, epStorageCap,
 } from '../src/modules/economy.js';
@@ -15,6 +15,7 @@ const cap = () => epStorageCap();
 const reset = () => Object.assign(S, {
   ep: 0, corruption: 0, cultists: [{ name: 't1', mood: 'ok' }], rp: 0, es: 0,
   prestige: 0, prestigePoints: 0, runEarned: 0, collapsed: false, _collapseAt: null,
+  _collapseChoicePending: false, _collapseTimer: 0,
   resDiscovered: {}, tech: {}, rpTheories: {}, relicLegacy: {},
   upgrades: {}, buildings: {}, delveDepth: 0, riftsSealed: 0, colonies: [],
   storyline: 'default', storylinesCompleted: [],
@@ -36,24 +37,29 @@ test('v2.8.22 ① 稳定协议科技：倒计时延长至 180 秒', () => {
   assert.equal(collapseMs(), 180000, '稳定协议 → 180 秒');
 });
 
-test('v2.8.22 ① 倒计时结束 → 强制崩溃；腐化降至满额以下自救取消', () => {
+test('v2.9.0 ① 倒计时结束 → 命运抉择（不直接崩溃）；自救仅主动净化 cancelCollapse', () => {
   reset();
   S.corruption = 100;
   S.ep = cap();
   tickCollapse(1);
   S._collapseAt = Date.now() - 1; // 倒计时耗尽
   tickCollapse(1);
-  assert.equal(S.collapsed, true, '倒计时结束强制崩溃');
-  assert.equal(collapseRemainMs(), 0, '崩溃后剩余 0');
-  // 自救：未崩溃前腐化净化到 <100% 取消（v2.8.22 自救口径=净化腐化）
+  // v2.9.0：终结进入抉择待决（由弹框接管：贿赂深渊/同归于尽），不再直接置 collapsed
+  assert.equal(S._collapseChoicePending, true, '倒计时结束进入命运抉择');
+  assert.equal(S._collapseAt, null, '倒计时清零');
+  assert.equal(S.collapsed, false, '不直接崩溃（崩溃由「同归于尽」抉择结算）');
+  // v2.9.0：倒计时一旦启动即锁定——腐化被动回落不再取消（被动净化被深渊压制）
   reset();
   S.corruption = 100;
   S.ep = cap();
   tickCollapse(1);
   S.corruption = 50;
   tickCollapse(1);
-  assert.equal(S.collapsed, false, '未崩溃');
-  assert.equal(S._collapseAt, null, '净化腐化取消倒计时');
+  assert.equal(S._collapseAt !== null, true, '腐化回落不取消倒计时（锁定）');
+  // 唯一自救：主动净化（cancelCollapse）
+  S.corruption = 50;
+  assert.equal(cancelCollapse(), true, '主动净化解除倒计时');
+  assert.equal(S._collapseAt, null);
 });
 
 test('v2.8.4 ① 崩溃后 computeCps 归零（所有系统停止产出）', () => {
@@ -62,14 +68,23 @@ test('v2.8.4 ① 崩溃后 computeCps 归零（所有系统停止产出）', () 
   assert.equal(computeCps(), 0, '崩溃后无产出');
 });
 
-test('v2.8.4 ② 崩溃后必须转生：豁免门槛 + 湮灭残片 +1', () => {
+test('v2.9.0 ② 深渊吞噬锁定：崩溃/倒计时/抉择期间晋升不可脱离；残片由「同归于尽」结算', () => {
   reset();
   S.collapsed = true;
-  assert.equal(canPrestige(), true, '崩溃豁免晋升门槛');
+  // v2.9.0：废除「崩溃豁免晋升门槛」——转生不可脱离深渊（仅命运抉择可终结吞噬）
+  assert.equal(canPrestige(), false, '崩溃期间晋升被锁定');
+  S.collapsed = false;
+  S._collapseAt = Date.now() + 30000;
+  assert.equal(canPrestige(), false, '倒计时期间晋升被锁定');
+  S._collapseAt = null;
+  S._collapseChoicePending = true;
+  assert.equal(canPrestige(), false, '抉择期间晋升被锁定');
+  S._collapseChoicePending = false;
+  // doPrestige 不再发放残片/清除吞噬态（由 main.js resolveCollapseChoice('mutual') 结算）
+  S.collapsed = true;
   doPrestige(null);
-  assert.equal(S.abyssSplinter, 1, '湮灭残片 +1');
-  assert.equal(S.collapsed, false, '转生后脱离崩溃态');
-  assert.equal(S.prestige, 1, '转生计数 +1');
+  assert.equal(S.abyssSplinter || 0, 0, '晋升不再发放湮灭残片');
+  assert.equal(S.prestige, 1, '转生计数 +1（防御路径）');
 });
 
 test('v2.8.4 ③ ES 门控：首次晋升获得 ES → discoverEs 点亮', () => {
@@ -85,13 +100,16 @@ test('v2.8.4 ③ ES 门控：首次晋升获得 ES → discoverEs 点亮', () =>
   assert.equal(esDiscovered(), true, '正常晋升点亮 ES');
 });
 
-test('v2.8.4 ④ 研究升级：5 项、成本递增、乘区生效', () => {
+test('v2.9.0 ④ 研究升级：11 项（含许愿池）、成本递增、乘区生效', () => {
   reset();
-  assert.equal(BALANCE.researchUpgs.length, 10, '研究升级 10 项（v2.8.25 扩充）');
-  // 数据层：成本随等级递增（growth>1）且上限合理（长线）
+  assert.equal(BALANCE.researchUpgs.length, 11, '研究升级 11 项（v2.9.0 许愿池入列）');
+  const wish = BALANCE.researchUpgs.find(x => x.id === 'wish_well');
+  assert.ok(wish, '许愿池存在');
+  assert.equal(wish.desc, '万一呢？', '许愿池描述 = 万一呢？（无 fx，走右侧投币动效）');
+  // 数据层：成本随等级递增（growth>1）且上限合理（长线；许愿池单级属风味项例外）
   for (const u of BALANCE.researchUpgs) {
-    assert.ok(u.growth > 1, `${u.id} 成本递增`);
-    assert.ok(u.cap >= 5, `${u.id} 等级上限（v2.8.25 长线 5-10）`);
+    assert.ok(u.growth > 1 || u.id === 'wish_well', `${u.id} 成本递增（许愿池单级除外）`);
+    assert.ok(u.cap >= 1, `${u.id} 等级上限`);
   }
   // 乘区：加乘（ep/thread）与叠乘（global）
   S.rpTheories = { rp_entropy: 1 };

@@ -55,9 +55,11 @@ export function startDelve() {
   const cost = diveCost(delveDepth());
   if ((S.dm || 0) < cost) return { ok: false, reason: `DM 不足：下潜至 Lv.${delveDepth() + 1} 需 ${fmt(cost)} DM（当前 ${fmt(S.dm || 0)}）` };
   S.dm -= cost;
+  // v2.9.0 修复：下潜成功即层深 +1——此前 depth 从不递增（恒 0），层深里程碑/深渊政策组/轮回遗存维度全部失效
+  S.delve.depth = (S.delve.depth || 0) + 1;
   S.delve.active = true;
   save(S);
-  dlog(`下潜至 Lv.${delveDepth() + 1}（-${fmt(cost)} DM）：虚空碎片产出开启，腐化随层深累积`, 'good');
+  dlog(`下潜至 Lv.${delveDepth()}（-${fmt(cost)} DM）：虚空碎片产出开启，腐化随层深累积`, 'good');
   return { ok: true, cost };
 }
 
@@ -66,14 +68,14 @@ export function stopDelve() {
   if (!delveActive()) return { ok: false, reason: '未在深潜中' };
   S.delve.active = false;
   save(S);
-  dlog(`上浮至 ${delveDepth() + 1} 层边界（当前层深 ${delveDepth() + 1} 保留）`, 'good');
+  dlog(`上浮完成（当前层深 Lv.${delveDepth()} 保留，产出与腐化停止）`, 'good');
   return { ok: true };
 }
 
 // 深潜产出 / 腐化 / 里程碑（主循环 tick 驱动；仅深潜中生效）
 export function tickDelve(dt) {
   if (!delveUnlocked() || !delveActive()) return;
-  const depth = delveDepth() + 1; // 当前已下潜到的层（下潜时层数 = 成本对应层）
+  const depth = Math.max(1, delveDepth()); // 当前已下潜到的层（层深自下潜成功时递增）
   const rate = vsPerSec(depth, delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult() * researchMult('delve'); // v2.7.0 遗物 + v2.8.4 虚空视界 + v2.8.25 ②：深渊观测
   if (rate > 0) S.vs = (S.vs || 0) + rate * dt * (1 + 0.5 * (echoLv('echo_delve') || 0)) * policyMult('delve'); // v2.7.3 ⑤：回响·深潜共振 + v2.8.6 B2a：观测主义/实证主义
   const cr = delveCorruptRate(depth, delveUpgradeLv('purge'));
@@ -132,8 +134,8 @@ export function renderDelvePanel(container) {
   const depth = delveDepth();
   const active = delveActive();
   const nextCost = diveCost(depth);
-  const rate = vsPerSec(depth + 1, delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult(); // v2.7.0 遗物 + v2.8.4 虚空视界
-  const cr = delveCorruptRate(depth + 1, delveUpgradeLv('purge'));
+  const rate = vsPerSec(Math.max(1, depth), delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult(); // v2.9.0：产出按当前真实层深（此前恒按第 1 层）
+  const cr = delveCorruptRate(Math.max(1, depth), delveUpgradeLv('purge'));
   let html = `
     <div class="delve-desc">深渊深潜：消耗 DM 下潜，越深虚空碎片产出越高，但腐化随层深累积（净化核心可抵消）。上浮保留层深，产出停止。</div>
     <div class="off-stat"><span>虚空碎片（VS）</span><b style="color:var(--cyan)">${fmt(S.vs || 0)}</b></div>

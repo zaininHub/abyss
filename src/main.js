@@ -6,6 +6,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
   offlineRate, offlineCap, addEp,
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
+  cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, // v2.7.4 ⑦：RP 蒸馏效率
@@ -38,10 +39,11 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition } from './modules/rift.js';
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm } from './modules/rift.js';
 import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
+import { WIKI_SECTIONS, wikiUnlocked } from './data/wiki.js'; // v2.9.0：体系化百科（KG 风格）
 import { PETS } from './data/pets.js';
 import { MOOD_MULT } from './data/threads.js';
 import { BALANCE } from './data/balance.js';
@@ -448,24 +450,20 @@ function renderCorruption() {
   if (fill) fill.style.width = txt + '%';
   if (num) num.textContent = txt + '%';
   if (pen) pen.textContent = `-${Math.round((1 - corruptionPenalty()) * 100)}%`;
-  // v2.8.3：深渊吞噬横幅
+  // v2.8.3：深渊吞噬横幅（v2.9.0：状态类统一 + 文案按需求定稿）
   const bn = document.getElementById('abyss-collapse');
   if (bn) {
-    if (S.collapsed) {
+    if (S.collapsed || S._collapseChoicePending) {
       bn.style.display = '';
-      bn.style.borderColor = 'var(--red,#e5484d)';
-      bn.style.background = 'rgba(229,72,77,.12)';
-      bn.style.color = 'var(--red,#ff6b6b)';
-      bn.innerHTML = `🌑 <b>深渊吞噬</b>：本局宣告失败，所有系统停止产出。<span style="opacity:.85">必须转生以脱离（转生 +1 湮灭残片）。</span>`;
+      bn.className = 'abyss-banner-danger';
+      bn.innerHTML = `🌑 <b>深渊吞噬</b>：深渊将你拖入矩阵之底——请做出命运抉择（转生不可脱离）。`;
     } else {
       const remain = collapseRemainMs();
       if (remain !== null) {
         const mm = Math.floor(remain / 60000), ss = Math.floor((remain % 60000) / 1000);
         bn.style.display = '';
-        bn.style.borderColor = 'var(--warn,#c8a24a)';
-        bn.style.background = 'rgba(200,162,74,.12)';
-        bn.style.color = 'var(--warn,#ffd479)';
-        bn.innerHTML = `⚠️ <b>深渊吞噬倒计时</b>：腐化满额且 EP 触顶，距本局崩溃 <b>${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>。<span style="opacity:.85">快速消耗 EP 至上限 50% 以下可自救；否则请立即转生。</span>`;
+        bn.className = 'abyss-banner-warn';
+        bn.innerHTML = `⚠️ <b>深渊吞噬倒计时</b>：已被深渊腐化，崩溃倒计时 <b>${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>。<span style="opacity:.85">主动净化（消耗 EP）压至满额以下可自救；转生不可脱离深渊。</span>`;
       } else {
         bn.style.display = 'none';
       }
@@ -815,7 +813,32 @@ function updateTabLocks() {
 }
 
 // ========== v2.8.30 ③：许愿池（研究升级解锁，右侧浮动投币） ==========
+// v2.9.0：视觉重做——内联 SVG 许愿井（亭顶/石圈/发光井水）+ 投币落井、涟漪扩散、中奖金光动效
+// （纯 SVG + CSS keyframes，无外部图片依赖，任何环境均可渲染）
 let wishCoolUntil = 0;
+const WISH_COST = 100, WISH_CHANCE = 0.0001, WISH_REWARD = 100000;
+const WISH_WELL_SVG = `<svg class="wish-svg" viewBox="0 0 120 132" width="96" height="106" aria-hidden="true">
+  <defs>
+    <radialGradient id="wish-water-g" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#7ef3e2"/><stop offset="45%" stop-color="#2aa8b8"/><stop offset="100%" stop-color="#0b2a33"/>
+    </radialGradient>
+    <linearGradient id="wish-roof-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d1d6e"/><stop offset="100%" stop-color="#1b0733"/>
+    </linearGradient>
+  </defs>
+  <path d="M22 44 L60 20 L98 44 Z" fill="url(#wish-roof-g)" stroke="#4dd0e1" stroke-width="1.2" opacity="0.95"/>
+  <line x1="30" y1="44" x2="30" y2="96" stroke="#3a4150" stroke-width="4"/>
+  <line x1="90" y1="44" x2="90" y2="96" stroke="#3a4150" stroke-width="4"/>
+  <line x1="60" y1="44" x2="60" y2="58" stroke="#565f6e" stroke-width="1.6"/>
+  <rect x="55" y="58" width="10" height="8" rx="2" fill="#4a3b22" stroke="#c8a24a" stroke-width="1"/>
+  <path d="M16 96 C16 86 104 86 104 96 L100 116 C100 124 20 124 20 116 Z" fill="#1c2128" stroke="#3a4150" stroke-width="2"/>
+  <ellipse cx="60" cy="96" rx="44" ry="12" fill="#10151c" stroke="#3a4150" stroke-width="2"/>
+  <ellipse class="wish-water" cx="60" cy="96" rx="34" ry="8.5" fill="url(#wish-water-g)"/>
+  <ellipse class="wish-ripple" cx="60" cy="96" rx="34" ry="8.5" fill="none" stroke="#7ef3e2" stroke-width="1.5"/>
+  <ellipse class="wish-ripple wish-ripple-2" cx="60" cy="96" rx="34" ry="8.5" fill="none" stroke="#a371f7" stroke-width="1.2"/>
+</svg>
+<span class="wish-coin"></span>
+<span class="wish-label">许愿池</span>`;
 function ensureWishWell() {
   let w = document.getElementById('wish-well');
   const owned = (S.rpTheories && S.rpTheories.wish_well) > 0;
@@ -823,38 +846,44 @@ function ensureWishWell() {
   if (!w) {
     w = document.createElement('button');
     w.id = 'wish-well';
-    w.textContent = '🪙 许愿池';
-    w.title = '投一枚硬币（100 EP）：万一呢？';
-    w.style.cssText = 'position:fixed;right:14px;top:40%;z-index:200;padding:10px 14px;border:1px solid var(--accent,#4a9eff);border-radius:8px;background:#1c2128;color:var(--accent);cursor:pointer;font-size:12px;box-shadow:0 2px 12px rgba(0,0,0,.4);transition:transform .3s';
-    w.addEventListener('click', () => {
-      const now = Date.now();
-      if (now < wishCoolUntil) { toast('投币动画进行中，稍等片刻…'); return; }
-      if ((S.ep || 0) < 100) { toast('EP 不足（需 100 EP）'); return; }
-      S.ep -= 100;
-      wishCoolUntil = now + 3000;
-      w.disabled = true;
-      w.style.opacity = '.6';
-      w.textContent = '🪙 投币中…';
-      w.style.transform = 'rotate(360deg)';
-      setTimeout(() => {
-        const win = Math.random() < 0.0001;
-        if (win) {
-          S.ep = (S.ep || 0) + 100000;
-          toast('✨ 奇迹发生了！+100K EP');
-          log('许愿池：奇迹发生！+100K EP', 'good');
-        } else {
-          toast('水花都没有…（-100 EP）');
-        }
-        save(S); dirty.top = true;
-        w.disabled = false;
-        w.style.opacity = '1';
-        w.textContent = '🪙 许愿池';
-        w.style.transform = 'rotate(0deg)';
-      }, 3000);
-    });
+    w.className = 'wish-well';
+    w.title = '许愿池：投一枚硬币（100 EP）——万一呢？（0.01% 概率 +100K EP）';
+    w.innerHTML = WISH_WELL_SVG;
+    w.addEventListener('click', onWishToss);
     document.body.appendChild(w);
   }
   w.style.display = '';
+}
+function onWishToss() {
+  const w = document.getElementById('wish-well');
+  if (!w || w.disabled) return;
+  const now = Date.now();
+  if (now < wishCoolUntil) { toast('投币动画进行中，稍等片刻…'); return; }
+  if ((S.ep || 0) < WISH_COST) { toast(`EP 不足（需 ${WISH_COST} EP）`); return; }
+  S.ep -= WISH_COST;
+  wishCoolUntil = now + 3000;
+  w.disabled = true;
+  w.classList.add('tossing');
+  save(S); dirty.top = true;
+  // 硬币落井（1.1s 动效）后开奖，涟漪随之扩散
+  setTimeout(() => {
+    const win = Math.random() < WISH_CHANCE;
+    w.classList.remove('tossing');
+    w.classList.add(win ? 'win' : 'splash');
+    if (win) {
+      const gained = addEp(WISH_REWARD); // 统一入口：受 EP 上限约束，溢出部分入 RP 溢出池
+      log(`许愿池：奇迹发生！+${fmt(gained)} EP${gained < WISH_REWARD ? '（已达存储上限，溢出转入 RP 池）' : ''}`, 'good');
+      toast('✨ 奇迹发生了！+100K EP');
+    } else {
+      toast('水花都没有…（-100 EP）');
+    }
+    save(S); dirty.top = true;
+  }, 1100);
+  // 3s 冷却结束：复位硬币与按钮
+  setTimeout(() => {
+    w.classList.remove('win', 'splash');
+    w.disabled = false;
+  }, 3000);
 }
 function initWishWell() { ensureWishWell(); }
 
@@ -936,36 +965,68 @@ function bindEvents() {
   document.getElementById('btn-delve')?.addEventListener('click', () => switchTab('delve'));
   bindDelvePanel(document.getElementById('delve-panel')); // v2.6.0：深潜面板事件委托
   document.getElementById('btn-rift-tab')?.addEventListener('click', () => switchTab('rift-tab'));
-  // v2.8.15：Wiki 弹框内容——故事线选择区别 + 主线章节解锁状态
-function renderWikiContent() {
-  const sl = document.getElementById('wiki-storylines');
-  if (sl && !sl._done) {
-    const LINES = [
-      ['默认线', '标准矩阵发展：不立誓不锁线，可一路推进主线 21 章到终章。'],
-      ['秩序重构者', '以绝对理性重写矩阵规则（立誓「秩序之柱」）。新编译器路线：全局 ×3 起点、AI 自动科技/自动购买、负面效果仅减缓（零熵协议不再免疫）、乘区稳定可预期。'],
-      ['深渊行者', '深入深渊，封印裂隙，收集深渊物质（立誓「深渊之锚」）。混沌路线：混沌之子随机乘区、混沌心智接管 AI、裂隙余烬/DM 采集强化、触手协议自动点击——危险但回报丰厚。'],
-      ['信仰传播者', '传播信仰，培养异兽，建造神殿（立誓「信仰圣所」）。精神路线：神权协议全局 ×3 且信仰 ×2、信仰长线升级、异兽/神殿联动。'],
-    ];
-    sl._done = true;
-    sl.innerHTML = LINES.map(([n, d]) => `<div style="margin:2px 0 6px"><b style="color:var(--accent)">${n}</b>：<span style="color:var(--text-2)">${d}</span></div>`).join('');
-  }
-  const ch = document.getElementById('wiki-chapters');
-  if (ch && !ch._done) {
-    ch._done = true;
-    const seen = (S.chaptersUnlocked && S.chaptersUnlocked[S.storyline]) || [];
-    ch.innerHTML = CHAPTERS.map((c) => {
-      let ok = false;
-      try { ok = !!c.cond(S); } catch (e) { /* 忽略 */ }
-      const idx = parseInt(c.id, 10) || 0;
-      if (seen.includes(idx)) ok = true;
-      return `<div style="margin:2px 0"><span style="color:${ok ? 'var(--green)' : 'var(--text-3)'}">${ok ? '✓' : '🔒'} ${c.name}</span>${ok ? `<span style="color:var(--text-2);font-size:10.5px">：${c.desc}</span>` : ''}</div>`;
-    }).join('');
-  }
-}
-
-// v2.8.15：Wiki 弹框——图例/名词 + 故事线效果 + 主线章节讲解
+  // v2.9.0：Wiki 重构为侧栏分章 + 内容区（参考 KG 体系化百科）；锁定章节灰显并给门控提示
   const wikiBtn = document.getElementById('btn-wiki');
   const wikiModal = document.getElementById('wiki-modal');
+  let wikiActiveId = 'intro';
+  function renderWikiNav() {
+    const nav = document.getElementById('wiki-nav');
+    if (!nav) return;
+    nav.innerHTML = WIKI_SECTIONS.map(s => {
+      const ok = !s.unlock || wikiUnlocked(s.unlock);
+      return `<button class="wiki-nav-btn${s.id === wikiActiveId ? ' on' : ''}${ok ? '' : ' locked'}" data-wiki="${s.id}" ${ok ? '' : 'disabled'}>${ok ? '' : '🔒 '}${s.name}</button>`;
+    }).join('');
+    nav.querySelectorAll('[data-wiki]').forEach(b => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      wikiActiveId = b.dataset.wiki;
+      renderWikiNav();
+      renderWikiBody();
+    }));
+  }
+  function renderWikiBody() {
+    const body = document.getElementById('wiki-body');
+    if (!body) return;
+    const s = WIKI_SECTIONS.find(x => x.id === wikiActiveId) || WIKI_SECTIONS[0];
+    const ok = !s.unlock || wikiUnlocked(s.unlock);
+    if (!ok) {
+      body.innerHTML = `<div class="wiki-locked">🔒 本章尚未解锁——${hintFor(s.unlock)}</div>`;
+      return;
+    }
+    let html = `<h4 class="wiki-title">${s.name}</h4><div class="wiki-content">${s.body()}</div>`;
+    // 故事线/章节讲解并入对应章节（intro/ach 已含；此处保留故事线图鉴入口在 ach 章末）
+    if (s.id === 'ach') html += renderStorylineAppendix();
+    body.innerHTML = html;
+  }
+  function hintFor(key) {
+    const m = { rp:'让 EP 溢出一次解锁研究点', es:'完成首次晋升', faith:'信奉宗教分支', pt:'购入宠物乐园',
+      dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
+      prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）' };
+    return m[key] || '推进主线解锁';
+  }
+  function renderStorylineAppendix() {
+    const LINES = [
+      ['默认线', '标准矩阵发展：不立誓不锁线，可一路推进主线到终章。'],
+      ['秩序重构者', '立誓「秩序之柱」。新编译器路线：全局 ×3 起点、AI 自动科技/自动购买、负面仅减缓、乘区稳定。'],
+      ['深渊行者', '立誓「深渊之锚」。混沌路线：混沌之子随机乘区、混沌心智接管 AI、裂隙余烬/DM 强化、触手协议自动点击。'],
+      ['信仰传播者', '立誓「信仰圣龛」。精神路线：神权协议全局 ×3 且信仰 ×2、信仰长线升级、异兽/神殿联动。'],
+    ];
+    let h = `<h4 class="wiki-title" style="margin-top:18px">故事线选择区别</h4>` + LINES.map(([n, d]) => `<p class="wiki-line"><b>${n}</b>：${d}</p>`).join('');
+    h += `<h4 class="wiki-title" style="margin-top:14px">主线章节</h4>`;
+    const seen = (S.chaptersUnlocked && S.chaptersUnlocked[S.storyline]) || [];
+    h += CHAPTERS.map(c => {
+      let ok = false; try { ok = !!c.cond(S); } catch {}
+      const idx = parseInt(c.id, 10) || 0;
+      if (seen.includes(idx)) ok = true;
+      return `<p class="wiki-line"><span style="color:${ok ? 'var(--green)' : 'var(--text-3)'}">${ok ? '✓' : '🔒'} ${escWiki(c.name)}</span>${ok ? `：${escWiki(c.desc)}` : ''}</p>`;
+    }).join('');
+    return h;
+  }
+  function escWiki(s) { return String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+  function renderWikiContent() {
+    wikiActiveId = 'intro';
+    renderWikiNav();
+    renderWikiBody();
+  }
   if (wikiBtn && wikiModal) {
     wikiBtn.addEventListener('click', () => { renderWikiContent(); wikiModal.style.display = 'flex'; });
     document.getElementById('wiki-x')?.addEventListener('click', () => { wikiModal.style.display = 'none'; });
@@ -1058,6 +1119,8 @@ function renderWikiContent() {
   // 晋升按钮
   document.getElementById('prestige-panel')?.addEventListener('click', (e) => {
     if (e.target.id !== 'prestige-btn') return;
+    // v2.9.0 优化③：吞噬锁定提示（转生不可脱离深渊）
+    if (S._collapseAt || S.collapsed || S._collapseChoicePending) { if (toast) toast('深渊已锁定你——转生不可脱离深渊吞噬'); return; }
     if (canPrestige()) { openTalentModal(); return; }
     // v2.7.3：未达标点击有反馈（不再静默 disabled）——「没反应」观感根治
     const need = prestigeNeed();
@@ -1089,21 +1152,34 @@ function renderWikiContent() {
     setTimeout(() => heart.remove(), 900);
   });
 
-  // v2.0 腐化：主动净化按钮（每次清除最多 50%）
+  // v2.9.0 优化①：主动净化——消耗 EP（随净化量与存储上限计价），清除最多 50% 腐化，
+  // 并按平方曲线析出 DM（腐化越严重 DM 越多）；吞噬倒计时中净化至满额以下 = 唯一自救路径
   document.getElementById('corruption-purge')?.addEventListener('click', () => {
-    const cut = Math.min(S.corruption || 0, 50);
-    S.corruption = Math.max(0, (S.corruption || 0) - cut);
-    if (cut > 0) {
-      log(`主动净化：清除 ${cut.toFixed(1)}% 腐化`, 'good');
-      toast(`净化 -${cut.toFixed(1)}% 腐化`);
-    }
-    dirty.corruption = true; dirty.top = true;
+    const cur = S.corruption || 0;
+    if (cur <= 0) { toast('当前无腐化可净化'); return; }
+    const cut = Math.min(cur, BALANCE.corruption.purge?.maxCut || 50);
+    const cost = purgeCostFor(cut);
+    if ((S.ep || 0) < cost) { toast(`EP 不足：净化 ${cut.toFixed(1)}% 腐化需 ${fmt(cost)} EP`); return; }
+    S.ep -= cost;
+    S.corruption = Math.max(0, cur - cut);
+    const dmGain = purgeDmFor(cut);
+    if (dmGain > 0) { addDm(dmGain); discoverDm(); }
+    let rescued = false;
+    if (S._collapseAt && S.corruption < (BALANCE.corruption.max || 100)) rescued = cancelCollapse();
+    log(`主动净化：-${fmt(cost)} EP，清除 ${cut.toFixed(1)}% 腐化，析出 +${dmGain} DM${rescued ? '——吞噬倒计时已解除' : ''}`, 'good');
+    toast(rescued ? `净化成功：-${cut.toFixed(1)}% 腐化，吞噬倒计时解除！` : `净化 -${cut.toFixed(1)}% 腐化 · +${dmGain} DM`);
+    save(S);
+    dirty.corruption = true; dirty.top = true; dirty.hero = true;
   });
-  // v2.8.30：紧急脱出移至腐化区（主动净化右侧）——深入探索中可用
+  // v2.9.0 优化②：紧急脱出二次确认——弹框打开期间一切计时暂停（模态暂停机制）
   document.getElementById('abort-rift-ex')?.addEventListener('click', () => {
-    const r = abortRiftExpedition();
-    dirty.top = true; dirty.rift = true;
-    if (r && r.ok) toast('紧急脱出：探索中止，保留已获产出');
+    if (!S.riftExpedition) return;
+    askConfirm('紧急脱出确认',
+      '确定立即中止深入探索？\n· 已消耗的 EP / DM 不退还；\n· 提前脱出无任何结算奖励（完整探索 60s 才能带回产物）。\n确认期间一切计时暂停。', () => {
+        const r = abortRiftExpedition();
+        dirty.top = true; dirty.rift = true; dirty.hero = true;
+        if (r && r.ok) toast('紧急脱出：探索中止');
+      });
   });
 
   // v2.3.1 缺陷④修复：清档守卫——doReset 清键后到 reload 完成前，任何回写路径
@@ -1131,6 +1207,34 @@ function exportSave() {
   }
 }
 
+// ========== v2.9.0 优化②：模态暂停——确认/抉择弹框打开期间一切计时暂停 ==========
+// 两层冻结：① tick 的 dt 直接跳过（不再累积）；② 恢复时把绝对时间戳字段整体顺延，
+// 否则 Date.now() 型计时（裂隙探索/吞噬倒计时/buff/任务截止等）会在弹框期间暗中流逝。
+let modalPauseAt = 0;
+function pauseGameClock() { if (!modalPauseAt) modalPauseAt = Date.now(); }
+function resumeGameClock() {
+  if (!modalPauseAt) return;
+  const cm = document.getElementById('collapse-modal');
+  if (cm && cm.style.display === 'flex') return; // 抉择弹框仍打开（如取消同归于尽二次确认）→ 保持暂停
+  const shift = Date.now() - modalPauseAt;
+  modalPauseAt = 0;
+  if (shift <= 0) return;
+  if (S.riftExpedition) S.riftExpedition.until += shift;
+  if (S.activeRift) S.activeRift.expiresAt += shift;
+  if (S.buffUntil > 0) S.buffUntil += shift;
+  if (S.clickBuffUntil > 0) S.clickBuffUntil += shift;
+  if (S._collapseAt) S._collapseAt += shift;
+  if (S.nextEventAt) S.nextEventAt += shift;
+  if (S.petXpUntil) S.petXpUntil += shift;
+  if (S.fuseLuckUntil) S.fuseLuckUntil += shift;
+  if (S.restBonusUntil) S.restBonusUntil += shift;
+  if (S.lazySince) S.lazySince += shift;
+  if (S.pausedAt) S.pausedAt += shift;
+  for (const p of (S.projects || [])) { if (p.deadline) p.deadline += shift; if (p.pendingAt) p.pendingAt += shift; if (p.startsAt) p.startsAt += shift; }
+  S._lastActionAt = Date.now();
+  lastTick = performance.now();
+}
+
 // v2.5.4 ①：通用二级确认弹框（title / 正文 / 取消-确认）
 let _confirmOk = null;
 export function askConfirm(title, text, onYes) {
@@ -1142,13 +1246,59 @@ export function askConfirm(title, text, onYes) {
   x.textContent = text;
   _confirmOk = onYes;
   m.style.display = 'flex';
+  pauseGameClock(); // v2.9.0：弹框期间一切计时暂停
 }
 document.getElementById('confirm-cancel')?.addEventListener('click', () => {
   const m = document.getElementById('confirm-modal'); if (m) m.style.display = 'none'; _confirmOk = null;
+  resumeGameClock();
 });
 document.getElementById('confirm-ok')?.addEventListener('click', () => {
   const m = document.getElementById('confirm-modal'); if (m) m.style.display = 'none';
+  resumeGameClock();
   const fn = _confirmOk; _confirmOk = null; if (fn) fn();
+});
+
+// ========== v2.9.0：深渊吞噬·命运抉择（倒计时终结触发；不可关闭，二选一） ==========
+function showCollapseChoice() {
+  const m = document.getElementById('collapse-modal');
+  if (!m) return;
+  pauseGameClock(); // 抉择期间一切计时暂停（含崩溃倒计时/探索/buff/任务）
+  m.style.display = 'flex';
+}
+function resolveCollapseChoice(kind) {
+  const m = document.getElementById('collapse-modal');
+  if (m) m.style.display = 'none';
+  S._collapseChoicePending = false;
+  S._collapseAt = null; S._collapseTimer = 0;
+  resumeGameClock();
+  if (kind === 'bribe') {
+    // 贿赂深渊：上缴 90% EP，成为深渊的朋友——本局继续，腐化回落至 50%（仍可再度满额）
+    const paid = Math.floor((S.ep || 0) * 0.9);
+    S.ep = Math.max(0, (S.ep || 0) - paid);
+    S.corruption = 50;
+    S.achievements.demon_friend = true;
+    log(`贿赂深渊：上缴 ${fmt(paid)} EP（90%）——深渊收下了祭品，你成为了深渊的朋友（本局继续）`, 'good');
+    toast('🤝 成就解锁：恶魔的朋友');
+    checkAch(); // 立即点亮成就面板
+  } else {
+    // 同归于尽：立即触发崩溃杀死深渊——本局湮灭并强制转生（湮灭残片 +1，成就「凝视深渊」）
+    S.achievements.gaze_abyss = true;
+    S.achievements.collapsed = true; // 旧「被深渊吞噬」成就同步点亮
+    S.abyssSplinter = (S.abyssSplinter || 0) + 1;
+    S.collapsed = true;
+    log('同归于尽：你引爆了全部效能核心——崩溃吞没了你，也杀死了深渊。新局将在灰烬中重启', 'bad');
+    toast('🌑 成就解锁：凝视深渊');
+    S.collapsed = false; // 崩溃已结算（强制转生是唯一收尾，非「转生逃离吞噬」）
+    doPrestige(null);
+    dirty.shop = true; dirty.tech = true; dirty.pets = true;
+  }
+  save(S);
+  dirty.top = true; dirty.hero = true; dirty.corruption = true; dirty.prestige = true; dirty.projects = true;
+}
+document.getElementById('collapse-bribe')?.addEventListener('click', () => resolveCollapseChoice('bribe'));
+document.getElementById('collapse-mutual')?.addEventListener('click', () => {
+  // 同归于尽不可撤销，加一道确认（确认期间同样计时暂停）
+  askConfirm('同归于尽 · 最终确认', '崩溃将吞没本局（强制转生，湮灭残片 +1），深渊与你一同湮灭。\n确定执行？', () => resolveCollapseChoice('mutual'));
 });
 
 // v2.5.4 ①：快照面板
@@ -1513,6 +1663,8 @@ function renderAchievementPanel(container) {
     { id: 'dm100',     name: '深渊物质',  icon: '🜏', desc: '持有 100 DM' },
     { id: 'fishbowl1', name: '缸中之渊',  icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）' },
     { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）' },
+    { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' }, // v2.9.0
+    { id: 'gaze_abyss', name: '凝视深渊', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' }, // v2.9.0
   ];
   const got = defs.filter(d => S.achievements[d.id]);
   const n = got.length;
@@ -1582,6 +1734,8 @@ function tick(now) {
   // v2.8.7：打开存档管理时暂停所有产出/计时（防存档窗口内进度漂移）
   const snapOpen = document.getElementById('snap-modal') && document.getElementById('snap-modal').style.display === 'flex';
   if (snapOpen) { lastTick = now; return; }
+  // v2.9.0 优化②：模态暂停（确认/抉择弹框打开期间一切计时暂停；绝对时间戳恢复时顺延）
+  if (modalPauseAt) { lastTick = now; return; }
 
   // EP 核心产出
   const cps = computeCps();
@@ -1671,7 +1825,9 @@ function tick(now) {
   if (!!S.activeRift !== hadRift || S.activeRift) dirty.rift = true;
 
   // v1.3 模块 D：载具被动采集 DM（60s roll，到账走 [采集] 日志）
-  if (tickVehicleCollect(dt)) dirty.top = true;
+  // v2.9.0 Bug④：'transition' = 自动暂停↔恢复切换 → 同步刷新探采页头（EP 不足自动暂停提示）
+  const vehChanged = tickVehicleCollect(dt);
+  if (vehChanged) { dirty.top = true; if (vehChanged === 'transition') dirty.shop = true; }
 
   // 任务版
   // v2.0 P1 修复：tickProjects() 返回本帧任务状态是否变化（生成/完成/过期），
@@ -1784,6 +1940,13 @@ function tick(now) {
     dirty.corruption = true; dirty.hero = true; dirty.top = true;
     corruptionCacheFloor = corruptionFloor;
   }
+  // v2.9.0：吞噬倒计时期间每秒强制刷新横幅（腐化钉在满额时 floor 不再变化，倒计时文本需独立节拍）
+  if (S._collapseAt || S.collapsed || S._collapseChoicePending) {
+    S._collapseUiTimer = (S._collapseUiTimer || 0) + dt;
+    if (S._collapseUiTimer >= 1) { S._collapseUiTimer = 0; dirty.corruption = true; }
+  } else {
+    S._collapseUiTimer = 0;
+  }
 
   // v2.1 R2：仅保留纯文本刷新的脏标记（top/hero 只更新 textContent，不重建可点击节点）；
   // 移除旧版无条件 dirty.projects —— 任务面板 100ms 全量重建是「奖励领不了」的根因
@@ -1892,7 +2055,7 @@ function startApp() {
   setReligionLogFn(log);
   setReligionToastFn(toast); // v2.5.7：宗教日志/toast
   setDelveLogFn(log);
-  setCollapseHooks(log, toast); // v2.8.3：深渊吞噬日志/toast
+  setCollapseHooks(log, toast, showCollapseChoice); // v2.8.3：深渊吞噬日志/toast；v2.9.0：终结抉择弹框
   setDelveToastFn(toast); // v2.6.0：深潜日志/toast
 
   dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true; dirty.relics = true; // v2.7.0：深渊遗物
@@ -1909,6 +2072,9 @@ function startApp() {
 
   bindEvents();
   render();
+  // v2.9.0：旧档兼容——已崩溃/待抉择的存档重开时直接弹出命运抉择（不再走「转生脱离」旧路径）；
+  // 已过期的 _collapseAt 由首帧 tickCollapse 触发抉择，无需在此处理
+  if (S.collapsed || S._collapseChoicePending) showCollapseChoice();
 
   setInterval(() => tick(performance.now()), 100);
 
@@ -1933,6 +2099,9 @@ if (document.readyState === 'loading') {
   startApp();
 }
 
+// v2.9.1：暴露游戏状态到 window 供调试 / 自动化测试访问（存档类游戏，无敏感信息）
+if (typeof window !== 'undefined') { window.S = S; window.__gameDirty = dirty; }
+
 
 // ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（背景特效） ==========
 // v2.8.21 ①：setInterval 替代 RAF（headless/低功耗环境 RAF 可能暂停 → 粒子不绘制）；字符可见度 0.22→0.45
@@ -1953,32 +2122,38 @@ function ensureCodeRain() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   const ctx = canvas.getContext('2d');
-  const CHARS = '01<>/\{}[]=+*#%&';
+  const CHARS = '01<>/\\{}[]=+*#%&αβγδεθλμπΣΩ§¶†‡';
   const COLS = Math.floor(canvas.width / 10); // v2.8.26：列距 16→10——1440 宽 144 列，字符雨密度再翻倍（上一轮截图仍被用户判定「没有」）
-  const drops = new Array(COLS).fill(0).map(() => Math.random() * -80);
-  const drops2 = new Array(COLS).fill(0).map(() => Math.random() * -80 + 40); // 双层雨：每列两串字符错位下落，同屏字符 ×2
+  // v2.9.1 impeccable：列速随机化（0.22~0.48）——同屏字符流速参差，破除整齐感，更接近 Matrix 真实雨幕
+  const drops = new Array(COLS).fill(0).map(() => ({ y: Math.random() * -80, v: 0.22 + Math.random() * 0.26 }));
+  const drops2 = new Array(COLS).fill(0).map(() => ({ y: Math.random() * -80 + 40, v: 0.22 + Math.random() * 0.26 })); // 双层雨：每列两串字符错位下落，同屏字符 ×2
   const FONT = 18; // 18px 配合 10px 列距——字符紧凑成流
   // resize 重设画布尺寸
   window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
   _codeRainTimer = setInterval(() => {
     if (!_codeRainStarted) return;
+    if (document.hidden) return; // v2.9.0 优化⑤：标签页隐藏时跳过绘制（节省 CPU/电池，回归前台无缝续绘）
     ctx.fillStyle = 'rgba(8,6,14,0.10)'; // 拖尾加深——字符尾迹连成光流
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold ' + FONT + 'px monospace';
     for (let i = 0; i < COLS; i++) {
       const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-      const y = drops[i] * FONT;
-      ctx.fillStyle = 'rgba(102, 255, 224, 1)';
+      const d = drops[i];
+      const y = d.y * FONT;
+      // v2.9.1 impeccable：偶发紫色「故障」字符（~2%）——破除纯青单调，呼应深渊紫主题
+      const glitch = Math.random() < 0.02;
+      ctx.fillStyle = glitch ? 'rgba(163,113,247,1)' : 'rgba(102, 255, 224, 1)';
       ctx.fillText(ch, i * 10, y);
       ctx.fillStyle = 'rgba(230, 255, 250, 1)'; // 列首白光
       ctx.fillText(ch, i * 10, y - FONT);
-      drops[i] += 0.35;
-      if (y > canvas.height && Math.random() > 0.972) drops[i] = 0;
-      const y2 = drops2[i] * FONT;
+      d.y += d.v;
+      if (y > canvas.height && Math.random() > 0.972) d.y = 0;
+      const d2 = drops2[i];
+      const y2 = d2.y * FONT;
       ctx.fillStyle = 'rgba(80, 220, 200, 0.95)';
       ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], i * 10, y2);
-      drops2[i] += 0.35;
-      if (y2 > canvas.height && Math.random() > 0.972) drops2[i] = 0;
+      d2.y += d2.v;
+      if (y2 > canvas.height && Math.random() > 0.972) d2.y = 0;
     }
   }, 60);
 }

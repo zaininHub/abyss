@@ -15,7 +15,7 @@ import { spawnProject } from './projects.js';
 export function echoScore() {
   const W = BALANCE.reincarn.scoreWeights;
   const score = (S.prestige || 0) * W.prestige
-    + (S.delveDepth || 0) * W.delve
+    + ((S.delve && S.delve.depth) || 0) * W.delve // v2.9.0：层深改读 S.delve.depth（原 S.delveDepth 键不存在，维度恒 0）
     + (S.riftEmber || 0) * W.ember
     + (S.faith || 0) * W.faith;
   return score;
@@ -27,6 +27,10 @@ export function echoGain() {
 }
 
 export function reincarnReady() {
+  // v2.9.0 优化③：深渊吞噬锁定——倒计时/抉择/崩溃期间轮回不可脱离深渊（仅命运抉择可终结）
+  if (S._collapseAt || S.collapsed || S._collapseChoicePending) {
+    return { ok: false, reason: '深渊吞噬中：已被深渊锁定，轮回不可脱离——直面命运抉择' };
+  }
   if ((S.prestige || 0) < 1) return { ok: false, reason: '需先完成至少 1 次晋升（本局）' };
   if ((S.runEarned || 0) < BALANCE.reincarn.needEp) {
     return { ok: false, reason: `本局累计 EP 需 ≥ ${fmt(BALANCE.reincarn.needEp)}（当前 ${fmt(S.runEarned || 0)}）` };
@@ -45,7 +49,7 @@ export function doReincarn() {
   S.relicLegacy = S.relicLegacy || {};
   const legacyDefs = BALANCE.reincarn.legacy || [];
   const colonyLv = (S.colonies || []).reduce((a, c) => a + (c.lv || 0), 0);
-  const vals = { delve: S.delveDepth || 0, colony: colonyLv, rift: S.riftsSealed || 0 };
+  const vals = { delve: (S.delve && S.delve.depth) || 0, colony: colonyLv, rift: S.riftsSealed || 0 }; // v2.9.0：层深键修正（同 echoScore）
   const cands = legacyDefs
     .filter(L => (S.relicLegacy[L.id] || 0) < BALANCE.reincarn.legacyCap && vals[L.needKey] >= L.need)
     .sort((a, b2) => vals[b2.needKey] / b2.need - vals[a.needKey] / a.need);
@@ -71,7 +75,7 @@ export function doReincarn() {
   S.cultists = [];
   S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   S.corruption = 0;
-  S.collapsed = false; S._collapseTimer = 0; // v2.8.3：深渊吞噬脱离（轮回重置本局）
+  // v2.9.0 优化③：轮回不再清除 collapsed/_collapseAt——转生不可脱离深渊（崩溃仅由「同归于尽」抉择结算）
   S.vehCollectTimer = 0;
   S.pets = {};
   S.activePets = [];

@@ -142,11 +142,15 @@ t('熵减协议把惩罚率 /1.5', () => {
 });
 
 console.log('[5] 经济与线程');
-t('线程招募成本 360 × 1.25^n（v2.8.27）', () => {
+t('线程招募成本 360 × 1.25^n × 前3级折扣（v2.9.1：n=0/1/2 ×0.5/0.65/0.8）', () => {
   S.cultists = [];
-  assert.equal(staffCost(), 360); // v2.8.27：firstCost 120→360
+  assert.equal(staffCost(), 180); // v2.9.1：360 × 0.5（首线程半价）
   S.cultists.push({ output: 2.5, mood: '正常' });
-  assert.equal(staffCost(), 450); // 360×1.25
+  assert.equal(staffCost(), 293); // v2.9.1：360×1.25×0.65 = 292.5 → ceil 293
+  S.cultists.push({ output: 2.5, mood: '正常' });
+  assert.equal(staffCost(), 450); // v2.9.1：360×1.25²×0.8 = 450（第 3 个八折，恰好回到旧 n=1 价位）
+  S.cultists.push({ output: 2.5, mood: '正常' });
+  assert.equal(staffCost(), 704); // v2.9.1：360×1.25³ = 703.125 → ceil 704（第 4 个起全额曲线）
 });
 t('v2.0.2 EP 容量 = (基础2000 + 缓存×5000 + 存储级制累计 + DC加成) × (1 + 0.25×里程碑数)', () => {
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';

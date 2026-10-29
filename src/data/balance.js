@@ -170,6 +170,9 @@ export const BALANCE = {
       { id: 'echo_delve', name: '深潜共振', cap: 3, desc: '深潜产出 ×1.5/级' },
       { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: '信仰产出 ×1.5/级' },
       { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 ×2/级' },
+      // v2.9.0 大项②（参考 KG 长线克制）：扩充 2 项回响升级——存储/薪资双维度
+      { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 ×1.25/级（跨轮回）' },
+      { id: 'echo_wage', name: '薪酬共鸣', cap: 3, desc: '线程消耗 ×0.94/级（跨轮回）' },
     ],
   },
   crossroadToLine: { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' },
@@ -313,6 +316,9 @@ export const BALANCE = {
     penaltyPerPercent: 0.003,  // 每 1% 腐化 -0.3% 产出
     penaltyFloor: 0.7,         // 惩罚下限 30%
     max: 100,
+    // v2.9.0 优化①：主动净化——消耗 EP 换净化，腐化越严重析出 DM 越多（平方曲线）
+    // 净化 50% ≈ 消耗 30% 存储上限 EP、析出 50 DM；净化 10% ≈ 6% 上限 EP、2 DM
+    purge: { maxCut: 50, epCostPerPct: 0.006, dmPerPctSq: 0.02 },
     purifiers: [
       { id: 'purifier1', name: '净化节点 I', base: 50, dmCost: true, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
       { id: 'purifier2', name: '净化节点 II', base: 500, dmCost: true, rate: 2, desc: '每秒清除 2% 腐化' },

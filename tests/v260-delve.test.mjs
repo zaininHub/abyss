@@ -59,7 +59,8 @@ function mkState(extra = {}) {
   rec('V2 深潜 10s 产出 VS（层1 × 0.75/s）', Math.abs((S.vs || 0) - (vs0 + vsPerSec(1, 0) * 10)) < 1e-9, `vs ${vs0}→${S.vs}`);
   rec('V2 深潜腐化累积（层1 +0.02%/s ×10s）', Math.abs(S.corruption - 0.2) < 1e-9, `corruption=${S.corruption}`);
   const r3 = delve.stopDelve();
-  rec('V2 上浮（active=false，层深保留）', r3.ok === true && !delve.delveActive() && delve.delveDepth() === 0);
+  // v2.9.0：下潜成功即层深 +1（此前恒 0 的缺陷已修复）——上浮保留层深 1
+  rec('V2 上浮（active=false，层深保留 1）', r3.ok === true && !delve.delveActive() && delve.delveDepth() === 1);
   // 上浮后不再产出/腐化
   const c1 = S.corruption;
   delve.tickDelve(10);
@@ -105,7 +106,8 @@ function mkState(extra = {}) {
   rec('V4 层深 25 里程碑 +200 VS（10 层已领不重复）', (S.vs || 0) >= 200 && (S.vs || 0) < 300 && S.delve.mileDone['10'] === true && S.delve.mileDone['25'] === true, `vs=${S.vs}`);
   const vsA = S.vs;
   delve.tickDelve(1);
-  rec('V4 里程碑不重复发放', (S.vs || 0) === vsA + vsPerSec(26, 0), `vs=${S.vs}`);
+  // v2.9.0：产出按当前真实层深 25（原实现恒按 depth+1 计）
+  rec('V4 里程碑不重复发放', (S.vs || 0) === vsA + vsPerSec(25, 0), `vs=${S.vs}`);
 }
 
 // ========== V5 跨转生保留 ==========
