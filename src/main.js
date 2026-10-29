@@ -38,7 +38,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade } from './modules/rift.js';
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition } from './modules/rift.js';
 import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -547,7 +547,7 @@ function renderHero() {
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
   const cbar = document.getElementById('corruption-bar');
   if (cbar) {
-    if ((S.corruption || 0) > 0.01) {
+    if ((S.corruption || 0) > 0.01 || S.riftExpedition) { // v2.8.30：深入探索中腐化条恒显（含紧急脱出按钮）
       cbar.style.display = '';
       const fill = document.getElementById('corruption-fill');
       const num = document.getElementById('corruption-num');
@@ -555,6 +555,8 @@ function renderHero() {
       if (fill) fill.style.width = S.corruption.toFixed(1) + '%';
       if (num) num.textContent = S.corruption.toFixed(1) + '%';
       if (pen) pen.textContent = `-${Math.round((1 - corruptionPenalty()) * 100)}%`;
+      const ab = document.getElementById('abort-rift-ex');
+      if (ab) ab.style.display = S.riftExpedition ? '' : 'none';
     } else {
       cbar.style.display = 'none';
     }
@@ -920,6 +922,15 @@ function renderWikiContent() {
     wikiModal.addEventListener('click', (ev) => { if (ev.target === wikiModal) wikiModal.style.display = 'none'; });
   }
   document.getElementById('rift-tab-panel')?.addEventListener('click', (e) => { // v2.6.1：裂隙余烬升级树
+    // v2.8.30：自动动作开关（互斥单开——再点关闭；开新的自动关旧）
+    const autoEl = e.target.closest('[data-rift-auto]');
+    if (autoEl) {
+      const id = autoEl.dataset.riftAuto;
+      S.riftAuto = S.riftAuto === id ? null : id;
+      save(S);
+      renderRiftPanel(document.getElementById('rift-tab-panel'));
+      return;
+    }
     const upEl = e.target.closest('[data-rift-upg]');
     if (!upEl) return;
     const r = buyRiftUpgrade(upEl.dataset.riftUpg);
@@ -1029,6 +1040,12 @@ function renderWikiContent() {
       toast(`净化 -${cut.toFixed(1)}% 腐化`);
     }
     dirty.corruption = true; dirty.top = true;
+  });
+  // v2.8.30：紧急脱出移至腐化区（主动净化右侧）——深入探索中可用
+  document.getElementById('abort-rift-ex')?.addEventListener('click', () => {
+    const r = abortRiftExpedition();
+    dirty.top = true; dirty.rift = true;
+    if (r && r.ok) toast('紧急脱出：探索中止，保留已获产出');
   });
 
   // v2.3.1 缺陷④修复：清档守卫——doReset 清键后到 reload 完成前，任何回写路径

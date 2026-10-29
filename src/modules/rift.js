@@ -38,7 +38,10 @@ export function riftUpgradeLevel(id) {
 }
 export function riftUpgradeCost(id) {
   const u = BALANCE.rift.upgrades[id];
-  return Math.round(BALANCE.rift.upgBase * Math.pow(BALANCE.rift.upgGrowth, riftUpgradeLevel(id)));
+  // v2.8.30：自动动作升级消耗大量余烬（基础 ×10）
+  const base = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent')
+    ? BALANCE.rift.upgBase * 10 : BALANCE.rift.upgBase;
+  return Math.round(base * Math.pow(BALANCE.rift.upgGrowth, riftUpgradeLevel(id)));
 }
 export function riftSpawnSec() {
   const lv = riftUpgradeLevel('sentinel');
@@ -171,6 +174,12 @@ export function tickRift(dt) {
       dmReward: Math.ceil(1 * level),
       expiresAt: Date.now() + 120000,
     };
+    if (S.activeRift && S.riftAuto) {
+      // v2.8.30：裂隙自动动作（互斥单开——开关值即升级 id）
+      if (S.riftAuto === 'auto_seal') sealRift();
+      else if (S.riftAuto === 'auto_embrace') embraceRift();
+      else if (S.riftAuto === 'auto_descent') delveRift();
+    }
     // v2.5 ①：首次触发深渊裂隙 = 探采平台/深渊商店解锁（持久标记，跨转生保留）
     if (!S._riftSeen) {
       S._riftSeen = true;
@@ -321,13 +330,12 @@ export function renderRiftPanel(container) {
       <div class="rift-tab-desc">深入探索中：${riftLevelName(ex.level)}</div>
       <div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);margin-bottom:2px"><span>探索进度</span><span>剩余 ${left}s</span></div>
       <div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,var(--cyan,#22d3ee),var(--accent,#a855f7));transition:width .5s"></div></div></div>
-      <button class="btn" id="abort-rift-ex" style="margin-top:6px;width:100%">紧急脱出（保留已获产出）</button>
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
       <div class="off-stat"><span>已获 VS（深潜联动）</span><b style="color:var(--cyan)">+${ex.gainedVs.toFixed(2)}</b></div>
       <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '安全'}</b></div>
       <div style="font-size:11px;color:var(--text-3);margin:6px 0">腐化超 ${BALANCE.rift.delveFailCorrupt}% 结算时将损失 ${Math.round(BALANCE.rift.delveFailLoss * 100)}% 封印成本 EP；可提前脱出保留已获产出。</div>`;
     container.querySelector('#abort-rift-ex')?.addEventListener('click', () => {
-      abortRiftExpedition();
+      abortRiftExpedition(); // 保留（若旧档渲染缓存仍含按钮则兜底）
       renderRiftPanel(container);
     });
     return;
@@ -350,12 +358,19 @@ export function renderRiftPanel(container) {
         desc = `裂隙出现间隔缩短 25%/级：已达最短 ${cur} 分钟`;
       }
     }
+    // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
+    const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
+    const autoOn = S.riftAuto === id;
+    const autoToggle = isAuto && lv > 0
+      ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
+      : '';
     html += `
       <div class="rift-upg-row" data-rift-upg="${id}">
         <div style="flex:1">
           <div style="font-size:13px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:11px">Lv.${lv}/${u.cap}</span></div>
           <div style="font-size:11px;color:var(--text-3)">${desc}</div>
         </div>
+        ${autoToggle}
         <button class="btn ${cost === null || (S.riftEmber || 0) < cost ? 'disabled' : ''}" ${cost === null ? 'disabled' : ''}>${cost === null ? '满级' : `${cost} 余烬`}</button>
       </div>`;
   }

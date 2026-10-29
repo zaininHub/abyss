@@ -238,6 +238,10 @@ export const BALANCE = {
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
+      // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
+      auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
+      auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },
+      auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）' },
     },
   },
   // 里程碑（v2.3 奖励校准，PM §5.1 两锚点）：
