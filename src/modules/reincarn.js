@@ -84,6 +84,7 @@ export function doReincarn() {
   S.petXpMult = 1; S.petXpUntil = 0;
   S.fuseLuckUntil = 0;
   S.staffUnhappy = 0;
+  S._farewellBought = false; // v2.9.2 ②：sp3_farewell 每局可再次触发
   S.activeRift = null;
   S.riftExpedition = null;
   S.crossroad = 'inactive';

@@ -91,6 +91,7 @@ export function defaultState() {
     _specialTasksDone: {},         // 已完成的特殊任务
     _easterEggsFound: {},          // 已发现的彩蛋
     _pauseCycles: 0,               // 暂停/恢复循环次数
+    _farewellBought: false,        // v2.9.2：sp3_farewell「离职礼盒」购买标记（每局可触发一次，转生重置）
     // v2.0 线A 秩序重构者
     orderRewrites: {},             // 协议编辑器重写记录 {upgradeId: count}
     orderCompileProgress: 0,       // 编译进度
@@ -311,7 +312,7 @@ export function load() {
     }
     // 存档兼容：缺失字段用默认值补齐
     const newFields = ['tidePhase', 'tideTimer', 'corruption', 'wageState', 'buildings', 'vehCollectTimer', 'ai', 'boughtOrder', 'unlockedBuildings', 'buildingOverflow', 'epOverflowTotal', '_overflowRpAcc', 'delve', 'vs',
-                       'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone', '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades',
+                       'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone', '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', '_farewellBought',
                        'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
                        'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled',
                        'faithTemples', 'miraclesTriggered', 'prophecyNext',

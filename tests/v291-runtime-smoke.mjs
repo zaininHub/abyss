@@ -111,7 +111,36 @@ try {
   const resumed = await page.evaluate(() => S._probeAutoPaused === false);
   if (resumed) ok('探采：EP 充足后自动恢复（_probeAutoPaused→false）'); else bad('探采自动恢复', `paused=${await page.evaluate(()=>S._probeAutoPaused)}`);
 
-  // 12. 无 JS 运行时错误
+  // 12. v2.9.2 ② 离职礼盒（sp3_farewell 购买入口——线程休眠期间出现）
+  await page.evaluate(() => {
+    S._specialTasksDone = {}; S._farewellBought = false;
+    S.wageState = { state: 'dormant', debtSec: 999, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
+    S.ep = 100; S.cultists = [{ name: 't1', output: 1, mood: '正常' }];
+    window.__gameDirty.hero = true; window.__gameDirty.top = true;
+  });
+  await sleep(400); // 等 wageStateCache 脏检查 + renderTop 创建按钮
+  const giftBtn = await page.$('#farewell-gift');
+  const giftVisible = giftBtn ? await page.evaluate(el => getComputedStyle(el).display !== 'none', giftBtn) : false;
+  if (giftVisible) ok('离职礼盒：线程休眠期间浮动按钮出现'); else bad('离职礼盒按钮出现', `btn=${!!giftBtn}`);
+  // 购买：扣 1 EP + 设 _farewellBought + 触发 sp3_farewell 完成
+  const epBeforeGift = await page.evaluate(() => S.ep);
+  if (giftBtn) { await giftBtn.click(); await sleep(900); } // 0.8s 动画 + 结算
+  const epAfterGift = await page.evaluate(() => S.ep);
+  const bought = await page.evaluate(() => S._farewellBought);
+  const sp3Done = await page.evaluate(() => !!S._specialTasksDone?.sp3_farewell);
+  if (epAfterGift <= epBeforeGift - 1 && bought && sp3Done)
+    ok('离职礼盒：购买扣 1 EP + 触发 sp3_farewell 完成'); else bad('离职礼盒购买流程', `ep ${epBeforeGift}→${epAfterGift}, bought=${bought}, sp3Done=${sp3Done}`);
+  // 任务完成后按钮隐藏
+  await sleep(200);
+  const giftHidden = await page.$eval('#farewell-gift', el => !el || getComputedStyle(el).display === 'none').catch(() => true);
+  if (giftHidden) ok('离职礼盒：任务完成后按钮隐藏'); else bad('离职礼盒完成后隐藏', '按钮仍可见');
+  // 非休眠期间不显示
+  await page.evaluate(() => { S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 }; window.__gameDirty.top = true; });
+  await sleep(300);
+  const giftHidden2 = await page.$eval('#farewell-gift', el => !el || getComputedStyle(el).display === 'none').catch(() => true);
+  if (giftHidden2) ok('离职礼盒：非休眠期间不显示'); else bad('离职礼盒非休眠隐藏', '按钮仍可见');
+
+  // 13. 无 JS 运行时错误
   if (errors.length === 0) ok('无 JS 运行时错误 / console.error'); else bad('无 JS 运行时错误', `${errors.length} 条：${errors.slice(0,3).join(' | ')}`);
 
 } catch (e) {
@@ -119,6 +148,6 @@ try {
 } finally {
   await browser.close();
   const pass = results.filter(r => r.ok).length;
-  console.log(`\n===== v2.9.1 真实运行冒烟测试：${pass}/${results.length} 通过 =====`);
+  console.log(`\n===== v2.9.2 真实运行冒烟测试：${pass}/${results.length} 通过 =====`);
   if (pass < results.length) { console.log('FAILED: ' + results.filter(r=>!r.ok).map(r=>r.n).join('; ')); process.exit(1); }
 }

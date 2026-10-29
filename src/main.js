@@ -170,6 +170,7 @@ function updateCrossroad() {
 
 function render() {
   ensureWishWell(); // v2.8.30 ③：许愿池（购买研究升级后即时出现/移除）
+  ensureFarewellGift(); // v2.9.2：离职礼盒（线程休眠/流失期间出现，1 EP 购买触发 sp3_farewell）
   if (dirty.top) { renderTop(); dirty.top = false; }
   if (dirty.hero) { renderHero(); dirty.hero = false; }
   if (dirty.ai) { // v1.3 A：AI 面板（未解锁时整卡隐藏）
@@ -314,6 +315,7 @@ function discoverCheck() {
 // ========== 顶部栏 ==========
 function renderTop() {
   initWishWell(); // v2.8.30 ③：许愿池
+  initFarewellGift(); // v2.9.2 ②：离职礼盒（休眠/流失期间出现）
   updateTabLocks(); // v2.0：渐进开放标签页锁定状态
   // v2.3.1 ①（rev18 9.1）：顶栏资源显示 = 锚点完成（anchorShown 双读：即时谓词 ∨ 持久标记）。
   // 锚点完成当帧即亮出（不等 discoverCheck 落档），且连历史盲获得累计一并显示。
@@ -886,6 +888,51 @@ function onWishToss() {
   }, 3000);
 }
 function initWishWell() { ensureWishWell(); }
+
+// ========== v2.9.2 ②：离职礼盒（sp3_farewell 购买入口） ==========
+// sp3_farewell 文案承诺"购买离职礼盒（1 EP）送给流失的线程"，此前 condition 仅 dormant||staffUnhappy≥3
+// 自动触发——购买入口从未实现。现 condition 加入 S._farewellBought 前置，由本按钮提供购买入口。
+// 仅在 线程休眠(dormant)/流失(losing)/staffUnhappy≥3 且本局未完成时显示，避免新手误触。
+const FAREWELL_COST = 1;
+function farewellAvailable() {
+  if ((S._specialTasksDone || {}).sp3_farewell) return false; // 本局已完成
+  if (S._farewellBought) return false; // 已购买待结算（下一帧自动完成）
+  const w = S.wageState || {};
+  return w.state === 'dormant' || w.state === 'losing' || (S.staffUnhappy || 0) >= 3;
+}
+function ensureFarewellGift() {
+  let b = document.getElementById('farewell-gift');
+  if (!farewellAvailable()) { if (b) b.style.display = 'none'; return; }
+  if (!b) {
+    b = document.createElement('button');
+    b.id = 'farewell-gift';
+    b.className = 'farewell-gift';
+    b.title = '离职礼盒：送给流失线程的临别礼物（1 EP）—— 触发特殊任务「离职礼物」，解锁纪念墙';
+    b.innerHTML = '🎁<span class="fg-label">离职礼盒</span><span class="fg-cost">1 EP</span>';
+    b.addEventListener('click', onFarewellBuy);
+    document.body.appendChild(b);
+  }
+  b.style.display = '';
+}
+function onFarewellBuy() {
+  const b = document.getElementById('farewell-gift');
+  if (!b || b.disabled) return;
+  if ((S.ep || 0) < FAREWELL_COST) { toast(`EP 不足（需 ${FAREWELL_COST} EP）`); return; }
+  S.ep -= FAREWELL_COST;
+  S._farewellBought = true;
+  b.disabled = true;
+  b.classList.add('giving');
+  save(S); dirty.top = true;
+  // 礼盒飘出动画（0.8s）后立即结算 sp3_farewell（checkSpecialTasks 会读到 _farewellBought=true 并完成）
+  setTimeout(() => {
+    b.classList.remove('giving');
+    b.disabled = false;
+    b.style.display = 'none';
+    checkSpecialTasks(S, log, toast); // 立即结算，玩家即时看到奖励
+    save(S); dirty.top = true; dirty.achievements = true;
+  }, 800);
+}
+function initFarewellGift() { ensureFarewellGift(); }
 
 // ========== 事件绑定 ==========
 function bindEvents() {
@@ -1717,6 +1764,7 @@ let lastProjRender = 0;      // v2.0：任务面板 1s 节流重绘
 let tideCachePhase = -1;     // v2.0：潮汐脏检查缓存
 let tideCacheTimer = -1;
 let corruptionCacheFloor = -1; // v2.0：腐化脏检查缓存
+let wageStateCache = '';      // v2.9.2 ②：线程薪资状态变化脏检查（dormant/losing 触发离职礼盒按钮出现）
 let lastAiUnlocked = false;  // v1.3 A：AI 核心解锁变化检测
 let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 
@@ -1939,6 +1987,12 @@ function tick(now) {
   if (corruptionFloor !== corruptionCacheFloor) {
     dirty.corruption = true; dirty.hero = true; dirty.top = true;
     corruptionCacheFloor = corruptionFloor;
+  }
+  // v2.9.2 ②：线程薪资状态变化（进入/离开 dormant·losing）触发离职礼盒按钮出现/隐藏
+  const wageSt = (S.wageState || {}).state || 'ok';
+  if (wageSt !== wageStateCache) {
+    wageStateCache = wageSt;
+    dirty.hero = true; dirty.top = true;
   }
   // v2.9.0：吞噬倒计时期间每秒强制刷新横幅（腐化钉在满额时 floor 不再变化，倒计时文本需独立节拍）
   if (S._collapseAt || S.collapsed || S._collapseChoicePending) {

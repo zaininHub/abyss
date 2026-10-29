@@ -28,7 +28,7 @@ export const SPECIAL_TASKS = [
     id: 'sp3_farewell',
     name: '离职礼物',
     desc: '无时间限制；要求购买"离职礼盒"（1 EP）送给流失的线程',
-    condition: (S) => (S.wageState?.state === 'dormant') || S.staffUnhappy >= 3,
+    condition: (S) => ((S.wageState?.state === 'dormant') || S.staffUnhappy >= 3) && S._farewellBought,
     reward: { type: 'memorial_wall', msg: '解锁"纪念墙"（记录所有流失线程的名字和存活时间）' },
     triggered: false,
     line: 'any',

@@ -1224,6 +1224,35 @@ body {
 .wish-well.win::after { content:''; position:absolute; inset:-6px; border-radius:14px; border:1px solid var(--yellow); animation: wishWinRing 1.6s ease-out forwards; pointer-events:none; }
 @keyframes wishWinRing { 0% { opacity:.9; transform: scale(.9); } 100% { opacity:0; transform: scale(1.25); } }
 
+/* v2.9.2 ② 离职礼盒（sp3_farewell 购买入口——线程休眠/流失期间出现） */
+.farewell-gift {
+  position: fixed; right: 14px; top: 52%; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 12px 6px;
+  background: rgba(22, 27, 34, .92);
+  border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .5), 0 0 0 1px rgba(229, 152, 42, .12);
+  color: #e6982a;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+  animation: farewellBob 3.2s ease-in-out infinite;
+}
+.farewell-gift .fg-label { font-size: 11px; color: #e6982a; letter-spacing: 1px; }
+.farewell-gift .fg-cost { font-size: 10px; color: var(--text-3); }
+.farewell-gift:hover:not(:disabled) {
+  border-color: #e6982a;
+  box-shadow: 0 4px 18px rgba(0,0,0,.5), 0 0 16px rgba(230, 152, 42, .4);
+  transform: translateY(-2px);
+}
+.farewell-gift:disabled { cursor: wait; opacity: .6; }
+.farewell-gift.giving { animation: farewellGive .8s ease-in forwards; }
+@keyframes farewellBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes farewellGive {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  35% { transform: translateY(-6px) scale(1.08); }
+  100% { transform: translateY(-40px) scale(.6); opacity: 0; }
+}
+
 /* 粒子雨 canvas：轻微 bloom（filter 不影响 pointer-events:none） */
 #code-rain { filter: saturate(1.1); }
 
@@ -1232,7 +1261,7 @@ body {
   .tentacle-deco, .tentacle-deco .tentacle ellipse, .tentacle-deco .tentacle,
   .pet-grid .pet-card .icon, .pet-grid .pet-card.on::after,
   .pet-float .pet-item::before,
-  .wish-water, .wish-well.win::after, .wish-well, .pet-float .pet-item {
+  .wish-water, .wish-well.win::after, .wish-well, .pet-float .pet-item, .farewell-gift {
     animation: none !important;
   }
   .pet-grid .pet-card:hover { transform: none; }
