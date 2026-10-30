@@ -90,6 +90,36 @@ export function buyTemple() {
   return { ok: true };
 }
 
+// v3.0.1：信仰圣所关闭/重启开关——关闭时停止信仰产出（不消耗 EP），但每次关闭损失信仰 30% + 虔诚 15%（冷启动代价）
+// 重启无代价（仅恢复产出）。设计目的：圣所产信仰时持续烧 EP，玩家可临时关闭省 EP，但关闭有代价防滥用
+export function toggleTemple() {
+  if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
+  const lv = (S.religion && S.religion.temple) || 0;
+  if (lv < 1) return { ok: false, reason: '需先建造信仰圣所' };
+  const off = !!(S.religion && S.religion.templeOff);
+  if (!off) {
+    // 关闭：损失信仰 30%（至少 1 若有信仰）+ 虔诚 15%（至少 1 若有虔诚）
+    const faithLoss = Math.max(0, Math.floor((S.faith || 0) * 0.30));
+    const devLoss = Math.max(0, Math.floor((S.devotion || 0) * 0.15));
+    S.faith = Math.max(0, (S.faith || 0) - faithLoss);
+    S.devotion = Math.max(0, (S.devotion || 0) - devLoss);
+    S.religion.templeOff = true;
+    save(S);
+    const parts = [];
+    if (faithLoss > 0) parts.push(`-${faithLoss.toFixed(2)} 信仰`);
+    if (devLoss > 0) parts.push(`-${devLoss} 虔诚`);
+    rlog(`信仰圣所已关闭：停止信仰产出与 EP 消耗${parts.length ? '（冷启动代价：' + parts.join('，') + '）' : '（无信仰/虔诚可损失）'}`, 'bad');
+    if (toastFn) toastFn(`信仰圣所已关闭${parts.length ? '（损失 ' + parts.join('，') + '）' : ''}`);
+  } else {
+    // 重启：无代价，恢复产出
+    S.religion.templeOff = false;
+    save(S);
+    rlog(`信仰圣所已重启：恢复信仰产出（+${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）`, 'good');
+    if (toastFn) toastFn('信仰圣所已重启');
+  }
+  return { ok: true };
+}
+
 // v2.6.4 ⑤：神谕塔升级（消耗信仰，后期信仰深耕）
 export function buyOracle() {
   if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
@@ -270,11 +300,14 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）${(S.religion && S.religion.templeOff) ? '<span style="color:var(--warn)"> · 已关闭（停止产出/不消耗 EP）</span>' : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
+      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
+        title="${(S.religion && S.religion.templeOff) ? '重启：恢复信仰产出（无代价）' : '关闭：停止信仰产出与 EP 消耗，但损失 30% 信仰 + 15% 虔诚（冷启动代价）'}"
+        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}
     </div>
     ${seal >= 1 ? `
     <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验</div>
@@ -357,6 +390,12 @@ export function bindReligionPanel(container) {
     }
     if (e.target.closest('[data-religion-seal]')) {
       const r = upgradeSeal();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderReligionPanel(container);
+      return;
+    }
+    if (e.target.closest('[data-religion-toggle]')) {
+      const r = toggleTemple();
       if (!r.ok && toastFn) toastFn(r.reason);
       renderReligionPanel(container);
       return;

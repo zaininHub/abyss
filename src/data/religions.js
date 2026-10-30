@@ -47,6 +47,7 @@ export function templeCost() {
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));
 }
 export function templeFaithPerSec() {
+  if (S.religion && S.religion.templeOff) return 0; // v3.0.1：圣所关闭——停止信仰产出（不消耗 EP）
   let r = TEMPLE.faithPerSec * ((S.religion && S.religion.temple) || 0);
   // v2.6.0 深潜：深渊共鸣——信仰产出 ×1.5/级
   if (S.delve && S.delve.up && S.delve.up.resonance > 0) r *= Math.pow(1.5, S.delve.up.resonance);

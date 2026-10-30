@@ -1291,14 +1291,16 @@ function resolveCollapseChoice(kind) {
   if (m) m.style.display = 'none';
   S._collapseChoicePending = false;
   S._collapseAt = null; S._collapseTimer = 0;
+  S.collapsed = false; // v3.0.1：显式清除崩溃标记（防刷新后启动检查再次弹出抉择）
   resumeGameClock();
   if (kind === 'bribe') {
-    // 贿赂深渊：上缴 90% EP，成为深渊的朋友——本局继续，腐化回落至 50%（仍可再度满额）
+    // 贿赂深渊：上缴 90% EP，成为深渊的朋友——本局继续
+    // v3.0.1：腐化清零（原回落 50%——但线程被吞殆尽时无线程净化，腐化卡住或快速回满再次触发倒计时→抉择，形成死循环）
     const paid = Math.floor((S.ep || 0) * 0.9);
     S.ep = Math.max(0, (S.ep || 0) - paid);
-    S.corruption = 50;
+    S.corruption = 0;
     S.achievements.demon_friend = true;
-    log(`贿赂深渊：上缴 ${fmt(paid)} EP（90%）——深渊收下了祭品，你成为了深渊的朋友（本局继续）`, 'good');
+    log(`贿赂深渊：上缴 ${fmt(paid)} EP（90%）——深渊收下了祭品，你成为了深渊的朋友（本局继续，腐化已被深渊收回）`, 'good');
     toast('🤝 成就解锁：恶魔的朋友');
     checkAch(); // 立即点亮成就面板
   } else {

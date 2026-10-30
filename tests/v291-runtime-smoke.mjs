@@ -92,11 +92,19 @@ try {
   await sleep(500);
   const choiceModal = await page.$eval('#collapse-modal', el => getComputedStyle(el).display !== 'none').catch(() => false);
   if (choiceModal) ok('倒计时终结 → 命运抉择弹框弹出'); else bad('命运抉择弹框', '');
-  // 9. 点贿赂深渊
+  // 9. 点贿赂深渊（v3.0.1：腐化清零，原 50）
   await page.click('#collapse-bribe'); await sleep(300);
   const achBribe = await page.evaluate(() => !!S.achievements.demon_friend);
   const corruptionAfter = await page.evaluate(() => S.corruption);
-  if (achBribe && Math.abs(corruptionAfter - 50) < 1) ok('贿赂深渊：成就「恶魔的朋友」+ 腐化回落 50%', `corruption=${corruptionAfter}`); else bad('贿赂深渊', `ach=${achBribe} corruption=${corruptionAfter}`);
+  if (achBribe && corruptionAfter === 0) ok('贿赂深渊：成就「恶魔的朋友」+ 腐化清零（v3.0.1）'); else bad('贿赂深渊', `ach=${achBribe} corruption=${corruptionAfter}`);
+  // 9b. v3.0.1 问题2：贿赂后刷新页面，命运抉择不应再次出现
+  const epSaved = await page.evaluate(() => S.ep);
+  await page.reload({ waitUntil: 'networkidle0', timeout: 30000 });
+  await sleep(800);
+  const choiceAfterReload = await page.$eval('#collapse-modal', el => getComputedStyle(el).display !== 'none').catch(() => false);
+  if (!choiceAfterReload) ok('贿赂后刷新页面：命运抉择不再出现（v3.0.1 问题2）'); else bad('贿赂后刷新重现抉择', '弹框仍显示');
+  const corruptionReloaded = await page.evaluate(() => S.corruption);
+  if (corruptionReloaded === 0) ok('刷新后腐化仍为 0'); else bad('刷新后腐化非 0', `corruption=${corruptionReloaded}`);
 
   // 10. 转生锁定（吞噬期间）—— 重新触发倒计时，点晋升应被锁
   await page.evaluate(() => { S.corruption = 100; S._collapseAt = Date.now() + 30000; S._collapseChoicePending = false; S.runEarned = 1e12; });
@@ -140,7 +148,36 @@ try {
   const giftHidden2 = await page.$eval('#farewell-gift', el => !el || getComputedStyle(el).display === 'none').catch(() => true);
   if (giftHidden2) ok('离职礼盒：非休眠期间不显示'); else bad('离职礼盒非休眠隐藏', '按钮仍可见');
 
-  // 13. 无 JS 运行时错误
+  // 13. v3.0.1 问题4：信仰圣所关闭开关（损失信仰30%+虔诚15%）
+  await page.evaluate(() => {
+    S.religion = { unlocked: true, branch: 'sun', temple: 5, templeOff: false };
+    S.resDiscovered = S.resDiscovered || {}; S.resDiscovered.faith = true;
+    S.faith = 100; S.devotion = 100; S.ep = 1e8;
+    window.__gameDirty.religion = true;
+  });
+  await sleep(400); // 等 render → renderReligionPanel 渲染按钮
+  const toggleBtn = await page.$('[data-religion-toggle]');
+  if (toggleBtn) ok('圣所关闭/重启按钮渲染（temple≥1）'); else bad('圣所关闭按钮', '未找到 data-religion-toggle');
+  // 点击关闭：损失信仰30%+虔诚15%（100→70/85）
+  if (toggleBtn) {
+    const faithBefore = await page.evaluate(() => S.faith);
+    const devBefore = await page.evaluate(() => S.devotion);
+    await page.evaluate(el => el.click(), toggleBtn); await sleep(300);
+    const off = await page.evaluate(() => !!S.religion?.templeOff);
+    const faithAfter = await page.evaluate(() => S.faith);
+    const devAfter = await page.evaluate(() => S.devotion);
+    // 关闭损失 30% 信仰 + 15% 虔诚（允许圣所产出漂移 ±2）
+    if (off && Math.abs(faithAfter - faithBefore * 0.7) < 2 && devBefore - devAfter >= 15) ok('关闭圣所：损失 30% 信仰 + 15% 虔诚'); else bad('关闭圣所损失', `off=${off} faith ${faithBefore}→${faithAfter} dev ${devBefore}→${devAfter}`);
+    // 再点重启：无代价（关闭态不产出，重启后 faith 不应减少）
+    const faithClosed = await page.evaluate(() => S.faith);
+    const toggleBtn2 = await page.$('[data-religion-toggle]');
+    if (toggleBtn2) { await page.evaluate(el => el.click(), toggleBtn2); await sleep(300); }
+    const off2 = await page.evaluate(() => !!S.religion?.templeOff);
+    const faithAfter2 = await page.evaluate(() => S.faith);
+    if (!off2 && faithAfter2 >= faithClosed) ok('重启圣所：无代价（信仰不减，恢复产出）'); else bad('重启圣所', `off=${off2} faith ${faithClosed}→${faithAfter2}`);
+  }
+
+  // 14. 无 JS 运行时错误
   if (errors.length === 0) ok('无 JS 运行时错误 / console.error'); else bad('无 JS 运行时错误', `${errors.length} 条：${errors.slice(0,3).join(' | ')}`);
 
 } catch (e) {
@@ -148,6 +185,6 @@ try {
 } finally {
   await browser.close();
   const pass = results.filter(r => r.ok).length;
-  console.log(`\n===== v2.9.2 真实运行冒烟测试：${pass}/${results.length} 通过 =====`);
+  console.log(`\n===== v3.0.1 真实运行冒烟测试：${pass}/${results.length} 通过 =====`);
   if (pass < results.length) { console.log('FAILED: ' + results.filter(r=>!r.ok).map(r=>r.n).join('; ')); process.exit(1); }
 }
