@@ -6,7 +6,7 @@ import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford } from './econom
 import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned, boughtOrderIndex } from './listkit.js';
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
-import { dirty, log } from '../main.js'; // v2.3：首次购入推进链前缀 → 窗口刷新
+import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦
 
 let techContainer = null;
 let eternalContainer = null;

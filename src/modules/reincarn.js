@@ -10,7 +10,7 @@ import { recordPolicyRun } from '../data/policies.js';
 import { fmt } from './economy.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
 import { BALANCE } from '../data/balance.js';
-import { toast, dirty, askConfirm } from '../main.js';
+import { toast, dirty, askConfirm } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { spawnProject } from './projects.js';
 
 export function echoScore() {

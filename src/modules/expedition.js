@@ -1,7 +1,7 @@
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm } from './economy.js';
-import { log, toast, dirty } from '../main.js';
+import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 
 export const GALAXIES = [
   { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    reward: { type: 'ep', mult: 5 },   desc: '短平快探索' },

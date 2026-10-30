@@ -12,7 +12,7 @@ function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('embe
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { researchMult, addDm } from './economy.js';
-import { log, toast, dirty } from '../main.js';
+import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
 export function discoverDm() {

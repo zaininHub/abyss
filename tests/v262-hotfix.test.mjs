@@ -23,7 +23,7 @@ rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${resOk && ep
 rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };"), 'activateAutoBuild');
 
 // ===== ③ 宗教 =====
-rec('V3 唤醒按钮未达标带 disabled 属性', rel.includes("${ok ? '' : 'disabled'}") && rel.includes('data-religion-unlock="1" ${ok ? \'\' : \'disabled\'}'), '');
+rec('V3 唤醒按钮未达标带 disabled 属性（含每秒 affordability 刷新）', rel.includes('data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? \'\' : \'disabled\'}') && rel.includes('w.disabled = !canUnlockReligion() || (S.ep || 0) < religionWakeCost()'), '');
 rec('V3 宗教入口曾达标常显（_religionHintSeen）', main.includes('S._religionHintSeen = true') && main.includes("religionUnlocked() || canUnlockReligion() || S._religionHintSeen"), 'refreshTabVisibility');
 rec('V3 _religionHintSeen 入 defaultState + crossRun', state.includes('_religionHintSeen: false') && state.includes("'_religionHintSeen'"), '');
 

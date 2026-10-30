@@ -10,7 +10,7 @@ rec('V1 分级公式 clamp(1+log10(cps), 1, 5)', src.includes('1 + Math.floor(Ma
 rec('V1 五级名称（浅层/中层/深层/深渊/虚空之隙）', bal.includes("'浅层裂隙', '中层裂隙', '深层裂隙', '深渊裂隙', '虚空之隙'"), 'levelNames');
 // V2 余烬升级树
 rec('V2 四科技（哨站/透镜/护符/余烬共振）', bal.includes('sentinel') && bal.includes('lens') && bal.includes('charm') && bal.includes('echo'), 'upgrades');
-rec('V2 哨站间隔缩短（20min → 下限 6min）', src.includes('Math.max(360, BALANCE.rift.spawnSec * Math.pow(0.75, lv))'), 'riftSpawnSec');
+rec('V2 哨站间隔缩短（20min → v2.8.30 下限 10min）', src.includes('Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv))'), 'riftSpawnSec');
 rec('V2 透镜 DM/RP ×(1+0.2/级)', src.includes('1 + 0.2 * riftUpgradeLevel(\'lens\')'), 'riftDmMult');
 rec('V2 护符封印成本 -10%/级（下限 50%）', src.includes('Math.max(0.5, 1 - 0.1 * riftUpgradeLevel(\'charm\'))'), 'riftSealCostMult');
 rec('V2 余烬共振 VS ×(1+0.5/级)', src.includes('1 + 0.5 * riftUpgradeLevel(\'echo\')'), 'riftVsMult');

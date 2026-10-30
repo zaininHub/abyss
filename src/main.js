@@ -2,7 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
-  prestigeNeed,
+  prestigeNeed, prestigeGain,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
   offlineRate, offlineCap, addEp,
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
@@ -26,6 +26,9 @@ import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaar
 import { religionUnlocked } from './data/religions.js';
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
+// v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
+// 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
+import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
@@ -52,37 +55,9 @@ import './style.css';
 
 const app = document.getElementById('app');
 
-// ========== 日志系统 ==========
-const logs = [];
-export function log(msg, cls) {
-  const t = new Date();
-  const hh = String(t.getHours()).padStart(2, '0'), mm = String(t.getMinutes()).padStart(2, '0');
-  const clsHtml = cls === 'good' ? ' class="ev-good"' : cls === 'bad' ? ' class="ev-bad"' : '';
-  logs.unshift(`<div><span class="t mono">${hh}:${mm}</span><span${clsHtml}>${msg}</span></div>`);
-  if (logs.length > 40) logs.pop();
-  const el = document.getElementById('log-content');
-  if (el) el.innerHTML = logs.join('');
-}
-
-let toastTimer = null;
-export function toast(msg) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
-}
-
-// ========== 脏检查渲染 ==========
-export const dirty = {
-  top: true, hero: true, shop: true, tech: true,
-  pets: true, prestige: true, projects: true,
-  offline: true, story: true, log: false,
-  rift: true, expedition: true,
-  tide: true, corruption: true, // v2.0 新增：潮汐卡片 / 腐化条
-  ai: true, // v1.3 A：AI 助手面板
-  relics: false, // v2.7.0：深渊遗物
-};
+// ========== 日志系统 / toast / 脏检查渲染 ==========
+// 以上三者已下沉至 src/core/runtime.js（log / toast / dirty），浏览器中行为不变，
+// 纯 Node 环境下为 DOM 安全实现，便于核心模块单测。
 
 // ========== v2.0 故事线面板（v2.2 只读状态卡：走向由定向建筑购买决定，面板不再提供任何选择按钮） ==========
 function renderStorylinePanel() {
@@ -1299,28 +1274,10 @@ function resumeGameClock() {
   lastTick = performance.now();
 }
 
-// v2.5.4 ①：通用二级确认弹框（title / 正文 / 取消-确认）
-let _confirmOk = null;
-export function askConfirm(title, text, onYes) {
-  const m = document.getElementById('confirm-modal');
-  const t = document.getElementById('confirm-title');
-  const x = document.getElementById('confirm-text');
-  if (!m || !t || !x) return;
-  t.textContent = title;
-  x.textContent = text;
-  _confirmOk = onYes;
-  m.style.display = 'flex';
-  pauseGameClock(); // v2.9.0：弹框期间一切计时暂停
-}
-document.getElementById('confirm-cancel')?.addEventListener('click', () => {
-  const m = document.getElementById('confirm-modal'); if (m) m.style.display = 'none'; _confirmOk = null;
-  resumeGameClock();
-});
-document.getElementById('confirm-ok')?.addEventListener('click', () => {
-  const m = document.getElementById('confirm-modal'); if (m) m.style.display = 'none';
-  resumeGameClock();
-  const fn = _confirmOk; _confirmOk = null; if (fn) fn();
-});
+// v2.5.4 ①：通用二级确认弹框已下沉至 src/core/runtime.js（askConfirm / bindConfirmButtons / registerConfirmHooks）。
+// 浏览器启动时注入游戏时钟的暂停/恢复钩子并绑定确认框按钮（DOM 存在时才生效）：
+registerConfirmHooks({ pause: pauseGameClock, resume: resumeGameClock });
+bindConfirmButtons();
 
 // ========== v2.9.0：深渊吞噬·命运抉择（倒计时终结触发；不可关闭，二选一） ==========
 function showCollapseChoice() {
@@ -1793,6 +1750,7 @@ let lastAiUnlocked = false;  // v1.3 A：AI 核心解锁变化检测
 let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 
 let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
+let _codeRainStarted = false, _codeRainTimer = null; // v3.0.0：前置声明（配合 __advance 时间加速，消除 TDZ）
 function tick(now) {
   frame++;
   const dt = Math.max(0, Math.min(10, (now - lastTick) / 1000)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
@@ -2188,13 +2146,13 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
-  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain };
+  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec };
 }
 
 
 // ========== v2.8.4 ⑤：编译器神殿——青色代码雨粒子（背景特效） ==========
 // v2.8.21 ①：setInterval 替代 RAF（headless/低功耗环境 RAF 可能暂停 → 粒子不绘制）；字符可见度 0.22→0.45
-let _codeRainStarted = false, _codeRainTimer = null;
+// v3.0.0：_codeRainStarted / _codeRainTimer 已前置声明于主循环区
 function ensureCodeRain() {
   const canvas = document.getElementById('code-rain');
   if (!canvas) return;

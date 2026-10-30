@@ -1,7 +1,7 @@
 import { S, save } from '../state.js';
 import { getEvents } from '../core/provider.js';
 import { UPGRADES } from '../data/upgrades.js';
-import { computeCps, eventFreqMult, offlineRate, fmt, elv, tideMult, addEp } from './economy.js';
+import { computeCps, eventFreqMult, offlineRate, fmt, elv, tideMult, addEp, addRp } from './economy.js';
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：机会感知器·锐
 
 export function maybeTriggerEvent() {

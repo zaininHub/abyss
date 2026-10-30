@@ -176,7 +176,8 @@ for (const [name, fn] of tests) {
 console.log('[5] 源码级静态扫描（PM 断言 1/2）');
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-const SRC_DIR = join(dirname(new URL(import.meta.url).pathname), '..', 'src');
+import { fileURLToPath } from 'node:url';
+const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 function walkJs(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {

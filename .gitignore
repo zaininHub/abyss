@@ -2,6 +2,7 @@ node_modules/
 # 浏览器测试截图目录（如存在）
 tests/EV/
 tests/*.png
+tests/playthrough-shots/
 dist/_shot-*.png
 # 浏览器测试自检截图不入库（v270-relics 曾写入 dist）
 *.log
