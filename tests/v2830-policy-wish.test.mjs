@@ -43,11 +43,12 @@ test('v2.8.30 神权协议（line_faith）：全局 ×3 且信仰生产消耗 ×
   assert.ok(f2 >= f1 * 2 * 0.99 && f2 <= f1 * 2 * 1.01, `line_faith 信仰消耗应 ×2（${f1} → ${f2}）`);
 });
 
-test('v2.8.30 研究升级：许愿池 fx null 不报错、薪酬 desc 已去除「当前」括号', () => {
+test('v3.0.3 研究升级：许愿池已移入设施（非 researchUpgs）；薪酬 desc 已去除「当前」括号', () => {
   const wage = researchUpgs.find(x => x.id === 'rp_wage');
   assert.ok(wage.desc.includes('-4%/s'), '薪酬协商 desc 应为 /s（无（当前）括号）');
+  // v3.0.3：wish_well 从 researchUpgs 移入 BALANCE.buildings（通用设施）
   const wish = researchUpgs.find(x => x.id === 'wish_well');
-  assert.equal(wish.name, '许愿池');
-  assert.equal(wish.desc, '万一呢？');
-  assert.equal(wish.fx, null);
+  assert.equal(wish, undefined, '许愿池不在 researchUpgs（已移入设施）');
+  assert.ok(BALANCE.buildings.wish_well, '许愿池在 BALANCE.buildings.wish_well');
+  assert.equal(BALANCE.buildings.wish_well.name, '许愿池');
 });

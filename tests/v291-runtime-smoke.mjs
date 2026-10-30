@@ -66,8 +66,8 @@ try {
   }
   await page.evaluate(() => document.getElementById('wiki-x').click()); await sleep(100);
 
-  // 7. 许愿池（注入解锁 + 视觉存在）
-  await page.evaluate(() => { S.rpTheories = S.rpTheories || {}; S.rpTheories.wish_well = 1; S.ep = 1e6; });
+  // 7. 许愿池（v3.0.3：注入设施 wish_well 解锁 + 视觉存在）
+  await page.evaluate(() => { S.buildings = S.buildings || {}; S.buildings.wish_well = 1; S.ep = 1e6; });
   await sleep(300);
   const wellExists = await page.$eval('#wish-well', el => !!el).catch(() => false);
   const wellSvg = await page.$eval('#wish-well .wish-svg', el => !!el).catch(() => false);

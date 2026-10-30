@@ -12,6 +12,7 @@ export const BUILDINGS = [
   // 需里程碑/已有建筑才显示，导致玩家在商店底部找不到出售入口；现全线可见、效果通用
   // （DM 采集 +20%/级、3 级裂隙封印 +5 DM，读侧见 economy.abyssFishbowlLevel）
   BALANCE.buildings.abyss_fishbowl,
+  BALANCE.buildings.wish_well, // v3.0.3：许愿池从研究升级移入通用设施
 ];
 
 // v2.1 建筑表（46 新增 + storage/cache 升级镜像）

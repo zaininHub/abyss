@@ -23,14 +23,20 @@ const riftSrc = readFileSync(new URL('../src/modules/rift.js', import.meta.url),
 const vehiclesSrc = readFileSync(new URL('../src/modules/vehicles.js', import.meta.url), 'utf8');
 const htmlSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-test('Bug1/2：许愿池已入研究升级分组（prod），商店可购买 → 解锁后浮动井可出现', () => {
-  const wish = BALANCE.researchUpgs.find(x => x.id === 'wish_well');
+test('v3.0.3 Bug1/2：许愿池在通用设施（非研究点），设施可购买 → 解锁后浮动井可出现', () => {
+  // v3.0.3：wish_well 从研究升级移入通用设施 BALANCE.buildings（避免与研究点重复）
+  const wish = BALANCE.buildings.wish_well;
+  assert.ok(wish, '许愿池在 BALANCE.buildings.wish_well');
   assert.equal(wish.name, '许愿池');
-  assert.equal(wish.desc, '万一呢？');          // 描述文案即「万一呢？」（非另作升级项）
-  assert.equal(wish.fx, null);
-  assert.ok(shopSrc.includes("'wish_well'], unlock: null"), 'wish_well 应并入 prod 分组（此前不在任何分组→买不到→许愿池永不出现）');
+  assert.equal(wish.levels, 1, '许愿池 1 级（单次购买）');
+  // 研究升级不再含 wish_well
+  assert.equal(BALANCE.researchUpgs.find(x => x.id === 'wish_well'), undefined, '研究升级不含 wish_well');
+  // 研究点 prod 分组不含 wish_well
+  assert.ok(!shopSrc.includes("'wish_well'], unlock: null"), 'prod 分组不再含 wish_well');
   assert.ok(mainSrc.includes('WISH_COST = 100, WISH_CHANCE = 0.0001, WISH_REWARD = 100000'), '投币：100 EP / 0.01% / +100K EP');
   assert.ok(mainSrc.includes('wish-coin'), '许愿池 SVG/动画结构存在');
+  // ensureWishWell 检查设施（兼容旧档 rpTheories）
+  assert.ok(mainSrc.includes('S.buildings && S.buildings.wish_well'), 'ensureWishWell 检查 S.buildings.wish_well');
 });
 
 test('Bug3：倒计时一旦启动即锁定——腐化被动回落不再取消；唯主动净化（cancelCollapse）可解除', () => {

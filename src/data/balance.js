@@ -49,6 +49,7 @@ export const BALANCE = {
     dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
+    wish_well: { id: 'wish_well', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['投币（100 EP）：万一呢？0.01% 概率得 100K EP'] }, // v3.0.3：从研究升级移入通用设施（避免与研究点重复）
   },
   // ===== v2.1 建筑驱动转向（PM 设计文档 §2.2 + 终章 RESCALE 价梯，唯一数值基准）=====
   // 级制红线：重复购买即升级（KG 工坊模式），effect = value × level；效果类 ≤9 级、乘算锚点 ≤3 级、扩容类 ≤20 级，禁止无限堆叠
@@ -309,7 +310,7 @@ export const BALANCE = {
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: '信仰产出 +10%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
-    { id: 'wish_well',      name: '许愿池',     cap: 1,  base: 500, growth: 1,   fx: null,                          desc: '万一呢？' }, // v2.8.30 ③：许愿池——右侧投币（100 EP/次，0.01% 得 100K EP）
+    // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {
     accumulateRate: 0.1,       // 每秒按溢出比例累积

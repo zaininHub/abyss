@@ -42,7 +42,7 @@ export default {
     },
     buildings: {
       append: [
-        { id: 'wishing_pool', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['无数值效果；点击可"投币"'] },
+        // v3.0.3：wishing_pool（许愿池）移除——通用设施 BALANCE.buildings.wish_well 已全线可见，此处重复
         { id: 'gospel_hall', name: '福音大厅', levels: 3, base: 3e5, growth: 6, desc: ['事件频率 +10%', '事件频率 +20%', '事件频率 +30%；正面事件持续时间 +30%'] },
       ],
     },

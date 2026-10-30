@@ -100,15 +100,15 @@ test('v2.8.4 ③ ES 门控：首次晋升获得 ES → discoverEs 点亮', () =>
   assert.equal(esDiscovered(), true, '正常晋升点亮 ES');
 });
 
-test('v2.9.0 ④ 研究升级：11 项（含许愿池）、成本递增、乘区生效', () => {
+test('v3.0.3 研究升级：10 项（许愿池已移入通用设施）、成本递增、乘区生效', () => {
   reset();
-  assert.equal(BALANCE.researchUpgs.length, 11, '研究升级 11 项（v2.9.0 许愿池入列）');
+  assert.equal(BALANCE.researchUpgs.length, 10, '研究升级 10 项（v3.0.3 许愿池移入设施）');
   const wish = BALANCE.researchUpgs.find(x => x.id === 'wish_well');
-  assert.ok(wish, '许愿池存在');
-  assert.equal(wish.desc, '万一呢？', '许愿池描述 = 万一呢？（无 fx，走右侧投币动效）');
-  // 数据层：成本随等级递增（growth>1）且上限合理（长线；许愿池单级属风味项例外）
+  assert.equal(wish, undefined, '许愿池不在研究升级（已移入 BALANCE.buildings）');
+  assert.ok(BALANCE.buildings.wish_well, '许愿池在通用设施 BALANCE.buildings.wish_well');
+  // 数据层：成本随等级递增（growth>1）
   for (const u of BALANCE.researchUpgs) {
-    assert.ok(u.growth > 1 || u.id === 'wish_well', `${u.id} 成本递增（许愿池单级除外）`);
+    assert.ok(u.growth > 1, `${u.id} 成本递增`);
     assert.ok(u.cap >= 1, `${u.id} 等级上限`);
   }
   // 乘区：加乘（ep/thread）与叠乘（global）

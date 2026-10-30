@@ -831,7 +831,8 @@ const WISH_WELL_SVG = `<svg class="wish-svg" viewBox="0 0 120 132" width="96" he
 <span class="wish-label">许愿池</span>`;
 function ensureWishWell() {
   let w = document.getElementById('wish-well');
-  const owned = (S.rpTheories && S.rpTheories.wish_well) > 0;
+  // v3.0.3：许愿池从研究升级移入通用设施——检查 S.buildings.wish_well（兼容旧档 S.rpTheories.wish_well）
+  const owned = ((S.buildings && S.buildings.wish_well) || (S.rpTheories && S.rpTheories.wish_well) || 0) > 0;
   if (!owned) { if (w) w.remove(); return; }
   if (!w) {
     w = document.createElement('button');

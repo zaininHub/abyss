@@ -32,10 +32,10 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline, fami
 }
 
 console.log('[L1] 静态基线');
-t('getAllBuildings() 恰好 58 栋且 ID 唯一（v2.7.5 新增 3 仓库后）', () => {
+t('getAllBuildings() 恰好 59 栋且 ID 唯一（v3.0.3 许愿池移入通用设施）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 58, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 58, 'ID 必须唯一');
+  assert.equal(all.length, 59, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 59, 'ID 必须唯一');
 });
 t('级制红线恒真：非扩容类静态 cap ≤ 20；unlimited 扩容类豁免（v2.4 KG 无限化）', () => {
   for (const b of getAllBuildings()) {

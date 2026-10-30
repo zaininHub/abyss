@@ -21,10 +21,10 @@ function t(name, fn) {
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 console.log('[1] 61 栋注册表 & 级制红线（组长硬性要求：非扩容类静态 cap ≤ 20；v2.4 扩容类 unlimited 豁免）');
-t('getAllBuildings() 恰好 58 栋且 ID 唯一（v2.7.5 新增 3 仓库后）', () => {
+t('getAllBuildings() 恰好 59 栋且 ID 唯一（v3.0.3 许愿池移入通用设施）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 58, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 58, 'ID 必须唯一');
+  assert.equal(all.length, 59, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 59, 'ID 必须唯一');
 });
 t('既有 4 座 + v2.1 表 50 项 + 定向 3 栋 = 57（v2.7.5 新增 3 仓库；存储/蒸馏经 via:upgrade 单独注册）', () => {
   assert.equal(V21_BUILDINGS.length, 50);

@@ -1258,8 +1258,8 @@ export function buyResearchUpgrade(id) {
 // v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
 // 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局（累计 4 级）
 const RP_GROUPS = [
-  // v2.9.0：许愿池并入「产出强化」组——此前未入任何分组 → 商店不渲染 → 买不到 → 许愿池永不出现（Bug 根因）
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'wish_well'], unlock: null },
+  // v3.0.3：许愿池 wish_well 已从研究升级移入通用设施（BALANCE.buildings）——不再在研究点 tab 渲染
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
   { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith'],             unlock: { prev: 'prod', need: 4 } },
   { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift'],                                      unlock: { prev: 'res', need: 4 } },
 ];
