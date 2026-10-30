@@ -316,7 +316,7 @@ export function renderAiPanel(container) {
       </div>`;
   }
   container.innerHTML = `
-    <div class="ai-desc">预留线：EP 上限的 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%（当前 ${fmt(line)} EP）——自动化不会把 EP 花到预留线以下</div>
+    <div class="ai-desc">预留线：EP 上限的 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</div>
     ${sw('autoUpgrade', '自动升级', '每 5s 购买回本时间最短的产出项（成本 ÷ 边际 CPS，含全局乘数）；EP 低于预留线时暂停')}
     ${sw('autoHire', '自动招募', '线程净产出为正且 EP ≥ 2×招募成本时自动招募；净产出为负自动停止')}
     ${sw('autoClaim', '自动领取', '任务完成进入待领取状态立即自动领取')}

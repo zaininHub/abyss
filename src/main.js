@@ -24,7 +24,7 @@ import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked } from './data/religions.js';
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
@@ -656,7 +656,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.8.30 ⑤：灵感工坊（自动蒸馏）移入研究点 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -1809,13 +1809,28 @@ function tick(now) {
   }
 
   // v2.7.1：线程懒惰态计时——EP 持续近满（≥98% cap）开始计时；进入懒惰后
-  // 即使 EP 跌破近满线也保持（懒惰中消耗>产出自然下滑），直到 EP 跌到 0 或任意升级/购买解除
+  // v2.8.30 ④：EP 跌破近满线且持续 afterSec 即解除（对称缓冲）——避免消耗基数过低导致 EP 不跌、懒惰文案永不消失
+  const lazyAfterMs = (BALANCE.lazy?.afterSec || 60) * 1000;
   if (isLazy()) {
-    if (S.ep <= 0) S.lazySince = null;
+    if (S.ep <= 0) { S.lazySince = null; S.lazyLowSince = null; }
+    else if (S.ep < capNow * 0.98) {
+      if (!S.lazyLowSince) S.lazyLowSince = now;
+      if (now - S.lazyLowSince >= lazyAfterMs) S.lazySince = null;
+    } else S.lazyLowSince = null;
   } else if (S.ep >= capNow * 0.98) {
     if (!S.lazySince) S.lazySince = now;
+    S.lazyLowSince = null;
   } else {
-    S.lazySince = null;
+    S.lazySince = null; S.lazyLowSince = null;
+  }
+
+  // v2.8.30 ⑤：灵感工坊自动蒸馏（研究点开关）——消耗 EP 转化 RP（EP 归零自动停，懒惰可解除）
+  const atriumN = S.upgrades && S.upgrades.atrium ? S.upgrades.atrium : 0;
+  if (atriumN > 0 && S.atriumOn !== false && S.ep > 0) {
+    const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
+    const used = Math.min(S.ep, epNeed);
+    S.ep -= used;
+    addRp((used / (BALANCE.atrium.epRate || 150)) * (BALANCE.atrium.rate || 0.15) * atriumN);
   }
 
   // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），

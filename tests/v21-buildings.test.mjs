@@ -242,7 +242,7 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
 }
 t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 3,611,402（v2.8.27 曲线）', () => {
   setCapState(12, 20, 2, 8, 0, 0, 6);
-  assert.equal(epStorageCap(), 2239938, `实际 ${epStorageCap()}`); // v2.8.30 capPer/growth 降低
+  assert.equal(epStorageCap(), 3189847, `实际 ${epStorageCap()}`); // v2.8.30 ⑤ capPer/growth 回升（2500→4000、1.15→1.18）
 });
 t('S2 终局锚点：全满配 m=9 → epStorageCap ≈ 374,131,019,960（v2.8.27 曲线，容差 2e6）', () => {
   setCapState(20, 20, 3, 20, 20, 20, 9);
@@ -250,7 +250,7 @@ t('S2 终局锚点：全满配 m=9 → epStorageCap ≈ 374,131,019,960（v2.8.2
 });
 t('开局锚点：storage1/其余 0 → 5,175（v2.8.30 capPer 2500×1.15 曲线）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
-  assert.equal(epStorageCap(), 5175);
+  assert.equal(epStorageCap(), 6900); // v2.8.30 ⑤ capPer 4000 曲线
 });
 
 console.log('[6] 防死锁 30% 钳制（组长硬性要求：组D 三梯任意阶段买得起）');

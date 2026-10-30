@@ -210,10 +210,12 @@ export function renderReincarn(container) {
       const cost = echoUpgradeCost(u.id);
       const maxed = lv >= u.cap;
       const afford = (S.abyssEcho || 0) >= cost;
-      html += `<div class="echo-upg ${maxed ? 'maxed' : ''}" data-echo-upg="${u.id}" style="cursor:pointer">
-        <div class="echo-upg-name">${u.name} <span class="echo-upg-lv">Lv.${lv}/${u.cap}</span></div>
-        <div class="echo-upg-desc">${u.desc}</div>
-        <div class="echo-upg-cost" style="color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 回响'}</div>
+      html += `<div class="echo-upg ${maxed ? 'maxed' : ''}" data-echo-upg="${u.id}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid ${maxed ? 'var(--border)' : afford ? 'rgba(63,185,80,.45)' : 'var(--border)'};border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;transition:border-color .15s,background .15s" onmouseover="this.style.background='rgba(255,255,255,.07)'" onmouseout="this.style.background='rgba(255,255,255,.03)'">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:10px">Lv.${lv}/${u.cap}</span></div>
+          <div style="font-size:10px;color:var(--text-2);margin-top:2px">${u.desc}</div>
+        </div>
+        <div style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${maxed ? 'rgba(139,148,158,.15)' : afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 回响'}</div>
       </div>`;
     }
     if (list._lastHtml !== html) {

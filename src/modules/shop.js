@@ -139,7 +139,7 @@ export function renderShop(container) {
   // v2.8.2 反馈④：RP 相关升级（组 F 加成 + 灵感蒸馏塔）移入研究点 tab，主商店不再渲染
   const RP_FAMILY_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS.includes(u.id)
-    && u.cat !== 'purifier'); // v2.8.24 ①：净化节点仅遗物区 DM 购买，主商店完全排除（v2.8.22 移遗物后 filter 仍保留有熵减协议时渲染 → 兜底组「存储与资源建筑」重复出现）
+    && u.cat !== 'purifier' && u.id !== 'atrium'); // v2.8.30 ⑤：灵感工坊移入研究点（自动蒸馏）（v2.8.22 移遗物后 filter 仍保留有熵减协议时渲染 → 兜底组「存储与资源建筑」重复出现）
   // v2.3.1 缺陷⑦修复：链序改定义序（与 eternal v2.3 修复同口径）。
   // 原 v1.3 E「已解锁按成本升序」在 v2.3 渐进披露链下失效：已购项成本上浮后
   // 与未购项按成本交错，chainSplit 的已购前缀 p 判定失真 → 链提示挂错对象
@@ -248,6 +248,29 @@ export function renderRpFamily(container) {
   });
 }
 let rpFamilyContainer = null;
+
+// v2.8.30 ⑤：灵感工坊（自动蒸馏）——研究点 tab 卡（开关按钮 + 消耗/产出实时）
+export function renderAtriumDistill(container) {
+  if (!container) return;
+  const old = container.querySelector('.atrium-distill');
+  if (old) old.remove();
+  const n = (S.upgrades && S.upgrades.atrium) || 0;
+  if (n < 1) return;
+  const on = S.atriumOn !== false;
+  const epS = (BALANCE.atrium.epRate || 150) * n;
+  const rpS = (BALANCE.atrium.rate || 0.15) * n;
+  const div = document.createElement('div');
+  div.className = 'atrium-distill item';
+  div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button></div>
+    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 归零自动停）</div>`;
+  div.querySelector('[data-atrium-toggle]').addEventListener('click', () => {
+    S.atriumOn = S.atriumOn === false ? true : false;
+    save(S);
+    renderAtriumDistill(container);
+    if (logFn) logFn(`灵感工坊蒸馏${S.atriumOn === false ? '关' : '开'}`, 'good');
+  });
+  container.appendChild(div);
+}
 let rpFamilyItemEls = new Map();
 
 // v2.6.7：商店链窗口增量揭示——解锁数/已购前缀变化时只插入新可见卡，不整面板重建

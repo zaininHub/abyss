@@ -5,7 +5,7 @@ export const BALANCE = {
   scribble: { base: 120, cps: 0.12 },  // v2.8.27：首轮 7-10 天节奏——基础成本 ×3、产出 ×0.5（原 v2.8.3 base 40/cps 0.25）
   script: { base: 960, cps: 0.85 },  // v2.8.27：×3 / ×0.5
   parallel: { base: 10800, cps: 3.5 }, // v2.8.27：×3 / ×0.5
-  atrium: { base: 5e4, rate: 0.15 },
+  atrium: { base: 5e4, rate: 0.15, epRate: 150 }, // v2.8.30 ⑤：自动蒸馏——每秒消耗 150 EP 转化 0.15 RP（可关闭）
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
   thread: {
@@ -93,7 +93,7 @@ export const BALANCE = {
     { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
     // ---- 组 F · RP 加成（5 座）----
-    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, rpCost: 100, growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' }, // v2.8.30 ②：晋升 RP 加成大幅涨价（8→100）防过早解锁
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 4, base: 1200, rpCost: 100, growth: 1.18, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' }, // v2.8.30 ⑤：可升级 4/3
     { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, rpCost: 200, growth: 1.20, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
     { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  rpCost: 300, growth: 1.26, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  rpCost: 500, growth: 1.27, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
@@ -121,8 +121,8 @@ export const BALANCE = {
     { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 20000, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 4000 }, desc: '每级 EP 上限 +4,000' }, // v2.8.30：价格陡峭、加成减半（8000→4000）
-    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 5e4, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 5e5 }, desc: '每级 EP 上限 +500,000' },
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 80000, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000' }, // v2.8.30 ⑤：大幅涨价（20K→80K）、储存量随涨（4000→8000）
+    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 2e5, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: '每级 EP 上限 +800,000' }, // v2.8.30 ⑤：涨价（50K→200K）、储存量随涨（500K→800K）
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
@@ -213,7 +213,7 @@ export const BALANCE = {
   // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
   // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
   // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
-  storage: { base: 3000, growth: 1.45, capPer: 2500, capGrowth: 1.15, maxLevel: 20 }, // v2.8.30：价格陡峭的同时加成降低（capPer 5000→2500、capGrowth 1.18→1.15）
+  storage: { base: 12000, growth: 1.45, capPer: 4000, capGrowth: 1.18, maxLevel: 20 }, // v2.8.30 ⑤：中期存储大幅涨价（3000→12000）、储存量随涨价增多（capPer 2500→4000）
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],

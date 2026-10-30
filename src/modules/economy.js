@@ -620,7 +620,7 @@ export function focusCost() {
 
 // ========== 晋升需求 ==========
 // v2.8.27 ②：全资源存储上限（建筑扩容，EP 购买）——基础上限 + 建筑每级增量
-export function rpCap() { return 5000 + ((S.upgrades && S.upgrades.rp_vault) || 0) * 500; }
+export function rpCap() { return 2500 + ((S.upgrades && S.upgrades.rp_vault) || 0) * 400; } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
 export function dmCap() { return 1000 + ((S.upgrades && S.upgrades.dm_vault) || 0) * 100; }
 export function ptCap() { return 1000 + ((S.upgrades && S.upgrades.pt_vault) || 0) * 200; }
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
@@ -642,7 +642,7 @@ export function prestigeRpGain() {
   // v2.5.1：与职级点同口径（round）；未达标不保底（晋升门槛由 prestigeGain 承担）
   const x = S.runEarned / prestigeNeed();
   if (x < 1) return 0;
-  return Math.max(1, Math.round(Math.sqrt(x) * rpMult()));
+  return Math.max(1, Math.round(Math.pow(x, 0.45) * rpMult())); // v2.8.30 ⑤：首次晋升后节奏放缓（sqrt→x^0.45）
 }
 
 // ========== CPS 计算 ==========
@@ -745,8 +745,8 @@ export function epStorageCap() {
   const cacheCount = S.upgrades['cache'] || 0;
   cap += cacheCount * 8000; // v2.8.2：5000→8000（中期上限宽松，EP 不易触顶）
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
-  cap += (S.upgrades['reserve_bin'] || 0) * 8000; // v2.8.2：3000→8000
-  cap += (S.upgrades['deep_bin'] || 0) * 5e5;
+  cap += (S.upgrades['reserve_bin'] || 0) * 12000; // v2.8.30 ⑤：储存量随涨价增多（8000→12000） // v2.8.2：3000→8000
+  cap += (S.upgrades['deep_bin'] || 0) * 8e5; // v2.8.30 ⑤：储存量随涨价增多（500K→800K）
   cap *= researchMult('storage'); // v2.8.25 ②：存储协议（研究点）EP 上限 +8%/级
   // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）
   const storageLv = S.upgrades['storage'] || 0;

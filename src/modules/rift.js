@@ -76,12 +76,9 @@ export function delveRift() {
   if (S.riftExpedition) return { ok: false, reason: '已在深入探索中' };
   if (!S.resDiscovered || !S.resDiscovered.dm) return { ok: false, reason: '需先发现深渊之力（DM）——购入首辆载具或通过裂隙封印获得 DM' };
   const r = S.activeRift;
-  const epCost = Math.ceil(r.sealCost * 0.5);
-  const dmCost = r.level * 2;
+  const epCost = Math.ceil(r.sealCost * 0.5); // v2.8.30 ⑤：深入只消耗 EP（去 DM 门槛）
   if (S.ep < epCost) return { ok: false, reason: `EP 不足（需 ${fmt(epCost)}）` };
-  if ((S.dm || 0) < dmCost) return { ok: false, reason: `DM 不足（需 ${dmCost}）` };
   S.ep -= epCost;
-  S.dm -= dmCost;
   S.riftExpedition = {
     until: Date.now() + BALANCE.rift.delveDurSec * 1000,
     level: r.level,
@@ -270,7 +267,7 @@ export function refreshRiftAffordability() {
     if (btn) { btn.disabled = cost === null || (S.riftEmber || 0) < cost; btn.classList.toggle('disabled', cost !== null && (S.riftEmber || 0) < cost); }
   }
   const delve = document.getElementById('delve-rift');
-  if (delve) { const noDm = !(S.resDiscovered && S.resDiscovered.dm); delve.disabled = noDm; delve.classList.toggle('disabled', noDm); }
+  if (delve) { delve.disabled = false; delve.classList.toggle('disabled', false); } // v2.8.30 ⑤：深入只耗 EP，DM 门控移除
 }
 
 export function renderRift(container) {

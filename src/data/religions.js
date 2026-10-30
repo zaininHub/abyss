@@ -41,7 +41,7 @@ export function sealUpgradeCost(level) {
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级
-export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 1e5, growth: 1.25, cap: 10, faithPerSec: 0.05, faithEpPerUnit: 2000 }; // v2.8.30 ②：信仰生产消耗 EP（每 1 信仰耗 2000 EP/s，参考 DM 采集机制） // v2.6.4 ③：0.15 → 0.05（信仰超长线，缓慢累计）
+export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 5e5, growth: 1.35, cap: 10, faithPerSec: 0.05, faithEpPerUnit: 2000 }; // v2.8.30 ⑤：信仰建筑涨价（1e5→5e5、growth 1.35）
 export function templeCost() {
   const lv = (S.religion && S.religion.temple) || 0;
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));
@@ -83,7 +83,7 @@ export const PRAISE = {
   devSoftCap: 0.40,      // 软上限 40%
   devSoftAfter: 500,     // 虔诚 > 500 后衰减 50%
   transcendBase: 100,    // 超验成本 100 × 2.2^层级
-  transcendGrowth: 2.2,
+  transcendGrowth: 3.0, // v2.8.30 ⑤：超验涨价（2.2→3.0，后期虔诚消耗更重）
 };
 export const SECRET_SANCTUMS = [
   { id: 'black_sanctum', name: '黑曜圣所', needTranscend: 1, costEmberBase: 10, costEmberGrowth: 1.8, devGate: 10,

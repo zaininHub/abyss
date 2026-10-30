@@ -1,8 +1,8 @@
 // v2.9.1 真实游戏运行冒烟测试（puppeteer-core + 本机 Chrome）
 // 验证主要功能：加载/点击/招募/升级/科技/Wiki/许愿池/吞噬抉择/前3级线程降价
 import puppeteer from 'puppeteer-core';
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const URL = 'http://localhost:5173/';
+const CHROME = '/usr/local/bin/chromium'; // Linux env adapt
+const URL = 'file://' + process.cwd() + '/dist/index.html'; // Linux env adapt
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 const results = [];
