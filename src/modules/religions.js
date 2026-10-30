@@ -111,8 +111,10 @@ export function toggleTemple() {
     rlog(`信仰圣所已关闭：停止信仰产出与 EP 消耗${parts.length ? '（冷启动代价：' + parts.join('，') + '）' : '（无信仰/虔诚可损失）'}`, 'bad');
     if (toastFn) toastFn(`信仰圣所已关闭${parts.length ? '（损失 ' + parts.join('，') + '）' : ''}`);
   } else {
-    // 重启：无代价，恢复产出
+    // 重启：无代价，恢复产出；v3.0.2：清除自动暂停标记
     S.religion.templeOff = false;
+    S.religion._templeAutoPaused = false;
+    S._templeEpShortSec = 0;
     save(S);
     rlog(`信仰圣所已重启：恢复信仰产出（+${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）`, 'good');
     if (toastFn) toastFn('信仰圣所已重启');
@@ -206,20 +208,35 @@ export function faithDrainPerSec() {
   if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（消耗同步）
   return r * mult * TEMPLE.faithEpPerUnit;
 }
+// v3.0.2：自动暂停统一口径（与探采同）——EP 不足持续 AUTO_PAUSE_GRACE 秒才暂停；暂停后不自动恢复（需手动重启）
+const AUTO_PAUSE_GRACE = 5; // 秒
 export function tickReligion(dt) {
   if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
   const r = templeFaithPerSec();
   if (r > 0) {
+    // v3.0.1：圣所关闭（手动/自动）——停止产出与 EP 消耗
+    if (S.religion && S.religion.templeOff) { S._templeEpShortSec = 0; return; }
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
     if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
-    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）——EP 不足则停止产出（与 faithDrainPerSec 同口径）
+    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）
     const epUse = r * dt * mult * TEMPLE.faithEpPerUnit;
     if ((S.ep || 0) >= epUse) {
       S.ep -= epUse;
       S.faith = (S.faith || 0) + r * dt * mult;
+      S._templeEpShortSec = 0; // v3.0.2：EP 充足，重置缓冲计时器
+    } else {
+      // v3.0.2：EP 不足缓冲——持续 5s 才自动暂停（防反复横跳）；暂停后不自动恢复（需手动重启圣所）
+      S._templeEpShortSec = (S._templeEpShortSec || 0) + dt;
+      if (S._templeEpShortSec >= AUTO_PAUSE_GRACE) {
+        S.religion.templeOff = true;
+        S.religion._templeAutoPaused = true;
+        S._templeEpShortSec = 0;
+        rlog(`信仰圣所自动暂停：EP 持续不足 ${AUTO_PAUSE_GRACE}s——需手动重启圣所（损失 30% 信仰 + 15% 虔诚）`, 'bad');
+        if (toastFn) toastFn('信仰圣所自动暂停（EP 不足）——需手动重启');
+      }
     }
   }
 }
@@ -300,14 +317,14 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）${(S.religion && S.religion.templeOff) ? '<span style="color:var(--warn)"> · 已关闭（停止产出/不消耗 EP）</span>' : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
-      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
-        title="${(S.religion && S.religion.templeOff) ? '重启：恢复信仰产出（无代价）' : '关闭：停止信仰产出与 EP 消耗，但损失 30% 信仰 + 15% 虔诚（冷启动代价）'}"
-        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}
+      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? 'warn' : '') : 'warn'}" data-religion-toggle="1"
+        title="${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '重启：恢复信仰产出（无代价，清除自动暂停）' : '重启：恢复信仰产出（无代价）') : '关闭：停止信仰产出与 EP 消耗，但损失 30% 信仰 + 15% 虔诚（冷启动代价）'}"
+        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '自动暂停·点击恢复' : '重启圣所') : '关闭圣所'}</button>` : ''}
     </div>
     ${seal >= 1 ? `
     <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验</div>

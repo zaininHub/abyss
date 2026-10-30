@@ -445,17 +445,23 @@ function updateVehicleCollectHeader() {
     el.title = '购买载具后每 60 秒自动采集深渊物质';
   }
   // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取暂停
-  // v2.9.0 Bug④：EP 不足自动暂停的即时状态提示（自动恢复后提示消失）
+  // v3.0.2：自动暂停后不自动恢复——按钮显示"自动暂停·点击恢复"，点击清除 _probeAutoPaused（不切换 _probeEnabled）
   const autoPaused = enabled && rate > 0 && S._probeAutoPaused;
-  const btnCls = enabled ? '' : ' off';
-  const stateText = !enabled ? '已暂停' : (autoPaused ? '探采中' : '探采中');
+  const btnCls = !enabled || autoPaused ? ' off' : '';
+  const stateText = !enabled ? '已暂停' : (autoPaused ? '自动暂停·点击恢复' : '探采中');
   el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span>${info}${autoPaused ? ' <span style="color:var(--warn)">（EP 不足·自动暂停中，充足后自动恢复）</span>' : ''}</span>
+      <span>${info}${autoPaused ? ' <span style="color:var(--warn)">（EP 不足·自动暂停，需手动恢复）</span>' : ''}</span>
       <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${stateText}</button>
     </div>`;
   const tb = el.querySelector('#probe-toggle');
   if (tb) tb.addEventListener('click', () => {
-    S._probeEnabled = S._probeEnabled === false ? true : false;
+    // v3.0.2：自动暂停态点击→手动恢复（不切换 _probeEnabled）；否则切换手动开关
+    if (S._probeAutoPaused) {
+      S._probeAutoPaused = false;
+      S._probeEpShortSec = 0;
+    } else {
+      S._probeEnabled = S._probeEnabled === false ? true : false;
+    }
     save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
     updateVehicleCollectHeader();
     dirty.top = true;

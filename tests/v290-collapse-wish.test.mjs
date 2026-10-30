@@ -94,34 +94,37 @@ test('优化①：主动净化经济——成本/DM 析出公式（腐化越严�
   assert.ok(purgeDmFor(50) / purgeDmFor(25) > 3.9, '平方曲线：50% 的 DM 收益 ≈ 25% 的 4 倍');
 });
 
-test('Bug④：探采自动暂停 → EP 充足自动恢复（3 周期迟滞），边缘日志去重', () => {
+test('Bug④（v3.0.2）：探采 EP 不足持续 5s → 自动暂停；不自动恢复；边缘日志去重', () => {
   const logs = [];
   vehMod.setVehicleLogFn((m) => logs.push(m));
-  S.upgrades = { scooter: 1 }; // 0.05 DM/min → 每 60s 周期成本 = 0.05×6000 = 300 EP
-  S._probeEnabled = true; S.vehCollectTimer = 59.9; S._probeAutoPaused = false;
+  S.upgrades = { scooter: 1 }; // 0.05 DM/min → 周期成本 > 0
+  S._probeEnabled = true; S.vehCollectTimer = 0; S._probeAutoPaused = false; S._probeEpShortSec = 0;
   S.ep = 0; S.collapsed = false; S.riftExpedition = null;
+  // 缓冲期内（< 5s）不暂停
+  for (let i = 0; i < 49; i++) tickVehicleCollect(0.1); // 4.9s
+  assert.equal(S._probeAutoPaused, false, '缓冲期内（4.9s）不暂停');
+  assert.equal(logs.filter(m => m.includes('探采')).length, 0, '缓冲期内无暂停日志');
+  // 第 5s 触发暂停
   const r1 = tickVehicleCollect(0.2);
-  assert.equal(r1, 'transition', 'EP 不足 → 首次自动暂停（返回 transition 供页头刷新）');
-  assert.equal(logs.filter(m => m.includes('探采暂停')).length, 1, '暂停只打一条日志');
-  tickVehicleCollect(60); // 下一周期仍不足
-  tickVehicleCollect(60);
-  assert.equal(logs.filter(m => m.includes('探采暂停')).length, 1, '持续暂停不刷屏（仍是同一条）');
-  S.ep = 300 * 3; // 恢复门槛（3 周期成本）
-  S.vehCollectTimer = 59.9;
-  const r2 = tickVehicleCollect(0.2);
-  assert.equal(r2, 'transition', 'EP 充足 → 自动恢复');
-  assert.ok(logs.some(m => m.includes('探采恢复')), '恢复打一条日志');
-  S.vehCollectTimer = 59.9;
-  const r3 = tickVehicleCollect(0.2);
-  assert.equal(r3, true, '正常采集（DM 到账，无额外日志）');
-  const nPause = logs.filter(m => m.includes('探采暂停')).length;
-  assert.equal(nPause, 1, '全程暂停日志仍只有一条');
-  S.upgrades = {}; S._probeAutoPaused = false;
+  assert.equal(r1, 'transition', '持续 5s+ → 自动暂停（返回 transition）');
+  assert.equal(S._probeAutoPaused, true, '_probeAutoPaused=true');
+  assert.equal(logs.filter(m => m.includes('自动暂停')).length, 1, '暂停只打一条日志');
+  // EP 充足后不自动恢复
+  S.ep = 1e8;
+  tickVehicleCollect(10);
+  assert.equal(S._probeAutoPaused, true, 'EP 充足仍保持暂停（v3.0.2 不自动恢复）');
+  assert.equal(logs.filter(m => m.includes('自动恢复')).length, 0, '无自动恢复日志（v3.0.2 不自动恢复）');
+  // 持续暂停不刷屏
+  tickVehicleCollect(60); tickVehicleCollect(60);
+  assert.equal(logs.filter(m => m.includes('自动暂停')).length, 1, '持续暂停不刷屏（仍一条）');
+  S.upgrades = {}; S._probeAutoPaused = false; S._probeEpShortSec = 0;
 });
 
-test('Bug④（源码）：日志只出现在暂停/恢复边缘（删除逐周期刷屏）', () => {
-  assert.ok(vehiclesSrc.includes('if (!S._probeAutoPaused) {'), '暂停日志在边缘守卫内');
-  assert.ok(!vehiclesSrc.includes("净产出不足"), '旧「净产出不足」逐周期日志已删除');
+test('Bug④（源码 v3.0.2）：缓冲期常量 + 不自动恢复 + 手动恢复入口', () => {
+  assert.ok(vehiclesSrc.includes('AUTO_PAUSE_GRACE = 5'), '缓冲期 5s 常量');
+  assert.ok(vehiclesSrc.includes('_probeEpShortSec'), 'EP 不足缓冲计时器');
+  assert.ok(vehiclesSrc.includes('需手动点开关恢复'), '暂停日志含"需手动恢复"');
+  assert.ok(!vehiclesSrc.includes('探采恢复：EP 已充足'), '删除了原自动恢复日志');
 });
 
 test('Bug⑤：腐化满额/吞噬期间不触发新裂隙', () => {
@@ -131,7 +134,7 @@ test('Bug⑤：腐化满额/吞噬期间不触发新裂隙', () => {
 
 test('大项②：深潜层深在下潜时递增（此前恒 0 → 里程碑/政策组/轮回遗存维度全部失效）', () => {
   S.delve = { unlocked: true, depth: 0, up: {} };
-  S.dm = 1e9; S.collapsed = false; S.riftExpedition = null;
+  S.dm = 1e9; S.ep = 1e9; S.collapsed = false; S.riftExpedition = null; // v3.0.0：深潜 EP 化，需 EP+DM 双成本
   S.resDiscovered = { dm: true };
   const r = startDelve();
   assert.equal(r.ok, true);

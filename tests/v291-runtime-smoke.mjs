@@ -113,11 +113,18 @@ try {
   const talentModal = await page.$eval('#talent-modal', el => getComputedStyle(el).display !== 'none').catch(() => false);
   if (!talentModal) ok('转生锁定：吞噬期间晋升按钮不打开天赋弹框'); else bad('转生锁定', '天赋弹框仍打开');
 
-  // 11. 探采自动恢复（注入载具 + EP 充足）
-  await page.evaluate(() => { S.upgrades = S.upgrades || {}; S.upgrades.scooter = 1; S._probeEnabled = true; S._probeAutoPaused = true; S.ep = 1e7; S.vehCollectTimer = 59.9; });
-  await sleep(300);
-  const resumed = await page.evaluate(() => S._probeAutoPaused === false);
-  if (resumed) ok('探采：EP 充足后自动恢复（_probeAutoPaused→false）'); else bad('探采自动恢复', `paused=${await page.evaluate(()=>S._probeAutoPaused)}`);
+  // 11. v3.0.2 探采自动暂停不自动恢复（注入载具 + EP 充足 → 仍保持暂停，需手动恢复）
+  await page.evaluate(() => { S.upgrades = S.upgrades || {}; S.upgrades.scooter = 1; S._probeEnabled = true; S._probeAutoPaused = true; S._probeEpShortSec = 0; S.ep = 1e7; S.vehCollectTimer = 0; });
+  await sleep(500);
+  const stillPaused = await page.evaluate(() => S._probeAutoPaused === true);
+  if (stillPaused) ok('探采：EP 充足后仍保持自动暂停（v3.0.2 不自动恢复）'); else bad('探采不自动恢复', `paused=${await page.evaluate(()=>S._probeAutoPaused)}`);
+  // 手动恢复：直接操作 S 字段（模拟按钮点击的恢复逻辑——shop.js 里 if(_probeAutoPaused){清除})
+  await page.evaluate(() => {
+    if (S._probeAutoPaused) { S._probeAutoPaused = false; S._probeEpShortSec = 0; }
+  });
+  await sleep(200);
+  const manualResumed = await page.evaluate(() => S._probeAutoPaused === false);
+  if (manualResumed) ok('探采：手动恢复（_probeAutoPaused→false，按钮逻辑等价）'); else bad('探采手动恢复', `paused=${await page.evaluate(()=>S._probeAutoPaused)}`);
 
   // 12. v2.9.2 ② 离职礼盒（sp3_farewell 购买入口——线程休眠期间出现）
   await page.evaluate(() => {
