@@ -202,6 +202,8 @@ function render() {
   if (dirty.pets) {
     const petEl = document.getElementById('pet-grid');
     if (petEl) renderPetGrid(petEl);
+    // v3.0.3 第二批⑦：灵感工坊（研究点蒸馏）统一并入宠物面板——置于饼干蒸馏条下方
+    if (petEl) renderAtriumDistill(petEl);
     const floatEl = document.getElementById('pet-float');
     if (floatEl) renderPetFloat(floatEl);
     dirty.pets = false;
@@ -340,7 +342,7 @@ function renderTop() {
   const emberStat = document.getElementById('ember-stat');
   if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
     emberStat.style.display = S._riftSeen ? '' : 'none';
-    hEmber.textContent = S.riftEmber || 0;
+    hEmber.textContent = Math.round((S.riftEmber || 0) * 10) / 10; // v3.0.3 第二批④：余烬浮点显示收敛
   }
   const hBuff = document.getElementById('h-buff');
   // v2.7.5 ⑧：顶部轮回次数 + 悬停弹框显示回响加成（全局 +5%/点）
@@ -656,7 +658,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v2.8.30 ⑤：灵感工坊（自动蒸馏）移入研究点 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第二批⑦：灵感工坊移入宠物面板 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -852,6 +854,7 @@ function onWishToss() {
   if (now < wishCoolUntil) { toast('投币动画进行中，稍等片刻…'); return; }
   if ((S.ep || 0) < WISH_COST) { toast(`EP 不足（需 ${WISH_COST} EP）`); return; }
   S.ep -= WISH_COST;
+  S.wishCoins = (S.wishCoins || 0) + 1; // v3.0.3 第二批①：许愿池投币计数（成就）
   wishCoolUntil = now + 3000;
   w.disabled = true;
   w.classList.add('tossing');
@@ -862,6 +865,7 @@ function onWishToss() {
     w.classList.remove('tossing');
     w.classList.add(win ? 'win' : 'splash');
     if (win) {
+      S.wishWon = true; // v3.0.3 第二批①：许愿池中奖标记（成就）
       const gained = addEp(WISH_REWARD); // 统一入口：受 EP 上限约束，溢出部分入 RP 溢出池
       log(`许愿池：奇迹发生！+${fmt(gained)} EP${gained < WISH_REWARD ? '（已达存储上限，溢出转入 RP 池）' : ''}`, 'good');
       toast('✨ 奇迹发生了！+100K EP');
@@ -1651,6 +1655,9 @@ function checkAch() {
     { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
     { id: 'collapsed', name: '被深渊吞噬',    desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
     { id: 'idle60', name: '静默一分钟',    desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
+    // v3.0.3 第二批①：许愿池
+    { id: 'wish1',    name: '掷币入井',     desc: '首次向许愿池投币（100 EP）', test: s => (s.wishCoins || 0) >= 1 },
+    { id: 'wishwin',  name: '奇迹发生',     desc: '许愿池中奖（0.01% 概率 +100K EP）', test: s => !!s.wishWon },
     // v3.0.0：深渊集市
     { id: 'bazaar1',    name: '初次交易',     desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },
     { id: 'bazaar_t3',  name: '集市巨贾',     desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: s => (s.bazaar && s.bazaar.trades) >= 60 },

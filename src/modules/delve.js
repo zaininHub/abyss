@@ -38,7 +38,10 @@ export function canUnlockDelve() {
 export function unlockDelve() {
   if (delveUnlocked()) return { ok: false, reason: '已解锁' };
   if ((S.es || 0) < DELVE.unlockEs) return { ok: false, reason: `需转生 ES ≥ ${DELVE.unlockEs}` };
-  if (!S.resDiscovered || !S.resDiscovered.dm) return { ok: false, reason: '需先发现深渊之力（DM）' };
+  if (!S.resDiscovered || !S.resDiscovered.dm) {
+    // v3.0.3 第二批②：星尘金库买入即算发现 DM（与顶栏 anchorDone 同口径）
+    if (!S.upgrades || !(S.upgrades.dm_vault || 0)) return { ok: false, reason: '需先发现深渊之力（DM）' };
+  }
   if (!religionUnlocked()) return { ok: false, reason: '需先信奉一个宗教分支' };
   S.delve = S.delve || {};
   S.delve.unlocked = true;

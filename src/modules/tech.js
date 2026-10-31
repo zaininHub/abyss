@@ -161,7 +161,8 @@ export function renderEternal(container) {
   const split = chainSplit('eternal', [...ETERNALS], e => (S.eternal[e.id] || 0) > 0, S);
   split.visible.forEach((e, i) => {
     const owned = (S.eternal[e.id] || 0) > 0;
-    const el = owned ? makeEternalItem(e) : makeEternalLockedCard();
+    // v3.0.3 第二批⑧：链窗口内未购项显示真卡（可购/ES 不足灰显），不再 ??? 占位
+    const el = makeEternalItem(e);
     if (owned) eternalEls.set(e.id, el);
     container.appendChild(el);
   });

@@ -45,15 +45,15 @@ test('v3.0.0 集市：开张后 6 位商人就位、汇率在波动区间内、�
   assert.equal(BAZAAR.dealers.length, 6);
 });
 
-test('v3.0.0 集市：交易扣款与到账（EP → RP）', () => {
+test('v3.0.0 集市：交易扣款与到账（EP → DM）', () => {
   setup();
   bz.unlockBazaar();
   const lot = bz.lotOf('forge');
-  const ep0 = S.ep, rp0 = S.rp, st0 = bz.bazaarStockOf('forge');
+  const ep0 = S.ep, dm0 = S.dm, st0 = bz.bazaarStockOf('forge');
   const r = bz.trade('forge');
   assert.equal(r.ok, true, r.reason);
   assert.equal(S.ep, ep0 - lot.give, '扣 EP');
-  assert.ok(S.rp > rp0, '到账 RP');
+  assert.ok(S.dm > dm0, '到账 DM'); // v3.0.3 第二批③：熔炉不再直接产 RP（消耗 EP 换深渊物质）
   assert.equal(bz.bazaarStockOf('forge'), st0 - 1, '库存 -1');
   assert.equal(bz.bazaarTrades(), 1, '成交笔数 +1');
 });

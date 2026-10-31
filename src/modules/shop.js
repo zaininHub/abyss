@@ -261,18 +261,12 @@ export function renderAtriumDistill(container) {
   const on = S.atriumOn !== false;
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;
-  const uAtrium = UPGRADES.find(x => x.id === 'atrium');
-  const upgCost = uAtrium ? Math.ceil(uAtrium.base * Math.pow(uAtrium.growth || 1.5, n)) : 0;
-  const upgAfford = upgCost > 0 && (S.ep || 0) >= upgCost;
   const div = document.createElement('div');
   div.className = 'atrium-distill item';
-  div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>${upgCost > 0 ? `<button data-atrium-upg class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${upgAfford ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff;opacity:${upgAfford ? 1 : 0.5}">升级 ${fmt(upgCost)} EP</button>` : ''}</div>
-    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 归零自动停）</div>`;
-  const upgBtn = div.querySelector('[data-atrium-upg]');
-  if (upgBtn) upgBtn.addEventListener('click', () => {
-    if (!upgAfford) { if (logFn) logFn('EP 不足，无法升级灵感工坊', 'red'); return; }
-    if (buyUpgrade(uAtrium)) { save(S); renderAtriumDistill(container); if (logFn) logFn('灵感工坊升级至 ×' + (n + 1), 'good'); }
-  });
+  // v3.0.3 第二批⑦：统一游戏 UI——蒸馏开关放卡底，移除独立升级按钮（升级走主商店 atrium 卡）
+  div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><span class="count mono">${fmt(epS)} EP/s → +${fmt(rpS)} RP/s</span></div>
+    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 归零自动停；升级在主商店「灵感工坊」卡）</div>
+    <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>`;
   div.querySelector('[data-atrium-toggle]').addEventListener('click', () => {
     S.atriumOn = S.atriumOn === false ? true : false;
     save(S);
@@ -903,16 +897,6 @@ export function refreshShopAffordability() {
     el.classList.toggle('cant', S.ep < cost);
     const c = el.querySelector('.cost');
     if (c) c.textContent = `${fmt(cost)} EP`;
-  }
-  // v3.0.3 反馈⑦：研究点蒸馏升级按钮灰态/颜色即时同步（EP 变化不等待重渲染）
-  const au = document.querySelector('[data-atrium-upg]');
-  if (au) {
-    const uA = UPGRADES.find(x => x.id === 'atrium');
-    const nA = (S.upgrades && S.upgrades.atrium) || 0;
-    const costA = uA ? Math.ceil(uA.base * Math.pow(uA.growth || 1.5, nA)) : 0;
-    const affA = costA > 0 && (S.ep || 0) >= costA;
-    au.style.background = affA ? 'var(--good,#3fb950)' : 'var(--red,#f85149)';
-    au.style.opacity = affA ? 1 : 0.5;
   }
   // v2.2：岔路口三栋 EP 灰态 + 族升级 RP 灰态（1s 快刷，不重建 DOM）
   for (const [id, el] of crossroadItemEls) {

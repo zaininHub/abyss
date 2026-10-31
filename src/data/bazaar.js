@@ -18,8 +18,8 @@ export const BAZAAR = {
   // 商人：from → to 单向兑换；give = 每批支付，get = 每批获得（基准值，实际 × 汇率）
   // capRatio：'give' 表示支付额 = EP 存储上限 × give；'get' 表示获得额 = 上限 × get
   dealers: [
-    { id: 'forge',   name: '熔炉协议', icon: '🔥', from: 'ep',    to: 'rp',    give: 120000, get: 6,   stock: 4, tier: 0,
-      desc: '上缴算力换研究点（运气好时优于蒸馏塔，但限购）' },
+    { id: 'forge',   name: '熔炉协议', icon: '🔥', from: 'ep',    to: 'dm',    give: 120000, get: 6,   stock: 4, tier: 0,
+      desc: '上缴算力换深渊物质（稳定通道，但限购）' },
     { id: 'caravan', name: '兽栏商队', icon: '🍪', from: 'ep',    to: 'pt',    give: 0.03,  get: 35,  stock: 3, tier: 0, capRatio: 'give',
       desc: '用车间的余电换异兽饼干' },
     { id: 'smuggle', name: '走私信道', icon: '📦', from: 'rp',    to: 'dm',    give: 30,    get: 5,   stock: 3, tier: 0,
