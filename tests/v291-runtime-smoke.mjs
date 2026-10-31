@@ -23,9 +23,11 @@ try {
   const epText = await page.$eval('#h-ep', el => el.textContent).catch(() => '');
   if (epText.includes('/')) ok('加载：顶栏 EP 显示「当前/上限」'); else bad('加载：顶栏 EP 显示', epText);
 
-  // 2. 点击工作台 5 次 → EP 增加
+  // 2. 点击工作台 5 次 → EP 增加（v3.0.3：先清环境随机状态——潮汐/腐化会压低点击产出）
+  await page.evaluate(() => { S.corruption = 0; S.tidePhase = 0; S.tideName = null; window.__gameDirty.hero = true; });
+  await sleep(300);
   const ep0 = await page.evaluate(() => Number(S.ep) || 0);
-  for (let i=0;i<5;i++){ await page.click('#hero'); await sleep(60); }
+  for (let i=0;i<5;i++){ await page.evaluate(() => document.getElementById('hero')?.dispatchEvent(new MouseEvent('click',{bubbles:true}))); await sleep(60); }
   const ep1 = await page.evaluate(() => Number(S.ep) || 0);
   if (ep1 > ep0) ok('点击工作台产出 EP', `${ep0}→${ep1}`); else bad('点击工作台产出 EP', `${ep0}→${ep1}`);
 
@@ -34,7 +36,7 @@ try {
   await sleep(300);
   for (const label of ['第 1 个线程（前3级降价路径）','第 2 个线程','第 3 个线程（前3级降价完成）']) {
     const before = await page.evaluate(() => S.cultists.length);
-    await page.click('#hire-btn'); await sleep(200);
+    await page.evaluate(() => document.getElementById('hire-btn')?.dispatchEvent(new MouseEvent('click',{bubbles:true}))); await sleep(200);
     const after = await page.evaluate(() => S.cultists.length);
     if (after === before + 1) ok(`招募${label}`); else bad(`招募${label}`, `${before}→${after}`);
   }
@@ -67,8 +69,8 @@ try {
   await page.evaluate(() => document.getElementById('wiki-x').click()); await sleep(100);
 
   // 7. 许愿池（v3.0.3：注入设施 wish_well 解锁 + 视觉存在）
-  await page.evaluate(() => { S.buildings = S.buildings || {}; S.buildings.wish_well = 1; S.ep = 1e6; });
-  await sleep(300);
+  await page.evaluate(() => { S.buildings = S.buildings || {}; S.buildings.wish_well = 1; S.ep = 1e6; window.__gameDirty.shop = true; });
+  await sleep(600);
   const wellExists = await page.$eval('#wish-well', el => !!el).catch(() => false);
   const wellSvg = await page.$eval('#wish-well .wish-svg', el => !!el).catch(() => false);
   if (wellExists && wellSvg) ok('许愿池：解锁后浮动井 + SVG 渲染'); else bad('许愿池渲染', `exists=${wellExists} svg=${wellSvg}`);

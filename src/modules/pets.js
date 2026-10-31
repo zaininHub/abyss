@@ -1,4 +1,4 @@
-import { S } from '../state.js';
+import { S, save } from '../state.js';
 import { PETS, petBaseMult } from '../data/pets.js';
 import { elv, computeCps, fmt } from './economy.js';
 import { checkEasterEggs } from './progression.js';
@@ -125,11 +125,16 @@ export function renderPetGrid(container) {
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
-  // v3.0.3 反馈⑫ + 第三批②：异兽孵化（消耗 EP 产饼干，与灵感工坊 RP 蒸馏区分；消耗对齐其数量级）
+  // v3.0.3 反馈⑫ + 第三批② + 第四批②③⑥：异兽孵化——去括号文案、按钮放大、升级按钮在开关旁
   const ptOn = S.ptDistillOn === true;
-  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:4px 0;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
-    <span style="font-size:11px;color:var(--text-2)">异兽孵化（消耗 EP 产异兽饼干 · PT）：每秒消耗 <b style="color:var(--green)">1000 EP</b> → +0.15 异兽饼干（EP 归零自动停）</span>
-    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:11px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button></div>`;
+  const hatchLv = S.ptHatchLv || 1;
+  const epPerS = 1000 * hatchLv;
+  const ptPerS = 0.15 * hatchLv;
+  const hatchCost = ptHatchUpgCost(hatchLv);
+  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+    <span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：每秒消耗 <b style="color:var(--green)">${fmt(epPerS)} EP</b> → +${fmt(ptPerS)} 异兽饼干，EP 归零自动停</span>
+    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>
+    <button data-pt-hatch-upg style="cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:var(--accent)">升级 ${fmt(hatchCost)} EP</button></div>`;
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {
@@ -140,16 +145,29 @@ export function renderPetGrid(container) {
         <div class="lv" style="color:var(--text-3);font-size:10px">${p.desc}</div></div>`;
     }
   }
-  // v2.5.7 检查修复：HTML 未变化不重建（挂机经验/等级刷新复用同段标记，避免重建中断交互）
+// v2.5.7 检查修复：HTML 未变化不重建（挂机经验/等级刷新复用同段标记，避免重建中断交互）
   if (html === _gridHtml) return;
   _gridHtml = html;
   container.innerHTML = html;
-  const ptBtn = container.querySelector('[data-pt-distill-toggle]');
-  if (ptBtn) ptBtn.addEventListener('click', () => {
-    S.ptDistillOn = S.ptDistillOn === true ? false : true;
-    save(S);
-    renderPetGrid(container);
-  });
+  // v3.0.3 第四批⑥：改用事件委托——面板重建/HTML 复用后监听不丢失，点击一次即响应
+  if (!container._ptDelegated) {
+    container._ptDelegated = true;
+    container.addEventListener('click', (ev) => {
+      const t = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle],[data-pt-hatch-upg]') : ev.target;
+      if (t && t.hasAttribute('data-pt-distill-toggle')) {
+        S.ptDistillOn = S.ptDistillOn === true ? false : true;
+        save(S);
+        renderPetGrid(container);
+      } else if (t && t.hasAttribute('data-pt-hatch-upg')) {
+        const cost = ptHatchUpgCost(S.ptHatchLv || 1);
+        if ((S.ep || 0) < cost) return;
+        S.ep -= cost;
+        S.ptHatchLv = (S.ptHatchLv || 1) + 1;
+        save(S);
+        renderPetGrid(container);
+      }
+    });
+  }
   container.querySelectorAll('[data-pet-card]').forEach(el => {
     el.addEventListener('click', () => {
       const id = el.dataset.petCard;
@@ -204,4 +222,9 @@ export function refreshPetsAffordability() {
     if (!p) continue;
     card.classList.toggle('cant', (S.pt || 0) < p.price);
   }
+}
+
+// v3.0.3 第四批③：异兽孵化升级成本——EP 指数曲线（参考其他升级项），消耗大幅增多
+export function ptHatchUpgCost(lv) {
+  return Math.ceil(20000 * Math.pow(2.2, lv - 1));
 }

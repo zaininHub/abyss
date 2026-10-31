@@ -659,7 +659,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第三批①：灵感工坊在研究点蒸馏按钮下 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('rp-atrium-host')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第四批①：灵感工坊在顶部蒸馏按钮处 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -739,18 +739,19 @@ function renderRpPanel() {
     return;
   }
   panel.innerHTML = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、数据熔炉建筑、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
+    <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
     </div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小
+    <div id="rp-atrium-host" style="margin-top:8px"></div>
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.0.3 第四批①：灵感工坊挂载点（蒸馏按钮下方）
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 数据熔炉建筑：被动产出 RP\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：矩阵存储库每级 +500，达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：矩阵存储库每级 +500，达到上限后停止积累。', () => {});
   });
 }
 
@@ -772,7 +773,7 @@ function updateTabLocks() {
     const btn = document.getElementById(id);
     if (!btn) continue;
     const anchorKey = TAB_ANCHOR[id];
-    const petsPt = id === 'btn-pets' ? anchorDone('pt', S) : false;
+    const petsPt = id === 'btn-pets' ? true : false; // v3.0.3 第四批⑤：宠物乐园已删除——异兽系统直接可用
     // v2.8.7：宠物乐园购入后即显示异兽 tab（P2 章节门控与 pt 锚点取或——买了宠物乐园就能看到宠物模块）
     const unlocked = (isStageUnlocked(stage, S) || (id === 'btn-pets' && petsPt)) && (!anchorKey || anchorShown(anchorKey, S)) && (id !== 'btn-pets' || petsPt);
     if (!unlocked) {
@@ -1870,9 +1871,10 @@ function tick(now) {
   tickBazaar(dt);
   // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，EP 归零自动停）
   if (S.ptDistillOn === true && (S.ep || 0) > 0.5) {
-    const take = Math.min(1000 * dt, S.ep); // v3.0.3 第三批②：孵化消耗对齐灵感工坊数量级（1000 EP/s）
+    const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
+    const take = Math.min(1000 * hatchLv * dt, S.ep); // v3.0.3 第三批②：孵化消耗对齐灵感工坊数量级（1000 EP/s/级）
     S.ep -= take;
-    S.pt = (S.pt || 0) + take * 0.00015; // 1000 EP/s → 0.15 饼干/s
+    S.pt = (S.pt || 0) + take * 0.00015 * hatchLv; // 1000 EP/s/级 → 0.15 饼干/s/级
   }
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 5) {

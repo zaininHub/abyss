@@ -43,8 +43,8 @@ export const WIKI_SECTIONS = [
     <h4>资源分层（参考 KG 多层设计）</h4>
     <table class="wiki-tbl"><tr><th>层级</th><th>资源</th><th>获取</th><th>用途</th></tr>
       <tr><td>基础</td><td>⚡ EP 能量点</td><td>线程自动产出 + 点击</td><td>一切消耗（有存储上限）</td></tr>
-      <tr><td>中间</td><td>🔬 RP 研究点</td><td>灵感蒸馏塔主动转化 / 数据熔炉 / 任务奖励</td><td>科技树、研究升级、族升级</td></tr>
-      <tr><td>稀有</td><td>🍪 PT 异兽饼干</td><td>宠物乐园 / 伊甸花园</td><td>喂养异兽</td></tr>
+      <tr><td>中间</td><td>🔬 RP 研究点</td><td>灵感蒸馏塔主动转化 / 任务奖励</td><td>科技树、研究升级、族升级</td></tr>
+      <tr><td>稀有</td><td>🍪 PT 异兽饼干</td><td>异兽孵化</td><td>喂养异兽</td></tr>
       <tr><td>转生</td><td>💎 ES 永恒碎片</td><td>晋升结算</td><td>永恒矩阵永久强化</td></tr>
       <tr><td>深渊</td><td>🌀 DM 深渊物质</td><td>封印裂隙 / 载具采集 / 主动净化腐化</td><td>深渊商店、遗物、净化节点</td></tr>
       <tr><td>超长线</td><td>🙏 信仰 / 虔诚</td><td>圣所产出 / 赞颂转化</td><td>宗教升级、超验层级</td></tr>

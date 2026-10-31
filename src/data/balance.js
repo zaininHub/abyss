@@ -5,9 +5,9 @@ export const BALANCE = {
   scribble: { base: 120, cps: 0.12 },  // v2.8.27：首轮 7-10 天节奏——基础成本 ×3、产出 ×0.5（原 v2.8.3 base 40/cps 0.25）
   script: { base: 960, cps: 0.85 },  // v2.8.27：×3 / ×0.5
   parallel: { base: 10800, cps: 3.5 }, // v2.8.27：×3 / ×0.5
-  atrium: { base: 5e4, rate: 0.15, epRate: 150 }, // v2.8.30 ⑤：自动蒸馏——每秒消耗 150 EP 转化 0.15 RP（可关闭）
+  atrium: { base: 5e4, rate: 0.15, epRate: 150, growth: 2.2 }, // v3.0.3 第四批③：升级曲线陡化（消耗 EP 大幅增多）
   oracle: { base: 5e11, rate: 2 },
-  dataForge: { name: '数据熔炉', base: 1e8, cps: 0, produces: { type: 'rp', rate: 0.5 }, desc: '每秒 +0.5 RP' },
+  dataForge: { name: '数据熔炉', base: 1e8, cps: 0, desc: '研究点已改由灵感蒸馏塔与任务获取' }, // v3.0.3 第四批④：移除直产 RP
   thread: {
     firstCost: 360, baseOutput: 1.0, baseOutputJitter: 1.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.27：线程成本 ×3、基础产出 ×0.5（首轮 7-10 天） // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）

@@ -132,7 +132,7 @@ function shopUnlocked(u) {
   if (owned > 0) return true;
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
-  if (u.id === 'pt_vault') return !!((S.upgrades && S.upgrades.petland) || (S.resDiscovered && S.resDiscovered.pt));
+  if (u.id === 'pt_vault') return !!((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland)); // v3.0.3 第四批⑤：宠物乐园已删除——兼容旧档标记
   return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
 
@@ -159,7 +159,7 @@ export function renderShop(container) {
   const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0
     || (u.id === 'rp_vault' && (S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp)))
     || (u.id === 'dm_vault' && ((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm)))
-    || (u.id === 'pt_vault' && ((S.upgrades && S.upgrades.petland) || (S.resDiscovered && S.resDiscovered.pt))), S);
+    || (u.id === 'pt_vault' && ((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland))), S); // v3.0.3 第四批⑤：兼容旧档 petland 标记
   // v2.6.7：记录链窗口状态（供 refreshShopChain 增量揭示，避免整面板重建）
   shopContainer._chain = {
     ids: new Set(split.visible.map(u => u.id)),
@@ -263,19 +263,39 @@ export function renderAtriumDistill(container) {
   const on = S.atriumOn !== false;
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;
+  const nextCost = atriumUpgCost(n); // v3.0.3 第四批③：升级成本（EP 指数曲线，参考其他升级项）
   const div = document.createElement('div');
   div.className = 'atrium-distill item';
-  // v3.0.3 第二批⑦：统一游戏 UI——蒸馏开关放卡底，移除独立升级按钮（升级走主商店 atrium 卡）
+  // v3.0.3 第四批①③：移动到顶部蒸馏按钮处；去括号文案；升级按钮放开关旁（EP 指数消耗）
   div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><span class="count mono">${fmt(epS)} EP/s → +${fmt(rpS)} RP/s</span></div>
-    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 归零自动停；升级在主商店「灵感工坊」卡）</div>
-    <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>`;
-  div.querySelector('[data-atrium-toggle]').addEventListener('click', () => {
-    S.atriumOn = S.atriumOn === false ? true : false;
-    save(S);
-    renderAtriumDistill(container);
-    if (logFn) logFn(`灵感工坊蒸馏${S.atriumOn === false ? '关' : '开'}`, 'good');
-  });
+    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP，EP 归零自动停</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 14px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>
+      <button data-atrium-upg class="mini-btn" style="cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:var(--accent)">升级 ${fmt(nextCost)} EP</button>
+    </div>`;
+  // v3.0.3 第四批⑥：容器级事件委托——研究点面板重渲染后监听不丢失
+  if (!container._atriumDelegated) {
+    container._atriumDelegated = true;
+    container.addEventListener('click', (ev) => {
+      const t = ev.target.closest ? ev.target.closest('[data-atrium-toggle],[data-atrium-upg]') : ev.target;
+      if (!t) return;
+      if (t.hasAttribute('data-atrium-toggle')) {
+        S.atriumOn = S.atriumOn === false ? true : false;
+        save(S);
+        renderAtriumDistill(container);
+      } else if (t.hasAttribute('data-atrium-upg')) {
+        const r = buyUpgrade({ id: 'atrium' });
+        if (r && r.ok === false) { if (r.reason) shopToast(r.reason); return; }
+        save(S);
+        renderAtriumDistill(container);
+      }
+    });
+  }
   container.appendChild(div);
+}
+// v3.0.3 第四批③：灵感工坊升级成本——EP 指数曲线（参考研究升级项），消耗大幅增多
+export function atriumUpgCost(n) {
+  return Math.ceil((BALANCE.atrium.base || 5e4) * Math.pow(BALANCE.atrium.growth || 2.2, n - 1));
 }
 let rpFamilyItemEls = new Map();
 
