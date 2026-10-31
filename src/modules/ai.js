@@ -90,13 +90,13 @@ function bestPaybackItem() {
   for (const u of UPGRADES) {
     if (!isBaseProduction(u)) continue;
     if (!aiShopUnlocked(u)) continue;
-    const cost = Math.ceil(u.base * Math.pow(u.growth || 1.15, S.upgrades[u.id] || 0) * costMult());
+    const cost = unitCost(u, 1); // v3.0.3 修复：与实购同口径（原内联 ceil(base×growth^(owned)×costMult) 默认 growth 1.15 落后于 unitCost 的 1.30，回本排序低估成本 15–50%）
     const margCps = u.cps * globalMult();
     if (margCps <= 0) continue;
     const payback = cost / margCps;
     if (payback < bestPayback) { bestPayback = payback; best = u; }
   }
-  return best ? { u: best, cost: Math.ceil(best.base * Math.pow(best.growth || 1.15, S.upgrades[best.id] || 0) * costMult()), payback: bestPayback } : null;
+  return best ? { u: best, cost: unitCost(best, 1), payback: bestPayback } : null;
 }
 
 function aiHireOne() {

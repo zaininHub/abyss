@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm } from './economy.js';
+import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, unitCost } from './economy.js';
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 
 export const GALAXIES = [
@@ -34,8 +34,8 @@ export function tickColonies(dt) {
   if (rp > 0) addRp(rp * dt); // v2.8.27 ②：RP 上限
 }
 function colonyCost(c) {
-  const owned = (S.upgrades && S.upgrades[c.id]) || 0;
-  return Math.ceil(c.base * Math.pow(c.growth, owned));
+  // v3.0.3 修复：复用 unitCost——殖民站与主商店升级同口径（全局 costMult 生效、growth 默认 1.30），原内联公式缺 costMult 且口径独立
+  return unitCost(c, 1);
 }
 function buyColony(id) {
   const c = (BALANCE.starColonies || []).find(x => x.id === id);
