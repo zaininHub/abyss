@@ -290,15 +290,39 @@ export function renderReligionPanel(container) {
   }
   const branch = branchOf();
   if (!branch) {
-    const list = visibleReligions().map(r => `
-      <div class="item religion-opt" data-religion-branch="${r.id}">
-        <div class="name"><span>${r.icon} ${r.name}</span><span class="count">${r.effect}</span></div>
-        <div class="desc">${r.desc}</div>
-      </div>`).join('');
+    // v2.8.30 review：信仰分支按进度分组展示——锁定分支显示解锁条件（gate 逻辑不变，仅渲染层分类）
+    const gateHint = (id) => {
+      if (id === 'moon' || id === 'reveal' || id === 'nature') return '需发现研究点（RP）';
+      if (id === 'immortal') return '需发现暗物质（DM）';
+      if (id === 'omnipot') return '需转生获得永恒精粹（ES ≥ 1）';
+      return '';
+    };
+    const groups = [
+      { title: '基础信仰', hint: '开局即解锁', ids: ['sun', 'genesis'] },
+      { title: '启示信仰', hint: '发现 RP 后解锁', ids: ['moon', 'reveal', 'nature'] },
+      { title: '终极信仰', hint: 'DM / ES 解锁', ids: ['immortal', 'omnipot'] },
+    ];
+    const list = groups.map(g => `
+      <div style="margin:10px 0 4px;font-size:11px;color:var(--text-2)"><b>${g.title}</b><span style="opacity:.7"> · ${g.hint}</span></div>
+      ${g.ids.map(id => {
+        const r = RELIGIONS.find(x => x.id === id);
+        if (!r) return '';
+        const ok = r.gate();
+        return ok
+          ? `<div class="item religion-opt" data-religion-branch="${r.id}">
+              <div class="name"><span>${r.icon} ${r.name}</span><span class="count">${r.effect}</span></div>
+              <div class="desc">${r.desc}</div>
+            </div>`
+          : `<div class="item cant" style="opacity:.55;cursor:not-allowed">
+              <div class="name"><span>🔒 ${r.icon} ${r.name}</span><span class="count">未解锁</span></div>
+              <div class="desc">${r.desc}<br><span style="color:var(--red,#f85149);font-size:10px">${gateHint(id)}</span></div>
+            </div>`;
+      }).join('')}`).join('');
+    const unlockedN = RELIGIONS.filter(r => r.gate()).length;
     container.innerHTML = `
       <div class="religion-desc">选择你的信仰（选一锁定，跨转生保留）。随游戏进度解锁更多分支。</div>
       ${list || '<div style="color:var(--text-3);font-size:12px">暂无可用分支</div>'}
-      <div style="font-size:11px;color:var(--text-2);margin-top:6px">已解锁分支：${visibleReligions().length}/${RELIGIONS.length}（进度解锁：RP→中期分支，DM→转生分支，ES≥1→终局分支）</div>`;
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">已解锁分支：${unlockedN}/${RELIGIONS.length}</div>`;
     return;
   }
   const r = RELIGIONS.find(x => x.id === branch);

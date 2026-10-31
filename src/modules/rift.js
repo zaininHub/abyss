@@ -363,6 +363,10 @@ export function renderRiftPanel(container) {
     const autoToggle = isAuto && lv > 0
       ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
       : '';
+    const maxed = cost === null;
+    const afford = !maxed && (S.riftEmber || 0) >= cost;
+    // v2.8.30 review：余烬升级价格 pill 化（灰满级/绿可购/红不足）——与回响商店卡统一
+    const pricePill = `<span style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${maxed ? 'rgba(139,148,158,.15)' : afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 余烬'}</span>`;
     html += `
       <div class="rift-upg-row" data-rift-upg="${id}">
         <div style="flex:1">
@@ -370,7 +374,7 @@ export function renderRiftPanel(container) {
           <div style="font-size:11px;color:var(--text-3)">${desc}</div>
         </div>
         ${autoToggle}
-        <button class="btn ${cost === null || (S.riftEmber || 0) < cost ? 'disabled' : ''}" ${cost === null ? 'disabled' : ''}>${cost === null ? '满级' : `${cost} 余烬`}</button>
+        ${maxed ? pricePill : `<button class="btn ${afford ? '' : 'disabled'}" ${afford ? '' : 'disabled'}>${cost} 余烬</button>`}
       </div>`;
   }
   container.innerHTML = html;

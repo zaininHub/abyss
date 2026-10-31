@@ -195,8 +195,12 @@ export function renderReincarn(container) {
   if (lg) {
     const legacyHtml = (BALANCE.reincarn.legacy || []).map(L => {
       const lv = (S.relicLegacy && S.relicLegacy[L.id]) || 0;
+      // v2.8.30 review：未购遗存显示获取条件（随进度解锁可见）
+      const needHint = lv > 0 ? '' : (L.needKey === 'delve' ? ` · 需深潜 ≥ ${L.need} 层`
+        : L.needKey === 'colony' ? ` · 需异兽 ≥ ${L.need} 只`
+        : L.needKey === 'rift' ? ` · 需裂隙余烬 ≥ ${L.need}` : '');
       return `<div style="display:flex;justify-content:space-between;font-size:11px;color:${lv > 0 ? 'var(--green,#3fb950)' : 'var(--text-3)'}">
-        <span>${L.name} ${lv > 0 ? '×' + lv : ''}<span style="opacity:.75"> · ${L.desc}</span></span>
+        <span>${L.name} ${lv > 0 ? '×' + lv : ''}<span style="opacity:.75"> · ${L.desc}</span><span style="opacity:.7;color:var(--text-2)">${needHint}</span></span>
         <span class="mono">${lv}/3</span></div>`;
     }).join('');
     if (lg._last !== legacyHtml) { lg._last = legacyHtml; lg.innerHTML = legacyHtml; }
