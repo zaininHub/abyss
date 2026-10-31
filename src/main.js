@@ -91,7 +91,7 @@ function renderStorylinePanel() {
       if (!pkg) continue;
       html += `<div class="codex-line"><div class="codex-line-name">${pkg.name}</div>`;
       if (pkg.desc) html += `<div class="codex-desc">${pkg.desc}</div>`;
-      const chs = (pkg.chapters && pkg.chapters.append) || [];
+      const chs = (pkg.data && pkg.data.chapters && pkg.data.chapters.append) || []; // v3.0.3 第六批⑥：修复路径——章节数据在 pkg.data.chapters 下（原 pkg.chapters 恒 undefined 致剧情从不渲染）
       if (chs.length > 0) {
         html += `<div class="codex-chs">`;
         // v2.8.5 A3：解锁判定 = 持久化已进入（chaptersUnlocked）优先，其次即时 cond（未写入前的兼容）
@@ -344,6 +344,12 @@ function renderTop() {
   if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
     emberStat.style.display = S._riftSeen ? '' : 'none';
     hEmber.textContent = Math.round((S.riftEmber || 0) * 10) / 10; // v3.0.3 第二批④：余烬浮点显示收敛
+  }
+  const hVs = document.getElementById('h-vs');
+  const vsStat = document.getElementById('vs-stat');
+  if (hVs && vsStat) { // v3.0.3 第六批⑤：虚空碎片顶部展示（深潜解锁后常显）
+    vsStat.style.display = delveUnlocked() ? '' : 'none';
+    hVs.textContent = fmt(S.vs || 0);
   }
   const hBuff = document.getElementById('h-buff');
   // v2.7.5 ⑧：顶部轮回次数 + 悬停弹框显示回响加成（全局 +5%/点）

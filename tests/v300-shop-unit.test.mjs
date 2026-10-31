@@ -9,7 +9,7 @@ global.window = { addEventListener() {} };
 const { S } = await import('../src/state.js');
 const shop = await import('../src/modules/shop.js');
 const { UPGRADES } = await import('../src/data/upgrades.js');
-const { computeCps, totalDrainPerSec } = await import('../src/modules/economy.js');
+const { computeCps, totalDrainPerSec, unitCost } = await import('../src/modules/economy.js');
 
 const scribble = UPGRADES.find(u => u.id === 'scribble');
 const cpu = UPGRADES.find(u => u.id === 'cpu');
@@ -81,4 +81,21 @@ test('shop.buyUpgrade：EP 不足时购买失败且不改变状态', () => {
   const r = shop.buyUpgrade(scribble);
   assert.equal(r, false, `EP 不足应失败，实际 ${r}`);
   assert.equal(S.upgrades.scribble, 10, 'scribble 不应变化');
+});
+
+// v3.0.3 第六批①：EP 无限 bug 回归——事件委托曾误传裸对象 {id:'atrium'} 致 unitCost 得 NaN、
+// 而 S.ep < NaN 恒 false（成本检查失效），可无视 EP 无限升级。
+test('unitCost：裸对象（缺 base）返回 Infinity 而非 NaN，成本检查必然拦截', () => {
+  baseState({ ep: 1 });
+  const c = unitCost({ id: 'atrium' }); // 模拟事件委托误传裸对象
+  assert.equal(Number.isNaN(c), false, '成本不应为 NaN');
+  assert.equal(c, Infinity, '非法 base 应返回 Infinity');
+  assert.equal(S.ep < c, true, 'EP 不足检查应判定为不可购（NaN 会让该判定恒 false）');
+});
+
+test('atriumUpgCost：成本为有限正整数，EP 不足时拦截（显示/扣费同口径）', () => {
+  baseState({ ep: 1, upgrades: { atrium: 5 } });
+  const cost = shop.atriumUpgCost(5);
+  assert.ok(Number.isFinite(cost) && cost > 1, '成本应为有限正整数');
+  assert.equal(S.ep < cost, true, 'EP 不足应拦截');
 });

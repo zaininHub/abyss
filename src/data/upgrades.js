@@ -11,7 +11,7 @@ export const UPGRADES = [
   // v2.1 R3-A：早期 EP 存储扩容项（破解「上限 1000 死锁」的关键道具）
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
-  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`每级 EP 存储上限 +${B.storage.capPer}`},
+  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}`},
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
   {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:500},desc:'每级 RP 上限 +500'},
   {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'每级 DM 上限 +100'},
@@ -72,8 +72,8 @@ export const UPGRADES = [
   {id:'gpu',name:'GPU 加速',base:6000000000.0,cps:0.0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.23：门槛 6e8
   {id:'cache',name:'缓存优化',base:300000000000.0,cps:0.0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%，EP 存储上限 +8000/级'}, // v2.8.23：门槛 3e10
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
-  {id:'reserve_bin',name:'备用粮仓',base:20000,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +4,000'}, // v2.8.30：价格陡峭、加成减半（8000→4000）
-  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +800,000'},
+  {id:'reserve_bin',name:'备用粮仓',base:20000,growth:1.50,cps:0,cat:'D',desc:'EP 上限 +12,000'}, // v3.0.3 第五批：去「每级」；修正为与 economy.js 实际 12000/级一致（原 +4,000 文案错误）
+  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'EP 上限 +800,000'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:150000.0,cps:25,desc:'重装地面采集'},

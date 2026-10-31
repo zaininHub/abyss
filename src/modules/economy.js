@@ -593,6 +593,8 @@ export function unitCost(u, n) {
   // v2.8.2：默认增长率 1.15 → 1.30（成本曲线陡峭化——避免一个建筑买几十几百个，减缓前期发展）
   const growth = u.growth || 1.30;
   let cost = Math.ceil(u.base * Math.pow(growth, owned + n) * costMult());
+  // v3.0.3 第六批①：NaN 防御——base 缺失/非法时返回 Infinity（成本检查必然拦截），杜绝 NaN 成本穿透（EP 无限升级）
+  if (!Number.isFinite(cost)) return Infinity;
   if (CAP_EXPANSION_IDS.includes(u.id)) {
     cost = Math.min(cost, Math.floor(epStorageCap() * (B.storageAntiDeadlockRatio || 0.3)));
   }

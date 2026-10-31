@@ -131,10 +131,11 @@ export function renderPetGrid(container) {
   const epPerS = 1000 * hatchLv;
   const ptPerS = 0.15 * hatchLv;
   const hatchCost = ptHatchUpgCost(hatchLv);
+  const hatchAfford = (S.ep || 0) >= hatchCost; // v3.0.3 第六批②：EP 不足灰显
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：每秒消耗 <b style="color:var(--green)">${fmt(epPerS)} EP</b> → +${fmt(ptPerS)} 异兽饼干，EP 归零自动停</span>
     <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>
-    <button data-pt-hatch-upg style="cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:var(--accent)">升级 ${fmt(hatchCost)} EP</button></div>`;
+    <button data-pt-hatch-upg style="cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(hatchCost)} EP</button></div>`;
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {

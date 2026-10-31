@@ -264,6 +264,7 @@ export function renderAtriumDistill(container) {
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;
   const nextCost = atriumUpgCost(n); // v3.0.3 第四批③：升级成本（EP 指数曲线，参考其他升级项）
+  const upgAfford = (S.ep || 0) >= nextCost; // v3.0.3 第六批②：EP 不足灰显
   const div = document.createElement('div');
   div.className = 'atrium-distill item';
   // v3.0.3 第四批①③：移动到顶部蒸馏按钮处；去括号文案；升级按钮放开关旁（EP 指数消耗）
@@ -271,7 +272,7 @@ export function renderAtriumDistill(container) {
     <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP，EP 归零自动停</div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 14px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>
-      <button data-atrium-upg class="mini-btn" style="cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:var(--accent)">升级 ${fmt(nextCost)} EP</button>
+      <button data-atrium-upg class="mini-btn" style="cursor:${upgAfford ? 'pointer' : 'not-allowed'};opacity:${upgAfford ? 1 : 0.5};border:1px solid ${upgAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${upgAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(nextCost)} EP</button>
     </div>`;
   // v3.0.3 第四批⑥：容器级事件委托——研究点面板重渲染后监听不丢失
   if (!container._atriumDelegated) {
@@ -284,8 +285,15 @@ export function renderAtriumDistill(container) {
         save(S);
         renderAtriumDistill(container);
       } else if (t.hasAttribute('data-atrium-upg')) {
-        const r = buyUpgrade({ id: 'atrium' });
-        if (r && r.ok === false) { if (r.reason) shopToast(r.reason); return; }
+        // v3.0.3 第六批①：修复 EP 无限 bug——原 buyUpgrade({id:'atrium'}) 裸对象致 unitCost 读 u.base=undefined → 成本 NaN → 成本检查失效（可无视 EP 无限升级）
+        // 改为与按钮显示同口径（atriumUpgCost）手动拦截扣费，与异兽孵化升级同范式
+        const lvl = (S.upgrades && S.upgrades.atrium) || 0;
+        const cost = atriumUpgCost(lvl);
+        if (!Number.isFinite(cost) || (S.ep || 0) < cost) return;
+        S.ep -= cost;
+        S.upgrades.atrium = lvl + 1;
+        S.totalBuys = (S.totalBuys || 0) + 1;
+        S.lazySince = null;
         save(S);
         renderAtriumDistill(container);
       }
@@ -360,8 +368,8 @@ function storagePreviewLine(u) {
     let per;
     if (u.id === 'reserve_bin') per = 12000; // 与 economy.js epStorageCap 口径一致
     else if (u.id === 'deep_bin') per = 8e5;
-    else { const lv = S.upgrades[u.id] || 0; per = B.storage.capPer * Math.pow(B.storage.capGrowth, lv); }
-    return `<div class="preview" style="font-size:11px;color:var(--text-2);margin-top:2px">EP 上限：当前 ${fmt(cap)} → 下一级 ${fmt(cap + per)}</div>`;
+    else { const lv = S.upgrades[u.id] || 0; per = BALANCE.storage.capPer * Math.pow(BALANCE.storage.capGrowth, lv); }
+    return `<div class="preview" style="font-size:11px;color:var(--text-2);margin-top:2px">EP 上限：下一级 ${fmt(cap + per)}</div>`;
   } catch { return ''; }
 }
 
