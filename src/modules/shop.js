@@ -54,6 +54,8 @@ export function buyUpgrade(u) {
   S.upgrades[u.id] = owned + n;
   S.totalBuys += n;
   S.lazySince = null; // v2.7.1：任意升级/购买解除线程懒惰
+  // v3.0.3 第三批③：购买后立即刷新主商店灰态/成本（不依赖每秒快刷）
+  if (typeof refreshShopAffordability === 'function') refreshShopAffordability();
   return true;
 }
 

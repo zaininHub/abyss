@@ -96,14 +96,17 @@ function renderStorylinePanel() {
         html += `<div class="codex-chs">`;
         // v2.8.5 A3：解锁判定 = 持久化已进入（chaptersUnlocked）优先，其次即时 cond（未写入前的兼容）
         const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
+        let prevOk = true; // v3.0.3 第三批⑥：故事线解锁的是剧情——前章解锁后本章顺次可见
         for (const ch of chs) {
           let ok = false;
           try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
           const chIdx = ch.id !== undefined ? parseInt(ch.id, 10) : chs.indexOf(ch) + 1;
           if (seenChs.includes(chIdx)) ok = true; // 历史已进入 → 永久点亮
+          if (prevOk) ok = true; // 前一章可见 → 本章剧情顺次解锁（cond 节奏仍作用于后续）
           html += `<div class="codex-ch${ok ? ' on' : ' locked'}"><span class="codex-ch-name">${ok ? '✓' : '🔒'} ${ch.name}</span>`;
           if (ok && ch.desc) html += `<div class="codex-ch-desc">${ch.desc}</div>`;
           html += `</div>`;
+          prevOk = ok;
         }
         html += `</div>`;
       }
@@ -202,8 +205,6 @@ function render() {
   if (dirty.pets) {
     const petEl = document.getElementById('pet-grid');
     if (petEl) renderPetGrid(petEl);
-    // v3.0.3 第二批⑦：灵感工坊（研究点蒸馏）统一并入宠物面板——置于饼干蒸馏条下方
-    if (petEl) renderAtriumDistill(petEl);
     const floatEl = document.getElementById('pet-float');
     if (floatEl) renderPetFloat(floatEl);
     dirty.pets = false;
@@ -658,7 +659,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第二批⑦：灵感工坊移入宠物面板 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第三批①：灵感工坊在研究点蒸馏按钮下 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -1869,9 +1870,9 @@ function tick(now) {
   tickBazaar(dt);
   // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，EP 归零自动停）
   if (S.ptDistillOn === true && (S.ep || 0) > 0.5) {
-    const take = Math.min(200 * dt, S.ep);
+    const take = Math.min(1000 * dt, S.ep); // v3.0.3 第三批②：孵化消耗对齐灵感工坊数量级（1000 EP/s）
     S.ep -= take;
-    S.pt = (S.pt || 0) + take * 0.002; // 200 EP/s → 0.4 饼干/s
+    S.pt = (S.pt || 0) + take * 0.00015; // 1000 EP/s → 0.15 饼干/s
   }
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 5) {

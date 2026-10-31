@@ -57,8 +57,8 @@ export const UPGRADES = [
   {id:'beyond',name:'超越',base:3.6e+44,cps:4.2e+32,desc:'基础产出+840No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:1.5,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP（研究点开关）`},
-  {id:'petland',name:'宠物乐园',base:3000000.0,cps:0.0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干'}, // v2.8.7：文案精简
-  {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.001},desc:'每秒 0.1% 概率 +1 信仰'},
+  {id:'petland',name:'宠物乐园',base:3000000.0,cps:0.0,desc:'解锁异兽系统（异兽饼干 · PT 由此获得）'}, // v3.0.3 第三批④：移除直接资源产出
+  {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,desc:'解锁信仰系统（信仰由此获得）'}, // v3.0.3 第三批④：移除直接资源产出
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,produces:B.dataForge.produces,desc:B.dataForge.desc},
   {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 异兽饼干'},
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},

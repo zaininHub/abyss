@@ -125,11 +125,11 @@ export function renderPetGrid(container) {
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
-  // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，类似灵感工坊）
+  // v3.0.3 反馈⑫ + 第三批②：异兽孵化（消耗 EP 产饼干，与灵感工坊 RP 蒸馏区分；消耗对齐其数量级）
   const ptOn = S.ptDistillOn === true;
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:4px 0;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
-    <span style="font-size:11px;color:var(--text-2)">饼干蒸馏（异兽饼干 · PT）：每秒消耗 <b style="color:var(--green)">200 EP</b> → +0.4 异兽饼干（EP 归零自动停）</span>
-    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:11px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '蒸馏开' : '蒸馏关'}</button></div>`;
+    <span style="font-size:11px;color:var(--text-2)">异兽孵化（消耗 EP 产异兽饼干 · PT）：每秒消耗 <b style="color:var(--green)">1000 EP</b> → +0.15 异兽饼干（EP 归零自动停）</span>
+    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:11px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button></div>`;
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {
