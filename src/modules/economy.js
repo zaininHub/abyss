@@ -540,7 +540,9 @@ export function staffSalaryPerSec() {
   let total = 0;
   for (let i = 0; i < S.cultists.length; i++) total += Math.min(0.5 * Math.pow(base, i), perCap);
   total *= tideMult('salary'); // 潮汐：涨潮薪资 +50% / 退潮 -20% / 乱流 +30%
-  return total * m * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
+  // v3.0.3 反馈②：薪资跟随线程产出保底 10%（消除 100:1 产出比，收敛 ≤10:1）
+  const out = staffOutputPerSec();
+  return Math.max(total * m, out * 0.10 * m) * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }
 
 // v2.8.30：专注每级加成曲线——低等级加成少、逐段递增至上限 20%/级（达到上限后固定不变）

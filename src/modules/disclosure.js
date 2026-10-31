@@ -27,7 +27,7 @@ export const CHAIN_CONF = {
   vehicles: {},  // 探采平台（4）
   dm:       {},  // 深渊商店（4）
   v21:      {},  // 效能建筑（51，已购=RP 解锁）
-  eternal:  {},  // 永恒矩阵（14）
+  eternal:  { extraK: (items, flags, p, S) => Math.min(items.length, p + 1 + Math.floor((S.es || 0) / 8)) },  // v3.0.3 反馈③：ES 每 8 点多揭示 1 项（17 ES 时至少可见 3 项可购）
   offline:  {},  // 离线升级（4，既有 req 链=已购链特例）
 };
 
@@ -45,7 +45,7 @@ export function anchorDone(key, S) {
     case 'rp':    return (up.rp_vault || 0) >= 1 || (S && S._rpOverflowSeen === true && S._rpVaultIntroduced === undefined) || (up.atrium || 0) >= 1; // v2.8.28 修复：RP 解锁链 = 购买「矩阵存储库」→ 解锁研究点；旧档已溢出（无 _rpVaultIntroduced 标记）与「灵感工坊购入」保持解锁不回退
     case 'pt':    return (up.petland || 0) >= 1; // PT ← 宠物乐园购入
     case 'faith': return (up.shrine  || 0) >= 1; // FA ← 路边神龛购入
-    case 'dm':    return (up.scooter || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入
+    case 'dm':    return (up.scooter || 0) >= 1 || (up.dm_vault || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入；v3.0.3 反馈⑪：星尘金库买入亦亮出
     case 'es':    return ((S && S.prestige) || 0) >= 1; // ES 与职级 ← 完成首次晋升
     default: return false;
   }
@@ -76,7 +76,7 @@ export function chainSplit(mod, items, purchasedOf, S) {
   const flags = items.map(it => !!purchasedOf(it, S));
   let p = 0;
   while (p < items.length && flags[p]) p++; // 已购前缀
-  const K = Math.min(items.length, p + 1); // rev18 9.3：K = p + 1
+  const K = conf.extraK ? conf.extraK(items, flags, p, S) : Math.min(items.length, p + 1); // rev18 9.3：K = p + 1（eternal 按 ES 扩展）
   const visible = items.filter((it, i) => i < K || flags[i]); // 前 K 项 ∪ 全部已购项
   const hiddenCount = items.length - visible.length;
   return { visible, hiddenCount, chainNextIdx: p, K };

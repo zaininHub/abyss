@@ -196,7 +196,7 @@ export function tickBazaar(dt) {
   S.bazaar.regenTimer = (S.bazaar.regenTimer || 0) + dt;
   if (S.bazaar.regenTimer >= BAZAAR.stockRegenSec) {
     S.bazaar.regenTimer = 0;
-    for (const d of BAZAAR.dealers) {
+      for (const d of BAZAAR.dealers) {
       const mx = bazaarStockMax(d);
       if ((S.bazaar.stock[d.id] || 0) < mx) S.bazaar.stock[d.id] = (S.bazaar.stock[d.id] || 0) + 1;
     }
@@ -243,6 +243,7 @@ export function renderBazaarPanel(container) {
       <button class="btn ${(S.ep || 0) >= refreshCost ? '' : 'disabled'}" data-bazaar-refresh="1" style="flex:1">刷新（EP）</button>
       <button class="btn ${(S.abyssEcho || 0) >= BAZAAR.echoRefresh ? '' : 'disabled'}" data-bazaar-refresh-echo="1" style="flex:1">刷新（回响）</button>
     </div>`;
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">`;
   for (const d of BAZAAR.dealers) {
     const lockedByTier = tier < d.tier;
     const lockedByVs = d.to === 'vs' && !delveUnlocked();
@@ -254,7 +255,7 @@ export function renderBazaarPanel(container) {
     const rateColor = good ? 'var(--green,#2ea043)' : bad ? 'var(--red,#f85149)' : 'var(--text-1)';
     const canTrade = !lockedByTier && !lockedByVs && stock > 0 && resOf(d.from) >= (lot ? lot.give : Infinity);
     html += `
-      <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;margin-bottom:8px;${canTrade ? 'opacity:1' : ''}">
+      <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;${canTrade ? 'opacity:1' : ''}">
         <div class="name"><span>${d.icon} ${d.name}</span><span class="count">库存 ${stock}/${mx}</span></div>
         <div style="font-size:11px;color:var(--text-3);line-height:1.7">${d.desc}</div>
         <div style="font-size:12px;margin-top:4px">
@@ -266,9 +267,11 @@ export function renderBazaarPanel(container) {
         <div style="font-size:10.5px;color:var(--text-3)">${lockedByTier ? `🔒 需集市等级 Lv.${d.tier}` : lockedByVs ? '🔒 需先解锁深潜（VS）' : stock > 0 ? '点击成交 1 批' : '库存已空——等补货或刷新'}</div>
       </div>`;
   }
+  html += `</div>`;
   container.innerHTML = html;
 }
 
+let _pendingTrade = null; // v3.0.3 反馈⑥：集市购买二次确认（两阶段点击）
 export function bindBazaarPanel(container) {
   if (!container || container.dataset.bazaarBound) return;
   container.dataset.bazaarBound = '1';
@@ -293,9 +296,19 @@ export function bindBazaarPanel(container) {
     }
     const el = e.target.closest('[data-bazaar-dealer]');
     if (el) {
-      const r = trade(el.dataset.bazaarDealer);
-      if (!r.ok && toastFn) toastFn(r.reason);
-      renderBazaarPanel(container);
+      const did = el.dataset.bazaarDealer;
+      const now = Date.now();
+      if (_pendingTrade && _pendingTrade.id === did && now - _pendingTrade.t < 3000) {
+        _pendingTrade = null;
+        const r = trade(did);
+        if (!r.ok && toastFn) toastFn(r.reason);
+        renderBazaarPanel(container);
+      } else {
+        _pendingTrade = { id: did, t: now };
+        if (toastFn) toastFn('再点一次确认购买');
+        container.querySelectorAll('[data-bazaar-dealer]').forEach(x => { x.style.borderColor = ''; x.style.boxShadow = ''; });
+        el.style.borderColor = 'var(--green)'; el.style.boxShadow = '0 0 0 1px var(--green)';
+      }
       return;
     }
   });

@@ -6,19 +6,17 @@ import { S } from '../state.js';
 
 export const POLICY_GROUPS = [
   {
-    id: 'order', name: '秩序', unlock: (S) => (S.prestige || 0) >= 1, hint: '需职级 ≥1',
+    id: 'route', name: '路线抉择', unlock: (S) => (S.prestige || 0) >= 1, hint: '需职级 ≥1',
     policies: [
-      { id: 'centralize', name: '集权指令', effect: { ep: 0.20, recruit: -0.20 }, desc: '基础产出 +20%，线程招募 -20%' },
-      { id: 'autonomy',  name: '自治协议', effect: { thread: 0.15, aiCap: -1 },     desc: '线程产出 +15%，AI 自动购买上限 -1' },
-      { id: 'collaborate', name: '协作网络', effect: { collab: 0.20, recruit: 0.30 }, desc: '协作加成 ×1.2，线程招募 +30%' },
+      { id: 'order_route', name: '秩序指令', effect: { ep: 0.20, thread: 0.10 }, desc: '基础产出 +20%，线程产出 +10%' },
+      { id: 'abyss_route', name: '深渊誓约', effect: { delve: 0.25, ember: 0.15 }, desc: '深潜产出 +25%，余烬产出 +15%' },
     ],
   },
   {
-    id: 'abyss', name: '深渊', unlock: (S) => (S.delve && S.delve.depth) >= 1, hint: '需深潜 ≥1 层',
+    id: 'deepen', name: '路线深化', unlock: (S) => !!groupPolicyId('route'), hint: '需先选定路线',
     policies: [
-      { id: 'observe',   name: '观测主义', effect: { delve: 0.25, corruption: 0.02 }, desc: '深潜产出 +25%，腐化 +0.02/s' },
-      { id: 'nihilism',  name: '虚无主义', effect: { ember: 0.25, faith: -0.20 },     desc: '余烬产出 +25%，信仰 -20%' },
-      { id: 'empiric',   name: '实证主义', effect: { faith: 0.20, delve: -0.10 },     desc: '信仰产出 +20%，深潜产出 -10%' },
+      { id: 'order_deep', name: '秩序深化', unlock: () => groupPolicyId('route') === 'order_route', effect: { recruit: 0.30, collab: 0.20 }, desc: '线程招募 +30%，协作加成 ×1.2' },
+      { id: 'abyss_deep', name: '深渊深化', unlock: () => groupPolicyId('route') === 'abyss_route', effect: { delve: 0.15, ember: 0.10 }, desc: '深潜产出 +15%，余烬产出 +10%' },
     ],
   },
   {
@@ -29,7 +27,7 @@ export const POLICY_GROUPS = [
       { id: 'sacrifice', name: '牺牲',     effect: { devotion: 1.5, global: -0.10 }, desc: '虔诚获取 ×1.5，全局 -10%' },
     ],
   },
-  // v3.0.0 扩展：第 4 组「集市」——政策组 3 → 4（+33%），与深渊集市模块联动
+  // v3.0.0 扩展：第 4 组「集市」——与深渊集市模块联动
   {
     id: 'market', name: '集市', unlock: (S) => !!(S.bazaar && S.bazaar.unlocked), hint: '需深渊集市已开张',
     policies: [

@@ -51,7 +51,7 @@ export function renderPolicyPanel(container) {
   const groups = policyOpenGroups();
   if (groups.length === 0) {
     container.innerHTML = `<div class="religion-desc">周期政策：每轮（晋升/轮回）后按跨周期资产开放政策槽位，组内互斥单选——让每次游戏周期走向不同。</div>
-      <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 秩序组（需职级 ≥1）<br>· 深渊组（需深潜 ≥1 层）<br>· 信仰组（需信仰解锁）</div>`;
+      <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 路线抉择（需职级 ≥1）<br>· 信仰组（需信仰解锁）<br>· 集市组（需集市开张）</div>`;
     return;
   }
   const lv = (gid) => policyLv(gid);
@@ -60,16 +60,27 @@ export function renderPolicyPanel(container) {
     const chosen = groupPolicyId(g.id);
     const clv = lv(g.id);
     const nxt = chosen ? nextPolicyInGroup(g.id, chosen) : null;
-    html += `<div style="margin:10px 0 4px;font-size:11px;color:var(--accent);font-weight:600">${g.name}（${chosen ? `已选定 · Lv.${clv}` : '未选定'}）</div>`;
+    const chosenName = chosen ? g.policies.find(x => x.id === chosen) : null;
+    // v3.0.3 反馈⑤：已选定组折叠收起（一行小结，点击展开组内改选/推进）
+    html += `<div style="margin:10px 0 4px;font-size:11px;color:var(--accent);font-weight:600">${g.name}</div>`;
+    if (chosen) {
+      html += `<div class="item policy-on" data-policy-fold="${g.id}" style="cursor:pointer;border-color:var(--green,#2ea043);opacity:1">
+        <div class="name"><span>✓ ${chosenName ? chosenName.name : chosen}</span><span class="count">Lv.${clv} · ${chosenName ? chosenName.desc : ''}</span></div>
+        <div style="font-size:10.5px;color:var(--text-3)">${nxt ? `下一级：${nxt.name}（点击展开推进）` : '点击展开查看'}</div></div>
+      <div data-fold-body="${g.id}" style="display:none">`;
+    }
     for (const p of g.policies) {
       const isCur = chosen === p.id;
       const locked = !!chosen && !isCur; // 组内互斥（本局锁定）
       const canUp = isCur && !!nxt;
-      html += `<div class="item ${isCur ? 'policy-on' : locked ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" data-up="${canUp ? '1' : ''}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
+      const gate = p.unlock ? p.unlock() : true; // v3.0.3：政策级前置（深化组需先选对应路线）
+      if (chosen && !isCur) continue; // 折叠收起后组内仅显示已选项（展开区仍可改选）
+      html += `<div class="item ${isCur ? 'policy-on' : locked ? 'cant' : !gate ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" data-up="${canUp ? '1' : ''}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
         <div class="name"><span>${isCur ? '✓ ' : ''}${p.name}</span><span class="count">${p.desc}</span></div>
-        <div style="font-size:10.5px;color:var(--text-3)">${canUp ? `下一级：${nxt.name}（点击推进）` : locked ? '已选定其他政策' : '点击选定'}</div>
+        <div style="font-size:10.5px;color:var(--text-3)">${canUp ? `下一级：${nxt.name}（点击推进）` : locked ? '已选定其他政策' : !gate ? (g.id === 'deepen' ? '需先选定对应路线（深渊/秩序）' : '未满足前置') : '点击选定'}</div>
       </div>`;
     }
+    if (chosen) html += `</div>`;
   }
   container.innerHTML = html;
 }
@@ -78,6 +89,13 @@ export function bindPolicyPanel(container) {
   if (!container || container.dataset.policyBound) return;
   container.dataset.policyBound = '1';
   container.addEventListener('click', (e) => {
+    // v3.0.3 反馈⑤：折叠条点击展开/收起已选组
+    const fold = e.target.closest('[data-policy-fold]');
+    if (fold) {
+      const body = container.querySelector(`[data-fold-body="${fold.dataset.policyFold}"]`);
+      if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+      return;
+    }
     const el = e.target.closest('[data-policy-group]');
     if (!el) return;
     const gid = el.dataset.policyGroup;

@@ -116,6 +116,11 @@ export function renderPetGrid(container) {
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
+  // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，类似灵感工坊）
+  const ptOn = S.ptDistillOn === true;
+  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:4px 0;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+    <span style="font-size:11px;color:var(--text-2)">饼干蒸馏：每秒消耗 <b style="color:var(--green)">200 EP</b> → +0.4 饼干（EP 归零自动停）</span>
+    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:2px 10px;font-size:11px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '蒸馏开' : '蒸馏关'}</button></div>`;
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（异兽饼干：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {
@@ -130,6 +135,12 @@ export function renderPetGrid(container) {
   if (html === _gridHtml) return;
   _gridHtml = html;
   container.innerHTML = html;
+  const ptBtn = container.querySelector('[data-pt-distill-toggle]');
+  if (ptBtn) ptBtn.addEventListener('click', () => {
+    S.ptDistillOn = S.ptDistillOn === true ? false : true;
+    save(S);
+    renderPetGrid(container);
+  });
   container.querySelectorAll('[data-pet-card]').forEach(el => {
     el.addEventListener('click', () => {
       const id = el.dataset.petCard;

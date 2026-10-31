@@ -1860,11 +1860,18 @@ function tick(now) {
   tickDelve(dt);
   // v3.0.0：深渊集市——汇率波动 / 库存自然恢复
   tickBazaar(dt);
+  // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，EP 归零自动停）
+  if (S.ptDistillOn === true && (S.ep || 0) > 0.5) {
+    const take = Math.min(200 * dt, S.ep);
+    S.ep -= take;
+    S.pt = (S.pt || 0) + take * 0.002; // 200 EP/s → 0.4 饼干/s
+  }
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 5) {
     S._religCheckTimer = 0;
     refreshTabVisibility(); // 宗教入口条件达成后出现
-    dirty.religion = true;
+    // v3.0.3 反馈④：宗教面板不再每 5s innerHTML 重建（按钮闪烁根因）；结构变化由事件驱动 dirty.religion
+    if (typeof refreshReligionAffordability === 'function') refreshReligionAffordability();
     // v2.6.0：深潜面板随产出/腐化/里程碑低频刷新（HTML 相同由渲染层跳过重建）
     if (delveUnlocked()) dirty.delve = true;
     // v3.0.0：集市面板随汇率波动/库存恢复低频刷新

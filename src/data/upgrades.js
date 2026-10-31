@@ -11,11 +11,11 @@ export const UPGRADES = [
   // v2.1 R3-A：早期 EP 存储扩容项（破解「上限 1000 死锁」的关键道具）
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
-  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`EP 存储上限 +${B.storage.capPer}`},
+  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:`每级 EP 存储上限 +${B.storage.capPer}`},
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
-  {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:500},desc:'每级 RP 上限 +500（RP 达到上限后停止积累）'},
-  {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'每级 DM 上限 +100（DM 达到上限后停止积累）'},
-  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'每级异兽饼干上限 +200（饼干达到上限后停止积累）'},
+  {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:500},desc:'每级 RP 上限 +500'},
+  {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'每级 DM 上限 +100'},
+  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'每级异兽饼干上限 +200'},
   {id:'intern',name:'实习生',base:600000.0,cps:20,desc:'基础产出+20/s'}, // v2.8.3：base×4/cps 降
   {id:'team',name:'小组协作',base:6000000.0,cps:110,desc:'基础产出+110/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:60000000.0,cps:600,desc:'基础产出+600/s'}, // v2.8.3：base×4/cps 降
@@ -56,7 +56,7 @@ export const UPGRADES = [
   {id:'absolute',name:'绝对',base:3.6000000000000006e+43,cps:6.3e+31,desc:'基础产出+126No/s'}, // v2.8.3
   {id:'beyond',name:'超越',base:3.6e+44,cps:4.2e+32,desc:'基础产出+840No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
-  {id:'atrium',name:'灵感工坊',base:B.atrium.base,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP（研究点开关）`},
+  {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:1.5,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP（研究点开关）`},
   {id:'petland',name:'宠物乐园',base:3000000.0,cps:0.0,produces:{type:'pt',rate:0.1},desc:'每秒 +0.1 异兽饼干'}, // v2.8.7：文案精简
   {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.001},desc:'每秒 0.1% 概率 +1 信仰'},
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,produces:B.dataForge.produces,desc:B.dataForge.desc},
@@ -74,7 +74,7 @@ export const UPGRADES = [
   {id:'cache',name:'缓存优化',base:300000000000.0,cps:0.0,cat:'thread',desc:'线程消耗 -25% 起，每级再 -3%，EP 存储上限 +8000/级'}, // v2.8.23：门槛 3e10
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
   {id:'reserve_bin',name:'备用粮仓',base:20000,growth:1.50,cps:0,cat:'D',desc:'每级 EP 上限 +4,000'}, // v2.8.30：价格陡峭、加成减半（8000→4000）
-  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +500,000'},
+  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'每级 EP 上限 +800,000'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:150000.0,cps:25,desc:'重装地面采集'},

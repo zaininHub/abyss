@@ -18,17 +18,17 @@ export const BAZAAR = {
   // 商人：from → to 单向兑换；give = 每批支付，get = 每批获得（基准值，实际 × 汇率）
   // capRatio：'give' 表示支付额 = EP 存储上限 × give；'get' 表示获得额 = 上限 × get
   dealers: [
-    { id: 'forge',   name: '熔炉协议', icon: '🔥', from: 'ep',    to: 'rp',    give: 120000, get: 4,   stock: 4, tier: 0,
+    { id: 'forge',   name: '熔炉协议', icon: '🔥', from: 'ep',    to: 'rp',    give: 120000, get: 6,   stock: 4, tier: 0,
       desc: '上缴算力换研究点（运气好时优于蒸馏塔，但限购）' },
-    { id: 'caravan', name: '兽栏商队', icon: '🍪', from: 'ep',    to: 'pt',    give: 0.03,  get: 25,  stock: 3, tier: 0, capRatio: 'give',
+    { id: 'caravan', name: '兽栏商队', icon: '🍪', from: 'ep',    to: 'pt',    give: 0.03,  get: 35,  stock: 3, tier: 0, capRatio: 'give',
       desc: '用车间的余电换异兽饼干' },
-    { id: 'smuggle', name: '走私信道', icon: '📦', from: 'rp',    to: 'dm',    give: 30,    get: 3,   stock: 3, tier: 0,
+    { id: 'smuggle', name: '走私信道', icon: '📦', from: 'rp',    to: 'dm',    give: 30,    get: 5,   stock: 3, tier: 0,
       desc: '研究点走私成深渊物质（绕过裂隙的直接通道，库存极少）' },
-    { id: 'pawn',    name: '典当核心', icon: '💠', from: 'faith', to: 'ep',    give: 200,   get: 0.06, stock: 3, tier: 1, capRatio: 'get',
+    { id: 'pawn',    name: '典当核心', icon: '💠', from: 'faith', to: 'ep',    give: 200,   get: 0.08, stock: 3, tier: 1, capRatio: 'get',
       desc: '典当信仰换取急需的算力（信仰有上限，别囤着发霉）' },
-    { id: 'broker',  name: '余烬掮客', icon: '🕯️', from: 'dm',    to: 'ember', give: 15,    get: 3,   stock: 2, tier: 1,
+    { id: 'broker',  name: '余烬掮客', icon: '🕯️', from: 'dm',    to: 'ember', give: 15,    get: 4,   stock: 2, tier: 1,
       desc: '深渊物质换裂隙余烬（跨转生资产互换；本通道为余烬唯一非裂隙来源）' },
-    { id: 'voidfirm',name: '虚空商行', icon: '🌌', from: 'ep',    to: 'vs',    give: 0.12,  get: 6,   stock: 2, tier: 2, capRatio: 'give',
+    { id: 'voidfirm',name: '虚空商行', icon: '🌌', from: 'ep',    to: 'vs',    give: 0.12,  get: 8,   stock: 2, tier: 2, capRatio: 'give',
       desc: '重金收购虚空碎片——不必深潜也能摸到终局层（深潜解锁前无效）' },
   ],
 };

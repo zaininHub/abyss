@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec } from './economy.js'; // v2.8.30 ③：禁购检查
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap } from './economy.js'; // v2.8.30 ③：禁购检查
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -116,6 +116,8 @@ function bindDelegate(container, onBuy) {
   container.addEventListener('click', (e) => {
     const el = e.target.closest('[data-buy]');
     if (!el || !container.contains(el)) return;
+    // v3.0.3 反馈⑨：灰态/锁定卡点击不触发购买（防「灰色点击后仍生效」）
+    if (el.classList.contains('cant') || el.classList.contains('locked') || el.classList.contains('disabled')) return;
     onBuy(el.dataset.buy, el);
   });
 }
@@ -259,10 +261,18 @@ export function renderAtriumDistill(container) {
   const on = S.atriumOn !== false;
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;
+  const uAtrium = UPGRADES.find(x => x.id === 'atrium');
+  const upgCost = uAtrium ? Math.ceil(uAtrium.base * Math.pow(uAtrium.growth || 1.5, n)) : 0;
+  const upgAfford = upgCost > 0 && (S.ep || 0) >= upgCost;
   const div = document.createElement('div');
   div.className = 'atrium-distill item';
-  div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button></div>
+  div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>${upgCost > 0 ? `<button data-atrium-upg class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;background:${upgAfford ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff;opacity:${upgAfford ? 1 : 0.5}">升级 ${fmt(upgCost)} EP</button>` : ''}</div>
     <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 归零自动停）</div>`;
+  const upgBtn = div.querySelector('[data-atrium-upg]');
+  if (upgBtn) upgBtn.addEventListener('click', () => {
+    if (!upgAfford) { if (logFn) logFn('EP 不足，无法升级灵感工坊', 'red'); return; }
+    if (buyUpgrade(uAtrium)) { save(S); renderAtriumDistill(container); if (logFn) logFn('灵感工坊升级至 ×' + (n + 1), 'good'); }
+  });
   div.querySelector('[data-atrium-toggle]').addEventListener('click', () => {
     S.atriumOn = S.atriumOn === false ? true : false;
     save(S);
@@ -318,13 +328,26 @@ function makeShopItem(u) {
   div.className = 'item' + (!afford ? ' cant' : '');
   const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || '');
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
-    <div class="desc">${cpsStr}</div>
+    <div class="desc">${cpsStr}</div>${storagePreviewLine(u)}
     <div class="cost mono">${fmt(cost)}${u.dmCost ? ' DM' : ''}</div>`;
   return div;
 }
 
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
 export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
+
+// v3.0.3 反馈⑧：EP 上限阶梯建筑渲染层动态预览（当前 → 下一级）
+function storagePreviewLine(u) {
+  if (!['storage', 'reserve_bin', 'deep_bin'].includes(u.id)) return '';
+  try {
+    const cap = epStorageCap();
+    let per;
+    if (u.id === 'reserve_bin') per = 12000; // 与 economy.js epStorageCap 口径一致
+    else if (u.id === 'deep_bin') per = 8e5;
+    else { const lv = S.upgrades[u.id] || 0; per = B.storage.capPer * Math.pow(B.storage.capGrowth, lv); }
+    return `<div class="preview" style="font-size:11px;color:var(--text-2);margin-top:2px">EP 上限：当前 ${fmt(cap)} → 下一级 ${fmt(cap + per)}</div>`;
+  } catch { return ''; }
+}
 
 // v2.8.18 ③：购后满级/一次性已购 → 移入组最下侧「已升级」折叠区（不重建列表，无闪烁）
 function moveToOwnedFold(u, el) {
@@ -880,6 +903,16 @@ export function refreshShopAffordability() {
     el.classList.toggle('cant', S.ep < cost);
     const c = el.querySelector('.cost');
     if (c) c.textContent = `${fmt(cost)} EP`;
+  }
+  // v3.0.3 反馈⑦：研究点蒸馏升级按钮灰态/颜色即时同步（EP 变化不等待重渲染）
+  const au = document.querySelector('[data-atrium-upg]');
+  if (au) {
+    const uA = UPGRADES.find(x => x.id === 'atrium');
+    const nA = (S.upgrades && S.upgrades.atrium) || 0;
+    const costA = uA ? Math.ceil(uA.base * Math.pow(uA.growth || 1.5, nA)) : 0;
+    const affA = costA > 0 && (S.ep || 0) >= costA;
+    au.style.background = affA ? 'var(--good,#3fb950)' : 'var(--red,#f85149)';
+    au.style.opacity = affA ? 1 : 0.5;
   }
   // v2.2：岔路口三栋 EP 灰态 + 族升级 RP 灰态（1s 快刷，不重建 DOM）
   for (const [id, el] of crossroadItemEls) {
