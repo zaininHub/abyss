@@ -128,7 +128,7 @@ test('v2.8.28 修复 ⑥ 浏览器：RP 任务真实点击领取 → RP 到账�
   const now = Date.now();
   const mk = () => JSON.stringify({
     _version: 6, chapter: '6', storyline: 'default', ep: 0, rp: 10, es: 0, dm: 0,
-    upgrades: {}, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [],
+    upgrades: { rp_vault: 1 }, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [], // v3.0.9 反馈②：RP 解锁 = 已购矩阵存储库（原仅溢出标记不再解锁）
     religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: false, es: false, faith: false, pt: false, dm: false },
     allTimeEp: 1e9, _clickTutorialDone: true, buffMult: 1, buffUntil: 0, _rpOverflowSeen: true,

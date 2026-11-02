@@ -81,6 +81,7 @@ t('打满上限后 addEp 溢出全额累计入 epOverflowTotal', () => {
   assert.ok(S.rp >= rp0, 'RP 不应减少');
 });
 t('v2.8.22 溢出转 RP（与蒸馏同效率）：溢出 200K → 尾数池满 1 RP 即转', () => {
+  S.upgrades.rp_vault = 1; // v3.0.9 反馈②：溢出转 RP 需已购「矩阵存储库」（RP 未解锁不转化）
   const cap = epStorageCap();
   S.ep = cap; const rp0 = S.rp;
   addEp(200000); // 溢出 200K 进池，floor(200000/rpDistillRate) 转 RP

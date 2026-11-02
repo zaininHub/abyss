@@ -21,8 +21,9 @@ const { S } = await import('../src/state.js');
 const { epStorageCap, addEp, tickCorruption } = await import('../src/modules/economy.js');
 
 // 基线态：无任何扩容建筑/里程碑 → cap = 2000（epStorageCap 基础值）
+// v3.0.9 反馈②：溢出转 RP 需已购「矩阵存储库」（RP 未解锁不转化）——本文件验证转换机制本身，统一授予仓库
 function resetBaseline() {
-  S.upgrades = {}; S.buildings = {}; S.milesDone = {}; S.storyline = 'default';
+  S.upgrades = { rp_vault: 1 }; S.buildings = {}; S.milesDone = {}; S.storyline = 'default';
   S.ep = 0; S.rp = 0; S.corruption = 0;
   S.epOverflowTotal = 0; S._overflowRpPool = 0;
   S.runEarned = 0; S.allTimeEp = 0;

@@ -174,7 +174,8 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
     else if (p.reward.kind === 'ep') assert.ok(p.reward.amount > 0);
   }
   assert.ok(rpSeen === 0, `未解锁应零 rp 任务，实际 ${rpSeen}`);
-  // RP 解锁（首次溢出）后 rp 奖励出现且量级 3~8
+  // RP 解锁（v3.0.9 口径：购入矩阵存储库）后 rp 奖励出现且量级 3~8
+  S.upgrades.rp_vault = 1;
   S._rpOverflowSeen = true;
   rpSeen = 0;
   for (let i = 0; i < 100; i++) {

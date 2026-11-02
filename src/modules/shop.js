@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -403,27 +403,64 @@ function makeShopItem(u) {
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
 export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
 
-// v3.0.8：存储类卡面统一口径——单行「EP 存储上限 +{购买后总量}」（与「存储节点」同款，不再有静态「+4,000」/「下一级」两行）
+// v3.0.9 反馈④：升级文案统一「变化量」口径——不显示购买后总量、不复读百分比，
+// 统一展示「购买这一级，我的 XX 实际 +多少」。实现：临时 +1 级 → 重算 → 还原，取前后差值。
+function withTempLv(bucket, id, fn) {
+  if (!S[bucket]) S[bucket] = {};
+  const b = S[bucket];
+  const had = Object.prototype.hasOwnProperty.call(b, id);
+  const cur = b[id] || 0;
+  b[id] = cur + 1;
+  try { return fn(); } finally { if (had) b[id] = cur; else delete b[id]; } // 原不存在的键直接删除，不往存档写 0
+}
+// 差值文案：'+1.2K EP/s' / '-12.5 EP/s'；无实际变化（重复购买一次性效果等）返回 null
+function deltaStr(diff, unit) {
+  const abs = Math.abs(diff);
+  if (!(abs > 1e-9)) return null;
+  return `${diff > 0 ? '+' : '-'}${fmt(abs)}${unit}`;
+}
+// 从静态 desc 剥离「+5%/级」「×1.04/级」「-4%/s」等百分比尾巴，只留效果名
+function stripPct(desc) {
+  return (desc || '').replace(/\s*[+×-][\d.]+(%|\/级|\/s)?.*$/, '').trim();
+}
+
+// v3.0.8：存储类卡面统一口径 → v3.0.9 反馈④：改为「+变化量」（当前 1.05M 买下一级 +234K 就写 +234K，不写总量）
 const EP_STORAGE_IDS = ['storage', 'reserve_bin', 'deep_bin', 'cache'];
-const EP_STORAGE_EXTRA = { cache: '，线程消耗 -25% 起每级再 -3%' }; // cache 额外效果（原 desc 信息不丢）
-// 资源仓库（RP/DM/PT 上限）同口径：{资源} 上限 +{购买后总量}——原静态「每级 +500」既是一行复数又与实际 +400 不符
+// 资源仓库（RP/DM/PT 上限）同口径：{资源} 上限 +{本级增量}——v3.0.9 修正原「+购买后总量」误读（+2900 实为总量，真实增量 +400）
 const VAULT_RES = [['rp_vault', 'RP', () => rpCap()], ['dm_vault', 'DM', () => dmCap()], ['pt_vault', 'PT', () => ptCap()]];
 function vaultDesc(u) {
   const row = VAULT_RES.find(([id]) => id === u.id);
   if (!row) return null;
   const [, label, capFn] = row;
-  const cur = S.upgrades[u.id] || 0;
-  S.upgrades[u.id] = cur + 1;
-  let cap;
-  try { cap = capFn(); } finally { S.upgrades[u.id] = cur; }
-  return `${label} 上限 +${fmt(cap)}`;
+  const before = capFn();
+  const after = withTempLv('upgrades', u.id, capFn);
+  return `${label} 上限 +${fmt(after - before)}`;
+}
+// 线程强化变化量：cpu/gpu → 线程产出差值；subsist1-3/mem → 线程消耗差值；cache → 存储差值 + 消耗差值
+function threadEffectDesc(u) {
+  const isOut = u.id === 'cpu' || u.id === 'gpu';
+  const isCost = ['subsist1', 'subsist2', 'subsist3', 'mem'].includes(u.id);
+  if (!isOut && !isCost && u.id !== 'cache') return null;
+  const label = stripPct(u.desc) || (isOut ? '线程产出' : '线程消耗');
+  if (u.id === 'cache') {
+    const capBefore = epStorageCap();
+    const capAfter = epCapAfterBuy(u.id);
+    const s = deltaStr(withTempLv('upgrades', u.id, staffSalaryPerSec) - staffSalaryPerSec(), ' EP/s');
+    return `EP 存储上限 +${fmt(capAfter - capBefore)}${s ? '，线程消耗 ' + s : ''}`;
+  }
+  const metric = isOut ? staffOutputPerSec : staffSalaryPerSec;
+  const d = deltaStr(withTempLv('upgrades', u.id, metric) - metric(), ' EP/s');
+  return d ? `${label} ${d}` : null; // 一次性效果已生效 → 重复购买无变化，回落静态 desc
 }
 function storageDesc(u) {
   const vd = vaultDesc(u);
   if (vd) return vd;
+  const th = threadEffectDesc(u);
+  if (th) return th;
   if (!EP_STORAGE_IDS.includes(u.id)) return u.desc || '';
   try {
-    return `EP 存储上限 +${fmt(epCapAfterBuy(u.id))}${EP_STORAGE_EXTRA[u.id] || ''}`;
+    const before = epStorageCap();
+    return `EP 存储上限 +${fmt(epCapAfterBuy(u.id) - before)}`;
   } catch { return u.desc || ''; }
 }
 
@@ -879,12 +916,12 @@ export function renderBuildings(container) {
   });
 }
 
-// v3.0.8：设施卡存储文案同口径——数据中心「EP 存储上限 +{购买后总量}」，其余设施原样
+// v3.0.8：设施卡存储文案同口径 → v3.0.9 反馈④：数据中心「EP 存储上限 +{本级增量}」，其余设施原样
 function bldDesc(b) {
   const lv = buildingLevel(b, S);
   const text = b.desc[lv] || '';
   if (b.id !== 'datacenter') return text;
-  try { return text.replace(/EP 存储上限 \+[\d,]+/, `EP 存储上限 +${fmt(epCapAfterBuy('datacenter', 'building'))}`); }
+  try { const before = epStorageCap(); return text.replace(/EP 存储上限 \+[\d,]+/, `EP 存储上限 +${fmt(epCapAfterBuy('datacenter', 'building') - before)}`); }
   catch { return text; }
 }
 function makeBldItem(b) {
@@ -1070,7 +1107,7 @@ function v21HasCapAdd(b) {
 }
 function v21Desc(b) {
   if (!v21HasCapAdd(b)) return b.desc;
-  try { return `EP 存储上限 +${fmt(epCapAfterBuy(b.id, 'building'))}${V21_CAP_EXTRA[b.id] || ''}`; }
+  try { const before = epStorageCap(); return `EP 存储上限 +${fmt(epCapAfterBuy(b.id, 'building') - before)}${V21_CAP_EXTRA[b.id] || ''}`; } // v3.0.9 反馈④：总量→变化量
   catch { return b.desc; }
 }
 function makeV21Item(b) {
@@ -1423,6 +1460,26 @@ function rpGroupShown(g) {
   if (!g.unlock) return true;
   return rpGroupLv(g.unlock.prev) >= g.unlock.need;
 }
+// v3.0.9 反馈④：研究升级文案改为「计算后变化量」——临时 +1 级重算差值，
+// 展示「买入这一级实际 +多少」而非复读「+5%/级 → 下一级 +5%」；
+// 无实时口径的项（信仰/离线/深潜/裂隙）保留「下一级 +X%」（该百分比即本级变化量）
+const RESEARCH_METRIC = {
+  ep:      { fn: () => computeCps(),        unit: ' EP/s' },
+  thread:  { fn: () => staffOutputPerSec(), unit: ' EP/s' },
+  global:  { fn: () => computeCps(),        unit: ' EP/s' },
+  wage:    { fn: () => staffSalaryPerSec(), unit: ' EP/s' },
+  storage: { fn: () => epStorageCap(),      unit: '' },
+  dm:      { fn: () => vehicleDmPerMin(),   unit: ' /min' },
+};
+function researchDeltaDesc(u, maxed) {
+  if (maxed || !u.fx) return null;
+  const label = stripPct(u.desc) || u.name;
+  const m = RESEARCH_METRIC[u.fx.key];
+  const pct = `${u.fx.v > 0 ? '+' : ''}${Math.round(u.fx.v * 100)}%`;
+  if (!m) return `${label} 下一级 ${pct}`;
+  const d = deltaStr(withTempLv('rpTheories', u.id, m.fn) - m.fn(), m.unit);
+  return d ? `${label} ${d}` : `${label} 下一级 ${pct}`; // 差值为 0（如无线程时薪酬协商）回落百分比
+}
 export function renderResearchUpgrades(container) {
   if (!container) return;
   const sig = RP_GROUPS.map(g =>
@@ -1460,10 +1517,9 @@ export function renderResearchUpgrades(container) {
       div.className = 'item' + (maxed ? ' v21 owned-item' : (!afford ? ' cant' : ''));
       div.dataset.research = u.id;
       div.title = maxed ? '研究已达上限' : (afford ? `RP 购买：${u.desc}` : `RP 不足（需 ${fmt(cost)} RP）`); // v2.8.13：卡片不再重复展示当前 RP（顶部已有「当前 RP」）
-      const eff = (L) => u.fx ? (u.fx.key === 'global' ? '×' + (Math.pow(1 + u.fx.v, L)).toFixed(2) : (u.fx.v > 0 ? '+' : '') + Math.round(u.fx.v * L * 100) + '%') : ''; // v2.8.30 ③：许愿池（fx null）仅显示描述
-      const nextEff = lv < u.cap ? eff(lv + 1) : null;
+      const delta = researchDeltaDesc(u, maxed); // v3.0.9 反馈④：变化量口径
       div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv}/${u.cap}</span></div>
-        <div class="desc">${u.desc}${nextEff ? ` → 下一级 ${nextEff}` : maxed ? '（已满级）' : ''}</div>
+        <div class="desc">${delta || `${u.desc}${maxed ? '（已满级）' : ''}`}</div>
         <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
       grid.appendChild(div);
     }

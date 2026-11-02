@@ -705,10 +705,10 @@ function switchTab(id) {
 
 function refreshTabVisibility() {
   // v2.8.7：研究点 tab 仅 RP 解锁后显示（保持可探索性，未解锁不展示入口）
-  // v3.0.8：EP 已溢出（_rpOverflowSeen）即显示入口——面板内给出「抬上限 → 买矩阵存储库」的下一步，
-  // 避免玩家溢出后完全看不到研究点入口、以为功能坏了
+  // v3.0.9 反馈②：解锁口径收紧为「购入矩阵存储库」（anchorShown('rp')）——溢出只开放仓库购买入口，
+  // 不再显示研究点 tab（未购仓库时的「未解锁」提示页与溢出引导文案一并移除）
   const rpBtn = document.getElementById('btn-rp');
-  if (rpBtn) rpBtn.style.display = (anchorShown('rp', S) || S._rpOverflowSeen) ? '' : 'none';
+  if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
   // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）
   const expBtn = document.getElementById('btn-expedition');
   if (expBtn) expBtn.style.display = (S.expeditionsDone > 0 || S.expeditions.length > 0) ? '' : 'none';
@@ -734,24 +734,12 @@ function refreshTabVisibility() {
   if (bzBtn) bzBtn.style.display = (bazaarUnlocked() || canUnlockBazaar()) ? '' : 'none';
 }
 
-// v2.5 ④：研究点（RP）独立栏目——EP 首次溢出解锁；展示余额 / 溢出转换 / 用途说明
+// v2.5 ④：研究点（RP）独立栏目——v3.0.9 反馈②：解锁唯一入口 = 购入「矩阵存储库」；
+// tab 未解锁时入口整体隐藏，原「EP 已溢出存储上限…」引导文案随 v3.0.9 反馈① 移除
 function renderRpPanel() {
   const panel = document.getElementById('rp-panel');
   if (!panel) return;
-  if (!anchorShown('rp', S)) {
-    // v3.0.8：解锁提示按真实进度分两种——未溢出：先溢出；已溢出：把上限抬到仓库价再买仓库
-    const vault = UPGRADES.find(u => u.id === 'rp_vault');
-    const vaultCost = vault ? unitCost(vault, 0) : 0;
-    const cap = epStorageCap();
-    const body = S._rpOverflowSeen
-      ? `EP 已溢出存储上限。把 <b>EP 存储上限</b> 提升到 <b>${fmt(vaultCost)}</b> 以上（当前 ${fmt(cap)}），商店会开放「矩阵存储库」；<br>购入仓库后即解锁研究点，可消耗 EP 蒸馏转化为 RP。`
-      : `让 EP 溢出存储上限一次，商店会出现「矩阵存储库」（研究点仓库）。<br>购入仓库后：可消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。`;
-    panel.innerHTML = `<div class="panel" style="padding:14px">
-      <h3 style="margin-top:0;color:var(--dim)">🔬 研究点（RP）未解锁</h3>
-      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">${body}</p>
-    </div>`;
-    return;
-  }
+  if (!anchorShown('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></div>

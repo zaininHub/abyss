@@ -795,16 +795,15 @@ export function epCapAfterBuy(id, kind = 'upgrade') {
 // 累计入 epOverflowTotal 页头统计；其中 5% 就地转化为 RP（换算 1/10000，满 1 转出、尾数滞留）
 function accountEpOverflow(overflow) {
   S.epOverflowTotal = (S.epOverflowTotal || 0) + overflow;
-  // v2.5 ④：EP 首次溢出 = 研究点 RP 解锁（持久标记，随存档落盘；新档需首次溢出才开启 RP 栏目）
+  // v2.5 ④：EP 首次溢出 = 「矩阵存储库」购买入口开放（持久标记，随存档落盘）
+  // v3.0.9 反馈②：溢出仅开放仓库入口，不再直接解锁研究点（RP 解锁唯一 = 购入仓库，见 disclosure.anchorDone('rp')）
   if (overflow > 0 && !S._rpOverflowSeen) {
     S._rpOverflowSeen = true;
-    // v2.8.28 修复：新档首次溢出 → 标记「已引入 RP 仓库」，解锁链改为购买「矩阵存储库」后才解锁研究点；
-    // 旧档（已有 _rpOverflowSeen、无此标记）保持原解锁不回退（见 disclosure.anchorDone('rp')）
-    if (S._rpVaultIntroduced === undefined && (S.upgrades?.rp_vault || 0) < 1) S._rpVaultIntroduced = true;
   }
   // v2.8.22 ⑤：EP 达到上限后的溢出转化 RP，效率与蒸馏一致（1 RP = 蒸馏率 EP，蒸馏塔升级/星渊罗盘效率同步生效），
   // 满 1 RP 转出、尾数滞留池中（与蒸馏同口径，避免溢出自然产 RP 绕过蒸馏塔投入）
-  if (overflow > 0) {
+  // v3.0.9 反馈②：RP 未解锁（未购矩阵存储库）前溢出不转化 RP——杜绝绕过仓库白得研究点
+  if (overflow > 0 && ((S.upgrades && (S.upgrades.rp_vault || 0) >= 1) || (S.upgrades && (S.upgrades.atrium || 0) >= 1))) {
     const rate = rpDistillRate();
     S._overflowRpPool = (S._overflowRpPool || 0) + overflow;
     const gained = Math.floor(S._overflowRpPool / rate);
