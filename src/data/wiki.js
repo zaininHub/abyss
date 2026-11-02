@@ -1,5 +1,6 @@
-// v2.9.0：Wiki 数据中心——参考 Kittens Game 体系化百科风格（按系统分章 + 数值附录 + 渐进解锁）
-// 内容随真实 BALANCE/状态动态生成（避免数值漂移后 wiki 失真）；未解锁章节灰显并给出门控提示
+// v2.9.0：Wiki 数据中心——按系统分章 + 数值附录（内容随真实 BALANCE/状态动态生成，避免数值漂移后失真）
+// v3.1.1 反馈⑥：定位升级为「玩家手册 + 研发手册」——全部章节无条件展示（不管是否解锁），
+// 各资源/特殊建筑/功能点写明解锁条件；版本机制变更后同步更新本文件
 import { S } from '../state.js';
 import { BALANCE } from './balance.js';
 import { PRAISE, SECRET_SANCTUMS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
@@ -10,7 +11,7 @@ import { delveDepth } from '../modules/delve.js';
 
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-// 解锁判定（与 main.js 锚点/门控口径对齐；未解锁 → 章节灰显 + 提示）
+// v3.1.1 反馈⑥：章节不再锁定——unlock 字段保留仅供检索（历史测试/外部引用），不再参与展示门控
 function unlocked(key) {
   const rd = S.resDiscovered || {};
   switch (key) {
@@ -40,20 +41,20 @@ export const WIKI_SECTIONS = [
     <p class="wiki-hint">提示：先点工作台攒 EP → 招募 2-3 线程 → 买「存储节点」扩容 → 让 EP 溢出一次开放「矩阵存储库」→ 购入仓库解锁研究点 → 走科技树。第 5 章后命运的岔路口开放（秩序/深渊/信仰三线立誓）。</p>
   ` },
   { id: 'res', name: '资源与货币', unlock: null, body: () => `
-    <h4>资源分层（参考 KG 多层设计）</h4>
-    <table class="wiki-tbl"><tr><th>层级</th><th>资源</th><th>获取</th><th>用途</th></tr>
-      <tr><td>基础</td><td>⚡ EP 能量点</td><td>线程自动产出 + 点击</td><td>一切消耗（有存储上限）</td></tr>
-      <tr><td>中间</td><td>🔬 RP 研究点</td><td>灵感蒸馏塔主动转化 / 任务奖励</td><td>科技树、研究升级、族升级</td></tr>
-      <tr><td>稀有</td><td>🍪 PT</td><td>异兽孵化</td><td>喂养/升级异兽</td></tr>
-      <tr><td>转生</td><td>💎 ES 永恒碎片</td><td>晋升结算</td><td>永恒矩阵永久强化</td></tr>
-      <tr><td>深渊</td><td>🌀 DM 深渊物质</td><td>封印裂隙 / 载具采集 / 主动净化腐化</td><td>深渊商店、遗物、净化节点</td></tr>
-      <tr><td>超长线</td><td>🙏 信仰 / 虔诚</td><td>圣所产出 / 赞颂转化</td><td>宗教升级、超验层级</td></tr>
-      <tr><td>终局</td><td>🌑 VS 虚空碎片</td><td>深潜产出 / 裂隙深入</td><td>深潜升级树</td></tr>
+    <h4>资源分层与解锁条件</h4>
+    <table class="wiki-tbl"><tr><th>层级</th><th>资源</th><th>解锁条件</th><th>获取</th><th>用途</th></tr>
+      <tr><td>基础</td><td>⚡ EP 能量点</td><td>开局即有</td><td>线程自动产出 + 点击</td><td>一切消耗（有存储上限）</td></tr>
+      <tr><td>中间</td><td>🔬 RP 研究点</td><td>购入「矩阵存储库」（EP 溢出后商店开放）</td><td>灵感蒸馏塔主动转化 / 灵感工坊自动蒸馏 / 任务奖励</td><td>科技树、研究升级、RP 加成、离线升级、族升级</td></tr>
+      <tr><td>稀有</td><td>🍪 PT 异兽饼干</td><td>第 3 章后商店开放「饵料仓库」，购入即解锁</td><td>异兽孵化（EP 转化）/ 伊甸花园</td><td>购买/升级异兽</td></tr>
+      <tr><td>转生</td><td>💎 ES 永恒碎片</td><td>完成首次晋升</td><td>晋升结算</td><td>永恒矩阵永久强化</td></tr>
+      <tr><td>深渊</td><td>🌀 DM 深渊物质</td><td>购入首辆载具 或 首次封印裂隙</td><td>封印裂隙 / 载具探采 / 主动净化腐化</td><td>深渊商店、遗物、净化节点</td></tr>
+      <tr><td>超长线</td><td>🙏 信仰 / 虔诚</td><td>购入「路边神龛」</td><td>圣所产出 / 赞颂转化</td><td>宗教升级、超验层级</td></tr>
+      <tr><td>终局</td><td>🌑 VS 虚空碎片</td><td>深潜解锁（ES≥3 + DM + 宗教）</td><td>深潜产出 / 裂隙深入</td><td>深潜升级树</td></tr>
     </table>
-    <p class="wiki-hint">EP 存储上限 = 2000 + 存储节点（无限升级，+${fmt(D.storage.capPer)}/级 ×${D.storage.capGrowth}）+ 缓存优化 +${fmt(8000)}/级 + 里程碑 +${D.storageMileBonus*100}%/个。扩容项受 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）。</p>
+    <p class="wiki-hint">EP 存储上限 = 2000 + 存储节点（无限升级，逐级递增）+ 备用粮仓/深井仓储/缓存优化/效能建筑扩容 + 里程碑 +${D.storageMileBonus*100}%/个。扩容项受 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）。商店文案均为「购买后本级变化量」。</p>
   ` },
   { id: 'thread', name: '线程与薪资', unlock: null, body: () => `
-    <h4>线程四态薪资状态机（参考 KG 人口幸福）</h4>
+    <h4>线程四态薪资状态机</h4>
     <table class="wiki-tbl"><tr><th>状态</th><th>条件</th><th>效果</th></tr>
       <tr><td>🟢 满薪</td><td>EP ≥ ${D.thread.wages.warnSec}s 薪资</td><td>无惩罚</td></tr>
       <tr><td>🟡 欠薪降效</td><td>EP < ${D.thread.wages.warnSec}s 薪资</td><td>产出 ×${D.thread.wages.debtMult}（食堂逐级缓解至 0.95）</td></tr>
@@ -62,6 +63,8 @@ export const WIKI_SECTIONS = [
     </table>
     <h4>线程心情（与薪资正交叠加）</h4>
     <p>超频 ×2.0 / 优化 ×1.5 / 高效 ×1.2 / 正常 ×1.0 / 阻塞 ×0.5 / 死锁 ×0.1</p>
+    <h4>班组面板（v3.1.0 拟人化）</h4>
+    <p>商店页顶部「🧵 班组」：每条线程一张个人档案卡——状态灯（跟随薪资四态）、心情乘数、个人产出、累计贡献 EP（按实际入账份额逐 tick 分摊）、工龄；下方「班组事件流水」记录招募/状态切换/流失/吞没/晋升解散（随存档持久化 40 条）。</p>
     <h4>懒惰态（EP 满上限惩罚）</h4>
     <p>EP 持续满上限 ${D.lazy.afterSec}s → 线程怠工：产出 ×${D.lazy.prodMult}、消耗 ×${D.lazy.costMult}（消耗 > 产出，鼓励持续投入而非囤满挂机）；EP 跌到 0 或任意购买解除。</p>
   ` },
@@ -80,15 +83,15 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'rift', name: '裂隙与余烬', unlock: 'rift', body: () => `
     <h4>深渊裂隙（随机出现，基础 ${Math.round(D.rift.spawnSec/60)} 分钟）</h4>
-    <p>按 cps 分 5 级：${D.rift.levelNames.join(' / ')}。三选项：<b>封印</b>（消耗 EP，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ${Math.round(60)}s ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本）。</p>
+    <p>裂隙共 5 级：${D.rift.levelNames.join(' / ')}。<b>等级上限由余烬科技「深空探测井」逐级开放</b>（初始最高浅层 Lv.1，每级 +1）——cps 越高出现高位的潜力越大，但没买探测井就只会见到浅层裂隙。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显）。</p>
     <h4>裂隙余烬（跨转生保留）</h4>
-    <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。</p>
+    <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级）、<b>深空探测井</b>（裂隙最高等级 +1/级，共 4 级），及三项自动动作（互斥单开）。</p>
     <p class="wiki-hint">腐化满额/吞噬倒计时期间不触发新裂隙（走吞噬路径，避免机制叠加）。</p>
   ` },
   { id: 'religion', name: '宗教与虔诚', unlock: 'faith', body: () => `
     <h4>宗教分支（选一锁定，跨转生保留）</h4>
     <p>日耀议会（全局 ×2）/ 创世枢机（成本 ×0.8）/ 月影修道会（离线 ×1.5）/ 天启密会（项目 ×2）/ 自然亲和（异兽 ×2）/ 永生日轮（ES ×2）/ 全知教团（全局 ×10）。</p>
-    <h4>赞颂 → 虔诚 → 超验（参考 KG Order of the Sun 四层转化）</h4>
+    <h4>赞颂 → 虔诚 → 超验</h4>
     <p><b>信仰</b>（圣所产出）→ ≥容量 ${PRAISE.thresholdRatio*100}% 时<b>赞颂</b>转化得<b>虔诚</b>（跨周期保留）→ 消耗虔诚<b>超验</b>提升层级（成本 ${PRAISE.transcendBase}×${PRAISE.transcendGrowth}^级）。</p>
     <ul>
       <li>赞颂转化率 = 1 + 0.25 × 超验层级²</li>
@@ -99,22 +102,21 @@ export const WIKI_SECTIONS = [
     ${SECRET_SANCTUMS.map(s => `<p>· <b>${s.name}</b>（超验 ≥${s.needTranscend}，虔诚门槛 ${s.devGate}）：${s.desc}</p>`).join('')}
   ` },
   { id: 'policy', name: '周期政策', unlock: 'policy', body: () => `
-    <h4>周期政策（参考 KG Policies——组内互斥、每轮重选）</h4>
+    <h4>周期政策（组内互斥、每轮重选）</h4>
     <p>每局（晋升/轮回后）按跨周期资产开放政策组，每组三选一，选 A 锁 B/C；效果 ±10-30% 正负成对（拿一头强必吃另一头弱）；改选消耗回响/虔诚 ×2^n（立誓改选成本翻倍，中立半价）。</p>
     ${POLICY_GROUPS.map(g => `<p><b>${g.name}组</b>：${g.policies.map(p => `${p.name}（${p.desc}）`).join(' / ')}</p>`).join('')}
     <p class="wiki-hint">立誓（岔路口买定向建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。每轮政策走向记入图鉴「历史周期走向」。</p>
   ` },
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `
     <h4>深渊深潜（终局层，层深/VS 跨转生保留）</h4>
-    <p>解锁：ES ≥ 3 + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × 4% × 1.12^层深（封顶 75% 上限，耐压舱 -8%/级），DM 成本 ${100}×1.35^层深；<b>下潜即层深 +1</b>（v2.9.0 修复）；越深 VS 产出越高（基础 ${0.5}/s × (1+0.5×层)）。</p>
-    <p><b>深潜维持开销</b>（v3.0.0）：深潜中每秒烧掉「存储上限 × 0.02% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${0.02}%/层/s（净化核心 -30%/级）。</p>
-    <p class="wiki-hint">为什么改成吃 EP：终局前 EP 只有「买升级」一个出口，深潜与 EP 主经济完全脱钩——现在存储上限重新成为下潜的真实约束（想潜得深，先扩容）。</p>
+    <p>解锁：ES ≥ 3 + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × 4% × 1.12^层深（封顶 75% 上限，耐压舱 -8%/级），DM 成本 ${100}×1.35^层深；<b>下潜即层深 +1</b>；越深 VS 产出越高（基础 ${0.5}/s × (1+0.5×层)）。</p>
+    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × 0.02% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${0.02}%/层/s（净化核心 -30%/级）。</p>
     <p>当前层深：Lv.${delveDepth()}。里程碑：10 层 +50 VS / 25 层 +200 / 50 层 +1000 / 75 层 +2500 / 100 层 +5000（深渊之眼终局徽记）/ 150 层 +20000（回声定位 +20%/级）。</p>
     <h4>深潜升级树（VS 消耗，8 项）</h4>
     <p>深潜器（VS+50%/级）/ 虚空强化（全局 ×1.10/级）/ 净化核心（腐化 -30%/级）/ 深渊共鸣（圣印+2/级·信仰×1.5/级）/ 拟态矩阵（AI 间隔 -20%/级）/ 星辰余烬（离线上限 +20%/级）/ <b>耐压舱</b>（EP 维持 -25%/级·下潜 EP 成本 -8%/级）/ <b>回声定位</b>（VS+35%/级·里程碑 +20%/级）。</p>
   ` },
   { id: 'bazaar', name: '深渊集市', unlock: 'bazaar', body: () => `
-    <h4>深渊集市（v3.0.0 大模块 · 参考 KG 贸易与资源转换）</h4>
+    <h4>深渊集市（v3.0.0 大模块）</h4>
     <p>解锁：职级 ≥ 1 且已发现研究点（RP）。六位商人常驻矩阵夹层，做<b>单向资源兑换</b>——把富余的换成稀缺的。</p>
     <table class="wiki-tbl"><tr><th>商人</th><th>兑换</th><th>库存</th><th>等级门槛</th></tr>
       ${BAZAAR.dealers.map(d => `<tr><td>${d.icon} ${d.name}</td><td>${RES_LABEL[d.from]} → ${RES_LABEL[d.to]}</td><td>${d.stock}</td><td>${d.tier > 0 ? 'Lv.' + d.tier : '—'}</td></tr>`).join('')}
@@ -122,14 +124,15 @@ export const WIKI_SECTIONS = [
     <h4>汇率波动（每 ${BAZAAR.shuffleSec}s）</h4>
     <p>每位商人有独立汇率倍率，区间 [${(1 - BAZAAR.volatility).toFixed(2)} + 0.05×等级, ${(1 + BAZAAR.volatility).toFixed(2)}]，作用在<b>每批所得</b>上（×1.20 = 多得 20%）。集市等级只抬高波动下限，<b>永不消除波动</b>。</p>
     <h4>库存与刷新</h4>
-    <p>每批成交消耗 1 点库存；库存每 ${BAZAAR.stockRegenSec}s 自然 +1（至上限）。手动刷新立即补满库存并重掷汇率：EP 成本 = 存储上限 × ${(BAZAAR.refreshEpRatio * 100).toFixed(0)}% × ${BAZAAR.refreshGrowth}^本轮刷新次数，或消耗 ${BAZAAR.echoRefresh} 点回响（不计入刷新次数）。</p>
+    <p>每批成交消耗 1 点库存；库存每 ${BAZAAR.stockRegenSec}s 自然 +1（至上限）。手动刷新立即补满库存并重掷汇率：EP 成本 = 存储上限 × ${(BAZAAR.refreshEpRatio * 100).toFixed(0)}% × ${BAZAAR.refreshGrowth}^本轮刷新次数，或消耗 ${BAZAAR.echoRefresh} 点回响（不计入刷新次数）。随机事件：🔥特惠 ×1.2 / 📈涨价 ×0.8；二次确认可在设置关闭。</p>
     <h4>集市等级（跨周期保留）</h4>
     <p>按累计成交笔数升级：${BAZAAR.tiers.map((n, i) => `Lv.${i}（${n} 笔）`).join(' / ')}。等级抬高汇率波动下限并解锁高阶商人（典当核心 Lv.1 / 余烬掮客 Lv.1 / 虚空商行 Lv.2）。<b>成交笔数与等级跨周期保留，库存/汇率/刷新次数每轮重置</b>。</p>
-    <p class="wiki-hint">虚空商行只在深潜解锁后才收货（VS 未发现时无意义）。集市政策组（关税同盟 / 自由贸易 / 垄断协议）每轮可重选，会改写汇率、库存与刷新成本。</p>
   ` },
   { id: 'prestige', name: '晋升与轮回', unlock: 'prestige', body: () => `
     <h4>晋升转生（第一层循环）</h4>
     <p>本局累计 EP ≥ ${fmt(3e9*Math.pow((S.prestige||0)+1,1.5))} → 晋升：清空本局，获职级点（每点全局 +10%）+ RP + ES，三选一天赋。跨转生保留：职级/RP/ES/宗教/裂隙/深潜/回响/永恒/遗物。</p>
+    <h4>晋升 RP 加成（研究点 tab）</h4>
+    <p><b>完成首次晋升后开放</b>（v3.1.1 反馈①：此前 RP 解锁即展示，过早）。初探实验台（每级晋升 RP +30%）/ RP 蒸馏塔（+50%）/ 深度实验室（×2）/ 理论突破台（+150%）/ 传奇研究所（×2）——RP 购买，逐级解锁。</p>
     <h4>轮回（第二层循环，晋升之上）</h4>
     <p>门槛：本局 ≥ 1 次晋升 + 累计 EP ≥ ${fmt(1e9)}。结算深渊回响 = min(100, 8×√(本局成就评分))，每点全局 +5%（跨轮回保留）。每次轮回按本局最强维度携带 1 座「深渊遗存」（同种 cap 3）：湮灭核心（全局 ×1.25）/ 记忆库（上限 ×2）/ 虚空锚（余烬 +25%）。</p>
     <h4>回响商店（永久，跨轮回）</h4>
@@ -142,13 +145,40 @@ export const WIKI_SECTIONS = [
     <h4>吞噬专属成就（v2.9.0）</h4>
     <p>🤝 <b>恶魔的朋友</b>：倒计时终结选贿赂深渊<br>🌑 <b>凝视深渊</b>：倒计时终结选同归于尽<br>🌑 <b>被深渊吞噬</b>：本局被深渊吞没（同归于尽触发）</p>
   ` },
+  { id: 'unlock', name: '解锁条件手册', unlock: null, body: () => `
+    <h4>系统/功能解锁条件总表（研发手册口径，与代码同步）</h4>
+    <table class="wiki-tbl"><tr><th>内容</th><th>解锁条件</th><th>说明</th></tr>
+      <tr><td>科技树</td><td>第 1 章 ∧ 购入「矩阵存储库」（RP 锚点）</td><td>RP 消耗，开辟玩法</td></tr>
+      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>分三批次：产出强化开局显现 → 资源与消耗（累计 4 级）→ 深渊终局（再累计 4 级）；未显现批次不占版面</td></tr>
+      <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点 tab「晋升 RP 加成」分区</td></tr>
+      <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点 tab 底部，RP + 里程碑双门控，逐档线性</td></tr>
+      <tr><td>异兽（PT/宠物）</td><td>第 3 章 ∧ 购入「饵料仓库」</td><td>仓库即 PT 解锁入口；顶栏 PT、异兽 tab、孵化同步开放</td></tr>
+      <tr><td>探采平台 / 深渊商店</td><td>首次触发深渊裂隙</td><td>载具探采：EP→DM 汇率随总载具数逐辆 ×${D.vehicles.epPerDmGrowth} 递增</td></tr>
+      <tr><td>深渊遗物</td><td>裂隙已触发 ∧ DM 已发现</td><td>遗物 tab</td></tr>
+      <tr><td>裂隙 tab</td><td>首次触发深渊裂隙</td><td>余烬升级树、深入探索</td></tr>
+      <tr><td>宗教</td><td>购入「路边神龛」（信奉后开放）</td><td>宗教 tab，选一锁定</td></tr>
+      <tr><td>政策</td><td>开放任一政策组（晋升/深潜/信仰资产）</td><td>政策 tab，每轮重选</td></tr>
+      <tr><td>深潜</td><td>ES ≥ 3 ∧ DM 已发现 ∧ 宗教已信奉</td><td>深潜 tab，终局层</td></tr>
+      <tr><td>深渊集市</td><td>职级 ≥ 1 ∧ 已发现 RP</td><td>集市 tab，资源兑换</td></tr>
+      <tr><td>晋升</td><td>第 4 章 ∧ 本局累计 EP 达标（首次 30 亿）</td><td>晋升 tab</td></tr>
+      <tr><td>星图 / 故事线 / 岔路口</td><td>第 5 章</td><td>星图探索、三线立誓</td></tr>
+      <tr><td>宇宙探索（星图内）</td><td>科技树「深空探测」</td><td>6 项大工程，EP 一次性投入换多资源</td></tr>
+      <tr><td>效能建筑</td><td>购入「矩阵存储库」（RP 锚点）</td><td>商店页「效能建筑」分区，按组分类</td></tr>
+      <tr><td>组 D 扩容（量子缓存池等 6 座）</td><td>效能建筑「存储与扩容」组，各按里程碑/科技门控</td><td>无限升级 + 30% 防死锁钳制</td></tr>
+      <tr><td>AI 助手</td><td>第 7 章</td><td>自动购买需全资源点解锁后激活</td></tr>
+      <tr><td>永恒矩阵</td><td>第 8 章 ∧ 首次晋升获得 ES</td><td>科技树 tab 底部</td></tr>
+    </table>
+    <h4>资源仓库三件套（商店「存储与资源建筑」组）</h4>
+    <p><b>矩阵存储库</b>：EP 溢出一次后开放，购入解锁研究点（RP 上限 2,500 + 400/级）；<b>星尘金库</b>：首辆载具/DM 到手后开放（DM 上限扩容）；<b>饵料仓库</b>：第 3 章后开放，购入解锁 PT（PT 上限 1,000 + 200/级）。三仓库均要求「EP 存储上限 ≥ 全价」才摆出（防摆出买不起的死锁）。</p>
+  ` },
   { id: 'appendix', name: '数值公式附录', unlock: null, body: () => `
-    <h4>成本曲线（参考 KG）</h4>
+    <h4>成本曲线</h4>
     <ul>
-      <li>升级/建筑：base × growth^级 × costMult()（默认 growth 1.30）</li>
+      <li>升级/建筑：base × growth^级 × costMult()（默认 growth 1.30；50 级后每级额外 ×1.08）</li>
       <li>扩容类：无限升级 + 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）</li>
       <li>线程招募：firstCost × 1.25^线程数</li>
       <li>专注：30 × 1.6^级</li>
+      <li>探采平台：载具价 ×1.30^已购数；EP→DM 汇率 = 15,000 × 1.15^总载具数（DM 速率固定，保持稀缺）</li>
     </ul>
     <h4>全局乘数软上限</h4>
     <p>m > ${fmt(D.softCapThreshold)} → ${fmt(D.softCapThreshold)} + √(m-${fmt(D.softCapThreshold)}) × ${D.softCapFactor}（防无限滚）。</p>
@@ -160,7 +190,7 @@ export const WIKI_SECTIONS = [
       <tr><td>后期</td><td>1-3 天</td><td>永恒矩阵（转生）</td></tr>
       <tr><td>终局</td><td>3 天+</td><td>深渊裂隙、DM、深潜</td></tr>
     </table>
-    <h4>KG 设计原则（本游戏贯彻）</h4>
+    <h4>设计原则（本游戏贯彻）</h4>
     <ul>
       <li>每个问题多种解法（EP 不够 → 建线程/点科技/做任务/买异兽）</li>
       <li>每个解法创造新问题（线程多 → 薪资涨 → EP 消耗快）</li>
@@ -172,4 +202,4 @@ export const WIKI_SECTIONS = [
 ];
 
 export function wikiSectionById(id) { return WIKI_SECTIONS.find(s => s.id === id); }
-export function wikiUnlocked(key) { return unlocked(key); }
+export function wikiUnlocked(key) { return unlocked(key); } // v3.1.1 反馈⑥：展示不再门控，仅供内部/测试检索

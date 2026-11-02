@@ -33,7 +33,8 @@ export const BALANCE = {
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],
     epPerDm: 15000,                     // v3.0.3 后续反馈②：采集消耗 ×2.5（6000→15000）——探采 EP 消耗过少
-    dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位）
+    epPerDmGrowth: 1.15,                // v3.1.1 反馈⑤：EP→DM 汇率随总载具数逐辆 ×1.15 递增（参考升级商店成本曲线）——多买车不再让 EP 兑 DM 越来越便宜，DM 获取难度保持陡峭
+    dmRates: [0.05, 0.1, 0.25, 0.5],       // 每辆载具 DM/min 采集率（按档位，固定不随数量增长——DM 保持稀缺）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
     embraceBonusSec: 5,                     // 拥抱裂隙爆发时长加成（秒 × 档位）
@@ -242,6 +243,7 @@ export const BALANCE = {
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
+      depth:    { name: '深空探测井', cap: 4, desc: '裂隙最高等级 +1/级（浅层 → 虚空之隙）' }, // v3.1.1 反馈④：裂隙等级上限走余烬升级树——首见裂隙恒为浅层，深层随探测井逐级开放
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
       auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },

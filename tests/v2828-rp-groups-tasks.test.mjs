@@ -40,7 +40,7 @@ test('v2.8.28 ② 研究升级：10 项按 3 类目分批次（产出强化→�
   const src = fs.readFileSync(new URL('../src/modules/shop.js', import.meta.url), 'utf8');
   assert.ok(src.includes("key: 'prod'") && src.includes("key: 'res'") && src.includes("key: 'abyss'"), '3 类目定义存在');
   assert.ok(src.includes('unlock: { prev: \'prod\', need: 4 }') && src.includes('unlock: { prev: \'res\', need: 4 }'), '批次解锁条件（累计 4 级）');
-  assert.ok(src.includes('rp-group-lock'), '未解锁批次锁定提示');
+  assert.ok(!src.includes('未显现'), 'v3.1.1 反馈②：未显现占位整体移除（未解锁批次不渲染）');
   assert.ok(src.includes('data-rp-fold'), '类目折叠交互');
 });
 
@@ -70,7 +70,7 @@ test('v2.8.28 ② 浏览器：研究点分批次显示——批 1 可见、批 2
     }));
     assert.equal(r1.titles.length, 1, '仅产出强化显现');
     assert.ok(r1.titles[0].includes('产出强化'), '类目名产出强化');
-    assert.equal(r1.locks.length, 2, '资源与消耗/深渊终局锁定提示');
+    assert.equal(r1.locks.length, 0, 'v3.1.1 反馈②：未显现批次不渲染（无锁定提示行）');
     assert.equal(r1.cards, 4, '批 1 四张卡（熵减/矩阵/奇点/离线）');
     // 折叠：点产出强化标题 → 网格收起
     await p1.evaluate(() => document.querySelector('#research-upgrade-list .rp-group-title').click());
@@ -98,7 +98,7 @@ test('v2.8.28 ② 浏览器：研究点分批次显示——批 1 可见、批 2
       cards: document.querySelectorAll('#research-upgrade-list [data-research]').length,
     }));
     assert.equal(r2.titles.length, 2, '批 2（资源与消耗）揭示');
-    assert.equal(r2.locks.length, 1, '仅深渊终局锁定');
+    assert.equal(r2.locks.length, 0, '未显现批次不渲染');
     assert.equal(r2.cards, 8, '批 1+批 2 共 8 卡');
     // 批 1+批 2 满 4 级 → 全部揭示（新档注入，避免 evaluateOnNewDocument 覆盖 reload 档）
     const p3 = await browser.newPage();

@@ -490,8 +490,14 @@ export function collectVehicleDm() {
   return vehicleDmPerMin();
 }
 // v2.8.12：探采平台改为消耗 EP 采集——每 1 DM 消耗 epPerDm EP（ep/min 口径，tick 内折算）
+// v3.1.1 反馈⑤：汇率随总载具数逐辆 ×1.15 递增——单纯堆载具不再摊薄 EP→DM 成本
+export function vehicleEpPerDm() {
+  let total = 0;
+  BALANCE.vehicles.ids.forEach(id => { total += (S.upgrades[id] || 0); });
+  return BALANCE.vehicles.epPerDm * Math.pow(BALANCE.vehicles.epPerDmGrowth || 1, total);
+}
 export function vehicleDmEpCostPerMin() {
-  return vehicleDmPerMin() * BALANCE.vehicles.epPerDm;
+  return vehicleDmPerMin() * vehicleEpPerDm();
 }
 
 // ========== v1.3 L1：科技成本潮汐乘数 ==========

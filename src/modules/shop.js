@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, vehicleEpPerDm, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -142,7 +142,7 @@ const VAULT_IDS = ['rp_vault', 'dm_vault', 'pt_vault'];
 function vaultAnchorReady(u) {
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
-  if (u.id === 'pt_vault') return !!((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland)); // v3.0.3 第四批⑤：宠物乐园已删除——兼容旧档标记
+  if (u.id === 'pt_vault') return parseInt(S.chapter, 10) >= 3 || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构），P2 章节（第 3 章）后才开放；旧档标记兼容
   return false;
 }
 // v3.0.7 反馈① / v3.0.8 修正：资源仓库要「EP 上限存得下全价」才摆出来——
@@ -265,6 +265,11 @@ export function renderRpFamily(container) {
   if (!container) return;
   rpFamilyContainer = container;
   const RP_IDS = RP_FAMILY_SRC_IDS;
+  // v3.1.1 反馈①：晋升 RP 加成是晋升期内容——完成首次晋升（P3/ES 锚点同源）后才开放，前期不展示
+  const preTitle = document.getElementById('rp-upgrade-title');
+  const preShown = (S.prestige || 0) >= 1;
+  if (preTitle) preTitle.style.display = preShown ? '' : 'none';
+  if (!preShown) { container.innerHTML = ''; rpFamilyItemEls.clear(); return; }
   const rpItems = (BALANCE.buildingsV21 || []).filter(u => RP_IDS.includes(u.id)) // v2.8.26：数据源修复——thread.upgrades 不存在（实为裂隙配置），cat F 建筑在 buildingsV21；v2.8.7 声称修复但一直渲染为空
     .slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
   const split = chainSplit('rp', rpItems, u => (S.upgrades[u.id] || 0) > 0, S);
@@ -600,7 +605,7 @@ function updateVehicleCollectHeader() {
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
     info = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
-    el.title = '探采消耗 EP 换取深渊物质（每 1 DM 消耗 1000 EP，EP 净产出一薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率';
+    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 净产出-薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径
   } else {
     info = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
     el.title = '购买载具后每 60 秒自动采集深渊物质';
@@ -1157,7 +1162,7 @@ function updateV21Item(b) {
   el.classList.toggle('cant', S.ep < cost);
 }
 
-function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade' && b.cat !== 'D'); } // 镜像项走升级商店 + v2.8.27 ①：cat D 存储扩容统一主商店（「存储与资源建筑」唯一入口，效能建筑「存储与扩容」分区移除）
+function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); } // 镜像项走升级商店；v3.1.1 反馈⑧：组 D 六座扩容建筑接回「存储与扩容」分区（v2.8.27 移除后一直无购买入口）
 
 // v2.3.1 ⑤（rev18 9.3）：效能建筑 cat A-X 分组显示名（研发命名，回填设计文档 9.3 表）。
 // 组序 = 字母序（A→I，X 岔路镜像实际渲染于岔路口分区不进本列表）；「其他」为兜底组，未命中组谓词的条目归入、组内可见 0 项整组不渲染。
@@ -1368,7 +1373,9 @@ export function renderFamilyUpgrades(container) {
   if (!container) return;
   familyContainer = container;
   // v2.3.1 ②（rev18 9.2）：族升级分区 ← RP 锚点串联（仅整节可见性；anchorShown 双读不回隐藏）
-  const famShown = anchorShown('rp', S);
+  // v3.1.1 反馈③：族升级属后期玩法——首档需里程碑 9，未达标整节隐藏（占位行删除口径，直到可达再出现）
+  const famMilestone = Math.min(...Object.values(BALANCE.familyUpgradeTiers).map(c => c.tiers[0].milestone));
+  const famShown = anchorShown('rp', S) && Object.keys(S.milesDone || {}).length >= famMilestone;
   const famTitle = document.getElementById('family-upgrade-title');
   if (famTitle) famTitle.style.display = famShown ? '' : 'none';
   if (!famShown) { container.innerHTML = ''; familyItemEls.clear(); return; }
@@ -1490,13 +1497,7 @@ export function renderResearchUpgrades(container) {
   container.innerHTML = '';
   const frag = document.createDocumentFragment();
   for (const g of RP_GROUPS) {
-    if (!rpGroupShown(g)) {
-      const lock = document.createElement('div');
-      lock.className = 'rp-group-lock';
-      lock.textContent = `🔒 ${g.name} 未显现——累计 ${g.unlock.need} 级「${RP_GROUPS.find(x => x.key === g.unlock.prev).name}」研究后解锁`;
-      frag.appendChild(lock);
-      continue;
-    }
+    if (!rpGroupShown(g)) continue; // v3.1.1 反馈②：未达解锁条件的批次整体不渲染（占位行删除，直到解锁才出现）
     const title = document.createElement('div');
     title.className = 'rp-group-title';
     title.dataset.rpFold = g.key;

@@ -6,8 +6,9 @@ const src = readFileSync(new URL('../src/modules/rift.js', import.meta.url), 'ut
 const bal = readFileSync(new URL('../src/data/balance.js', import.meta.url), 'utf8');
 
 // V1 分级
-rec('V1 分级公式 clamp(1+log10(cps), 1, 5)', src.includes('1 + Math.floor(Math.log10(Math.max(1, cps || 1)))') && src.includes('Math.max(1, Math.min(5, lv))'), 'riftLevelOf');
+rec('V1 分级公式 clamp(1+log10(cps), 1, 5) ∧ 探测井上限（v3.1.1 反馈④）', src.includes('1 + Math.floor(Math.log10(Math.max(1, cps || 1)))') && src.includes('Math.min(lv, riftMaxLevel())') && src.includes("1 + riftUpgradeLevel('depth')"), 'riftLevelOf');
 rec('V1 五级名称（浅层/中层/深层/深渊/虚空之隙）', bal.includes("'浅层裂隙', '中层裂隙', '深层裂隙', '深渊裂隙', '虚空之隙'"), 'levelNames');
+rec('V1 探测井余烬升级（cap 4，等级上限走裂隙升级项）', bal.includes('depth:') && bal.includes("深空探测井"), 'depth-upg');
 // V2 余烬升级树
 rec('V2 四科技（哨站/透镜/护符/余烬共振）', bal.includes('sentinel') && bal.includes('lens') && bal.includes('charm') && bal.includes('echo'), 'upgrades');
 rec('V2 哨站间隔缩短（20min → v2.8.30 下限 10min）', src.includes('Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv))'), 'riftSpawnSec');
@@ -15,7 +16,7 @@ rec('V2 透镜 DM/RP ×(1+0.2/级)', src.includes('1 + 0.2 * riftUpgradeLevel(\'
 rec('V2 护符封印成本 -10%/级（下限 50%）', src.includes('Math.max(0.5, 1 - 0.1 * riftUpgradeLevel(\'charm\'))'), 'riftSealCostMult');
 rec('V2 余烬共振 VS ×(1+0.5/级)', src.includes('1 + 0.5 * riftUpgradeLevel(\'echo\')'), 'riftVsMult');
 // V3 深入裂隙
-rec('V3 深入成本（EP=封印×0.5 + DM=级×2）', src.includes('Math.ceil(r.sealCost * 0.5)') && src.includes('r.level * 2'), 'delveRift');
+rec('V3 深入成本（EP=封印×0.5；v2.8.30 去 DM 门槛）+ DM 未解锁灰显（v3.1.1 反馈④）', src.includes('Math.ceil(r.sealCost * 0.5)') && src.includes("resDiscovered.dm"), 'delveRift');
 rec('V3 深入产出（DM 0.5×级/s + VS 0.2×级/s 深潜联动）', src.includes('delveDmPerLevel * lv * dt') && src.includes('delveVsPerLevel * lv * dt'), 'settle');
 rec('V3 腐化累积（1%/级/s）+ 阈值 50% 损失 30% 封印成本', src.includes('delveCorruptPerLevel * lv * dt') && src.includes('delveFailCorrupt') && src.includes('ex.sealCost * BALANCE.rift.delveFailLoss'), 'risk');
 rec('V3 紧急脱出不奖励（v2.6.5：脱出无产出/余烬，仅结束探索）', !src.includes('S.dm = (S.dm || 0) + ex.gainedDm') && src.includes('S.riftExpedition = null'), 'abort');

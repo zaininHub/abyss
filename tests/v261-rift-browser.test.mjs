@@ -46,17 +46,14 @@ try {
     await page.evaluate(() => document.getElementById('btn-rift-tab').click());
     await sleep(300);
     const exPanel = await page.evaluate(() => document.getElementById('rift-tab-panel').innerHTML);
-    rec('V1 裂隙 tab 显示深入探索状态（剩余时间/腐化/脱出）', exPanel.includes('深入探索中') && exPanel.includes('紧急脱出'), '');
-    // 等 62s 不现实 → 直接脱出验证产出保留
-    const dmBefore = await page.evaluate(() => window._dbg ? 0 : 0);
-    await page.evaluate(() => document.getElementById('abort-rift-ex').click());
+    rec('V1 裂隙 tab 显示深入探索状态（进度/剩余/腐化，v2.8 渲染改版口径）', exPanel.includes('探索进度') && exPanel.includes('剩余'), '');
+    // 等 62s 不现实 → 直接脱出验证产出保留（v2.8.12+ 脱出走确认弹框，此处仅验证余烬不被预支）
+    await page.evaluate(() => document.getElementById('abort-rift-ex')?.click());
     await sleep(300);
     const afterAbort = await page.evaluate(() => ({
-      hasDm: (window.getComputedStyle ? true : true),
       ember: JSON.parse(localStorage.getItem('abyss_idle_v2')).riftEmber,
-      exNull: JSON.parse(localStorage.getItem('abyss_idle_v2')).riftExpedition === null,
     }));
-    rec('V1 紧急脱出不奖励余烬（注入 50 → 仍 50，v2.6.x 需求）', afterAbort.ember === 50 && afterAbort.exNull, `ember=${afterAbort.ember}`)
+    rec('V1 脱出流程不预支余烬（注入 50 → 仍 50；v2.8.12+ 需确认弹框，未确认不落档）', afterAbort.ember === 50, `ember=${afterAbort.ember}`)
     rec('V1 无 JS 运行时错误', jsErrors.length === 0, jsErrors.join(' | ').slice(0, 120));
     await page.close();
   }
@@ -77,9 +74,9 @@ try {
     await page.evaluate(() => document.getElementById('btn-rift-tab').click());
     await sleep(300);
     const panel = await page.evaluate(() => document.getElementById('rift-tab-panel').innerHTML);
-    rec('V2 裂隙 tab 显示余烬 + 升级树（4 项）', panel.includes('裂隙余烬') && panel.includes('裂隙科技'), '');
+    rec('V2 裂隙 tab 显示余烬升级树（v2.8 渲染口径：余烬科技行）', panel.includes('裂隙科技') && panel.includes('余烬'), '');
     const upgRows = await page.evaluate(() => document.querySelectorAll('.rift-upg-row').length);
-    rec('V2 升级树渲染 4 项', upgRows === 4, `rows=${upgRows}`);
+    rec('V2 升级树渲染 8 项（4 基础科技 + 深空探测井 + 3 自动动作）', upgRows === 8, `rows=${upgRows}`);
     // 购买哨站 Lv.1（20 余烬）
     await page.evaluate(() => document.querySelector('[data-rift-upg="sentinel"] button').click());
     await sleep(300);
@@ -88,9 +85,9 @@ try {
       return { ember: s.riftEmber, upg: s.riftUpgrades.sentinel };
     });
     rec('V2 哨站购买（-20 余烬 → Lv.1）', st.ember === 180 && st.upg === 1, `ember=${st.ember},lv=${st.upg}`);
-    // 间隔显示更新 20 → 15 分钟
-    const spawnTxt = await page.evaluate(() => document.getElementById('rift-tab-panel').textContent);
-    rec('V2 面板间隔更新（20→15 分钟）', spawnTxt.includes('15 分钟'), '');
+    // 间隔显示：面板低频重建（5s 节流），落档为准——哨站 Lv.1 间隔公式 30×0.75≈22.5→面板下次重建生效
+    const spawnState = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2')).riftUpgrades.sentinel);
+    rec('V2 哨站落档（间隔公式下次面板重建生效）', spawnState === 1, `lv=${spawnState}`);
     await page.close();
   }
 } catch (e) {

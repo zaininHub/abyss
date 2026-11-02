@@ -1014,19 +1014,18 @@ function bindEvents() {
   // v3.0.0：深渊集市
   document.getElementById('btn-bazaar')?.addEventListener('click', () => switchTab('bazaar'));
   bindBazaarPanel(document.getElementById('bazaar-panel'));
-  // v2.9.0：Wiki 重构为侧栏分章 + 内容区（参考 KG 体系化百科）；锁定章节灰显并给门控提示
+  // v2.9.0：Wiki 重构为侧栏分章 + 内容区；v3.1.1 反馈⑥：全部章节无条件展示（不管是否解锁——
+  // wiki 同时是研发手册，未解锁章节直接可见解锁条件，不再灰显锁定）
   const wikiBtn = document.getElementById('btn-wiki');
   const wikiModal = document.getElementById('wiki-modal');
   let wikiActiveId = 'intro';
   function renderWikiNav() {
     const nav = document.getElementById('wiki-nav');
     if (!nav) return;
-    nav.innerHTML = WIKI_SECTIONS.map(s => {
-      const ok = !s.unlock || wikiUnlocked(s.unlock);
-      return `<button class="wiki-nav-btn${s.id === wikiActiveId ? ' on' : ''}${ok ? '' : ' locked'}" data-wiki="${s.id}" ${ok ? '' : 'disabled'}>${ok ? '' : '🔒 '}${s.name}</button>`;
-    }).join('');
+    nav.innerHTML = WIKI_SECTIONS.map(s =>
+      `<button class="wiki-nav-btn${s.id === wikiActiveId ? ' on' : ''}" data-wiki="${s.id}">${s.name}</button>`
+    ).join('');
     nav.querySelectorAll('[data-wiki]').forEach(b => b.addEventListener('click', () => {
-      if (b.disabled) return;
       wikiActiveId = b.dataset.wiki;
       renderWikiNav();
       renderWikiBody();
@@ -1036,21 +1035,16 @@ function bindEvents() {
     const body = document.getElementById('wiki-body');
     if (!body) return;
     const s = WIKI_SECTIONS.find(x => x.id === wikiActiveId) || WIKI_SECTIONS[0];
-    const ok = !s.unlock || wikiUnlocked(s.unlock);
-    if (!ok) {
-      body.innerHTML = `<div class="wiki-locked">🔒 本章尚未解锁——${hintFor(s.unlock)}</div>`;
-      return;
-    }
     let html = `<h4 class="wiki-title">${s.name}</h4><div class="wiki-content">${s.body()}</div>`;
     // 故事线/章节讲解并入对应章节（intro/ach 已含；此处保留故事线图鉴入口在 ach 章末）
     if (s.id === 'ach') html += renderStorylineAppendix();
     body.innerHTML = html;
   }
   function hintFor(key) {
-    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'首次获得 PT',
+    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 3 章后商店开放「饵料仓库」，购入即解锁 PT',
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
       prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）',
-      bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0
+      bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链
     return m[key] || '推进主线解锁';
   }
   function renderStorylineAppendix() {

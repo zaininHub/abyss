@@ -24,9 +24,14 @@ let riftSig = null;      // v2.1 R2：当前已渲染裂隙签名，避免 100ms
 let delegateBound = false; // v2.1 R2：容器级事件委托只绑一次
 
 // ---- v2.6.1 裂隙等级 ----
+// v3.1.1 反馈④：裂隙等级 = cps 潜力级 ∧ 探测井解锁上限 的较小值——
+// 前期首见恒为浅层（Lv.1），深层/深渊/虚空随「深空探测井」余烬升级逐级开放
+export function riftMaxLevel() {
+  return 1 + riftUpgradeLevel('depth');
+}
 export function riftLevelOf(cps) {
   const lv = 1 + Math.floor(Math.log10(Math.max(1, cps || 1)));
-  return Math.max(1, Math.min(5, lv));
+  return Math.max(1, Math.min(5, Math.min(lv, riftMaxLevel())));
 }
 export function riftLevelName(lv) {
   return (BALANCE.rift.levelNames[lv - 1]) || `Lv.${lv}`;
@@ -267,7 +272,13 @@ export function refreshRiftAffordability() {
     if (btn) { btn.disabled = cost === null || (S.riftEmber || 0) < cost; btn.classList.toggle('disabled', cost !== null && (S.riftEmber || 0) < cost); }
   }
   const delve = document.getElementById('delve-rift');
-  if (delve) { delve.disabled = false; delve.classList.toggle('disabled', false); } // v2.8.30 ⑤：深入只耗 EP，DM 门控移除
+  if (delve) {
+    // v3.1.1 反馈④：DM 未解锁时深入按钮灰显（v2.8.30 曾误移除灰显——delveRift 内仍要求 DM，
+    // 按钮却恒亮可点，点了才报「需先发现深渊之力」）
+    const dmUnlock = !!(S.resDiscovered && S.resDiscovered.dm);
+    delve.disabled = !dmUnlock;
+    delve.classList.toggle('disabled', !dmUnlock);
+  }
 }
 
 export function renderRift(container) {
@@ -356,6 +367,13 @@ export function renderRiftPanel(container) {
       } else {
         desc = `裂隙出现间隔缩短 25%/级：已达最短 ${cur} 分钟`;
       }
+    }
+    // v3.1.1 反馈④：探测井动态文案（当前最高等级 → 下一级等级名）
+    if (id === 'depth') {
+      const cur = riftMaxLevel();
+      desc = lv < u.cap
+        ? `裂隙最高等级 +1/级：当前最高「${riftLevelName(cur)}」→ 下一级开放「${riftLevelName(Math.min(5, cur + 1))}」`
+        : `裂隙最高等级 +1/级：已开放至「${riftLevelName(5)}」（虚空之隙）`;
     }
     // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
     const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');

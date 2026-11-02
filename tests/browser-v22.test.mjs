@@ -44,6 +44,7 @@ const baseSave = (over) => ({
   crossroad: 'open', crossroadLockedBy: null, familyUpgrades: {},
   tech: {}, buildings: {}, unlockedBuildings: {}, buildingOverflow: {},
   epOverflowTotal: 0, _overflowRpAcc: 0, milesDone: {},
+  resDiscovered: { rp: true }, // v3.0.9 起 RP tab 锚点 = 购入矩阵存储库/灵感工坊；旧档标记兼容注入
   cultists: [], upgrades: {}, storylinesCompleted: [], lastSeen: Date.now(),
   ...over,
 });
