@@ -779,9 +779,8 @@ function updateTabLocks() {
     const btn = document.getElementById(id);
     if (!btn) continue;
     const anchorKey = TAB_ANCHOR[id];
-    const petsPt = id === 'btn-pets' ? true : false; // v3.0.3 第四批⑤：宠物乐园已删除——异兽系统直接可用
-    // v2.8.7：宠物乐园购入后即显示异兽 tab（P2 章节门控与 pt 锚点取或——买了宠物乐园就能看到宠物模块）
-    const unlocked = (isStageUnlocked(stage, S) || (id === 'btn-pets' && petsPt)) && (!anchorKey || anchorShown(anchorKey, S)) && (id !== 'btn-pets' || petsPt);
+    // v3.0.4 反馈②：异兽回归 P2 章节门控（chapter≥3）——此前 petsPt 恒 true 导致开局即解锁
+    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
     if (!unlocked) {
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';

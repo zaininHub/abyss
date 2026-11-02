@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { PROJECT_TYPES, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
-import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap } from './economy.js';
+import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost } from './economy.js';
 import { anchorShown } from './disclosure.js'; // v2.5 ③：未解锁资源不出对应奖励任务
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
@@ -33,7 +33,7 @@ export function spawnProject() {
   const windowSec = Math.min(duration / 1000, 600);
   let goal;
   if (t.id === 'earn_ep') goal = Math.max(100, Math.round(cps * windowSec * 0.5));
-  else if (t.id === 'click') goal = 20 + Math.floor(Math.random() * 30);
+  else if (t.id === 'click') goal = 20; // v3.0.4 反馈①：新手任务固定 20 次点击（原 20~49 随机，配合下方奖励精确对齐线程 1 价格）
   else if (t.id === 'buy_up') goal = 1 + Math.floor(Math.random() * 2);
   else goal = 1;
 
@@ -64,6 +64,12 @@ export function spawnProject() {
   } else if (roll < 0.9 && !hasBuff) reward = { kind: 'buff', buffMult: 2, dur: 300 };
   else if (!hasDebuff) reward = { kind: 'debuff', buffMult: 0.8, dur: 0 };
   else reward = { kind: 'ep', amount: 100 };
+
+  // v3.0.4 反馈①：新手任务总收益精确对齐线程 1 价格——点击收益(goal×clickMult) + 任务奖励 = 首线程价格
+  // 新档 clickMult=1、staffCost=180 → 20 次点击得 20 EP + 奖励 160 EP = 180 EP，恰好买得起第一个线程
+  if (t.id === 'click') {
+    reward = { kind: 'ep', amount: Math.max(50, Math.round(staffCost() - goal * clickMult())) };
+  }
 
   S.projects.push({
     type: t.id, name: t.name, desc: t.desc,
