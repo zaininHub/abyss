@@ -10,7 +10,7 @@ import { log, toast, dirty } from '../core/runtime.js';
 // epPerUnit：每 1 单位资源消耗的 EP（口径参考集市最优通道并放大 1.2~2 倍，保持「巨量 EP」感）
 export const COSMOS = {
   asteroid: { id: 'asteroid', name: '小行星采矿', icon: '⛏️', res: 'pt',    ratio: 0.10, growth: 1.7, cap: 5, epPerUnit: 60000,
-    desc: '开采小行星带——巨量 EP 换异兽饼干（PT）' },
+    desc: '开采小行星带——巨量 EP 换 PT' },
   collider: { id: 'collider', name: '暗物质对撞', icon: '🌀', res: 'dm',    ratio: 0.12, growth: 1.7, cap: 5, epPerUnit: 30000,
     desc: '对撞真空提取暗物质——巨量 EP 换 DM' },
   starwish: { id: 'starwish', name: '星辰祈愿',   icon: '🙏', res: 'faith', ratio: 0.10, growth: 1.8, cap: 5, epPerUnit: 50000,

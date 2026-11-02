@@ -2,7 +2,7 @@ import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, unitCost } from './economy.js';
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
-import { renderCosmosHtml, buyCosmos } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
+import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块；v3.0.5 反馈②：可购态快刷
 
 export const GALAXIES = [
   { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    reward: { type: 'ep', mult: 5 },   desc: '短平快探索' },
@@ -37,6 +37,27 @@ export function tickColonies(dt) {
 function colonyCost(c) {
   // v3.0.3 修复：复用 unitCost——殖民站与主商店升级同口径（全局 costMult 生效、growth 默认 1.30），原内联公式缺 costMult 且口径独立
   return unitCost(c, 1);
+}
+
+// v3.0.5 反馈②：星图面板（深空殖民 / 宇宙探索）可购态快刷——只切 cant，不重建 DOM
+// （面板整建在 5s 低频通道，EP 随时变化时「能买却灰着」可达 5s；此处对齐 300ms 快刷车道）
+export function refreshExpeditionAffordability() {
+  const panel = document.getElementById('expedition-panel');
+  if (!panel) return;
+  for (const el of panel.querySelectorAll('[data-colony]')) {
+    const c = (BALANCE.starColonies || []).find(x => x.id === el.dataset.colony);
+    if (!c) continue;
+    const owned = (S.upgrades && S.upgrades[c.id]) || 0;
+    if (owned >= c.cap) continue;
+    el.classList.toggle('cant', S.ep < colonyCost(c));
+  }
+  for (const el of panel.querySelectorAll('[data-cosmos]')) {
+    const p = COSMOS[el.dataset.cosmos];
+    if (!p) continue;
+    const lv = cosmosLv(p.id);
+    if (lv >= p.cap) continue;
+    el.classList.toggle('cant', (S.ep || 0) < cosmosCost(p, lv));
+  }
 }
 function buyColony(id) {
   const c = (BALANCE.starColonies || []).find(x => x.id === id);

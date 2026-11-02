@@ -44,7 +44,7 @@ import { maybeTriggerEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm } from './modules/rift.js';
-import { tickExpeditions, tickColonies, renderExpeditions } from './modules/expedition.js';
+import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
 import { WIKI_SECTIONS, wikiUnlocked } from './data/wiki.js'; // v2.9.0：体系化百科（KG 风格）
@@ -284,7 +284,7 @@ const DISCOVER_TOASTS = [
   ['es',    () => anchorDone('es', S),    '新资源：永恒碎片 ES'],
   ['rank',  () => anchorDone('es', S),    '晋升系统开启'],
   ['faith', () => anchorDone('faith', S), '新资源：信仰'],
-  ['pt',    () => anchorDone('pt', S),    '新资源：宠物饼干'],
+  ['pt',    () => anchorDone('pt', S),    '新资源：PT'],
   ['dm',    () => anchorDone('dm', S),    '新资源：深渊物质 DM'],
 ];
 function discoverCheck() {
@@ -1757,6 +1757,7 @@ function tickTide(dt) {
 // ========== 主循环 ==========
 let lastTick = performance.now();
 let lastShopCheck = 0;
+let lastAffordCheck = 0; // v3.0.5 反馈②：可购买态（灰态/价格）快刷节拍——原与 5s 解锁检测同块，玩家感知「能不能买」滞后严重
 let lastUnlockedCount = -1;
 let lastProjRender = 0;      // v2.0：任务面板 1s 节流重绘
 let tideCachePhase = -1;     // v2.0：潮汐脏检查缓存
@@ -1884,15 +1885,18 @@ function tick(now) {
     // 显示「+0.15×lv 饼干/s」但实产 0.15×lv²，升级过快的根因之一）；现为 0.15×lv 线性
     S.pt = (S.pt || 0) + take * 0.00003; // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
   }
+  // v3.0.5 反馈②：tab 入口显隐（纯 display 开关，零重建）1s 快刷——原 5s 导致「条件已达成但入口迟迟不出现」
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
-  if (S._religCheckTimer >= 5) {
+  if (S._religCheckTimer >= 1) {
     S._religCheckTimer = 0;
-    refreshTabVisibility(); // 宗教入口条件达成后出现
-    // v3.0.3 反馈④：宗教面板不再每 5s innerHTML 重建（按钮闪烁根因）；结构变化由事件驱动 dirty.religion
+    refreshTabVisibility(); // 宗教/深潜/星图/裂隙/遗物/政策/集市入口条件达成后出现
     if (typeof refreshReligionAffordability === 'function') refreshReligionAffordability();
-    // v2.6.0：深潜面板随产出/腐化/里程碑低频刷新（HTML 相同由渲染层跳过重建）
+  }
+  // v2.6.0 / v3.0.0：深潜与集市面板为 innerHTML 重建（无内容签名跳过），保持 5s 低频——1s 重建会吞点击/闪烁
+  S._panelCheckTimer = (S._panelCheckTimer || 0) + dt;
+  if (S._panelCheckTimer >= 5) {
+    S._panelCheckTimer = 0;
     if (delveUnlocked()) dirty.delve = true;
-    // v3.0.0：集市面板随汇率波动/库存恢复低频刷新
     if (bazaarUnlocked()) dirty.bazaar = true;
   }
 
@@ -2044,9 +2048,22 @@ function tick(now) {
   // 避免刷新页面才可买）——独立于 5s 商店节流，每 2s 置位，render() 每 tick 消费
   if ((frame % 20) === 0) dirty.relics = true;
 
-  // v2.6.7：商店解锁检测降频至 5s，且解锁数变化只增量揭示新卡（refreshShopChain），
-  // 不再整面板重建——「allTimeEp 每秒跨阈值 → 每秒整重建 → hover 闪烁/点击竞争」根因修复
-  if (now - lastShopCheck > 5000) {
+  // v3.0.5 反馈②：可购买态快刷（灰态/价格，纯 class/textContent 原地更新不重建 DOM）——300ms
+  // 原实现与 5s 解锁检测同块执行，导致「EP 已够但卡片仍灰」「新解锁卡片迟迟不出现」肉眼可见延迟
+  if (now - lastAffordCheck > 300) {
+    lastAffordCheck = now;
+    refreshTechState();
+    refreshShopAffordability(); // 主商店/线程/载具/深渊商店/设施/效能建筑/岔路口/族升级灰态
+    refreshRelicAffordability(); // v2.8.26：遗物/净化 DM 可购
+    refreshPetsAffordability(); // v2.8.26：宠物 PT 可购
+    refreshReligionAffordability(); // v2.8.26 ④：宗教按钮可购
+    refreshRiftAffordability(); // v2.8.26 ④：裂隙余烬/深入按钮可购
+    refreshExpeditionAffordability(); // v3.0.5 反馈②：深空殖民 / 宇宙探索卡片可购态
+  }
+
+  // v2.6.7：商店解锁检测（链窗揭示 + toast），v3.0.5 由 5s 收紧到 1s；
+  // 解锁数变化只增量揭示新卡（refreshShopChain），不整面板重建——保持「不每秒全重建」的防闪烁纪律
+  if (now - lastShopCheck > 1000) {
     lastShopCheck = now;
     let n = 0;
     for (const u of UPGRADES) {
@@ -2059,12 +2076,6 @@ function tick(now) {
       refreshShopChain();
       toast('新升级模块已解锁');
     }
-    refreshTechState();
-    refreshShopAffordability(); // v2.1 R4：每秒快刷灰态（不重建 DOM）
-    refreshRelicAffordability(); // v2.8.26：遗物/净化 DM 可购每秒刷新
-    refreshPetsAffordability(); // v2.8.26：宠物 PT 可购每秒刷新
-    refreshReligionAffordability(); // v2.8.26 ④：宗教按钮可购每秒同步
-    refreshRiftAffordability(); // v2.8.26 ④：裂隙余烬/深入按钮可购每秒同步
     // v1.3 A：AI 核心研究完成后面板出现（也覆盖晋升保留 ai_core 的场景）
     const aiNow = aiUnlocked();
     if (aiNow !== lastAiUnlocked) { lastAiUnlocked = aiNow; dirty.ai = true; }

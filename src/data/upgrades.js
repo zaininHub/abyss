@@ -15,7 +15,7 @@ export const UPGRADES = [
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
   {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:500},desc:'每级 RP 上限 +500'},
   {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'每级 DM 上限 +100'},
-  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'每级异兽饼干上限 +200'},
+  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'每级 PT 上限 +200'},
   {id:'intern',name:'实习生',base:600000.0,cps:20,growth:1.55,desc:'基础产出+20/s'}, // v2.8.3：base×4/cps 降
   {id:'team',name:'小组协作',base:6000000.0,cps:110,growth:1.55,desc:'基础产出+110/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:60000000.0,cps:600,growth:1.55,desc:'基础产出+600/s'}, // v2.8.3：base×4/cps 降
@@ -59,7 +59,7 @@ export const UPGRADES = [
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:2.2,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP，升级在蒸馏开关处`}, // v3.0.3 第四批③：升级入口移至开关处
   {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,desc:'解锁信仰系统（信仰由此获得）'}, // v3.0.3 第三批④：移除直接资源产出
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,desc:'研究点已改由灵感蒸馏塔与任务获取'}, // v3.0.3 第四批④：移除直产 RP
-  {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 异兽饼干'},
+  {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 PT'},
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:300000000000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）

@@ -21,7 +21,7 @@ export const BAZAAR = {
     { id: 'forge',   name: '熔炉协议', icon: '🔥', from: 'ep',    to: 'dm',    give: 120000, get: 6,   stock: 4, tier: 0,
       desc: '上缴算力换深渊物质（稳定通道，但限购）' },
     { id: 'caravan', name: '兽栏商队', icon: '🍪', from: 'ep',    to: 'pt',    give: 0.03,  get: 35,  stock: 3, tier: 0, capRatio: 'give',
-      desc: '用车间的余电换异兽饼干' },
+      desc: '用车间的余电换 PT' },
     { id: 'smuggle', name: '走私信道', icon: '📦', from: 'rp',    to: 'dm',    give: 30,    get: 5,   stock: 3, tier: 0,
       desc: '研究点走私成深渊物质（绕过裂隙的直接通道，库存极少）' },
     { id: 'pawn',    name: '典当核心', icon: '💠', from: 'faith', to: 'ep',    give: 200,   get: 0.08, stock: 3, tier: 1, capRatio: 'get',

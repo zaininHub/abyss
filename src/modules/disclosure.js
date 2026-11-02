@@ -43,7 +43,7 @@ export function anchorDone(key, S) {
   const up = (S && S.upgrades) || {};
   switch (key) {
     case 'rp':    return (up.rp_vault || 0) >= 1 || (S && S._rpOverflowSeen === true && S._rpVaultIntroduced === undefined) || (up.atrium || 0) >= 1; // v2.8.28 修复：RP 解锁链 = 购买「矩阵存储库」→ 解锁研究点；旧档已溢出（无 _rpVaultIntroduced 标记）与「灵感工坊购入」保持解锁不回退
-    case 'pt':    return true; // v3.0.3 第四批⑤：宠物乐园已删除——异兽系统直接可用
+    case 'pt':    return (S && (S.pt || 0) > 0) || ((up.petland || 0) >= 1); // v3.0.5 反馈①：PT 锚点 = 首次持有 PT（原恒 true → 新档即亮顶栏 PT、并放行「饵料仓库」，与异兽 P2 门控矛盾）；旧档宠物乐园标记保留
     case 'faith': return (up.shrine  || 0) >= 1; // FA ← 路边神龛购入
     case 'dm':    return (up.scooter || 0) >= 1 || (up.dm_vault || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入；v3.0.3 反馈⑪：星尘金库买入亦亮出
     case 'es':    return ((S && S.prestige) || 0) >= 1; // ES 与职级 ← 完成首次晋升
