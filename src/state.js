@@ -1,5 +1,6 @@
 // 游戏状态 + 存档兼容迁移（v3：新增故事线/渐进开放/特殊任务/彩蛋字段）
 import { BALANCE } from './data/balance.js';
+import { PROFESSION_BY_ID, LAZY_PROFESSION_ID, LEADER_PROFESSION_ID } from './data/threads.js';
 
 export const SAVE_KEY = 'abyss_idle_v2';
 export const SAVE_VERSION = 6;
@@ -69,6 +70,8 @@ export function defaultState() {
     wageState: { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 },
     // v1.3 模块 B：功能建筑持有等级
     buildings: {},
+    // v3.3.0 线程绑定系统：转化器开关（关闭→释放绑定→线程消耗恢复、EP 产出恢复）
+    converterOn: { vehicles: true, atrium: true },
     // v2.1 建筑驱动：已解锁建筑标记 + 旧档超封溢出记账 + 溢出池统计
     unlockedBuildings: {},
     buildingOverflow: {},
@@ -346,7 +349,7 @@ export function load() {
         migrated._v25Legacy = true;
       }
     }
-    return { ...defs, ...migrated, _version: SAVE_VERSION };
+    return { ...defs, ...normalizeCrew(migrated), _version: SAVE_VERSION };
   } catch { return defaultState(); }
 }
 
@@ -361,3 +364,19 @@ export function reset() {
 }
 
 export let S = load();
+
+// v3.3.0 线程绑定系统：旧档兼容——补全线程职业/等级/绑定字段，确保转化器开关存在
+function normalizeCrew(raw) {
+  if (!raw || typeof raw !== 'object') return raw;
+  if (raw.converterOn === undefined) raw.converterOn = { vehicles: true, atrium: true };
+  if (!Array.isArray(raw.cultists)) return raw;
+  const normals = Object.values(PROFESSION_BY_ID).filter(p => p.id !== LAZY_PROFESSION_ID && p.id !== LEADER_PROFESSION_ID);
+  for (const c of raw.cultists) {
+    if (c.profession === undefined) c.profession = normals[Math.floor(Math.random() * normals.length)].id;
+    if (c.level === undefined) c.level = 1;
+    if (c.xp === undefined) c.xp = 0;
+    if (c.leader === undefined) c.leader = false;
+    if (c.boundTo !== undefined && c.boundTo !== null && raw.converterOn && raw.converterOn[c.boundTo] === false) c.boundTo = null;
+  }
+  return raw;
+}

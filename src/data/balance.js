@@ -25,6 +25,27 @@ export const BALANCE = {
       restBonusMult: 1.5,   // 休眠/流失 ≥60s 恢复后补偿——产出 ×1.5 持续 120s
       restBonusSec: 120,
     },
+    // v3.3.0 线程绑定系统数值（绑定到 EP 转化类生产建筑后的产出/消耗/加成/等级）
+    binding: {
+      outputFactor: 0.6,        // 绑定非擅长岗位：该线程自由 EP 产出 ×0.6（产出被抽调 → ep 产出减少）
+      salaryFactor: 1.5,        // 绑定非擅长岗位：该线程消耗 ×1.5（线程消耗增多）
+      lazyOutputFactor: 0.4,    // 懒惰线程绑定：自由产出 ×0.4
+      lazySalaryFactor: 2.25,   // 懒惰线程绑定：消耗 ×2.25
+      matchLevelBonus: 0.05,    // 每级：匹配岗位转化加成 +5%/级
+      mismatchLevelBonus: 0.01, // 每级：非匹配岗位转化加成 +1%/级
+      matchProfBonus: 0.25,     // 匹配岗位额外转化加成 +25%（擅长领域加成）
+      mismatchProfBonus: 0.05,  // 非匹配岗位额外转化加成 +5%
+      leaderBonus: 0.10,        // 领导者绑定额外 +10%
+      leaderGlobalPerLeader: 0.05, // 每个领导者全局产出 +5%（领导者拥有全局加成）
+      leaderGlobalCap: 0.25,    // 全局加成上限 +25%（5 个领导者封顶）
+      xpPerSec: 1,              // 在岗每秒 XP 基础
+      xpSuitableMult: 2.5,      // 匹配/领导岗位 XP ×2.5（合适岗位等级涨得多）
+      xpCap: 6000,              // XP 上限（封顶等级用）
+      levelMultPerLevel: 0.08,  // 每级个人产出 +8%（高等级加成高）
+      levelCap: 10,             // 等级上限
+      lazySpawnChance: 0.12,    // 懒惰职业出现概率（负面线程少）
+      autoAssignShare: 0.7,     // 招募时按需求建议职业的概率（AI/手动招募与职业联动）
+    },
   },
   // v2.7.1：线程懒惰态（EP 满上限惩罚）——持续满上限后线程怠工：产出降、消耗升，
   // 使消耗 > 产出（鼓励玩家持续投入 EP 而非囤满挂机）；EP 跌到 0 或任意升级/购买解除

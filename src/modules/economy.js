@@ -11,6 +11,10 @@ import { faithDrainPerSec } from './religions.js'; // v2.8.30 ③：信仰生产
 import { fxValue, fxBest } from '../core/effectEngine.js';
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
+import {
+  threadBindOutputFactor, threadBindSalaryFactor, converterThreadBoost,
+  leaderGlobalMult, threadLevel, threadLevelMult,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统
 
 const B = BALANCE;
 
@@ -255,6 +259,7 @@ export function globalMult() {
   m *= devotionMult();
   m *= policyMult('ep');
   m *= policyMult('global'); // v2.8.6 B2a：牺牲——全局 -10%
+  m *= leaderGlobalMult(); // v3.3.0：领导者线程全局加成（每个 +5%，封顶 +25%）
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
@@ -483,12 +488,14 @@ export function embraceDurMs() {
 // v2.4：显示与到账统一为确定性数值口径 = Σ(载具数×档位速率)×(1+dmRateAdd 建筑加成)；
 // 不再掷骰（原概率投掷方差导致「显示 55/s 实际 1.1/min」类感知偏差，v2.3.2 定性与本版修复依据）
 export function vehicleDmPerMin() {
+  if (S.converterOn && S.converterOn.vehicles === false) return 0; // v3.3.0：探采平台关闭 → 停止采集（绑定释放、消耗恢复）
   let sum = 0;
   BALANCE.vehicles.ids.forEach((id, i) => { sum += (S.upgrades[id] || 0) * BALANCE.vehicles.dmRates[i]; });
   // v2.5.1：深渊鱼缸（DM 采集 +20%/级，深渊行者线专属建筑）+ 深渊集市（×1.5，叠乘）
   let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
   if (hasAbyssMarket()) m *= 1.5;
   m *= researchMult('dm'); // v2.8.25 ②：星尘精炼（研究点）载具 DM 采集 +8%/级
+  m *= converterThreadBoost('vehicles'); // v3.3.0：绑定线程（匹配/高等级/领导）提升 DM 采集
   return sum * m;
 }
 // 单次采集到账（确定性按速率计算，60s 节拍由 vehicles.tickVehicleCollect 承担；小数累加进 S.dm）
@@ -552,7 +559,11 @@ export function staffSalaryPerSec() {
   const base = BALANCE.thread.salaryBase;
   const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
   let total = 0;
-  for (let i = 0; i < S.cultists.length; i++) total += Math.min(0.5 * Math.pow(base, i), perCap);
+  for (let i = 0; i < S.cultists.length; i++) {
+    let s = Math.min(0.5 * Math.pow(base, i), perCap);
+    s *= threadBindSalaryFactor(S.cultists[i]); // v3.3.0：绑定到转化器后该线程消耗增多
+    total += s;
+  }
   total *= tideMult('salary'); // 潮汐：涨潮薪资 +50% / 退潮 -20% / 乱流 +30%
   // v3.0.3 反馈②：薪资跟随线程产出保底 10%（消除 100:1 产出比，收敛 ≤10:1）
   const out = staffOutputPerSec();
@@ -584,7 +595,8 @@ export function staffOutputPerSec() {
   let total = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
-    total += (c.output || 3) * 0.8 * mood * outMult; // v2.8.30：线程基础产出 -20%（整体降温）
+    // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
+    total += (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
   }
   return total;
 }

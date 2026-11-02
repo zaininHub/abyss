@@ -4,8 +4,12 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmt, isLazy } from './economy.js';
-import { MOOD_MULT } from '../data/threads.js';
+import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, CONVERTER_IDS, LAZY_PROFESSION_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
+import {
+  threadProfession, isLeader, isLazyProfession, threadLevel, leaderCount,
+  autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
 const STATE_META = {
@@ -50,18 +54,30 @@ export function renderCrewPanel(container) {
   if (crewPage >= pageCount) crewPage = pageCount - 1;
   const start = crewPage * PAGE_SIZE;
   const pageCultists = S.cultists.slice(start, start + PAGE_SIZE);
-  const names = pageCultists.map(c => `${c.name}:${c.mood}`).join(',');
-  const sig = `${n}|${crewPage}|${meta.label}|${names}|${feed.map(f => f.msg).join('|')}`;
+  const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${feed.map(f => f.msg).join('|')}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
   for (const c of pageCultists) {
+    const p = threadProfession(c);
+    const pTxt = p ? `${p.icon}${p.name}` : '无职业';
+    const lvl = threadLevel(c);
+    const boundTxt = c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲';
+    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)">★领导</span>' : '';
+    const lazyBadge = isLazyProfession(c) ? ' <span style="color:var(--warn,#c8a24a)">😪怠惰</span>' : '';
+    const bindOpts = ['<option value="">空闲</option>'].concat(
+      CONVERTER_IDS.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t].name}</option>`)).join('');
+    const leaderBtn = isLazyProfession(c) ? '' :
+      `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
     cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
       <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
       <div class="crew-info">
-        <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span></div>
+        <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}${lazyBadge}</div>
+        <div class="crew-stat">${pTxt} · Lv.${lvl} · 岗位：${boundTxt}</div>
         <div class="crew-stat">产出 <b class="c-out">0</b>/s · 贡献 <b class="c-earned">—</b> EP</div>
         <div class="crew-stat dim"><span class="c-tenure"></span></div>
+        <div class="crew-stat"><select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>${leaderBtn}</div>
       </div>
     </div>`;
   }
@@ -81,6 +97,15 @@ export function renderCrewPanel(container) {
       <span class="crew-state" style="color:${meta.color}">● ${meta.label}</span>
       <span class="crew-count">${n} 条线程在岗</span>
     </div>
+    <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：把空闲线程分配到最合适岗位">智能分配（领导者决策）</button>
+      <span style="font-size:12px;color:var(--text-2)">转化器开关：</span>
+      ${CONVERTER_IDS.map(t => {
+        const on = !(S.converterOn && S.converterOn[t] === false);
+        return `<button class="btn crew-conv-btn" data-conv-toggle="${t}" style="font-size:11px;padding:2px 8px;${on ? 'background:var(--good,#3fb950);color:#04210f' : 'background:#444;color:#ddd'}">${CONVERTERS[t].name} ${on ? '开' : '关'}</button>`;
+      }).join('')}
+    </div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">💡 <b>班组调度协议 v3.3</b>：把线程绑定到探采平台/灵感工坊——绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。<b>匹配职业</b>（🔭勘探员→探采、⚗️蒸馏师→灵感工坊）无惩罚且加成更高；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）。关闭转化器开关即可释放绑定、消耗恢复。</div>
     <div class="crew-grid">${cards}</div>
     ${pager}
     <div class="crew-feed">${feedHtml}</div>`;
@@ -89,8 +114,41 @@ export function renderCrewPanel(container) {
     container._crewDelegated = true;
     container.addEventListener('click', (ev) => {
       const btn = ev.target.closest ? ev.target.closest('[data-crew-page]') : null;
-      if (!btn || btn.disabled) return;
-      crewPage += btn.dataset.crewPage === 'prev' ? -1 : 1;
+      if (btn && !btn.disabled) { crewPage += btn.dataset.crewPage === 'prev' ? -1 : 1; renderCrewPanel(container); return; }
+      const lb = ev.target.closest ? ev.target.closest('[data-leader]') : null;
+      if (lb) {
+        const c = S.cultists.find(x => String(x.id) === String(lb.dataset.leader));
+        if (c) { c.leader = !c.leader; crewPush(c.leader ? `【${c.name}】晋升为领导者，全局产出提升` : `【${c.name}】卸任领导者`, c.leader ? 'good' : ''); renderCrewPanel(container); }
+        return;
+      }
+      const ab = ev.target.closest ? ev.target.closest('[data-autobind]') : null;
+      if (ab) {
+        const k = autoAssignThreads();
+        crewPush(k > 0 ? `领导者调度：分配 ${k} 条线程到合适岗位` : '领导者调度：暂无可分配线程', 'good');
+        renderCrewPanel(container);
+        return;
+      }
+      const ct = ev.target.closest ? ev.target.closest('[data-conv-toggle]') : null;
+      if (ct) {
+        const t = ct.dataset.convToggle;
+        S.converterOn = S.converterOn || {};
+        S.converterOn[t] = (S.converterOn[t] === false); // 切换：关→开、开→关
+        crewPush(`${CONVERTERS[t].name}已${S.converterOn[t] === false ? '关闭（释放绑定、线程消耗恢复）' : '开启'}`, S.converterOn[t] === false ? 'bad' : 'good');
+        renderCrewPanel(container);
+        return;
+      }
+    });
+    container.addEventListener('change', (ev) => {
+      const sel = ev.target.closest ? ev.target.closest('[data-bind]') : null;
+      if (!sel) return;
+      const c = S.cultists.find(x => String(x.id) === String(sel.dataset.bind));
+      if (!c) return;
+      const v = sel.value;
+      if (v) {
+        bindThread(c, v);
+        const match = threadProfession(c) && threadProfession(c).affinity === v;
+        crewPush(`【${c.name}】分配至${CONVERTERS[v].name}${match ? '（擅长岗位，无 EP/消耗惩罚）' : ''}`, 'good');
+      } else { unbindThread(c); crewPush(`【${c.name}】从岗位撤离（消耗恢复）`, ''); }
       renderCrewPanel(container);
     });
   }
@@ -105,7 +163,7 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
   const tenEls = container.querySelectorAll('.c-tenure');
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
-    outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1));
+    outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c));
     earnEls[i].textContent = c.earned ? fmt(c.earned) : '—';
     if (tenEls[i]) tenEls[i].textContent = `已共事 ${c.hiredAt ? tenure(c) : '—'}`;
   }

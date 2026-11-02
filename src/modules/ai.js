@@ -20,6 +20,7 @@ import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { policyMult } from '../data/policies.js';
 import { v21BuildingCost } from './economy.js';
 import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
+import { rollProfession, aiSuggestedProfession } from './threadBinding.js'; // v3.3.0 ⑤：AI 招募与线程职业联动
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
 import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已购顺序登记）
 
@@ -103,9 +104,13 @@ function aiHireOne() {
   // 与 main.js hireCultist 同构的最小招募（[AI] 日志口径独立，避免循环依赖）
   S.ep -= staffCost();
   const names = ['外勤干员 A','斥候','深潜者','观测员','渗透单元','信使','无面者','印斯茅斯节点','沙丘行者','门之侍者'];
+  const name = names[Math.floor(Math.random() * names.length)];
+  const profession = rollProfession(aiSuggestedProfession()); // v3.3.0 ⑤：AI 招募按需求建议职业
   S.cultists.push({
     id: Date.now() + Math.random(),
-    name: names[Math.floor(Math.random() * names.length)],
+    name,
+    profession,
+    level: 1, xp: 0, leader: false, boundTo: null,
     output: BALANCE.thread.baseOutput + Math.random() * BALANCE.thread.baseOutputJitter,
     mood: '正常',
     moodTimer: 30 + Math.random() * 60,

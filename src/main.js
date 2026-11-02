@@ -26,6 +26,7 @@ import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaar
 import { religionUnlocked } from './data/religions.js';
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -1615,16 +1616,21 @@ function hireCultist() {
   const names = ['外勤干员 A','斥候','深潜者','观测员','渗透单元','信使','无面者','印斯茅斯节点','沙丘行者','门之侍者'];
   // v2.0：线程基础产出由 BALANCE.thread 定义（3 + 随机 0~3），不再硬编码
   const name = names[Math.floor(Math.random() * names.length)];
+  const profession = rollProfession(aiSuggestedProfession()); // v3.3.0 ⑤：招募按需求建议职业（与线程职业联动）
   S.cultists.push({
     id: Date.now() + Math.random(),
     name,
+    profession,                  // v3.3.0 线程绑定系统：职业（天赋）
+    level: 1, xp: 0,             // v3.3.0 线程等级（按在岗时间累积）
+    leader: false,               // v3.3.0 领导者标记
+    boundTo: null,               // v3.3.0 绑定到的转化器
     output: BALANCE.thread.baseOutput + Math.random() * BALANCE.thread.baseOutputJitter,
     mood: '正常',
     moodTimer: 30 + Math.random() * 60,
     hiredAt: Date.now(), // v3.1.0 反馈③：工龄
     earned: 0,           // v3.1.0 反馈③：个人累计贡献（按实际入账份额分摊）
   });
-  crewPush(`招募新线程【${name}】加入班组（+${fmt(BALANCE.thread.baseOutput)}~${fmt(BALANCE.thread.baseOutput + BALANCE.thread.baseOutputJitter)} EP/s）`, 'good');
+  crewPush(`招募新线程【${name}】加入班组（${profession}·Lv.1，+${fmt(BALANCE.thread.baseOutput)}~${fmt(BALANCE.thread.baseOutput + BALANCE.thread.baseOutputJitter)} EP/s）`, 'good');
   dirty.top = true; dirty.hero = true;
   save(S); // v2.8.9：招募即持久化（v2.7.1 购买即保存惯例，防刷新丢招募）
 }
@@ -1985,16 +1991,22 @@ function tick(now) {
 
   // v2.8.30 ⑤：灵感工坊自动蒸馏（研究点开关）——消耗 EP 转化 RP（v3.2.2 反馈①：EP 不足自然暂停，回升自动恢复，不再自动关闭）
   const atriumN = S.upgrades && S.upgrades.atrium ? S.upgrades.atrium : 0;
-  if (atriumN > 0 && S.atriumOn !== false && S.ep > 0) {
+  // v3.3.0：灵感工坊绑定开关（关闭→停止蒸馏、释放绑定→线程消耗恢复）
+  const atriumOn = (S.atriumOn !== false) && (S.converterOn ? S.converterOn.atrium !== false : true);
+  if (atriumN > 0 && atriumOn && S.ep > 0) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
     const used = Math.min(S.ep, epNeed);
     S.ep -= used;
-    addRp((used / (BALANCE.atrium.epRate || 150)) * (BALANCE.atrium.rate || 0.15) * atriumN);
+    addRp((used / (BALANCE.atrium.epRate || 150)) * (BALANCE.atrium.rate || 0.15) * atriumN * converterThreadBoost('atrium')); // v3.3.0：绑定线程（匹配/高等级/领导）提升 RP 蒸馏
   }
 
   // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），
   // 替代 staffUnhappy 隐藏计数器（旧字段保留读兼容）；个体 mood 在状态机内正交叠加
   tickWages(dt);
+
+  // v3.3.0 线程等级推进（在岗累积 XP → 刷新等级；合适岗位涨得快）
+  const leveled = tickThreads(dt);
+  for (const nm of leveled) { log(`线程【${nm}】晋升，班组调度经验提升`, 'good'); if (toast) toast(`🎖️ 线程【${nm}】晋升！`); }
 
   // v3.1.0 反馈③：线程个人「累计贡献」——按实际入账 CPS 份额分摊到每条线程（休眠 ×0 时自然停止累计）
   if (S.cultists.length > 0) {
@@ -2390,7 +2402,10 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
-  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec };
+  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
+    // v3.3.0 线程绑定系统 QA 钩子
+    threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads },
+  };
 }
 
 
