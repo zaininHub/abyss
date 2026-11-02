@@ -1,5 +1,5 @@
 import { S } from '../state.js';
-import { computeCps, offlineRate, offlineCap, fmt, fmtTime, addEp, researchMult, addRp, addDm, addPt } from './economy.js';
+import { computeCps, offlineEffRate, offlineCap, fmt, fmtTime, addEp, addRp, addDm, addPt } from './economy.js';
 
 export function applyOffline() {
   const now = Date.now();
@@ -9,7 +9,7 @@ export function applyOffline() {
   const cps = computeCps();
   let gain = 0;
   if (cps > 0) {
-    const raw = cps * eff * offlineRate() * researchMult('offline'); // v2.8.25 ②：离线协议（研究点）离线效率 +12%/级
+    const raw = cps * eff * offlineEffRate(); // v3.2.4 反馈⑤：统一口径（含离线协议研究 +12%/级）
     // v2.1 拍板口径：离线收益受 EP 存储上限约束（防止离线一夜直接爆仓），
     // 统一走 addEp 入口，实发与预览同口径
     gain = addEp(raw);
@@ -34,7 +34,7 @@ export function applyOffline() {
 export function renderOfflinePanel(container) {
   if (!container) return;
   const hours = offlineCap() / 3600;
-  const effRate = offlineRate();
+  const effRate = offlineEffRate(); // v3.2.4 反馈⑤：含离线协议研究加成，升级后即时反映
   // v2.4.1：离线预期不再动态展示（原按当前 cps/EP 存量换算动态数字，数值跳动造成「没定数」观感）；
   // 改为静态口径说明，实际收益在回程离线结算时一次性落账（经 addEp，受 EP 存储上限约束）。
   let html = `<div class="off-stat"><span>当前离线效率</span><b>${Math.round(effRate * 100)}%</b></div>

@@ -19,7 +19,7 @@ rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#3d1d6e"')
 rec('V1 动画六帧抽摆（steps(6) + 6 keyframes）', css.includes('steps(6, end)') && css.includes('15% { transform: rotate(-1.5deg); }') && css.includes('70% { transform: rotate(2deg); }'), '');
 
 // ===== ② AI 激活按钮 =====
-rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${resOk && epOk ? '' : 'disabled'}"), 'data-ai-build-activate');
+rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP
 rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };"), 'activateAutoBuild');
 
 // ===== ③ 宗教 =====

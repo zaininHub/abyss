@@ -286,33 +286,35 @@ export function renderAiPanel(container) {
   // v2.8.4：自动研究开关（秩序线科技「自动研究」已购后显示；RP 购买科技树）
   const autoTechHtml = (S.tech && S.tech.auto_tech) ? sw('autoTech', '自动研究', '每决策周期自动购买最便宜的已解锁科技（RP 消耗，至多 1 个/周期）') : '';
   // v2.5.5：自动购建区块（全部资源点解锁后可激活）
+  // v3.2.4 反馈④：未全解锁时整块不展示（原常驻展示「资源点 x/10」进度卡）；文案精简去冗余描述
   const AB = BALANCE.ai.aiAutoBuild;
   let buildHtml = autoTechHtml + (autoTechHtml ? '<div style="margin-top:4px"></div>' : '');
   if (!autoBuildUnlocked()) {
     const resOk = allResDiscovered(S);
-    const epOk = S.ep >= autoBuildActivateCost();
-    buildHtml += `
-      <div class="ai-build-box ${resOk && epOk ? '' : 'ai-build-locked'}">
-        <div class="ai-build-title">自动购建（全部资源点解锁后可用）</div>
+    if (!resOk) buildHtml += ''; // 未全解锁：不展示（反馈④）
+    else {
+      const epOk = S.ep >= autoBuildActivateCost();
+      buildHtml += `
+      <div class="ai-build-box ${epOk ? '' : 'ai-build-locked'}">
+        <div class="ai-build-title">自动购建</div>
         <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-          资源点：${ALL_RES_KEYS.filter(k => S.resDiscovered[k] === true).length}/${ALL_RES_KEYS.length} 已解锁${resOk ? '' : '（全部解锁后可激活）'}
-          <br>激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}
+          激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}
         </div>
-        <button class="btn ${resOk && epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${resOk && epOk ? '' : 'disabled'}
-          title="全部资源点解锁且 EP 充足后，消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活自动购建</button>
-        <div style="font-size:11px;color:var(--text-2)">激活后 AI 将按设定速率自动购买建筑（EP 升级，不消耗 RP）；间隔下限 5 秒、每周期至多 1 栋，且不低于预留线，不会与手动操作抢资源。</div>
+        <button class="btn ${epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${epOk ? '' : 'disabled'}
+          title="消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活自动购建</button>
       </div>`;
+    }
   } else {
     const rateBtns = AB.rateOptions.map(r =>
       `<button class="btn ai-rate-btn ${(ai.autoBuildRate ?? AB.defaultRate) === r ? 'on' : ''}" data-ai-build-rate="${r}">${r}s</button>`).join('');
     buildHtml += `
       <div class="ai-build-box">
         <div class="ai-build-title">自动购建（已激活）</div>
-        ${sw('autoBuild', '自动购建', `每 ${autoBuildRate()}s 购买 1 栋已解锁建筑（EP 成本最低优先）；硬性间隔下限 ${AB.minRate}s、每周期至多 ${AB.perTickMax} 栋，不低于预留线`)}
+        ${sw('autoBuild', '自动购建', `每 ${autoBuildRate()}s 购买 1 栋已解锁建筑（EP 成本最低优先，不低于预留线）`)}
         <div class="ai-reserve-row" style="margin-top:4px">
           <span>购买间隔</span>${rateBtns}
         </div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:4px">当前间隔 ${autoBuildRate()}s（下限 ${AB.minRate}s，改档不生效）；下次购建倒计时 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>
+        <div style="font-size:11px;color:var(--text-2);margin-top:4px">下次购建倒计时 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>
       </div>`;
   }
   container.innerHTML = `

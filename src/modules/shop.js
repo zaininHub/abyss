@@ -319,8 +319,8 @@ export function renderAtriumDistill(container) {
     const afford = (S.ep || 0) >= cost && !drainBlocked({ id: 'atrium' });
     const div = document.createElement('div');
     div.className = 'atrium-distill item';
-    div.innerHTML = `<div class="name"><span>灵感工坊（未购）</span><span class="count mono">${fmt(cost)} EP</span></div>
-      <div class="desc">自动蒸馏：每级消耗 150 EP/s 转化 +0.15 RP/s（RP 产线核心，购入后常驻本区）</div>
+    div.innerHTML = `<div class="name"><span>灵感工坊</span><span class="count mono">${fmt(cost)} EP</span></div>
+      <div class="desc">自动蒸馏：每秒消耗 ${fmt(BALANCE.atrium.epRate || 150)} EP 转化 +${BALANCE.atrium.rate || 0.15} RP（EP 不足时暂停，回升后自动继续）</div>
       <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
         <button data-atrium-buy class="mini-btn" style="cursor:${afford ? 'pointer' : 'not-allowed'};opacity:${afford ? 1 : 0.5};border:1px solid ${afford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${afford ? 'var(--accent)' : 'var(--text-3)'}">购入 ${fmt(cost)} EP</button>
         ${(S.ep || 0) >= cost && !afford ? '<span style="font-size:11px;color:var(--text-3)">净产出 ≤ 0，先攒产出再购</span>' : ''}

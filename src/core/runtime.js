@@ -12,6 +12,7 @@ export const dirty = {
   tide: true, corruption: true, // v2.0 新增：潮汐卡片 / 腐化条
   ai: true, // v1.3 A：AI 助手面板
   relics: false, // v2.7.0：深渊遗物
+  storyline: false, achievements: false, // v3.2.4 反馈②：右列故事线/成就常驻面板（v3.2.1 三列布局后原 switchTab 渲染入口失效致恒空）
 };
 
 // ========== 日志系统 ==========

@@ -34,23 +34,19 @@ try {
     await page.close();
   }
 
-  // ===== V2 AI 激活：9/10 资源未全解锁 → 按钮禁点 =====
+  // ===== V2 AI 激活：9/10 资源未全解锁 → 自动购建区块整体不展示（v3.2.4 反馈④） =====
   {
     const inject = JSON.stringify({ ...base, ep: 50000 });
     const page = await browser.newPage();
     await page.evaluateOnNewDocument((s) => { localStorage.setItem('abyss_idle_v2', s); }, inject);
     await page.goto(fileUrl, { waitUntil: 'load' });
     await sleep(1000);
-    const aiBtn = await page.evaluate(() => {
+    const aiBox = await page.evaluate(() => {
       const b = document.querySelector('[data-ai-build-activate]');
-      return b ? { disabledAttr: b.disabled, hasClass: b.classList.contains('disabled') } : null;
+      const box = document.querySelector('.ai-build-box');
+      return { btn: !!b, boxText: box ? box.textContent : null };
     });
-    rec('V2 未全解锁时激活按钮 disabled 属性=true（真正禁点）', aiBtn && aiBtn.disabledAttr === true && aiBtn.hasClass === true, JSON.stringify(aiBtn));
-    // 点击无效果：autoBuildUnlocked 保持 false
-    await page.evaluate(() => { const b = document.querySelector('[data-ai-build-activate]'); if (b) b.click(); });
-    await sleep(300);
-    const still = await page.evaluate(() => { const a = JSON.parse(localStorage.getItem('abyss_idle_v2')).ai; return a && a.autoBuildUnlocked; });
-    rec('V2 点击未解锁按钮不激活', still !== true, `autoBuildUnlocked=${still}`);
+    rec('V2 未全解锁时自动购建区块整体不展示', aiBox.btn === false && aiBox.boxText === null, JSON.stringify(aiBox));
     await page.close();
   }
 

@@ -340,6 +340,12 @@ export function offlineCap() {
   return h * 3600;
 }
 
+// v3.2.4 反馈⑤：离线效率统一口径 = 基础率（信号塔/天赋/离线升级/遗物等）× 离线协议研究（+12%/级）——
+// 原面板展示/暂停预览/暂停结算漏乘 researchMult('offline')，「离线协议」升级后当前离线效率不涨
+export function offlineEffRate() {
+  return offlineRate() * researchMult('offline');
+}
+
 export function rpMult() {
   // v2.1 建筑驱动：初探实验台/RP蒸馏塔/理论突破台（加法）+ 深度实验室/传奇研究所（乘算）
   return (1 + fxValue('rpAdd')) * fxValue('rpMul');

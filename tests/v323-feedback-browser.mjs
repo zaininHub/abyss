@@ -53,7 +53,7 @@ try {
   await page.evaluate(() => { window.S.ep = 30000; window.S.allTimeEp = 30000; window.S.upgrades = { ...(window.S.upgrades || {}) }; delete window.S.upgrades.atrium; window.__gameDirty.shop = true; });
   await sleep(500);
   let atriumCard = await page.evaluate(() => { const h = document.getElementById('atrium-host'); return h ? h.textContent : ''; });
-  if (atriumCard.includes('未购') && atriumCard.includes('购入')) ok('③ 未购时摆出首购卡（EP≥15K 揭示）'); else bad('③ 首购卡', atriumCard.slice(0, 50));
+  if (atriumCard.includes('灵感工坊') && atriumCard.includes('购入')) ok('③ 未购时摆出首购卡（EP≥15K 揭示）'); else bad('③ 首购卡', atriumCard.slice(0, 50));
   await page.evaluate(() => {
     window.S.ep = 60000; window.S.allTimeEp = 1e8;
     window.S.upgrades.storage = 300; // 抬高 EP 存储上限（否则 tick 把 ep 钳回 cap，50K 买不起）

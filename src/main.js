@@ -4,7 +4,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain,
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
-  offlineRate, offlineCap, addEp,
+  offlineRate, offlineCap, offlineEffRate, addEp, // v3.2.4 反馈⑤：offlineEffRate 统一离线效率口径（含离线协议研究）
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
   cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
@@ -33,7 +33,7 @@ import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { renderCrewPanel, crewPush } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化）
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
-import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
+import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
@@ -145,13 +145,17 @@ function renderStorylinePanel() {
   }
   el.innerHTML = html;
   // v2.7.5 ⑤：命运的岔路口移入故事线 tab（原在建筑区）——状态/立誓跟随故事线叙事
+  // v3.2.4：岔路口卡改由 dirty.shop 周期渲染（render() 内已有调用点），此处仅状态切换/首空时重建，
+  // 避免 2s 兜底刷新每帧重建立誓按钮（v2.7.5 ① 同款「慢速点击丢失」风险）
   const crEl = document.getElementById('crossroad-list');
-  if (crEl) {
+  if (crEl && (crEl.childElementCount === 0 || lastCrRenderState !== S.crossroad)) {
+    lastCrRenderState = S.crossroad;
     const crTitle = document.getElementById('crossroad-title');
     if (crTitle) crTitle.style.display = S.crossroad === 'inactive' ? 'none' : '';
     renderCrossroadBuildings(crEl);
   }
 }
+let lastCrRenderState = null; // v3.2.4：岔路口卡重建去重
 
 // ========== v2.2 岔路口状态机（替代 v2.0 弹窗触发：资产持有即走向，open 不买是合法中立路径） ==========
 let lastCrossroadState = null;
@@ -197,7 +201,7 @@ function render() {
     const dmEl2 = document.getElementById('dm-shop');
     if (dmEl2) renderDmShop(dmEl2);
     const crEl2 = document.getElementById('crossroad-list');
-    if (crEl2) renderCrossroadBuildings(crEl2);
+    if (crEl2) { renderCrossroadBuildings(crEl2); lastCrRenderState = S.crossroad; }
     // v3.2.1 反馈⑧：灵感工坊卡随商店周期刷新（消耗/产出数值联动）
     renderAtriumDistill(document.getElementById('atrium-host'));
     const famEl2 = document.getElementById('family-upgrade-list');
@@ -258,6 +262,10 @@ function render() {
     if (storyEl) renderStoryBar(storyEl);
     dirty.story = false;
   }
+  // v3.2.4 反馈②：右列故事线/成就常驻面板——v3.2.1 三列布局后原 switchTab('storyline'/'achievement')
+  // 渲染入口已不可达（按钮移除），面板从开档起恒空。现在走脏标记：开档渲染 + 每 2s 兜底 + 事件置位
+  if (dirty.storyline) { renderStorylinePanel(); dirty.storyline = false; }
+  if (dirty.achievements) { renderAchievementPanel(document.getElementById('achievement-panel')); dirty.achievements = false; }
   if (dirty.religion) { // v2.5.7：宗教面板
     const relEl = document.getElementById('religion-panel');
     if (relEl) renderReligionPanel(relEl);
@@ -767,7 +775,7 @@ function renderQuickSwitches() {
   const items = [];
   if ((S.upgrades.atrium || 0) >= 1) {
     const on = S.atriumOn !== false;
-    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
+    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「设施 · 灵感工坊」卡开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
   }
   if (vehicleDmPerMin() > 0) {
     const on = S._probeEnabled !== false;
@@ -1000,6 +1008,22 @@ function initFarewellGift() { ensureFarewellGift(); }
 
 // ========== 事件绑定 ==========
 function bindEvents() {
+  // v3.2.4 反馈①：故事线面板收起/展开（记忆在 localStorage，跨开档保留）
+  const slPanel = document.getElementById('tab-storyline');
+  const slH3 = document.getElementById('storyline-h3');
+  if (slPanel && slH3) {
+    const applySl = () => {
+      const c = localStorage.getItem('abyss_story_collapsed') === '1';
+      slPanel.classList.toggle('sl-collapsed', c);
+      const ind = slH3.querySelector('.sl-ind');
+      if (ind) ind.textContent = c ? '▸' : '▾';
+    };
+    slH3.addEventListener('click', () => {
+      localStorage.setItem('abyss_story_collapsed', slPanel.classList.contains('sl-collapsed') ? '0' : '1');
+      applySl();
+    });
+    applySl();
+  }
   document.getElementById('hero')?.addEventListener('click', doClick);
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
   // v2.8.10：线程状态点击弹出四态说明（欠薪/休眠状态悬停提示对点击无响应，改为点击弹窗）
@@ -1670,7 +1694,7 @@ function updatePausePreview() {
   const dt = (Date.now() - (S.pausedAt || Date.now())) / 1000;
   const eff = Math.min(dt, offlineCap());
   const cps = computeCps();
-  const epPreview = Math.max(0, cps * eff * offlineRate());
+  const epPreview = Math.max(0, cps * eff * offlineEffRate()); // v3.2.4 反馈⑤：与离线结算统一口径
   const hours = eff / 3600;
   const rpPreview = hours >= 1 ? Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1)) : 0;
   info.innerHTML = `已暂停（模拟离线）：<b class="mono">${fmtTime(dt)}</b><br>
@@ -1691,7 +1715,7 @@ function settlePause() {
   if (dt > 5) {
     const eff = Math.min(dt, offlineCap());
     const cps = computeCps();
-    const gain = cps * eff * offlineRate();
+    const gain = cps * eff * offlineEffRate(); // v3.2.4 反馈⑤：与离线结算统一口径
     if (gain >= 1) {
       const gained = addEp(gain); // v2.1 D1：统一入口，受 EP 上限约束
       if (gained > 0) logPts.push(`+${fmt(gained)} EP`);
@@ -1883,6 +1907,8 @@ let tideCacheTimer = -1;
 let corruptionCacheFloor = -1; // v2.0：腐化脏检查缓存
 let wageStateCache = '';      // v2.9.2 ②：线程薪资状态变化脏检查（dormant/losing 触发离职礼盒按钮出现）
 let lastAiUnlocked = false;  // v1.3 A：AI 核心解锁变化检测
+let lastAbVisible = false;   // v3.2.4 反馈④：自动购建区块（已激活或全资源解锁）显隐检测
+let lastAbEpOk = false;      // v3.2.4 反馈④：激活按钮 EP 充足态检测（原 disabled 后 EP 攒够不刷新 → 按钮永久禁点）
 let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
 
 let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
@@ -2182,7 +2208,7 @@ function tick(now) {
   // 原每 tick 无条件置位 → renderPrestige+renderReincarn+renderStorylinePanel 每 100ms innerHTML 重建
   // → 晋升/轮回/岔路口按钮每帧被替换 → 慢速点击（mousedown/mouseup 间隔 >100ms）丢失（「大量点击才成功一次」）
   // → 轮回卡/岔路口卡 hover 每帧替换闪烁。购买/转生等事件仍即时置位，此处仅降频兜底刷新
-  if ((frame % 20) === 0) { dirty.prestige = true; dirty.story = true; }
+  if ((frame % 20) === 0) { dirty.prestige = true; dirty.story = true; dirty.storyline = true; dirty.achievements = true; } // v3.2.4 反馈②：右列故事线/成就随 2s 兜底刷新
 
   // v2.7.4 ①：遗物 gate 状态周期刷新（DM 满足但进度不足时，进度推进后按钮状态及时更新，
   // 避免刷新页面才可买）——独立于 5s 商店节流，每 2s 置位，render() 每 tick 消费
@@ -2208,6 +2234,18 @@ function tick(now) {
     renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
     renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
     renderQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关（解锁态/开关态随周期同步，sig 去重）
+    // v3.2.4 反馈③：灵感工坊首购卡揭示随周期出现（原仅 dirty.shop 时渲染 → EP 达标后卡不出现）；
+    // 仅在「应显示 ↔ 未显示」状态翻转时重建（卡内容静态，避免每秒重建按钮致点击丢失）；
+    // 区标题随卡有无显隐（未解锁时不再空挂「设施 · 灵感工坊」标题）
+    const atrHost = document.getElementById('atrium-host');
+    if (atrHost) {
+      const base = BALANCE.atrium.base || 5e4;
+      const should = ((S.upgrades && S.upgrades.atrium) || 0) >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
+      const has = !!atrHost.querySelector('.atrium-distill');
+      if (has !== should) renderAtriumDistill(atrHost);
+      const atrTitle = document.getElementById('atrium-title');
+      if (atrTitle) atrTitle.style.display = should ? '' : 'none';
+    }
     let n = 0;
     for (const u of UPGRADES) {
       const owned = S.upgrades[u.id] || 0;
@@ -2222,6 +2260,14 @@ function tick(now) {
     // v1.3 A：AI 核心研究完成后面板出现（也覆盖晋升保留 ai_core 的场景）
     const aiNow = aiUnlocked();
     if (aiNow !== lastAiUnlocked) { lastAiUnlocked = aiNow; dirty.ai = true; }
+    // v3.2.4 反馈④：自动购建区块在「全资源解锁/已激活」翻转时刷新 AI 面板（激活后区块形态切换）；
+    // EP 充足态翻转同样刷新——否则激活按钮渲染时 EP 不足被 disabled，攒够后面板不重渲染 → 永久禁点
+    const abNow = aiNow && (autoBuildUnlocked() || allResDiscovered(S));
+    if (abNow !== lastAbVisible) { lastAbVisible = abNow; dirty.ai = true; }
+    else if (abNow && !autoBuildUnlocked()) {
+      const epOkNow = (S.ep || 0) >= autoBuildActivateCost();
+      if (epOkNow !== lastAbEpOk) { lastAbEpOk = epOkNow; dirty.ai = true; }
+    }
   }
 
   render();
@@ -2301,6 +2347,7 @@ function startApp() {
   dirty.rift = true; dirty.expedition = true; dirty.riftTab = true;
   dirty.tide = true; dirty.corruption = true; dirty.ai = true;
   dirty.religion = true; dirty.delve = true; dirty.bazaar = true; // v3.0.0：集市
+  dirty.storyline = true; dirty.achievements = true; // v3.2.4 反馈②：右列常驻面板开档即渲染
 
   // v2.1：旧档迁移一次性提示（PM 4.2 玩家沟通口径；localStorage 防重）
   if (S._v21Migrated && !localStorage.getItem('v21_migrated_toast')) {

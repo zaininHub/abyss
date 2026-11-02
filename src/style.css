@@ -1076,6 +1076,12 @@ body {
 .codex-desc { color: var(--text-2); font-size: 11px; margin-bottom: 6px; line-height: 1.5; }
 .codex-chs { display: flex; flex-direction: column; gap: 3px; }
 .codex-ch { padding: 4px 6px; border-left: 2px solid var(--border); font-size: 11px; }
+
+/* v3.2.4 反馈①：故事线面板收起态（点击标题切换，状态记 localStorage） */
+#tab-storyline.sl-collapsed #storyline-panel,
+#tab-storyline.sl-collapsed #crossroad-title,
+#tab-storyline.sl-collapsed #crossroad-list { display: none; }
+#storyline-h3:hover { color: var(--accent); }
 .codex-ch.on { border-left-color: var(--green, #3fb950); }
 .codex-ch.locked { border-left-color: var(--red, #f85149); opacity: .55; }
 .codex-ch-name { color: var(--text-1); }
