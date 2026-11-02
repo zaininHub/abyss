@@ -50,7 +50,7 @@ export const BALANCE = {
     dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 存储上限 +10,000', '每 10 线程全局产出 +10%，EP 存储上限 +25,000', '每 10 线程全局产出 +15%，EP 存储上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
-    wish_well: { id: 'wish_well', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['向深渊投币许愿：每枚 100 EP，有 0.01% 概率坠回 100K EP 的横财（超存储上限溢出转入 RP 池）。次数越多，奇迹越近'] }, // v3.2.1 反馈⑧：文案充实（原「万一呢？」过简）；v3.0.3：从研究升级移入通用设施
+    wish_well: { id: 'wish_well', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['万一呢？'] }, // v3.2.3 反馈②：文案回归「万一呢？」（原长说明过详）；v3.0.3：从研究升级移入通用设施
   },
   // ===== v2.1 建筑驱动转向（PM 设计文档 §2.2 + 终章 RESCALE 价梯，唯一数值基准）=====
   // 级制红线：重复购买即升级（KG 工坊模式），effect = value × level；效果类 ≤9 级、乘算锚点 ≤3 级、扩容类 ≤20 级，禁止无限堆叠

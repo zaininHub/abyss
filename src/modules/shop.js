@@ -302,12 +302,49 @@ export function renderRpFamily(container) {
 let rpFamilyContainer = null;
 
 // v2.8.30 ⑤：灵感工坊（自动蒸馏）——研究点 tab 卡（开关按钮 + 消耗/产出实时）
+// v3.2.3 反馈③：修复首购入口缺失——原实现 n<1 直接 return 且主商店排除 atrium，
+// 新档永远买不到第一座灵感工坊（wiki 也查不到解锁条件）。现未购时在本区摆首购卡：
+// 解锁门槛与主商店同口径（EP 或累计产出 ≥ 首价 30% = 15K），EP 直购 50K。
 export function renderAtriumDistill(container) {
   if (!container) return;
   const old = container.querySelector('.atrium-distill');
   if (old) old.remove();
   const n = (S.upgrades && S.upgrades.atrium) || 0;
-  if (n < 1) return;
+  if (n < 1) {
+    const base = BALANCE.atrium.base || 5e4;
+    // 与主商店 shopUnlocked 同口径：EP / 累计产出 ≥ 首价 30% 才摆出
+    const revealed = (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
+    if (!revealed) return;
+    const cost = Math.ceil(base);
+    const afford = (S.ep || 0) >= cost && !drainBlocked({ id: 'atrium' });
+    const div = document.createElement('div');
+    div.className = 'atrium-distill item';
+    div.innerHTML = `<div class="name"><span>灵感工坊（未购）</span><span class="count mono">${fmt(cost)} EP</span></div>
+      <div class="desc">自动蒸馏：每级消耗 150 EP/s 转化 +0.15 RP/s（RP 产线核心，购入后常驻本区）</div>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+        <button data-atrium-buy class="mini-btn" style="cursor:${afford ? 'pointer' : 'not-allowed'};opacity:${afford ? 1 : 0.5};border:1px solid ${afford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${afford ? 'var(--accent)' : 'var(--text-3)'}">购入 ${fmt(cost)} EP</button>
+        ${(S.ep || 0) >= cost && !afford ? '<span style="font-size:11px;color:var(--text-3)">净产出 ≤ 0，先攒产出再购</span>' : ''}
+      </div>`;
+    if (!container._atriumDelegated) {
+      container._atriumDelegated = true;
+      container.addEventListener('click', (ev) => {
+        const t = ev.target.closest ? ev.target.closest('[data-atrium-buy]') : null;
+        if (!t) return;
+        const lv0 = (S.upgrades && S.upgrades.atrium) || 0;
+        const c0 = Math.ceil(BALANCE.atrium.base || 5e4);
+        if (lv0 > 0 || (S.ep || 0) < c0 || drainBlocked({ id: 'atrium' })) return;
+        S.ep -= c0;
+        S.upgrades.atrium = 1;
+        S.totalBuys = (S.totalBuys || 0) + 1;
+        S.lazySince = null;
+        save(S);
+        // 快捷开关/顶栏由主循环周期刷新（sig 去重）自动补上「蒸馏」开关，无需额外标记
+        renderAtriumDistill(container);
+      });
+    }
+    container.appendChild(div);
+    return;
+  }
   const on = S.atriumOn !== false;
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;

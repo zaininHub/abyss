@@ -14,7 +14,8 @@ const STATE_META = {
   dormant: { label: '强制休眠', color: '#ff9800' },
   losing:  { label: '流失预警', color: 'var(--bad,#f85149)' },
 };
-const MAX_CARDS = 24; // 档案卡展示上限（超出折叠为「还有 N 条」，避免百级线程面板卡顿）
+const PAGE_SIZE = 10; // v3.2.3 反馈①：班组档案卡一页 10 条，分页浏览（原 24 条上限折叠，改分页后全量可达）
+let crewPage = 0; // 会话级页码（不落盘）
 
 // 班组流水：cap 40 滚动窗口，随存档持久化
 export function crewPush(msg, cls = '') {
@@ -42,13 +43,19 @@ export function renderCrewPanel(container) {
   if (!container) return;
   const meta = crewStateMeta();
   const feed = (S.crewFeed || []).slice(-8).reverse();
-  const names = S.cultists.map(c => `${c.name}:${c.mood}`).join(',');
-  const sig = `${S.cultists.length}|${meta.label}|${names}|${feed.map(f => f.msg).join('|')}`;
-  if (container._lastSig === sig) { refreshCrewDyn(container); return; } // 增量：内容未变只刷新动态数值
-  container._lastSig = sig;
   const n = S.cultists.length;
+  // v3.2.3 反馈①：分页——一页 10 条；线程数变化后钳制页码
+  const pageCount = Math.max(1, Math.ceil(n / PAGE_SIZE));
+  if (!Number.isFinite(crewPage) || crewPage < 0) crewPage = 0;
+  if (crewPage >= pageCount) crewPage = pageCount - 1;
+  const start = crewPage * PAGE_SIZE;
+  const pageCultists = S.cultists.slice(start, start + PAGE_SIZE);
+  const names = pageCultists.map(c => `${c.name}:${c.mood}`).join(',');
+  const sig = `${n}|${crewPage}|${meta.label}|${names}|${feed.map(f => f.msg).join('|')}`;
+  if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
+  container._lastSig = sig;
   let cards = '';
-  for (const c of S.cultists.slice(0, MAX_CARDS)) {
+  for (const c of pageCultists) {
     cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
       <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
       <div class="crew-info">
@@ -58,7 +65,14 @@ export function renderCrewPanel(container) {
       </div>
     </div>`;
   }
-  if (n > MAX_CARDS) cards += `<div class="crew-card more">…还有 ${n - MAX_CARDS} 条线程在岗</div>`;
+  if (!cards) cards = '<div class="crew-card more">暂无线程——去商店招募第一条线程</div>';
+  const pager = pageCount > 1
+    ? `<div class="crew-pager">
+        <button data-crew-page="prev" ${crewPage <= 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <span>第 ${crewPage + 1} / ${pageCount} 页 · 共 ${n} 条线程</span>
+        <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
+      </div>`
+    : '';
   const feedHtml = feed.length
     ? feed.map(f => `<div class="crew-feed-item ${f.cls || ''}"><span class="mono">${new Date(f.t).toTimeString().slice(0, 5)}</span> ${f.msg}</div>`).join('')
     : '<div class="crew-feed-item dim">暂无班组动态——招募、状态切换与流失都会记录在这里</div>';
@@ -68,17 +82,29 @@ export function renderCrewPanel(container) {
       <span class="crew-count">${n} 条线程在岗</span>
     </div>
     <div class="crew-grid">${cards}</div>
+    ${pager}
     <div class="crew-feed">${feedHtml}</div>`;
-  refreshCrewDyn(container);
+  // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
+  if (!container._crewDelegated) {
+    container._crewDelegated = true;
+    container.addEventListener('click', (ev) => {
+      const btn = ev.target.closest ? ev.target.closest('[data-crew-page]') : null;
+      if (!btn || btn.disabled) return;
+      crewPage += btn.dataset.crewPage === 'prev' ? -1 : 1;
+      renderCrewPanel(container);
+    });
+  }
+  refreshCrewDyn(container, start, pageCultists);
 }
 
 // 每秒原地更新动态数值（个人产出/累计贡献/工龄），不重建 DOM（v2.6.7 防闪烁纪律）
-function refreshCrewDyn(container) {
+// v3.2.3 反馈①：索引跟随当前分页切片（原全量前 24 条直读）
+function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0, PAGE_SIZE)) {
   const outEls = container.querySelectorAll('.c-out');
   const earnEls = container.querySelectorAll('.c-earned');
   const tenEls = container.querySelectorAll('.c-tenure');
-  for (let i = 0; i < outEls.length && i < S.cultists.length; i++) {
-    const c = S.cultists[i];
+  for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
+    const c = pageCultists[i];
     outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1));
     earnEls[i].textContent = c.earned ? fmt(c.earned) : '—';
     if (tenEls[i]) tenEls[i].textContent = `已共事 ${c.hiredAt ? tenure(c) : '—'}`;

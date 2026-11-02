@@ -1096,6 +1096,9 @@ body {
 .pet-anim-b { animation: petFloatB 3.4s ease-in-out infinite; }
 .pet-anim-c { animation: petFloatC 2.4s ease-in-out infinite; }
 .pet-anim-d { animation: petFloatD 4s ease-in-out infinite; }
+/* v3.2.3 反馈⑥：PT 不足休战（异兽回家）视觉——浮标灰显停动画、卡片降饱和 */
+.pet-item.starving { filter: grayscale(1); opacity: .45; animation-play-state: paused !important; }
+.pet-card.starving { filter: saturate(.4); opacity: .75; }
 @keyframes petFloatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-6deg); } }
 @keyframes petFloatB { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
 @keyframes petFloatC { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
@@ -1277,8 +1280,23 @@ body {
 }
 
 /* ========== v2.9.0：Wiki 体系化百科（KG 风格——侧栏分章 + 内容区 + 渐进解锁） ========== */
-.wiki-box { max-width: 760px; }
-.wiki-wrap { display: flex; gap: 14px; min-height: 360px; max-height: 70vh; }
+/* v3.2.3 反馈④：wiki 弹框固定尺寸——弹框高度恒定（78vh，上限 720px），正文/nav 各自滚动 */
+.wiki-box {
+  max-width: 780px;
+  width: 780px;
+  height: 78vh;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 尺寸固定：滚动交给 wiki-wrap 内部 */
+}
+.wiki-toolbar { margin-bottom: 8px; }
+.wiki-toolbar input {
+  width: 100%; box-sizing: border-box; padding: 6px 10px; font-size: 12.5px; font-family: inherit;
+  background: var(--bg-2, #141821); color: var(--text); border: 1px solid var(--border); border-radius: 6px; outline: none;
+}
+.wiki-toolbar input:focus { border-color: var(--purple); }
+.wiki-wrap { display: flex; gap: 14px; flex: 1; min-height: 0; } /* min-height:0 允许 flex 子项收缩出滚动区 */
 .wiki-nav { flex: 0 0 140px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; padding-right: 4px; border-right: 1px solid var(--border); }
 .wiki-nav-btn {
   text-align: left; padding: 6px 10px; border: none; background: transparent; color: var(--text-2);
@@ -1287,7 +1305,12 @@ body {
 .wiki-nav-btn:hover:not(.locked) { background: rgba(88,166,255,.08); color: var(--text); }
 .wiki-nav-btn.on { background: rgba(163,113,247,.16); color: var(--purple); font-weight: 600; }
 .wiki-nav-btn.locked { color: var(--text-3); cursor: not-allowed; opacity: .6; }
-.wiki-body { flex: 1; overflow-y: auto; padding-right: 4px; font-size: 12.5px; line-height: 1.75; color: var(--text); }
+.wiki-body { flex: 1; min-width: 0; overflow-y: auto; padding-right: 4px; font-size: 12.5px; line-height: 1.75; color: var(--text); }
+/* v3.2.3 反馈④：wiki 搜索命中条目 */
+.wiki-hit { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin: 6px 0; cursor: pointer; background: rgba(255,255,255,.02); transition: border-color .12s; }
+.wiki-hit:hover { border-color: var(--purple); }
+.wiki-hit-sec { color: var(--purple); font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.wiki-hit-line { color: var(--text-2); font-size: 11.5px; line-height: 1.6; }
 .wiki-title { color: var(--accent); font-size: 13px; margin: 0 0 8px; letter-spacing: .5px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
 .wiki-content p { margin: 6px 0; color: var(--text); }
 .wiki-content h4 { color: var(--cyan); font-size: 12px; margin: 12px 0 4px; letter-spacing: .5px; }
@@ -1323,14 +1346,24 @@ body {
 .crew-feed-item { padding: 1px 0; color: var(--text-2); }
 .crew-feed-item.good { color: var(--good); }
 .crew-feed-item.bad { color: var(--bad); }
+/* v3.2.3 反馈①：班组档案卡分页条 */
+.crew-pager { display: flex; gap: 10px; align-items: center; justify-content: center; font-size: 11.5px; color: var(--text-3); margin: 6px 0; }
+.crew-pager button {
+  padding: 2px 10px; font-size: 11px; font-family: inherit; cursor: pointer;
+  background: var(--bg-2, #141821); color: var(--text-2); border: 1px solid var(--border); border-radius: 4px;
+}
+.crew-pager button:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+.crew-pager button:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ========== v3.2.1 反馈⑤：存档悬浮菜单（导入/导出/存档管理收进一个图标） ========== */
+/* v3.2.3 反馈⑤：菜单改为向下展开——.sys-btns 固定在屏幕右上角（top:12px），原向上展开会超出视口顶外不可点 */
 .save-menu { position: relative; display: inline-block; }
 .save-menu-pop {
   display: none;
   position: absolute;
   right: 0;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
+  bottom: auto;
   flex-direction: column;
   gap: 6px;
   min-width: 130px;

@@ -126,17 +126,19 @@ let _floatHtml = '';
 export function renderPetGrid(container) {
   if (!container) return;
   const actives = activePetIds();
+  const starving = petStarving(); // v3.2.3 反馈⑥：休战状态在卡片/浮标可见（异兽「回家」）
   let html = '';
-  html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效</div>`;
+  html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效${starving ? ' —— <b style="color:var(--bad)">PT 不足，全部休战中</b>' : ''}</div>`;
   for (const [id, p] of Object.entries(S.pets)) {
     const isActive = actives.includes(id);
+    const stateTag = isActive ? (starving ? ' · <span style="color:var(--warn)">💤 休战中</span>' : ' · 出战') : '';
     const xpNeed = petExpNeed(p.level);
     const def = PETS.find(x => x.id === id);
     const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
-    html += `<div class="pet-card${isActive ? ' on' : ''}" data-pet-card="${id}">${genTag}
+    html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
-      <div class="lv">Lv.${p.level}${isActive ? ' · 出战' : ''}</div>
+      <div class="lv">Lv.${p.level}${stateTag}</div>
       <div class="lv" style="color:var(--green);font-size:10px">${def ? def.desc : ''}</div>
       <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`; // v2.8.17：已拥有卡直接显示效果（不靠悬浮）
   }
@@ -155,7 +157,6 @@ export function renderPetGrid(container) {
   const hatchCost = ptHatchUpgCost(hatchLv);
   const hatchAfford = (S.ep || 0) >= hatchCost; // v3.0.3 第六批②：EP 不足灰显
   const upkeep = petUpkeepTotalPerSec();
-  const starving = petStarving();
   let hatchCtl;
   if (!autoHatch) {
     hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁</span>
@@ -167,7 +168,7 @@ export function renderPetGrid(container) {
   }
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
   if (upkeep > 0) {
-    html += `<div style="grid-column:1/-1;font-size:11px;color:${starving ? 'var(--bad)' : 'var(--text-3)'};margin:-2px 0 4px">出战维持：-${fmt(upkeep)} PT/s（随等级/世代增长）${starving ? ' · <b>PT 不足，异兽已全部休战（加成失效）——PT ≥ 1 自动恢复出战</b>' : ''}</div>`;
+    html += `<div style="grid-column:1/-1;font-size:11px;color:${starving ? 'var(--bad)' : 'var(--text-3)'};margin:-2px 0 4px">出战维持：-${fmt(upkeep)} PT/s（随等级/世代增长）${starving ? ' · <b>PT 不足，异兽已回家休战（加成失效、不获经验、停扣维持）——PT 回升后自动重新出战</b>' : ''}</div>`;
   }
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（PT：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
@@ -233,6 +234,7 @@ export function renderPetGrid(container) {
 export function renderPetFloat(container) {
   if (!container) return;
   const ids = activePetIds();
+  const starving = petStarving(); // v3.2.3 反馈⑥：PT 不足时浮标异兽灰显回家
   let html = '';
   if (ids.length > 0) {
     for (const id of ids) {
@@ -240,7 +242,8 @@ export function renderPetFloat(container) {
       const p = S.pets[id];
       const mile = p.level >= 100 ? '神临' : p.level >= 80 ? '异化' : p.level >= 50 ? '觉醒' : p.level >= 25 ? '成长' : '';
       const anim = def && def.anim ? def.anim : 'a';
-      html += `<div class="pet-item pet-anim-${anim}" data-pet-anim="${anim}" title="${p.name} Lv.${p.level}${mile ? ` · ${mile}` : ''}">${def ? def.icon : p.icon}</div>`; // v2.8.17 ③：idle 动画差异化（a/b/c/d）；去「里程碑×」研发性悬浮
+      const tip = `${p.name} Lv.${p.level}${mile ? ` · ${mile}` : ''}${starving ? ' · 💤 休战中（PT 不足）' : ''}`;
+      html += `<div class="pet-item pet-anim-${anim}${starving ? ' starving' : ''}" data-pet-anim="${anim}" title="${tip}">${def ? def.icon : p.icon}</div>`; // v2.8.17 ③：idle 动画差异化（a/b/c/d）；去「里程碑×」研发性悬浮
     }
   }
   // v2.5.7 检查修复：相同内容不重建——否则每帧重设 innerHTML 会不断重启浮动动画

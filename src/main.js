@@ -36,7 +36,7 @@ import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // 
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
-import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持
+import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
@@ -911,7 +911,7 @@ function ensureWishWell() {
     w = document.createElement('button');
     w.id = 'wish-well';
     w.className = 'wish-well';
-    w.title = '许愿池：投一枚硬币（100 EP）——0.01% 概率坠回 100K EP 的横财（超存储上限溢出转入 RP 池）';
+    w.title = '许愿池：投一枚硬币（100 EP）——万一呢？'; // v3.2.3 反馈②：悬浮文案同步精简
     w.innerHTML = WISH_WELL_SVG;
     w.addEventListener('click', onWishToss);
     document.body.appendChild(w);
@@ -1087,6 +1087,7 @@ function bindEvents() {
   const wikiBtn = document.getElementById('btn-wiki');
   const wikiModal = document.getElementById('wiki-modal');
   let wikiActiveId = 'intro';
+  let wikiQuery = ''; // v3.2.3 反馈④：wiki 关键词检索（会话级，打开弹框时清空）
   function renderWikiNav() {
     const nav = document.getElementById('wiki-nav');
     if (!nav) return;
@@ -1099,7 +1100,40 @@ function bindEvents() {
       renderWikiBody();
     }));
   }
+  // v3.2.3 反馈④：跨章节搜索——命中行摘录 + 点击跳转对应章节
+  function renderWikiSearch(q) {
+    const body = document.getElementById('wiki-body');
+    if (!body) return;
+    const needle = q.trim().toLowerCase();
+    let found = 0;
+    let html = `<h4 class="wiki-title">搜索「${escWiki(q.trim())}」</h4>`;
+    for (const s of WIKI_SECTIONS) {
+      const probe = document.createElement('div');
+      probe.innerHTML = s.body();
+      const lines = (probe.textContent || '').split('\n').map(l => l.trim()).filter(Boolean);
+      const hits = lines.filter(l => l.toLowerCase().includes(needle)).slice(0, 4);
+      if (!hits.length) continue;
+      found += hits.length;
+      html += `<div class="wiki-hit" data-wiki-hit="${s.id}">
+        <div class="wiki-hit-sec">${s.name} ${wikiActiveId === s.id ? '（当前章节）' : ''}</div>
+        ${hits.map(l => `<div class="wiki-hit-line">…${escWiki(l.length > 120 ? l.slice(0, 120) + '…' : l)}…</div>`).join('')}
+      </div>`;
+    }
+    html += found ? `<p class="wiki-hint">共 ${found} 条命中——点击条目跳转对应章节（关键词已清空）</p>`
+      : `<p class="wiki-hint">没有找到「${escWiki(q.trim())}」相关内容——试试别的关键词（资源名 / 系统名 / 机制名）</p>`;
+    body.innerHTML = html;
+    body.querySelectorAll('[data-wiki-hit]').forEach(el => el.addEventListener('click', () => {
+      wikiActiveId = el.dataset.wikiHit;
+      wikiQuery = '';
+      const inp = document.getElementById('wiki-search');
+      if (inp) inp.value = '';
+      renderWikiNav();
+      renderWikiBody();
+    }));
+  }
   function renderWikiBody() {
+    // v3.2.3 反馈④：有搜索词时优先展示检索结果
+    if (wikiQuery && wikiQuery.trim()) { renderWikiSearch(wikiQuery); return; }
     const body = document.getElementById('wiki-body');
     if (!body) return;
     const s = WIKI_SECTIONS.find(x => x.id === wikiActiveId) || WIKI_SECTIONS[0];
@@ -1107,6 +1141,7 @@ function bindEvents() {
     // 故事线/章节讲解并入对应章节（intro/ach 已含；此处保留故事线图鉴入口在 ach 章末）
     if (s.id === 'ach') html += renderStorylineAppendix();
     body.innerHTML = html;
+    body.scrollTop = 0;
   }
   function hintFor(key) {
     const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 3 章后商店开放「饵料仓库」，购入即解锁 PT',
@@ -1136,12 +1171,26 @@ function bindEvents() {
   function escWiki(s) { return String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
   function renderWikiContent() {
     wikiActiveId = 'intro';
+    wikiQuery = '';
+    const inp = document.getElementById('wiki-search');
+    if (inp) inp.value = '';
     renderWikiNav();
     renderWikiBody();
   }
   if (wikiBtn && wikiModal) {
     wikiBtn.addEventListener('click', () => { renderWikiContent(); wikiModal.style.display = 'flex'; });
     document.getElementById('wiki-x')?.addEventListener('click', () => { wikiModal.style.display = 'none'; });
+    // v3.2.3 反馈④：搜索框输入即检索（防抖 200ms，避免长 wiki 每键全量重排）
+    const wikiSearchInput = document.getElementById('wiki-search');
+    if (wikiSearchInput) {
+      let wikiSearchTimer = null;
+      wikiSearchInput.addEventListener('input', () => {
+        clearTimeout(wikiSearchTimer);
+        wikiSearchTimer = setTimeout(() => {
+          if (wikiModal.style.display === 'flex') { wikiQuery = wikiSearchInput.value; renderWikiBody(); }
+        }, 200);
+      });
+    }
     // v2.8.19：天赋弹框 × 关闭（绑定常驻，不依赖打开流程）
     document.getElementById('talent-x')?.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -1971,6 +2020,11 @@ function tick(now) {
   // v3.2.1 反馈⑨：出战异兽存活维持——每秒消耗 PT（随等级/世代增长），PT 归零即休战（见 pets.petStarving）
   const petUpkeep = petUpkeepTotalPerSec();
   if (petUpkeep > 0 && (S.pt || 0) > 0) S.pt = Math.max(0, (S.pt || 0) - petUpkeep * dt);
+  // v3.2.3 反馈⑥：休战/复出战过渡可见——进入休战（回家）与恢复各记一条日志（边缘触发，不刷屏）
+  const petStarvingNow = petStarving();
+  if (petStarvingNow && !S._petStarving) log('PT 耗尽：出战异兽已回家休战（加成失效，不再消耗维持）', 'warn');
+  else if (!petStarvingNow && S._petStarving) log('PT 回升：异兽重新出战', 'good');
+  S._petStarving = petStarvingNow;
   // v3.0.5 反馈②：tab 入口显隐（纯 display 开关，零重建）1s 快刷——原 5s 导致「条件已达成但入口迟迟不出现」
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 1) {
