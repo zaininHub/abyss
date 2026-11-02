@@ -139,10 +139,11 @@ t('组I 晋升双楼：轮回圣殿 3e5×1.30（2 级 ×√2/级）、传奇职�
   assert.ok(Math.abs(fxValue('ppMul') - 6) < 1e-9, `满级 ppMul 应 ×6，实际 ${fxValue('ppMul')}`);
   S.buildings = {};
 });
-t('各组高端楼（C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、末级 ≤1.2e6（v2.6.3 反馈①：B 分区已移除）', () => {
+t('各组高端楼（C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、末级 ≤1.2e6（v2.6.3 反馈①：B 分区已移除；RP 计价项除外）', () => {
   const high = ['purchase_office_3', 'super_team', 'legend_institute', 'beacon_3', 'delay_cache_2', 'event_tide_lab', 'proj_parallel'];
   for (const id of high) {
     const b = V21_BUILDINGS.find(x => x.id === id);
+    if (b.rpCost) continue; // v3.0.3 后续：RP 加成组按 RP 计价（growth 1.28~1.42），不受 EP 阶梯约束
     assert.ok(b.base <= 1.5e5, `${id} 基价 ${b.base} > 1.5e5`);
     assert.ok(b.growth >= 1.24 && b.growth <= 1.28, `${id} growth=${b.growth} 越界`);
     const last = b.base * Math.pow(b.growth, b.cap - 1);

@@ -19,7 +19,7 @@ export function defaultState() {
     tech: {},
     // 异兽
     pets: {}, activePets: [], fusesDone: 0,
-    delve: {}, vs: 0,
+    delve: { up: {} }, vs: 0, // v3.0.3 后续反馈①：up 显式初始化（原缺省致首次 VS 升级 TypeError）
     petXpMult: 1, petXpUntil: 0, fuseLuckUntil: 0,
     // 晋升/永恒
     prestige: 0, prestigePoints: 0, runTalent: null,
@@ -33,6 +33,7 @@ export function defaultState() {
     projects: [], projectsDone: 0,
     // 探索/宗教
     expeditions: [], expeditionsDone: 0, starMiles: {}, // v2.8.5：星际里程碑已领取记录
+    cosmos: { lv: {} }, // v3.0.3 后续反馈④：宇宙探索工程等级（本局制，晋升/轮回重置）
     chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
     devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）
     policies: {}, policyRerolls: {}, vowPolicyBoost: false, policyRuns: [], // v2.8.6 B2a：周期政策（每轮重选）+ 政策走向历史
@@ -316,6 +317,7 @@ export function load() {
                        'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone', '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', '_farewellBought',
                        'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
                        'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar',
+                       'cosmos',
                        'faithTemples', 'miraclesTriggered', 'prophecyNext',
                        '_prestigeSkips', '_idleSec', '_catClicks', '_lastActionAt', 'resDiscovered']; // v2.3.2 反馈②：_vehicleNames 移除
     for (const k of newFields) {

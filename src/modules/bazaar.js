@@ -26,6 +26,8 @@ export function ensureBazaar() {
   if (b.regenTimer === undefined) b.regenTimer = 0;
   if (!b.rates || typeof b.rates !== 'object') b.rates = {};
   if (!b.stock || typeof b.stock !== 'object') b.stock = {};
+  if (!b.events || typeof b.events !== 'object') b.events = { hot: null, cold: null }; // v3.0.3 反馈②：每轮随机特惠/涨价商人
+  if (b.skipConfirm === undefined) b.skipConfirm = false; // v3.0.3 反馈③：二次确认可关
   const tier = bazaarTier(b.trades);
   for (const d of BAZAAR.dealers) {
     if (!(b.rates[d.id] > 0)) b.rates[d.id] = rollRate(tier);
@@ -71,6 +73,20 @@ export function bazaarStockOf(id) {
   return S.bazaar.stock[id] || 0;
 }
 
+// v3.0.3 反馈②：每轮随机「特惠/涨价」商人——手动刷新与定时波动时重掷，让「哪类商品涨价」显性随机
+export function rollMarketEvents() {
+  ensureBazaar();
+  const tier = bazaarTierNow();
+  const pool = BAZAAR.dealers.filter(d => tier >= d.tier);
+  if (pool.length < 2) { S.bazaar.events = { hot: null, cold: null }; return; }
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  S.bazaar.events = { hot: shuffled[0].id, cold: shuffled[1].id };
+}
+export function marketEventOf(id) {
+  const ev = (S.bazaar && S.bazaar.events) || {};
+  return ev.hot === id ? 1.2 : ev.cold === id ? 0.8 : 1;
+}
+
 // 本批报价：{ give, get, mult }（give = 支付量，get = 获得量，已含汇率与政策）
 export function lotOf(id) {
   const d = dealerById(id);
@@ -78,7 +94,7 @@ export function lotOf(id) {
   ensureBazaar();
   const cap = epStorageCap();
   const tier = bazaarTierNow();
-  const mult = bazaarRateOf(id) * policyMult('bazaarRate');
+  const mult = bazaarRateOf(id) * policyMult('bazaarRate') * marketEventOf(id); // v3.0.3 反馈②：特惠/涨跌事件并入汇率
   let give = d.give, get = d.get;
   if (d.capRatio === 'give') give = Math.round(cap * d.give);
   if (d.capRatio === 'get') get = cap * d.get;
@@ -167,8 +183,9 @@ export function refreshBazaar(useEcho = false) {
     S.bazaar.refreshCount = (S.bazaar.refreshCount || 0) + 1;
   }
   restock(true);
+  rollMarketEvents(); // v3.0.3 反馈②：手动刷新同时随机刷新特惠/涨价类型
   save(S);
-  blog(`集市刷新（${useEcho ? `-${BAZAAR.echoRefresh} 回响` : '消耗 EP'}）：汇率重掷，库存补满`, 'good');
+  blog(`集市刷新（${useEcho ? `-${BAZAAR.echoRefresh} 回响` : '消耗 EP'}）：汇率重掷，库存补满，特惠/涨价商人重抽`, 'good');
   return { ok: true };
 }
 
@@ -191,6 +208,7 @@ export function tickBazaar(dt) {
     S.bazaar.shuffleTimer = 0;
     const tier = bazaarTierNow();
     for (const d of BAZAAR.dealers) S.bazaar.rates[d.id] = rollRate(tier);
+    rollMarketEvents(); // v3.0.3 反馈②：定时波动同步重抽特惠/涨价类型
     changed = true;
   }
   S.bazaar.regenTimer = (S.bazaar.regenTimer || 0) + dt;
@@ -212,6 +230,7 @@ export function resetBazaarRun() {
   S.bazaar.shuffleTimer = 0;
   S.bazaar.regenTimer = 0;
   restock(true);
+  rollMarketEvents(); // v3.0.3 反馈②：每轮特惠/涨价商人重抽
 }
 
 // ========== 面板 ==========
@@ -242,6 +261,7 @@ export function renderBazaarPanel(container) {
     <div style="display:flex;gap:8px;margin:8px 0 12px">
       <button class="btn ${(S.ep || 0) >= refreshCost ? '' : 'disabled'}" data-bazaar-refresh="1" style="flex:1">刷新（EP）</button>
       <button class="btn ${(S.abyssEcho || 0) >= BAZAAR.echoRefresh ? '' : 'disabled'}" data-bazaar-refresh-echo="1" style="flex:1">刷新（回响）</button>
+      <button class="btn" data-bazaar-confirm-toggle="1" style="flex:1" title="开启后购买需点击两次确认；关闭后单击直接成交">二次确认：${S.bazaar.skipConfirm === true ? '关' : '开'}</button>
     </div>`;
   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">`;
   for (const d of BAZAAR.dealers) {
@@ -254,9 +274,11 @@ export function renderBazaarPanel(container) {
     const good = rate >= 1.08, bad = rate <= 0.92;
     const rateColor = good ? 'var(--green,#2ea043)' : bad ? 'var(--red,#f85149)' : 'var(--text-1)';
     const canTrade = !lockedByTier && !lockedByVs && stock > 0 && resOf(d.from) >= (lot ? lot.give : Infinity);
+    const evTag = marketEventOf(d.id) > 1 ? '<span style="font-size:10.5px;color:var(--green,#3fb950)"> 🔥特惠</span>'
+      : marketEventOf(d.id) < 1 ? '<span style="font-size:10.5px;color:var(--red,#f85149)"> 📈涨价</span>' : '';
     html += `
       <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;${canTrade ? 'opacity:1' : ''}">
-        <div class="name"><span>${d.icon} ${d.name}</span><span class="count">库存 ${stock}/${mx}</span></div>
+        <div class="name"><span>${d.icon} ${d.name}${evTag}</span><span class="count">库存 ${stock}/${mx}</span></div>
         <div style="font-size:11px;color:var(--text-3);line-height:1.7">${d.desc}</div>
         <div style="font-size:12px;margin-top:4px">
           <span style="color:var(--text-2)">- ${fmt(lot ? lot.give : 0)} ${RES_LABEL[d.from]}</span>
@@ -294,10 +316,23 @@ export function bindBazaarPanel(container) {
       renderBazaarPanel(container);
       return;
     }
+    if (e.target.closest('[data-bazaar-confirm-toggle]')) { // v3.0.3 反馈③：二次确认开关（存档持久化）
+      S.bazaar.skipConfirm = S.bazaar.skipConfirm === true ? false : true;
+      save(S);
+      renderBazaarPanel(container);
+      return;
+    }
     const el = e.target.closest('[data-bazaar-dealer]');
     if (el) {
       const did = el.dataset.bazaarDealer;
       const now = Date.now();
+      // v3.0.3 反馈③：skipConfirm 开启 → 单击直接成交
+      if (S.bazaar.skipConfirm === true) {
+        const r = trade(did);
+        if (!r.ok && toastFn) toastFn(r.reason);
+        renderBazaarPanel(container);
+        return;
+      }
       if (_pendingTrade && _pendingTrade.id === did && now - _pendingTrade.t < 3000) {
         _pendingTrade = null;
         const r = trade(did);

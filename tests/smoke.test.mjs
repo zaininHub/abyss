@@ -827,8 +827,9 @@ t('5.2：unitCost(cache, n) ≤ epStorageCap()×0.3（任意数量）', () => {
 
 t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
-  S.upgrades['intern'] = 40; // v2.8.2：5e4×1.30^40 ≈ 18G，远超上限×30%
-  const raw = Math.ceil(6e5 * Math.pow(1.30, 40)); // v2.8.27：intern base ×3
+  S.upgrades['intern'] = 40; // v3.0.3 后续：产出阶梯 growth 1.30→1.55
+  const g = UPGRADES.find(x => x.id === 'intern').growth || 1.30;
+  const raw = Math.ceil(6e5 * Math.pow(g, 40)); // v2.8.27：intern base ×3；growth 随数据
   const capLimit = Math.floor(epStorageCap() * 0.3);
   const u = UPGRADES.find(x => x.id === 'intern');
   assert.ok(unitCost(u, 0) === raw && raw > capLimit, `非扩容项应按原价 ${raw}（> 上限30% ${capLimit}），实际 ${unitCost(u, 0)}`);

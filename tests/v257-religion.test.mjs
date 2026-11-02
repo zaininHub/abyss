@@ -76,9 +76,9 @@ function mkState(extra = {}) {
 {
   Object.assign(S, mkState({ ep: 1e6, upgrades: { storage: 1 }, faith: 1000, religion: { unlocked: true, branch: 'sun', sun: true } }));
   rec('V3 早期圣印上限 3', sealMaxLevel() === 3, `max=${sealMaxLevel()}`);
-  rec('V3 圣印升级费用 100/250/625', sealUpgradeCost(0) === 100 && sealUpgradeCost(1) === 250 && sealUpgradeCost(2) === 625, `cost0=${sealUpgradeCost(0)}`);
+  rec('V3 圣印升级费用 500/1450/4205（v3.0.3 后续涨价 500×2.9^n）', sealUpgradeCost(0) === 500 && sealUpgradeCost(1) === 1450 && sealUpgradeCost(2) === 4205, `cost0=${sealUpgradeCost(0)}`);
   const s1 = relMod.upgradeSeal();
-  rec('V3 圣印升 1 级成功（-100 信仰）', s1.ok === true && S.religion.seal === 1 && S.faith === 900, s1.reason || '');
+  rec('V3 圣印升 1 级成功（-500 信仰）', s1.ok === true && S.religion.seal === 1 && S.faith === 500, s1.reason || '');
   rec('V3 圣印加成生效（×2 分支 × 1.08 圣印 = 2.16）', Math.abs(econ.globalMult() - 2.16) < 1e-9, `globalMult=${econ.globalMult()}`);
   // 纯圣印加成（无分支）：1.08
   Object.assign(S, mkState({ ep: 1e6, upgrades: { storage: 1 }, religion: { unlocked: true, seal: 1 } }));

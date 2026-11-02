@@ -47,7 +47,7 @@ export function gainPetExp(dt) {
   for (const id of ids) {
     const p = S.pets[id];
     if (!p || p.level >= 100) continue;
-    p.exp += computeCps() * dt * 0.4 * mult; // v2.7.3 ⑦：获取速率 0.5→0.4（升级整体放缓）
+    p.exp += computeCps() * dt * 0.1 * mult; // v3.0.3 后续反馈③：升级速率 ÷4（0.4→0.1）——异兽升级过快（叠加饼干门槛与孵化产出线性化）
     while (p.exp >= petExpNeed(p.level) && p.level < 100) {
       // v3.0.3 第二批⑤：升级需消耗异兽饼干；饼干不足时本回合停止升级（资源门槛陡峭化）
       const ptNeed = petPtNeed(p.level);
@@ -128,7 +128,7 @@ export function renderPetGrid(container) {
   // v3.0.3 反馈⑫ + 第三批② + 第四批②③⑥：异兽孵化——去括号文案、按钮放大、升级按钮在开关旁
   const ptOn = S.ptDistillOn === true;
   const hatchLv = S.ptHatchLv || 1;
-  const epPerS = 1000 * hatchLv;
+  const epPerS = 5000 * hatchLv; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000），与 main.js tick 同口径
   const ptPerS = 0.15 * hatchLv;
   const hatchCost = ptHatchUpgCost(hatchLv);
   const hatchAfford = (S.ep || 0) >= hatchCost; // v3.0.3 第六批②：EP 不足灰显

@@ -2,6 +2,7 @@ import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, unitCost } from './economy.js';
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
+import { renderCosmosHtml, buyCosmos } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 
 export const GALAXIES = [
   { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    reward: { type: 'ep', mult: 5 },   desc: '短平快探索' },
@@ -135,7 +136,15 @@ export function renderExpeditions(container) {
     }
   }
   html += renderColoniesHtml();
+  html += renderCosmosHtml(); // v3.0.3 后续反馈④：宇宙探索（深空探测解锁）
   container.innerHTML = html;
+  container.querySelectorAll('[data-cosmos]').forEach(div => {
+    div.addEventListener('click', () => {
+      const r = buyCosmos(div.dataset.cosmos);
+      if (!r.ok) toast(r.reason);
+      renderExpeditions(container);
+    });
+  });
   container.querySelectorAll('[data-colony]').forEach(div => {
     div.addEventListener('click', () => buyColony(div.dataset.colony));
   });

@@ -201,25 +201,33 @@ function rpFamilyCost(u) {
 function makeRpFamilyItem(u) {
   const owned = (S.upgrades[u.id] || 0);
   const cost = rpFamilyCost(u);
-  const afford = S.rp >= cost;
+  const maxed = !u.unlimited && owned >= (u.cap || Infinity); // v3.0.3 反馈④：满级态展示
+  const afford = !maxed && S.rp >= cost;
   const div = document.createElement('div');
   div.dataset.buy = u.id;
   div.className = 'item' + (!afford ? ' cant' : '');
-  div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`}</span></div>
+  if (maxed) {
+    delete div.dataset.buy; // 满级移除购买入口（委托匹配 [data-buy] 不再命中）
+    div.className = 'item owned-item';
+    div.title = '已满级：晋升 RP 加成建筑数量受控';
+  }
+  div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${maxed ? `Lv.${owned}/${u.cap} 满` : u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`}</span></div>
     <div class="desc">${u.desc}</div>
-    <div class="cost mono">${fmt(cost)} RP</div>`;
+    <div class="cost mono">${maxed ? '已满级' : `${fmt(cost)} RP`}</div>`;
   return div;
 }
 function updateRpFamilyItem(u) {
   const el = rpFamilyItemEls.get(u.id);
   if (!el) return;
   const owned = (S.upgrades[u.id] || 0);
+  const maxed = !u.unlimited && owned >= (u.cap || Infinity); // v3.0.3 反馈④
   const cost = rpFamilyCost(u);
   const cnt = el.querySelector('.count');
-  if (cnt) cnt.textContent = u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`;
+  if (cnt) cnt.textContent = maxed ? `Lv.${owned}/${u.cap} 满` : u.unlimited ? `×${owned}` : `Lv.${owned}/${u.cap}`;
   const c = el.querySelector('.cost');
-  if (c) c.textContent = `${fmt(cost)} RP`;
-  el.classList.toggle('cant', S.rp < cost);
+  if (c) c.textContent = maxed ? '已满级' : `${fmt(cost)} RP`;
+  el.classList.toggle('owned-item', maxed);
+  el.classList.toggle('cant', !maxed && S.rp < cost);
 }
 export function renderRpFamily(container) {
   if (!container) return;
@@ -241,11 +249,14 @@ export function renderRpFamily(container) {
   bindDelegate(container, (id, el) => {
     const u = (BALANCE.buildingsV21 || []).find(x => x.id === id);
     if (!u || !rpFamilyItemEls.has(id)) return;
-    const wasOwned = (S.upgrades[u.id] || 0) > 0;
+    const ownedNow = (S.upgrades[u.id] || 0);
+    // v3.0.3 反馈④：RP 加成升级项满级拦截——原购买路径缺失 cap 检查，可无限超出 Lv 上限
+    if (!u.unlimited && ownedNow >= (u.cap || Infinity)) return;
+    const wasOwned = ownedNow > 0;
     const cost = rpFamilyCost(u);
     if (S.rp < cost) return;
     S.rp -= cost;
-    S.upgrades[u.id] = (S.upgrades[u.id] || 0) + 1;
+    S.upgrades[u.id] = ownedNow + 1;
     if (!wasOwned) renderRpFamily(container);
     else updateRpFamilyItem(u);
     save(S);
@@ -350,7 +361,7 @@ function makeShopItem(u) {
   const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：固定 ×1
   const afford = u.dmCost ? (S.dm || 0) >= cost : S.ep >= cost; // v2.8.21 ⑥：DM 消耗升级
   div.className = 'item' + (!afford ? ' cant' : '');
-  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : (u.desc || '');
+  const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : storageDesc(u); // v3.0.3 后续①：storage desc 动态化
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
     <div class="desc">${cpsStr}</div>${storagePreviewLine(u)}
     <div class="cost mono">${fmt(cost)}${u.dmCost ? ' DM' : ''}</div>`;
@@ -360,9 +371,20 @@ function makeShopItem(u) {
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
 export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
 
-// v3.0.3 反馈⑧：EP 上限阶梯建筑渲染层动态预览（当前 → 下一级）
+// v3.0.3 后续反馈①：存储节点卡面动态化——静态「+4000」在高等级（×57 实际下一级 +~50M）严重失真，
+// 合并为单行「EP 存储上限 +{下一级后总量}」（原 desc 行 + preview 行二合一）
+function storageDesc(u) {
+  if (u.id !== 'storage') return u.desc || '';
+  try {
+    const lv = S.upgrades[u.id] || 0;
+    const per = BALANCE.storage.capPer * Math.pow(BALANCE.storage.capGrowth, lv);
+    return `EP 存储上限 +${fmt(epStorageCap() + per)}`;
+  } catch { return u.desc || ''; }
+}
+
+// v3.0.3 反馈⑧：EP 上限阶梯建筑渲染层动态预览（当前 → 下一级）；storage 已并入 desc 不再单出预览行
 function storagePreviewLine(u) {
-  if (!['storage', 'reserve_bin', 'deep_bin'].includes(u.id)) return '';
+  if (!['reserve_bin', 'deep_bin'].includes(u.id)) return '';
   try {
     const cap = epStorageCap();
     let per;
@@ -410,7 +432,7 @@ function updateShopItem(u) {
   if (c) c.textContent = fmt(cost) + (u.dmCost ? ' DM' : ''); // v2.8.21 ⑥
   el.classList.toggle('cant', u.dmCost ? (S.dm || 0) < cost : S.ep < cost);
   const d = el.querySelector('.desc');
-  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : (u.desc || '')}`;
+  if (d) d.textContent = `${u.cps > 0 ? fmt(u.cps * globalMult()) + ' EP/s' : storageDesc(u)}`; // v3.0.3 后续①：storage desc 动态化（购后原地更新同步）
   el.classList.toggle('cant', S.ep < cost);
 }
 

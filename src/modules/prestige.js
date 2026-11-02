@@ -49,6 +49,7 @@ export function doPrestige(talentId) {
   S.policyRerolls = {};
   S.vowPolicyBoost = false;
   resetBazaarRun(); // v3.0.0：集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
+  S.cosmos = { lv: {} }; // v3.0.3 后续反馈④：宇宙探索本局制重置
   S.pets = {};
   S.activePets = [];
   S.buffMult = 1; S.buffUntil = 0;

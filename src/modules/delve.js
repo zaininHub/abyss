@@ -45,6 +45,7 @@ export function unlockDelve() {
   if (!religionUnlocked()) return { ok: false, reason: '需先信奉一个宗教分支' };
   S.delve = S.delve || {};
   S.delve.unlocked = true;
+  S.delve.up = S.delve.up || {}; // v3.0.3 后续反馈①：旧档兜底
   save(S);
   dlog('深渊之眼睁开：深潜层解锁——耗尽深渊之力，直取矩阵之底', 'good');
   if (toastFn) toastFn('🌀 深潜解锁：深渊之眼已睁开（终局层）');
@@ -139,6 +140,9 @@ export function buyDelveUpgrade(id) {
   const cost = delveUpgradeCost(id, lv);
   if ((S.vs || 0) < cost) return { ok: false, reason: `虚空碎片不足（需 ${fmt(cost)} VS）` };
   S.vs -= cost;
+  // v3.0.3 后续反馈①：S.delve 默认 {} 无 up 字段（state.js），首次购买原 `S.delve.up[id]=lv+1` 对 undefined
+  // 赋值抛 TypeError → 点击静默失败（「终局升级无法升级」根因）
+  S.delve.up = S.delve.up || {};
   S.delve.up[id] = lv + 1;
   save(S);
   dlog(`「${u.name}」升至 Lv.${lv + 1}（-${fmt(cost)} VS）：${u.desc}`, 'good');

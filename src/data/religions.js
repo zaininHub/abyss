@@ -35,9 +35,9 @@ export function sealMaxLevel() {
   return max;
 }
 
-// v2.8.30 ③：圣印升级信仰消耗大幅提高并陡峭化：100 → 250 → 625 → …（×2.5 递增）
+// v3.0.3 后续反馈⑦：宗教升级再涨价——圣印 500 起步 ×2.9/级（原 100×2.5）
 export function sealUpgradeCost(level) {
-  return Math.round(100 * Math.pow(2.5, level));
+  return Math.round(500 * Math.pow(2.9, level));
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级
@@ -63,9 +63,9 @@ export function templeFaithPerSec() {
 }
 
 // ===== v2.6.4 ⑤ 信仰超长线：神谕塔 / 圣战军（消耗信仰的后期升级点） =====
-export const ORACLE = { id: 'oracle', name: '神谕塔', base: 100, growth: 1.8, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级' }; // v2.8.30 ③：神谕塔/圣战军大幅涨价
+export const ORACLE = { id: 'oracle', name: '神谕塔', base: 600, growth: 2.2, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级' }; // v3.0.3 后续反馈⑦：600×2.2（原 100×1.8）
 
-export const CRUSADE = { id: 'crusade', name: '圣战军', base: 200, growth: 1.9, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级' };
+export const CRUSADE = { id: 'crusade', name: '圣战军', base: 1000, growth: 2.3, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级' }; // v3.0.3 后续反馈⑦：1000×2.3（原 200×1.9）
 export function oracleLevel() { return (S.religion && S.religion.oracle) || 0; }
 export function crusadeLevel() { return (S.religion && S.religion.crusade) || 0; }
 export function oracleCost() { const lv = oracleLevel(); return Math.round(ORACLE.base * Math.pow(ORACLE.growth, lv)); }

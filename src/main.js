@@ -1878,9 +1878,12 @@ function tick(now) {
   // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，EP 归零自动停）
   if (S.ptDistillOn === true && (S.ep || 0) > 0.5) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
-    const take = Math.min(1000 * hatchLv * dt, S.ep); // v3.0.3 第三批②：孵化消耗对齐灵感工坊数量级（1000 EP/s/级）
+    const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
+    const take = Math.min(need, S.ep);
     S.ep -= take;
-    S.pt = (S.pt || 0) + take * 0.00015 * hatchLv; // 1000 EP/s/级 → 0.15 饼干/s/级
+    // v3.0.3 后续反馈③附带修正：产出按实扣比例折算（原 take×0.00015×lv 实为 lv² 隐性加成——
+    // 显示「+0.15×lv 饼干/s」但实产 0.15×lv²，升级过快的根因之一）；现为 0.15×lv 线性
+    S.pt = (S.pt || 0) + take * 0.00003; // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
   }
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 5) {
