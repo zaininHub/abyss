@@ -24,12 +24,21 @@ function baseState(extra = {}) {
   }, extra);
 }
 
-test('shop.buyUpgrade：净产出 ≤ 0 时触发「产出不足」禁购（v2.8.30③）', () => {
-  baseState(); // 无生产、无消耗 → computeCps - drain = 0 → 触发禁购
+test('shop.buyUpgrade：净产出 ≤ 0 时仍可购买基础产出升级（v3.0.7 反馈②：一刀切禁购收窄为转化项）', () => {
+  baseState(); // 无生产、无消耗 → computeCps - drain = 0
   assert.equal(computeCps() - totalDrainPerSec() <= 0, true, '空局净产出应为 ≤0');
   const r = shop.buyUpgrade(scribble);
-  assert.equal(r.ok, false, `空局购买应被禁止，实际 ${JSON.stringify(r)}`);
-  assert.equal(S.upgrades.scribble || 0, 0, '不应扣减/增加升级');
+  assert.equal(r, true, `基础产出升级不应被「产出不足」拦截，实际 ${JSON.stringify(r)}`);
+  assert.equal(S.upgrades.scribble || 0, 1, 'scribble 应 0→1');
+});
+
+test('shop.buyUpgrade：净产出 ≤ 0 时禁止购买「EP 换资源」转化项（v3.0.7 反馈②）', () => {
+  baseState();
+  const temple = UPGRADES.find(u => u.id === 'temple');
+  assert.equal(shop.isConversionUpgrade(temple), true, 'produces 类应判定为转化项');
+  const r = shop.buyUpgrade(temple);
+  assert.equal(r.ok, false, `转化项在产出不足时应被拦截，实际 ${JSON.stringify(r)}`);
+  assert.equal(S.upgrades.temple || 0, 0, '不应扣减/增加');
 });
 
 test('shop.buyUpgrade：净产出 > 0 时成功购买并扣 EP / 计 totalBuys', () => {

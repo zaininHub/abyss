@@ -35,8 +35,19 @@ export function setToastFn(fn) { toastFn = fn; }
 function shopToast(msg) { if (toastFn) toastFn(msg); }
 
 // ========== 核心购买（口径不变；v2.3.1 ⑥ 固定 ×1） ==========
+// v3.0.7 反馈②：「产出不足」禁购只针对「消耗 EP 换其他资源」的转化项——
+// 基础产出升级 / 存储扩容 / 一次性设施一律放行。原实现一刀切（净产出 ≤0 全禁），
+// 把能提升产出、唯一能自救的那类升级也拦了 → 越卡越死（用户：EP 上限 2K 时什么都买不了）
+const CONVERSION_IDS = ['atrium', 'rp_distill']; // 灵感工坊（自动蒸馏）/ 灵感蒸馏塔（EP→RP）
+export function isConversionUpgrade(u) {
+  return !!u && (!!u.produces || CONVERSION_IDS.includes(u.id));
+}
+function drainBlocked(u) {
+  if (!isConversionUpgrade(u)) return false;
+  return computeCps() - totalDrainPerSec() <= 0;
+}
 export function buyUpgrade(u) {
-  if (computeCps() - totalDrainPerSec() <= 0) { shopToast('产出不足：总消耗 ≥ 产出，无法购买升级'); return { ok: false, reason: '产出不足' }; } // v2.8.30 ③：总消耗≥产出禁购
+  if (drainBlocked(u)) { shopToast('产出不足：总消耗 ≥ 产出，暂不可购买「EP 换资源」类升级'); return { ok: false, reason: '产出不足' }; } // v2.8.30 ③ → v3.0.7 收窄范围
   const owned = S.upgrades[u.id] || 0;
   // v2.0.2：级制封顶——满级后购买入口锁定
   const maxLv = u.maxLevel || Infinity;
@@ -127,12 +138,29 @@ function bindDelegate(container, onBuy) {
 // ========== 渲染：主商店（可叠加项：永留可购区，成本升序 + ??? 最后） ==========
 // v2.8.28 修复：资源仓库建筑按对应解锁链门控——EP 首次溢出前不显示「矩阵存储库」；
 // DM 解锁（首辆载具）前不显示「星尘金库」；宠物乐园购入前不显示「饵料仓库」；已购/已解锁不受影响。
-function shopUnlocked(u) {
-  const owned = S.upgrades[u.id] || 0;
-  if (owned > 0) return true;
+const VAULT_IDS = ['rp_vault', 'dm_vault', 'pt_vault'];
+function vaultAnchorReady(u) {
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
   if (u.id === 'pt_vault') return !!((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland)); // v3.0.3 第四批⑤：宠物乐园已删除——兼容旧档标记
+  return false;
+}
+// v3.0.7 反馈①：资源仓库还要「EP 上限承载得起首价的一半」才摆出来——
+// 否则新档上限 2,000 时店里就挂着 150.00K 的矩阵存储库（玩家会误以为「仓库已解锁却永远买不起」）
+function vaultCapacityReady(u) {
+  return epStorageCap() >= (u.base || Infinity) * 0.5;
+}
+function vaultForced(u) {
+  return VAULT_IDS.includes(u.id) && vaultAnchorReady(u) && vaultCapacityReady(u);
+}
+function shopUnlocked(u) {
+  const owned = S.upgrades[u.id] || 0;
+  if (owned > 0) return true;
+  // v3.0.7 反馈①：EP 存储节点是防死锁关键件——不参与「逐项揭示」链窗，始终可见。
+  // 原实现里它排在并行任务（10,800 EP）之后，而上限只有 2,000 → 并行任务永远买不起 →
+  // 存储节点永远揭示不出来 → 上限锁死 2K 的硬死锁（用户实测现象）
+  if (u.id === 'storage') return true;
+  if (VAULT_IDS.includes(u.id)) return vaultForced(u);
   return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
 
@@ -156,10 +184,13 @@ export function renderShop(container) {
   // v2.3 渐进披露链：链序 = 定义序；窗口内渲染（K = p + 1），已购永不隐藏，链内下一项挂链提示
   // v2.8.28 修复：资源仓库（矩阵存储库/星尘金库/饵料仓库）在对应资源解锁后强制可见（跳过链窗口）——
   // 资源解锁 = 购买对应仓库（EP 溢出后矩阵存储库即解锁），避免玩家已满足前置却因链窗口看不到可购仓库
-  const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0
-    || (u.id === 'rp_vault' && (S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp)))
-    || (u.id === 'dm_vault' && ((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm)))
-    || (u.id === 'pt_vault' && ((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland))), S); // v3.0.3 第四批⑤：兼容旧档 petland 标记
+  const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0 || vaultForced(u), S);
+  // v3.0.7 反馈①：EP 存储节点钉死在可购区（不占链位、不算已购前缀）——防死锁关键件必须一直可见
+  const storageItem = sorted.find(u => u.id === 'storage');
+  if (storageItem && !split.visible.includes(storageItem)) {
+    split.visible = sorted.filter(u => split.visible.includes(u) || u === storageItem);
+    split.hiddenCount = sorted.length - split.visible.length;
+  }
   // v2.6.7：记录链窗口状态（供 refreshShopChain 增量揭示，避免整面板重建）
   shopContainer._chain = {
     ids: new Set(split.visible.map(u => u.id)),
@@ -780,7 +811,7 @@ let bldItemEls = new Map();  // id -> el（未满级建筑）
 let bldSection = null;
 
 export function buyBuilding(b) {
-  if (computeCps() - totalDrainPerSec() <= 0) { shopToast('产出不足：总消耗 ≥ 产出，无法购买'); return { ok: false, reason: '产出不足' }; } // v2.8.30 ③：总消耗≥产出禁购
+  // v3.0.7 反馈②：一次性设施不是「EP 换资源」转化项，不再受「产出不足」闸门拦截
   const lv = (S.buildings?.[b.id]) || 0;
   if (lv >= b.levels) return false;
   const cost = buildingCost(b, S, costMult());
