@@ -31,6 +31,7 @@ import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; /
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
+import { renderCrewPanel, crewPush } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化）
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
@@ -1478,13 +1479,17 @@ function hireCultist() {
   S._lastActionAt = Date.now();
   const names = ['外勤干员 A','斥候','深潜者','观测员','渗透单元','信使','无面者','印斯茅斯节点','沙丘行者','门之侍者'];
   // v2.0：线程基础产出由 BALANCE.thread 定义（3 + 随机 0~3），不再硬编码
+  const name = names[Math.floor(Math.random() * names.length)];
   S.cultists.push({
     id: Date.now() + Math.random(),
-    name: names[Math.floor(Math.random() * names.length)],
+    name,
     output: BALANCE.thread.baseOutput + Math.random() * BALANCE.thread.baseOutputJitter,
     mood: '正常',
     moodTimer: 30 + Math.random() * 60,
+    hiredAt: Date.now(), // v3.1.0 反馈③：工龄
+    earned: 0,           // v3.1.0 反馈③：个人累计贡献（按实际入账份额分摊）
   });
+  crewPush(`招募新线程【${name}】加入班组（+${fmt(BALANCE.thread.baseOutput)}~${fmt(BALANCE.thread.baseOutput + BALANCE.thread.baseOutputJitter)} EP/s）`, 'good');
   dirty.top = true; dirty.hero = true;
   save(S); // v2.8.9：招募即持久化（v2.7.1 购买即保存惯例，防刷新丢招募）
 }
@@ -1850,6 +1855,18 @@ function tick(now) {
   // 替代 staffUnhappy 隐藏计数器（旧字段保留读兼容）；个体 mood 在状态机内正交叠加
   tickWages(dt);
 
+  // v3.1.0 反馈③：线程个人「累计贡献」——按实际入账 CPS 份额分摊到每条线程（休眠 ×0 时自然停止累计）
+  if (S.cultists.length > 0) {
+    const credited = computeCps() * dt;
+    const totalNominal = staffOutputPerSec();
+    if (credited > 0 && totalNominal > 0) {
+      for (const c of S.cultists) {
+        const nom = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1);
+        c.earned = (c.earned || 0) + credited * (nom / totalNominal);
+      }
+    }
+  }
+
   // 资源型模块产出
   for (const u of UPGRADES) {
     if (!u.produces) continue;
@@ -2063,6 +2080,7 @@ function tick(now) {
   // 解锁数变化只增量揭示新卡（refreshShopChain），不整面板重建——保持「不每秒全重建」的防闪烁纪律
   if (now - lastShopCheck > 1000) {
     lastShopCheck = now;
+    renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
     let n = 0;
     for (const u of UPGRADES) {
       const owned = S.upgrades[u.id] || 0;

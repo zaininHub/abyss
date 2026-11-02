@@ -9,6 +9,7 @@ import { S, save } from '../state.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { fmt } from './economy.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
+import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
 import { BALANCE } from '../data/balance.js';
 import { toast, dirty, askConfirm } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { spawnProject } from './projects.js';
@@ -74,6 +75,7 @@ export function doReincarn() {
   S.focusLevel = 0;
   S.projects = [];
   S.cultists = [];
+  crewPush('深渊轮回：班组随本局一起被抹去', 'bad'); // v3.1.0 反馈③：班组流水
   S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
   S.corruption = 0;
   // v2.9.0 优化③：轮回不再清除 collapsed/_collapseAt——转生不可脱离深渊（崩溃仅由「同归于尽」抉择结算）

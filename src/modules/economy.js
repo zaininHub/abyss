@@ -3,6 +3,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { ETERNALS, esCost as _esCost } from '../data/eternals.js';
 import { PETS, petBaseMult } from '../data/pets.js';
 import { MOOD_MULT } from '../data/threads.js';
+import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水（吞噬吞没线程）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { devotionMult } from '../data/religions.js';
@@ -187,6 +188,7 @@ export function tickCollapse(dt) {
     S._collapseTimer = 0;
     const lost = S.cultists.pop();
     if (collapseLogFn) collapseLogFn(`[深渊吞噬] 线程【${lost.name}】被深渊吞没（倒计时中）`, 'bad');
+    crewPush(`【${lost.name}】被深渊吞没${lost.earned ? `（累计贡献 ${fmt(lost.earned)} EP）` : ''}`, 'bad'); // v3.1.0 反馈③：班组流水
     if (collapseToastFn) collapseToastFn(`🌊 线程【${lost.name}】被深渊吞没！`);
   }
   // 倒计时终结 → 命运抉择（贿赂深渊 / 同归于尽；弹框由 main.js 接管，期间一切计时暂停）

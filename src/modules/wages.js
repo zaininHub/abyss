@@ -9,6 +9,7 @@
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { staffSalaryPerSec, wageDebtMult, wageKeepCostMult, wageLoseChance, fmt } from './economy.js';
+import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水（状态切换写入班组事件）
 
 let logFn = null;
 let toastFn = null;
@@ -52,6 +53,7 @@ export function tickWages(dt) {
       if (w.transition >= W.transitionSec) {
         w.state = 'debt'; w.debtSec = 0; w.bufferSec = 0; w.transition = 0;
         wlog(`EP 余额不足（低于 ${W.warnSec}s 薪资），线程欠薪降效：产出 ×${wageDebtMult()}`, 'bad');
+        crewPush('班组进入欠薪降效——线程产出下滑，尽快回血', 'bad'); // v3.1.0 反馈③
       }
     } else {
       w.transition = 0;
@@ -66,6 +68,7 @@ export function tickWages(dt) {
         if (w.bufferSec <= 0 && S.ep >= recoverLine) {
           resetWageState(w);
           wlog('恢复缓冲结束，线程回到满薪运行', 'good');
+          crewPush('班组恢复满薪运行', 'good'); // v3.1.0 反馈③
         }
       } else {
         // v2.8.7：常规欠薪恢复同样走 5s 过渡（不瞬间回满薪）
@@ -73,6 +76,7 @@ export function tickWages(dt) {
         if (w.transition >= W.transitionSec) {
           resetWageState(w);
           wlog('EP 回到安全线（≥60s 薪资），线程恢复满薪', 'good');
+          crewPush('EP 回到安全线，班组恢复满薪', 'good'); // v3.1.0 反馈③
         }
       }
     } else if (S.ep < recoverLine && w.bufferSec <= 0) {
@@ -82,6 +86,7 @@ export function tickWages(dt) {
       if (w.debtSec >= W.dormantAfterSec) {
         w.state = 'dormant'; w.dormantSec = 0; w.loseTimer = 0;
         wlog(`连续欠薪 ${W.dormantAfterSec}s，线程强制休眠：产出 ×0，仅扣保命成本（×${wageKeepCostMult()}）`, 'bad');
+        crewPush('班组被迫强制休眠——产出归零，只扣保命成本', 'bad'); // v3.1.0 反馈③
       }
     } else if (w.bufferSec > 0 && S.ep < warnLine) {
       // 缓冲期内资金再度告急：取消缓冲，回到普通欠薪
@@ -104,11 +109,13 @@ export function tickWages(dt) {
       grantRestBonus(w);
       w.state = 'debt'; w.debtSec = 0; w.bufferSec = W.bufferSec;
       wlog(`EP 回到安全线，休眠缓解：${W.bufferSec}s 缓冲后恢复满薪`, 'good');
+      crewPush('EP 回到安全线，班组从休眠中缓解', 'good'); // v3.1.0 反馈③
     } else {
       w.dormantSec += dt;
       if (w.dormantSec >= W.loseAfterSec) {
         w.state = 'losing'; w.loseTimer = 0;
         wlog(`休眠持续 ${W.loseAfterSec}s，进入流失预警：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程`, 'bad');
+        crewPush('班组进入流失预警——再不回血就要有人离开', 'bad'); // v3.1.0 反馈③
         if (toastFn) toastFn('⚠️ 流失预警：线程可能流失！');
       }
     }
@@ -120,6 +127,7 @@ export function tickWages(dt) {
       grantRestBonus(w);
       w.state = 'debt'; w.debtSec = 0; w.bufferSec = W.bufferSec;
       wlog(`EP 回到安全线，休眠缓解：${W.bufferSec}s 缓冲后恢复满薪`, 'good');
+      crewPush('EP 回到安全线，班组从休眠中缓解', 'good'); // v3.1.0 反馈③
     } else {
       w.dormantSec += dt;
       w.loseTimer += dt;
@@ -129,6 +137,7 @@ export function tickWages(dt) {
           const lost = S.cultists.pop();
           if (S.cultists.length === 0) resetWageState(w);
           wlog(`线程【${lost.name}】在休眠中流失（余额 ${fmt(S.ep)} EP）`, 'bad');
+          crewPush(`【${lost.name}】在休眠中流失了${lost.earned ? `（累计贡献 ${fmt(lost.earned)} EP）` : ''}`, 'bad'); // v3.1.0 反馈③：个人档案式流失记录
           if (toastFn) toastFn(`线程【${lost.name}】流失了！`);
         }
       }

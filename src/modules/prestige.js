@@ -4,6 +4,7 @@ import { TALENTS } from '../data/talents.js';
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp } from './economy.js';
 import { spawnProject } from './projects.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
+import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
 
 export function canPrestige() {
   // v2.9.0 优化③：深渊吞噬锁定——倒计时/抉择/崩溃期间晋升不可脱离深渊（仅命运抉择可终结；
@@ -29,6 +30,7 @@ export function doPrestige(talentId) {
   if (talentId !== 'legacy') S.focusLevel = 0;
   S.projects = [];
   S.cultists = [];
+  crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水（economy→crew 循环依赖：crew 仅函数内使用 economy，安全）
   // v1.3：AI 管理核心跨晋升保留（设计 §9：晋升一轮后 AI/建筑状态保持；建筑在 S.buildings 本就不随晋升清空）
   const keepAiCore = !!S.tech.ai_core;
   S.tech = {};
