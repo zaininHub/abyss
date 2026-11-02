@@ -8,6 +8,7 @@ export function activePetIds() {
 }
 
 export function petMult(key) {
+  if (petStarving()) return 1; // v3.2.1 反馈⑨：PT 不足休战中——出战加成整体失效
   let m = 1;
   for (const id of activePetIds()) {
     const p = S.pets[id];
@@ -42,6 +43,8 @@ export function petPtNeed(level) {
 export function gainPetExp(dt) {
   const ids = activePetIds();
   if (ids.length === 0) return;
+  // v3.2.1 反馈⑨：PT 不足时异兽休战（不获得经验、加成失效）——恢复缓冲：PT ≥ 1
+  if (petStarving()) return;
   let mult = 1;
   if (Date.now() < S.petXpUntil) mult *= 2;
   for (const id of ids) {
@@ -57,6 +60,20 @@ export function gainPetExp(dt) {
       p.level++;
     }
   }
+}
+
+// v3.2.1 反馈⑨：异兽存活维持——出战异兽每秒消耗 PT（随等级增长），PT 不足自动休战，恢复缓冲 PT ≥ 1 后重新出战
+const PET_UPKEEP_BASE = 0.02; // Lv.1 每只 0.02 PT/s
+export function petUpkeepPerSec(p) {
+  return PET_UPKEEP_BASE * (p ? p.level : 1) * (1 + ((p && p.gen ? p.gen : 1) - 1) * 0.25);
+}
+export function petUpkeepTotalPerSec() {
+  let sum = 0;
+  for (const id of activePetIds()) { const p = S.pets[id]; if (p) sum += petUpkeepPerSec(p); }
+  return sum;
+}
+export function petStarving() {
+  return (S.pt || 0) <= 0 && activePetIds().length > 0;
 }
 
 export function buyPet(petDef) {
@@ -126,16 +143,32 @@ export function renderPetGrid(container) {
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
   // v3.0.3 反馈⑫ + 第三批② + 第四批②③⑥：异兽孵化——去括号文案、按钮放大、升级按钮在开关旁
+  // v3.2.1 反馈①：自动孵化需解锁（首次购买「孵化升级」解锁，不再直接开放）
+  // v3.2.1 反馈⑥：文案改「总计 / 下级」双行口径；反馈⑨：出战维持消耗展示 + PT 不足休战提示
   const ptOn = S.ptDistillOn === true;
+  const autoHatch = S.ptAutoHatch === true;
   const hatchLv = S.ptHatchLv || 1;
   const epPerS = 5000 * hatchLv; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000），与 main.js tick 同口径
   const ptPerS = 0.15 * hatchLv;
+  const epNext = 5000 * (hatchLv + 1);
+  const ptNext = 0.15 * (hatchLv + 1);
   const hatchCost = ptHatchUpgCost(hatchLv);
   const hatchAfford = (S.ep || 0) >= hatchCost; // v3.0.3 第六批②：EP 不足灰显
-  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
-    <span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：每秒消耗 <b style="color:var(--green)">${fmt(epPerS)} EP</b> → +${fmt(ptPerS)} PT，EP 归零自动停</span>
-    <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>
-    <button data-pt-hatch-upg style="cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(hatchCost)} EP</button></div>`;
+  const upkeep = petUpkeepTotalPerSec();
+  const starving = petStarving();
+  let hatchCtl;
+  if (!autoHatch) {
+    hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁</span>
+      <button data-pt-hatch-upg style="margin-left:auto;cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}" title="购买「孵化升级」即解锁自动孵化（EP → PT 持续转化），并提升孵化速率">解锁自动孵化 ${fmt(hatchCost)} EP</button>`;
+  } else {
+    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：总计 <b style="color:var(--bad)">-${fmt(epPerS)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b>　下级 <b style="color:var(--bad)">-${fmt(epNext)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptNext)} PT/s</b></span>
+      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>
+      <button data-pt-hatch-upg style="cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(hatchCost)} EP</button>`;
+  }
+  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
+  if (upkeep > 0) {
+    html += `<div style="grid-column:1/-1;font-size:11px;color:${starving ? 'var(--bad)' : 'var(--text-3)'};margin:-2px 0 4px">出战维持：-${fmt(upkeep)} PT/s（随等级/世代增长）${starving ? ' · <b>PT 不足，异兽已全部休战（加成失效）——PT ≥ 1 自动恢复出战</b>' : ''}</div>`;
+  }
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（PT：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
     for (const p of buyable) {
@@ -164,6 +197,7 @@ export function renderPetGrid(container) {
         if ((S.ep || 0) < cost) return;
         S.ep -= cost;
         S.ptHatchLv = (S.ptHatchLv || 1) + 1;
+        if (S.ptAutoHatch !== true) S.ptAutoHatch = true; // v3.2.1 反馈①：首次购买孵化升级即解锁自动孵化
         save(S);
         renderPetGrid(container);
       }

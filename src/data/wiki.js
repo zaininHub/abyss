@@ -45,7 +45,7 @@ export const WIKI_SECTIONS = [
     <table class="wiki-tbl"><tr><th>层级</th><th>资源</th><th>解锁条件</th><th>获取</th><th>用途</th></tr>
       <tr><td>基础</td><td>⚡ EP 能量点</td><td>开局即有</td><td>线程自动产出 + 点击</td><td>一切消耗（有存储上限）</td></tr>
       <tr><td>中间</td><td>🔬 RP 研究点</td><td>购入「矩阵存储库」（EP 溢出后商店开放）</td><td>灵感蒸馏塔主动转化 / 灵感工坊自动蒸馏 / 任务奖励</td><td>科技树、研究升级、RP 加成、离线升级、族升级</td></tr>
-      <tr><td>稀有</td><td>🍪 PT 异兽饼干</td><td>第 3 章后商店开放「饵料仓库」，购入即解锁</td><td>异兽孵化（EP 转化）/ 伊甸花园</td><td>购买/升级异兽</td></tr>
+      <tr><td>稀有</td><td>🍪 PT 异兽饼干</td><td>第 3 章后商店开放「饵料仓库」，购入即解锁</td><td>异兽孵化（EP 转化，首次购买「孵化升级」解锁自动孵化）/ 伊甸花园</td><td>购买/升级异兽、出战维持（每只 0.02 PT/s × 等级 × 世代）</td></tr>
       <tr><td>转生</td><td>💎 ES 永恒碎片</td><td>完成首次晋升</td><td>晋升结算</td><td>永恒矩阵永久强化</td></tr>
       <tr><td>深渊</td><td>🌀 DM 深渊物质</td><td>购入首辆载具 或 首次封印裂隙</td><td>封印裂隙 / 载具探采 / 主动净化腐化</td><td>深渊商店、遗物、净化节点</td></tr>
       <tr><td>超长线</td><td>🙏 信仰 / 虔诚</td><td>购入「路边神龛」</td><td>圣所产出 / 赞颂转化</td><td>宗教升级、超验层级</td></tr>
@@ -152,7 +152,7 @@ export const WIKI_SECTIONS = [
       <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>分三批次：产出强化开局显现 → 资源与消耗（累计 4 级）→ 深渊终局（再累计 4 级）；未显现批次不占版面</td></tr>
       <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点 tab「晋升 RP 加成」分区</td></tr>
       <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点 tab 底部，RP + 里程碑双门控，逐档线性</td></tr>
-      <tr><td>异兽（PT/宠物）</td><td>第 3 章 ∧ 购入「饵料仓库」</td><td>仓库即 PT 解锁入口；顶栏 PT、异兽 tab、孵化同步开放</td></tr>
+      <tr><td>异兽（PT/宠物）</td><td>第 3 章 ∧ 购入「饵料仓库」</td><td>仓库即 PT 解锁入口；顶栏 PT、异兽 tab 同步开放；自动孵化需首次购买「孵化升级」解锁；出战异兽维持消耗 PT（不足自动休战）</td></tr>
       <tr><td>探采平台 / 深渊商店</td><td>首次触发深渊裂隙</td><td>载具探采：EP→DM 汇率随总载具数逐辆 ×${D.vehicles.epPerDmGrowth} 递增</td></tr>
       <tr><td>深渊遗物</td><td>裂隙已触发 ∧ DM 已发现</td><td>遗物 tab</td></tr>
       <tr><td>裂隙 tab</td><td>首次触发深渊裂隙</td><td>余烬升级树、深入探索</td></tr>

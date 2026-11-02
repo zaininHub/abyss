@@ -741,10 +741,17 @@ export function drainBreakdown() {
   if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
   const faith = faithDrainPerSec(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
   if (faith > 0.005) parts.push(`信仰生产 -${fmt(faith)}/s`);
+  const hatch = ptHatchEpPerSec(); // v3.2.1 反馈⑥：异兽孵化 EP 扣减计入消耗值
+  if (hatch > 0.005) parts.push(`异兽孵化 -${fmt(hatch)}/s`);
   return parts;
 }
 export function totalDrainPerSec() {
-  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60 + faithDrainPerSec();
+  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60 + faithDrainPerSec() + ptHatchEpPerSec();
+}
+// v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 main.js tick 同口径：5000×级数 EP/s，解锁自动孵化且开关开启时生效）
+export function ptHatchEpPerSec() {
+  if (S.ptAutoHatch !== true || S.ptDistillOn !== true) return 0;
+  return 5000 * (S.ptHatchLv || 1);
 }
 
 // ========== EP 存储上限 ==========

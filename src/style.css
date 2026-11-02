@@ -74,21 +74,30 @@ body {
 .buff-on { background: rgba(63,185,80,.15); color: var(--green); }
 .buff-off { background: rgba(248,81,73,.15); color: var(--red); }
 
-/* ========== 主网格 ========== */
+/* ========== 主网格（v3.2.1 反馈④：三列——左列英雄/任务/班组、中列标签页、右列日志/故事线/晋升/成就） ========== */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 1.5fr) minmax(270px, 0.85fr);
   gap: 12px;
 }
 
-.left-col, .right-col {
+.left-col, .right-col, .side-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* 右列常驻面板：原 tab-pane 从标签页迁出，脱离 .on 显隐机制 */
+.side-col .panel { margin: 0; }
+.side-col #tab-prestige, .side-col #tab-achievement, .side-col #tab-storyline { display: block; }
+
+@media (max-width: 1280px) {
+  .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
+  .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
+}
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
+  .side-col { grid-template-columns: 1fr; }
 }
 
 /* ========== 面板通用 ========== */
@@ -806,9 +815,9 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: 1fr 1.25fr;
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.3fr) minmax(240px, 0.8fr);
   }
-  .left-col {
+  .left-col, .side-col {
     overflow-y: auto;
     min-height: 0;
   }
@@ -1314,3 +1323,23 @@ body {
 .crew-feed-item { padding: 1px 0; color: var(--text-2); }
 .crew-feed-item.good { color: var(--good); }
 .crew-feed-item.bad { color: var(--bad); }
+
+/* ========== v3.2.1 反馈⑤：存档悬浮菜单（导入/导出/存档管理收进一个图标） ========== */
+.save-menu { position: relative; display: inline-block; }
+.save-menu-pop {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  flex-direction: column;
+  gap: 6px;
+  min-width: 130px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+  z-index: 60;
+}
+.save-menu:hover .save-menu-pop, .save-menu:focus-within .save-menu-pop { display: flex; }
+.save-menu-pop .btn { width: 100%; }

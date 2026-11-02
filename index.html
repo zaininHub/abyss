@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.2.0</title>
+<title>深渊效能工作台 v3.2.1</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -19,7 +19,7 @@
     <div class="stat" title="RP（研究点）：科技树货币。完成任务、达成里程碑、灵感工坊产出获得。"><b>🔬RP</b><span id="h-rp">0</span></div>
     <div class="stat" title="ES（永恒碎片）：永恒矩阵货币，晋升时按本局累计结算，购买永久强化。"><b>💎ES</b><span id="h-es">0</span></div>
     <div class="stat" title="信仰：神龛/万神殿随机产出，用于开启宗教路线。"><b>🙏信仰</b><span id="h-faith">0</span></div>
-    <div class="stat" title="PT（异兽饼干）：异兽系统的喂养/升级资源。来源：异兽孵化（EP 蒸馏）/ 伊甸花园 / 集市 / 宇宙探索；解锁：首次获得 PT 时亮出。"><b>🍪PT</b><span id="h-pt">0</span></div>
+    <div class="stat" title="PT（异兽饼干）：异兽系统的喂养/升级资源。来源：异兽孵化（EP 转化）/ 伊甸花园 / 集市 / 宇宙探索；解锁：首次获得 PT 时亮出。"><b>🍪PT</b><span id="h-pt">0</span></div>
     <div class="stat" id="devotion-stat" style="display:none" title="虔诚：信仰满额后「赞颂」转化获得，永久保留；用于超验与深层升级。"><b>🙏虔诚</b><span id="h-devotion">0</span></div>
     <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
     <div class="stat" id="ember-stat" style="display:none" title="裂隙余烬：封印/拥抱/深入积累，跨转生保留，用于裂隙科技。"><b>🔥余烬</b><span id="h-ember">0</span></div>
@@ -34,7 +34,7 @@
   <!-- 主线剧情 -->
   <div id="chapter-bar" class="ch-bar"></div>
 
-  <!-- v2.9.0：Wiki 弹框（参考 KG 体系化百科——侧栏分章 + 内容区 + 渐进解锁；锁定章节灰显） -->
+  <!-- v2.9.0：Wiki 弹框（侧栏分章 + 内容区；全部章节无条件展示） -->
   <div class="modal" id="wiki-modal">
     <div class="modal-box wiki-box">
       <button class="modal-x" id="wiki-x" title="关闭">×</button>
@@ -46,9 +46,9 @@
     </div>
   </div>
 
-  <!-- 主网格 -->
+  <!-- 主网格（v3.2.1 反馈④：三列布局——左列英雄/任务/班组，中列标签页，右列日志/故事线/晋升/成就） -->
   <div class="grid">
-    <!-- 左列：英雄 + 离线 + 任务 + 日志 -->
+    <!-- 左列：英雄 + 裂隙 + 任务 + 班组 -->
     <div class="left-col">
       <!-- 英雄面板 -->
       <div class="panel">
@@ -103,14 +103,14 @@
         <div id="projects"></div>
       </div>
 
-      <!-- 日志 -->
-      <div class="panel log-panel">
-        <h3>系统日志</h3>
-        <div id="log-content" class="log-content"></div>
+      <!-- v3.2.1 反馈④：班组面板移到任务版下方（线程拟人化个人档案 + 事件流水） -->
+      <div class="panel">
+        <h3>🧵 班组</h3>
+        <div id="crew-panel"></div>
       </div>
     </div>
 
-    <!-- 右列：标签页 -->
+    <!-- 中列：标签页 -->
     <div class="right-col">
       <div class="tabs">
         <button class="btn on" id="btn-shop">升级商店</button>
@@ -118,16 +118,18 @@
         <button class="btn" id="btn-rp">研究点</button>
         <button class="btn" id="btn-relics" style="display:none">遗物</button>
         <button class="btn" id="btn-pets">异兽</button>
-        <button class="btn" id="btn-prestige">晋升</button>
-        <button class="btn" id="btn-achievement">成就</button>
-        <button class="btn" id="btn-offline">离线</button>
         <button class="btn" id="btn-expedition">星图</button>
-        <button class="btn" id="btn-storyline">故事线</button>
         <button class="btn" id="btn-religion" style="display:none">宗教</button>
         <button class="btn" id="btn-policy" style="display:none">政策</button>
         <button class="btn" id="btn-delve" style="display:none">深潜</button>
         <button class="btn" id="btn-rift-tab" style="display:none">裂隙</button>
         <button class="btn" id="btn-bazaar" style="display:none" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
+             保留隐藏桩元素与 switchTab 绑定（兼容程序化切换与既有测试） -->
+        <button class="btn" id="btn-prestige" style="display:none">晋升</button>
+        <button class="btn" id="btn-achievement" style="display:none">成就</button>
+        <button class="btn" id="btn-offline" style="display:none">离线</button>
+        <button class="btn" id="btn-storyline" style="display:none">故事线</button>
       </div>
 
       <div class="tab-content">
@@ -135,13 +137,13 @@
         <div class="tab-pane on" id="tab-shop">
           <!-- v2.3.1 ⑥（rev18 9.4）：bulk-bar 倍率条整节移除，购买固定 ×1 -->
           <div id="shop-list" class="shop-grid"></div>
-          <!-- v3.1.0 反馈③：班组面板（线程拟人化个人档案 + 事件流水） -->
-          <h3 style="margin-top:12px">🧵 班组</h3>
-          <div id="crew-panel"></div>
           <h3 style="margin-top:12px">线程强化</h3>
           <div id="thread-shop" class="shop-grid"></div>
           <h3 style="margin-top:12px" id="v21-title">效能建筑</h3>
           <div id="v21-building-list" class="shop-grid"></div>
+          <!-- v3.2.1 反馈⑧：灵感工坊（自动蒸馏）移入设施区 -->
+          <h3 style="margin-top:12px" id="atrium-title">设施 · 灵感工坊</h3>
+          <div id="atrium-host"></div>
           <h3 style="margin-top:12px" id="bld-title">设施</h3>
           <div id="building-list" class="shop-grid"></div>
         </div>
@@ -154,7 +156,7 @@
           <div id="eternal-list" class="tech-grid"></div>
         </div>
 
-        <!-- v2.5 ④：研究点（RP 独立栏目，EP 首次溢出解锁） -->
+        <!-- v2.5 ④：研究点（RP 独立栏目，解锁唯一入口 = 购入矩阵存储库） -->
         <div class="tab-pane" id="tab-rp">
           <div id="rp-panel"></div>
           <h3 style="margin-top:16px" id="research-upgrade-title">研究升级</h3>
@@ -165,7 +167,7 @@
           <div id="family-upgrade-list" class="shop-grid"></div>
         </div>
 
-        <!-- 异兽 -->
+        <!-- 遗物（探采平台 + 深渊商店） -->
         <div class="tab-pane" id="tab-relics">
           <h3 id="vehicle-title">探采平台 <span id="v21-overflow-stat" style="font-size:12px;font-weight:400;color:var(--text-2)"></span></h3>
           <div id="vehicle-collect" class="vehicle-collect" title=""></div>
@@ -178,27 +180,11 @@
           <div id="pet-grid" class="pet-grid"></div>
         </div>
 
-        <!-- 晋升 -->
-        <div class="tab-pane" id="tab-prestige">
-          <div id="prestige-panel"></div>
-        </div>
-
-        <!-- 成就（v2.8.1：只显示已解锁，点击/达成即时点亮） -->
-        <div class="tab-pane" id="tab-achievement">
-          <div id="achievement-panel"></div>
-        </div>
-
-        <!-- 离线 -->
-        <div class="tab-pane" id="tab-offline">
-          <div id="offline-panel"></div>
-        </div>
-
         <!-- 星图 -->
         <div class="tab-pane" id="tab-expedition">
           <div id="expedition-panel"></div>
         </div>
 
-        <!-- v2.0 故事线 -->
         <div class="tab-pane" id="tab-religion">
           <div id="religion-panel"></div>
         </div>
@@ -215,11 +201,35 @@
         <div class="tab-pane" id="tab-bazaar">
           <div id="bazaar-panel"></div>
         </div>
-        <div class="tab-pane" id="tab-storyline">
-          <div id="storyline-panel"></div>
-          <h3 style="margin-top:16px" id="crossroad-title">命运的岔路口 <span style="font-size:12px;font-weight:400;color:var(--text-2)">三选一立誓 · 亦可保持中立（不买不锁，可走到终章）</span></h3>
-          <div id="crossroad-list" class="shop-grid"></div>
-        </div>
+      </div>
+    </div>
+
+    <!-- 右列（v3.2.1 反馈④第三栏）：日志 / 故事线 / 晋升 / 成就（常驻可见） -->
+    <div class="side-col">
+      <!-- 日志 -->
+      <div class="panel log-panel">
+        <h3>系统日志</h3>
+        <div id="log-content" class="log-content"></div>
+      </div>
+
+      <!-- 故事线（原 tab-storyline，常驻右列；id 保留兼容 switchTab/测试） -->
+      <div class="panel" id="tab-storyline">
+        <h3>故事线</h3>
+        <div id="storyline-panel"></div>
+        <h3 style="margin-top:14px" id="crossroad-title">命运的岔路口 <span style="font-size:12px;font-weight:400;color:var(--text-2)">三选一立誓 · 可保持中立</span></h3>
+        <div id="crossroad-list" class="shop-grid"></div>
+      </div>
+
+      <!-- 晋升（原 tab-prestige，常驻右列） -->
+      <div class="panel" id="tab-prestige">
+        <h3>晋升</h3>
+        <div id="prestige-panel"></div>
+      </div>
+
+      <!-- 成就（原 tab-achievement，常驻右列） -->
+      <div class="panel" id="tab-achievement">
+        <h3>成就</h3>
+        <div id="achievement-panel"></div>
       </div>
     </div>
   </div>
@@ -248,8 +258,8 @@
         <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#e1bee7" stroke-width="4.5" stroke-linecap="round" opacity="0.8"/>
         <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#4dd0e1" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
         <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#4dd0e1" stroke-width="4" stroke-linecap="round" opacity="0.18"/>
-        <g fill="#311b92"><ellipse cx="106" cy="110" rx="3.6" ry="2.8"/><ellipse cx="110" cy="96" rx="3.2" ry="2.5"/><ellipse cx="102" cy="82" rx="2.9" ry="2.2"/><ellipse cx="113" cy="68" rx="2.6" ry="2"/><ellipse cx="107" cy="54" rx="2.3" ry="1.8"/><ellipse cx="117" cy="41" rx="2" ry="1.5"/><ellipse cx="114" cy="29" rx="1.6" ry="1.2"/><ellipse cx="123" cy="17" rx="1.2" ry="0.9"/></g>
-        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="106" cy="110" rx="1.3" ry="1"/><ellipse cx="110" cy="96" rx="1.1" ry="0.9"/><ellipse cx="102" cy="82" rx="1" ry="0.8"/><ellipse cx="113" cy="68" rx="0.9" ry="0.7"/><ellipse cx="107" cy="54" rx="0.8" ry="0.6"/><ellipse cx="117" cy="41" rx="0.7" ry="0.5"/><ellipse cx="114" cy="29" rx="0.6" ry="0.45"/><ellipse cx="123" cy="17" rx="0.5" ry="0.35"/></g>
+        <g fill="#311b92"><ellipse cx="106" cy="110" rx="3.6" ry="2.8"/><ellipse cx="110" cy="96" rx="3.2" ry="2.5"/><ellipse cx="102" cy="82" rx="2.9" ry="2.2"/><ellipse cx="113" cy="68" rx="2.6" ry="2"/><ellipse cx="107" cy="54" rx="2.3" ry="1.8"/><ellipse cx="117" cy="41" rx="2" ry="1.5"/><ellipse cx="123" cy="17" rx="1.2" ry="0.9"/></g>
+        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="106" cy="110" rx="1.3" ry="1"/><ellipse cx="110" cy="96" rx="1.1" ry="0.9"/><ellipse cx="102" cy="82" rx="1" ry="0.8"/><ellipse cx="113" cy="68" rx="0.9" ry="0.7"/><ellipse cx="107" cy="54" rx="0.8" ry="0.6"/><ellipse cx="117" cy="41" rx="0.7" ry="0.5"/><ellipse cx="123" cy="17" rx="1.2" ry="0.9"/></g>
       </g>
       <g class="tentacle tentacle-c">
         <path d="M152 124 C162 114 172 106 166 92 C160 78 178 68 172 54 C166 40 184 30 180 16 C178 8 192 10 190 20 C188 30 176 26 184 12" fill="none" stroke="#1b0733" stroke-width="16" stroke-linecap="round"/>
@@ -257,7 +267,7 @@
         <path d="M153 120 C162 111 170 104 166 92 C162 80 176 69 172 55 C168 41 182 31 180 17 C178 9 190 10 189 19" fill="none" stroke="#4dd0e1" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
         <path d="M153 120 C162 111 170 104 166 92 C162 80 176 69 172 55 C168 41 182 31 180 17 C178 9 190 10 189 19" fill="none" stroke="#4dd0e1" stroke-width="4" stroke-linecap="round" opacity="0.18"/>
         <g fill="#311b92"><ellipse cx="160" cy="110" rx="3.6" ry="2.8"/><ellipse cx="165" cy="96" rx="3.2" ry="2.5"/><ellipse cx="160" cy="82" rx="2.9" ry="2.2"/><ellipse cx="170" cy="68" rx="2.6" ry="2"/><ellipse cx="165" cy="54" rx="2.3" ry="1.8"/><ellipse cx="174" cy="41" rx="2" ry="1.5"/><ellipse cx="176" cy="29" rx="1.6" ry="1.2"/><ellipse cx="181" cy="16" rx="1.2" ry="0.9"/></g>
-        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="160" cy="110" rx="1.3" ry="1"/><ellipse cx="165" cy="96" rx="1.1" ry="0.9"/><ellipse cx="160" cy="82" rx="1" ry="0.8"/><ellipse cx="170" cy="68" rx="0.9" ry="0.7"/><ellipse cx="165" cy="54" rx="0.8" ry="0.6"/><ellipse cx="174" cy="41" rx="0.7" ry="0.5"/><ellipse cx="176" cy="29" rx="0.6" ry="0.45"/><ellipse cx="181" cy="16" rx="0.5" ry="0.35"/></g>
+        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="160" cy="110" rx="1.3" ry="1"/><ellipse cx="165" cy="96" rx="1.1" ry="0.9"/><ellipse cx="160" cy="82" rx="1" ry="0.8"/><ellipse cx="170" cy="68" rx="0.9" ry="0.7"/><ellipse cx="174" cy="41" rx="0.7" ry="0.5"/><ellipse cx="176" cy="29" rx="0.6" ry="0.45"/><ellipse cx="181" cy="16" rx="0.5" ry="0.35"/></g>
       </g>
     </svg>
   </div>
@@ -275,12 +285,15 @@
     </div>
   </div>
 
-  <!-- v2.5 ⑥：暂停 / 离线恢复模态框 -->
+  <!-- v2.5 ⑥：暂停 / 离线恢复模态框（v3.2.1 反馈⑤：离线管理并入暂停界面） -->
   <div id="pause-modal" class="modal">
     <div class="modal-box">
       <h3 style="margin-top:0;color:var(--red)">系统暂停 · 模拟离线</h3>
       <div id="pause-info" style="font-size:13px;line-height:2;margin:8px 0 14px"></div>
       <button class="btn" id="pause-resume" style="width:100%">恢复并结算</button>
+      <div id="tab-offline" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div id="offline-panel"></div>
+      </div>
     </div>
   </div>
 
@@ -326,14 +339,19 @@
     </div>
   </div>
 
-  <!-- 系统按钮 -->
+  <!-- 系统按钮（v3.2.1 反馈⑤：导入/导出/存档管理收进一个存档图标，悬浮展示） -->
   <div class="sys-btns">
     <button class="btn" id="pauseBtn">暂停</button>
     <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
-    <button class="btn" id="export-btn">导出存档</button>
-    <button class="btn" id="import-btn">导入存档</button>
-    <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-    <button class="btn" id="snap-btn">存档管理</button>
+    <div class="save-menu">
+      <button class="btn" id="save-menu-btn" title="存档：导出 / 导入 / 快照管理（悬浮展开）">💾 存档</button>
+      <div class="save-menu-pop">
+        <button class="btn" id="export-btn">导出存档</button>
+        <button class="btn" id="import-btn">导入存档</button>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+        <button class="btn" id="snap-btn">存档管理</button>
+      </div>
+    </div>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>

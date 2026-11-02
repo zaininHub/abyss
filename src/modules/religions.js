@@ -116,7 +116,7 @@ export function toggleTemple() {
     S.religion._templeAutoPaused = false;
     S._templeEpShortSec = 0;
     save(S);
-    rlog(`信仰圣所已重启：恢复信仰产出（+${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）`, 'good');
+    rlog(`信仰圣所已重启：恢复信仰产出（+${templeFaithPerSec().toFixed(2)} 信仰/s，消耗 -${fmt(faithDrainPerSec())} EP/s）`, 'good');
     if (toastFn) toastFn('信仰圣所已重启');
   }
   return { ok: true };
@@ -341,7 +341,7 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s，当前合计 ${templeFaithPerSec().toFixed(2)}/s，每 1 信仰消耗 ${TEMPLE.faithEpPerUnit} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} 信仰/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"

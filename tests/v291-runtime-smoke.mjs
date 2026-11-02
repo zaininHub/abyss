@@ -111,7 +111,7 @@ try {
   // 10. 转生锁定（吞噬期间）—— 重新触发倒计时，点晋升应被锁
   await page.evaluate(() => { window.S.corruption = 100; window.S._collapseAt = Date.now() + 30000; window.S._collapseChoicePending = false; window.S.runEarned = 1e12; });
   await sleep(400);
-  await page.click('#btn-prestige'); await sleep(200);
+  await page.evaluate(() => document.getElementById('btn-prestige')?.click()); await sleep(200); // v3.2.1：晋升面板常驻右列，tab 桩按钮隐藏（evaluate click 兼容）
   const talentModal = await page.$eval('#talent-modal', el => getComputedStyle(el).display !== 'none').catch(() => false);
   if (!talentModal) ok('转生锁定：吞噬期间晋升按钮不打开天赋弹框'); else bad('转生锁定', '天赋弹框仍打开');
 

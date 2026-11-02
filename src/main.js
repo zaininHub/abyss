@@ -36,7 +36,7 @@ import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // 
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag } from './modules/ai.js'; // v1.3 A
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
-import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新
+import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
@@ -70,11 +70,28 @@ function renderStorylinePanel() {
   let html = `<h3>故事线</h3>`;
   // v2.3 顺延小修：线名中文映射（getCurrentStoryline 返回 id，直接展示对玩家不可读）
   const lineName = getStorylinePackage(current)?.name || current;
-  html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">当前路线：<b style="color:var(--purple)">${lineName}</b></div>`;
+  // v3.2.1 反馈③：展示当前进度——已解锁剧情章节数（含顺次可见）占该线总章节数
+  let progTxt = '';
+  const curPkg = getStorylinePackage(current);
+  const curChs = (curPkg && curPkg.data && curPkg.data.chapters && curPkg.data.chapters.append) || [];
+  if (curChs.length > 0) {
+    const seen = (S.chaptersUnlocked && S.chaptersUnlocked[current]) || [];
+    let unlockedN = 0, prevOk2 = true;
+    for (const ch of curChs) {
+      let ok = false;
+      try { ok = !!ch.cond(S); } catch (e) { /* 未解锁 */ }
+      const chIdx = ch.id !== undefined ? parseInt(ch.id, 10) : curChs.indexOf(ch) + 1;
+      if (seen.includes(chIdx) || prevOk2) ok = true;
+      if (ok) unlockedN++;
+      prevOk2 = ok;
+    }
+    progTxt = ` · 剧情进度 ${unlockedN}/${curChs.length} 章`;
+  }
+  html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">当前路线：<b style="color:var(--purple)">${lineName}</b>${progTxt}</div>`;
   if (crossById) {
     html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">立誓建筑：<b>${crossById.name}</b>（本轮锁定该命运线，转生后岔路口重新开放）</div>`;
   } else if (S.crossroad === 'open') {
-    html += `<div style="color:var(--warn);font-size:11.5px;margin-bottom:8px">命运的岔路口已开放——前往建筑区立誓，或保持中立（不买不锁，可一路走到终章）</div>`;
+    html += `<div style="color:var(--warn);font-size:11.5px;margin-bottom:8px">命运的岔路口已开放——在下方岔路口立誓锁定走向，或保持中立</div>`; // v3.2.1 反馈③：去除「不买不锁，可一路走到终章」占位说明
   } else if (S.crossroad === 'inactive') {
     html += `<div style="color:var(--text-3);font-size:11.5px;margin-bottom:8px">推进主线至第五章后，命运的岔路口将开放</div>`;
   }
@@ -181,6 +198,8 @@ function render() {
     if (dmEl2) renderDmShop(dmEl2);
     const crEl2 = document.getElementById('crossroad-list');
     if (crEl2) renderCrossroadBuildings(crEl2);
+    // v3.2.1 反馈⑧：灵感工坊卡随商店周期刷新（消耗/产出数值联动）
+    renderAtriumDistill(document.getElementById('atrium-host'));
     const famEl2 = document.getElementById('family-upgrade-list');
     if (famEl2) renderFamilyUpgrades(famEl2);
     dirty.shop = false;
@@ -666,7 +685,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('rp-atrium-host')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.0.3 第四批①：灵感工坊在顶部蒸馏按钮处 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('atrium-host')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.2.1 反馈⑧：灵感工坊移入商店 tab 设施区 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -749,8 +768,7 @@ function renderRpPanel() {
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
     </div>
-    <div id="rp-atrium-host" style="margin-top:8px"></div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.0.3 第四批①：灵感工坊挂载点（蒸馏按钮下方）
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.2.1 反馈⑧：灵感工坊挂载点移入商店 tab 设施区
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
@@ -844,7 +862,7 @@ function ensureWishWell() {
     w = document.createElement('button');
     w.id = 'wish-well';
     w.className = 'wish-well';
-    w.title = '许愿池：投一枚硬币（100 EP）——万一呢？（0.01% 概率 +100K EP）';
+    w.title = '许愿池：投一枚硬币（100 EP）——0.01% 概率坠回 100K EP 的横财（超存储上限溢出转入 RP 池）';
     w.innerHTML = WISH_WELL_SVG;
     w.addEventListener('click', onWishToss);
     document.body.appendChild(w);
@@ -1522,10 +1540,14 @@ function togglePause() {
 }
 
 // v2.5 ⑥：暂停弹框——实时展示已暂停时长与预计离线收入；「恢复并结算」结束暂停
+// v3.2.1 反馈⑤：离线管理（离线面板/离线升级）并入暂停界面——暂停打开即渲染
 function showPauseModal() {
   const modal = document.getElementById('pause-modal');
   if (!modal) return;
   modal.style.display = 'flex';
+  const offPanel = document.getElementById('offline-panel');
+  if (offPanel) renderOfflinePanel(offPanel);
+  renderOfflineUpgrades(document.getElementById('offline-upg-list'));
   updatePausePreview();
   const btn = document.getElementById('pause-resume');
   if (btn) {
@@ -1884,8 +1906,9 @@ function tick(now) {
   tickDelve(dt);
   // v3.0.0：深渊集市——汇率波动 / 库存自然恢复
   tickBazaar(dt);
-  // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干，EP 归零自动停）
-  if (S.ptDistillOn === true && (S.ep || 0) > 0.5) {
+  // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干）
+  // v3.2.1 反馈①：自动孵化需先购买「孵化升级」解锁（S.ptAutoHatch），不再开局直给
+  if (S.ptAutoHatch === true && S.ptDistillOn === true && (S.ep || 0) > 0.5) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
     const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
     const take = Math.min(need, S.ep);
@@ -1894,6 +1917,9 @@ function tick(now) {
     // 显示「+0.15×lv 饼干/s」但实产 0.15×lv²，升级过快的根因之一）；现为 0.15×lv 线性
     S.pt = (S.pt || 0) + take * 0.00003; // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
   }
+  // v3.2.1 反馈⑨：出战异兽存活维持——每秒消耗 PT（随等级/世代增长），PT 归零即休战（见 pets.petStarving）
+  const petUpkeep = petUpkeepTotalPerSec();
+  if (petUpkeep > 0 && (S.pt || 0) > 0) S.pt = Math.max(0, (S.pt || 0) - petUpkeep * dt);
   // v3.0.5 反馈②：tab 入口显隐（纯 display 开关，零重建）1s 快刷——原 5s 导致「条件已达成但入口迟迟不出现」
   S._religCheckTimer = (S._religCheckTimer || 0) + dt;
   if (S._religCheckTimer >= 1) {
@@ -2075,6 +2101,7 @@ function tick(now) {
   if (now - lastShopCheck > 1000) {
     lastShopCheck = now;
     renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
+    renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
     let n = 0;
     for (const u of UPGRADES) {
       const owned = S.upgrades[u.id] || 0;
