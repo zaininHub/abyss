@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.2.1</title>
+<title>深渊效能工作台 v3.2.2</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -18,7 +18,7 @@
     <div class="stat" title="职级（晋升点数）：晋升获得的永久点数，每点全局产出 +10%。"><b>职级</b><span id="h-rank">0</span></div>
     <div class="stat" title="RP（研究点）：科技树货币。完成任务、达成里程碑、灵感工坊产出获得。"><b>🔬RP</b><span id="h-rp">0</span></div>
     <div class="stat" title="ES（永恒碎片）：永恒矩阵货币，晋升时按本局累计结算，购买永久强化。"><b>💎ES</b><span id="h-es">0</span></div>
-    <div class="stat" title="信仰：神龛/万神殿随机产出，用于开启宗教路线。"><b>🙏信仰</b><span id="h-faith">0</span></div>
+    <div class="stat" title="FP（信仰）：神龛/万神殿/圣所产出，用于开启宗教路线与宗教升级。"><b>🙏FP</b><span id="h-faith">0</span></div>
     <div class="stat" title="PT（异兽饼干）：异兽系统的喂养/升级资源。来源：异兽孵化（EP 转化）/ 伊甸花园 / 集市 / 宇宙探索；解锁：首次获得 PT 时亮出。"><b>🍪PT</b><span id="h-pt">0</span></div>
     <div class="stat" id="devotion-stat" style="display:none" title="虔诚：信仰满额后「赞颂」转化获得，永久保留；用于超验与深层升级。"><b>🙏虔诚</b><span id="h-devotion">0</span></div>
     <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
@@ -95,6 +95,12 @@
       <div class="panel" id="rift-card" style="display:none">
         <h3 style="color:var(--purple)">深渊裂隙</h3>
         <div id="rift-panel"></div>
+      </div>
+
+      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化）——解锁后出现，原位置开关保留、两者功能一致 -->
+      <div class="panel" id="quick-switches-panel" style="display:none">
+        <h3>⚡ 自动转化</h3>
+        <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       </div>
 
       <!-- 任务版 -->

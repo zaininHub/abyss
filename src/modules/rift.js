@@ -224,7 +224,7 @@ function grantRiftRewards(r, emberGain, embrace) {
   // 信仰：宗教解锁后概率
   if (S.religion && S.religion.unlocked && Math.random() < BALANCE.rift.faithChance) {
     S.faith = (S.faith || 0) + 1;
-    log(`裂隙神谕：+1 信仰`, 'good');
+    log(`裂隙神谕：+1 FP`, 'good');
   }
   S.riftEmber = (S.riftEmber || 0) + emberGain * emberMul();
   return dmGain;

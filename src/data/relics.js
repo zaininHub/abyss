@@ -7,7 +7,7 @@ import { S } from '../state.js';
 // 遗物定义（费用 DM ×1.8^级；gate 按游戏进度解锁）
 export const RELICS = [
   { id: 'tome',     name: '深渊古卷', desc: '全局产出 +8%/级',            effect: 0.08, cap: 5, base: 50,  growth: 1.8, gate: () => true },
-  { id: 'prayer',   name: '永暗祷文', desc: '信仰产出 +15%/级',           effect: 0.15, cap: 5, base: 80,  growth: 1.8, gate: () => true },
+  { id: 'prayer',   name: '永暗祷文', desc: 'FP 产出 +15%/级',           effect: 0.15, cap: 5, base: 80,  growth: 1.8, gate: () => true },
   { id: 'compass',  name: '星渊罗盘', desc: '研究点转换效率 +10%/级',      effect: 0.10, cap: 5, base: 150, growth: 1.8, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
   { id: 'eye',      name: '虚空之眼', desc: '离线效率 +12%/级',            effect: 0.12, cap: 5, base: 120, growth: 1.8, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
   { id: 'tentacle', name: '混沌触须', desc: 'AI 决策间隔 -10%/级', effect: 0.10, cap: 5, base: 200, growth: 1.8, gate: () => !!(S.tech && S.tech.ai_core) },

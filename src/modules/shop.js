@@ -317,7 +317,7 @@ export function renderAtriumDistill(container) {
   div.className = 'atrium-distill item';
   // v3.0.3 第四批①③：移动到顶部蒸馏按钮处；去括号文案；升级按钮放开关旁（EP 指数消耗）
   div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><span class="count mono">${fmt(epS)} EP/s → +${fmt(rpS)} RP/s</span></div>
-    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP，EP 归零自动停</div>
+    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 不足时暂停，回升后自动继续）</div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 14px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>
       <button data-atrium-upg class="mini-btn" style="cursor:${upgAfford ? 'pointer' : 'not-allowed'};opacity:${upgAfford ? 1 : 0.5};border:1px solid ${upgAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${upgAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(nextCost)} EP</button>
@@ -605,29 +605,22 @@ function updateVehicleCollectHeader() {
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
     info = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
-    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 净产出-薪资-探采消耗 > 0 才采集，不足自动暂停）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径
+    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足时本轮跳过，回升后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径 // v3.2.2 反馈①：去除自动暂停口径
   } else {
     info = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
     el.title = '购买载具后每 60 秒自动采集深渊物质';
   }
   // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取暂停
-  // v3.0.2：自动暂停后不自动恢复——按钮显示"自动暂停·点击恢复"，点击清除 _probeAutoPaused（不切换 _probeEnabled）
-  const autoPaused = enabled && rate > 0 && S._probeAutoPaused;
-  const btnCls = !enabled || autoPaused ? ' off' : '';
-  const stateText = !enabled ? '已暂停' : (autoPaused ? '自动暂停·点击恢复' : '探采中');
+  // v3.2.2 反馈①：去除「EP 不足自动暂停需手动恢复」——开关只由玩家控制，EP 不足自动跳过、回升自动恢复
+  const btnCls = enabled ? '' : ' off';
+  const stateText = enabled ? '探采中' : '已暂停';
   el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span>${info}${autoPaused ? ' <span style="color:var(--warn)">（EP 不足·自动暂停，需手动恢复）</span>' : ''}</span>
+      <span>${info}</span>
       <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${stateText}</button>
     </div>`;
   const tb = el.querySelector('#probe-toggle');
   if (tb) tb.addEventListener('click', () => {
-    // v3.0.2：自动暂停态点击→手动恢复（不切换 _probeEnabled）；否则切换手动开关
-    if (S._probeAutoPaused) {
-      S._probeAutoPaused = false;
-      S._probeEpShortSec = 0;
-    } else {
-      S._probeEnabled = S._probeEnabled === false ? true : false;
-    }
+    S._probeEnabled = S._probeEnabled === false ? true : false;
     save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
     updateVehicleCollectHeader();
     dirty.top = true;

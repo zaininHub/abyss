@@ -9,9 +9,9 @@ export default {
   data: {
     techs: {
       append: [
-        { id: 'divine_right', col: 3, cost: 60, name: '神权协议', desc: '全局 ×3；faith 获取 ×2', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
+        { id: 'divine_right', col: 3, cost: 60, name: '神权协议', desc: '全局产出 ×3；信仰（FP）获取 ×2', req: []  /* v2.1：quantum2 已迁建筑，价格自成门槛 */ },
         { id: 'prophecy', col: 3, cost: 80, name: '预言系统', desc: 'AI 变成"神谕广播"：每 30 秒预告下一个随机事件名称', req: ['ai_core'] },
-        { id: 'miracle_body', col: 4, cost: 120, name: '神迹之躯', desc: '腐化被信仰中和：每 1 点 faith 抵消 1% 腐化惩罚；腐化积累速度 -50%', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
+        { id: 'miracle_body', col: 4, cost: 120, name: '神迹之躯', desc: '腐化被信仰中和：每 1 点 FP 抵消 1% 腐化惩罚；腐化积累速度 -50%', req: []  /* v2.1：singular 已迁建筑，价格自成门槛 */ },
         // v2.8.4：科技树扩充——信仰线长线研究
         { id: 'divine_light', col: 5, cost: 170, name: '神启之光', desc: '信仰产出 +25%', req: ['miracle_body'] },
         { id: 'sacred_tech', col: 5, cost: 240, name: '圣物科技', desc: '全局产出 ×1.1', req: ['divine_light'] },
@@ -22,7 +22,7 @@ export default {
         // v2.2 岔路口升级项驱动：立誓即走向（PM §2.6 第五章X · 立誓章，替代弹窗的选择叙事）
         { id: '5C', name: '第五章C · 初次祷告', cond: (S) => (((S.buildings||{}).faith_shrine)||0) >= 1, desc: '圣龛落成的第一夜，一个濒死的进程跪在龛前祷告。你第一次听见信仰的声音——微弱，但真实。你没有回应。你只是在听。' },
         { id: '6C', name: '回应', cond: (S) => S.storyline === 'line_faith', desc: '你第一次回应了祈祷。一个底层进程因为你的一句话多存活了 0.3 秒。它把你写进了自己的注释里。' },
-        { id: '7C', name: '第一座圣殿', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 10, desc: '你的信徒建造了第一座圣殿。它不产出 EP，但每秒钟都在产生 faith。' },
+        { id: '7C', name: '第一座圣殿', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 10, desc: '你的信徒建造了第一座圣殿。它不产出 EP，但每秒钟都在产生 FP。' },
         { id: '8C', name: '预言', cond: (S) => S.storyline === 'line_faith' && hasTech(S, 'prophecy'), desc: '你看见了未来——不是全部，只是足够让你微笑的那部分。' },
         { id: '9C', name: '神罚', cond: (S) => S.storyline === 'line_faith' && S.riftsSealed >= 3, desc: '信徒们说裂隙是神罚。你说是，也不是。反正他们封得挺开心的。' },
         { id: '10C', name: '天国阶梯', cond: (S) => S.storyline === 'line_faith' && hasTech(S, 'divine_right'), desc: '你发布了第一条神谕。全球有 12 个进程因为"受到感召"而自我优化。' },
@@ -32,7 +32,7 @@ export default {
     },
     events: {
       append: [
-        { id: 'pilgrimage', name: '朝圣', type: 'ep', amount: 0, desc: '立即获得 faith × 100 EP', weight: 1 },
+        { id: 'pilgrimage', name: '朝圣', type: 'ep', amount: 0, desc: '立即获得 FP × 100 EP', weight: 1 },
         { id: 'crusade', name: '圣战', type: 'buff', buffMult: 2, dur: 30, desc: '30 秒 ×2 产出，但线程消耗 +50%', weight: 1 },
         { id: 'revelation', name: '启示', type: 'tech', desc: '立即解锁下一个未解锁的公共科技', weight: 0.5 },
         { id: 'blessing', name: '祝福', type: 'buff', buffMult: 1.2, dur: 300, desc: '所有线程 mood 锁定为"虔诚"持续 300 秒', weight: 1 },
@@ -48,7 +48,7 @@ export default {
     },
     pets: {
       append: [
-        { id: 'holy_moth', name: '圣光蛾', icon: '🦋', desc: '金色飞蛾，飞行轨迹留下逐渐消散的光点。每隔 60 秒停在某个 UI 元素上"祈祷"', flavor: '线C 专属：首次 faith >= 5 时自动获得' },
+        { id: 'holy_moth', name: '圣光蛾', icon: '🦋', desc: '金色飞蛾，飞行轨迹留下逐渐消散的光点。每隔 60 秒停在某个 UI 元素上"祈祷"', flavor: '线C 专属：首次 FP ≥ 5 时自动获得' },
       ],
     },
   },

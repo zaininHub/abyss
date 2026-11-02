@@ -212,7 +212,7 @@ export function tickExpeditions() {
     // 深空探索有概率获得信仰
     if ((ex.galaxyId === 'edge' || ex.galaxyId === 'andromeda') && Math.random() < 0.15) {
       S.faith = (S.faith || 0) + 1;
-      log('探索中感受到神意：+1 信仰', 'good');
+      log('探索中感受到神意：+1 FP', 'good');
     }
     toast(`探索完成：${g.name}`);
   }

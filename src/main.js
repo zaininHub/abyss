@@ -9,7 +9,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
-  rpDistillRate, // v2.7.4 ⑦：RP 蒸馏效率
+  rpDistillRate, vehicleDmPerMin, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
@@ -303,7 +303,7 @@ const DISCOVER_TOASTS = [
   ['rp',    () => anchorDone('rp', S),    '新资源：研究点 RP——科技树货币'],
   ['es',    () => anchorDone('es', S),    '新资源：永恒碎片 ES'],
   ['rank',  () => anchorDone('es', S),    '晋升系统开启'],
-  ['faith', () => anchorDone('faith', S), '新资源：信仰'],
+  ['faith', () => anchorDone('faith', S), '新资源：信仰（FP）'],
   ['pt',    () => anchorDone('pt', S),    '新资源：PT'],
   ['dm',    () => anchorDone('dm', S),    '新资源：深渊物质 DM'],
 ];
@@ -754,6 +754,55 @@ function refreshTabVisibility() {
   if (bzBtn) bzBtn.style.display = (bazaarUnlocked() || canUnlockBazaar()) ? '' : 'none';
 }
 
+// ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
+// RP 蒸馏（灵感工坊）/ DM 探采（载具）/ PT 孵化（异兽）——解锁后各出现一枚快捷开关，
+// 与原位置开关读写同一状态字段（atriumOn / _probeEnabled / ptDistillOn），功能完全一致；
+// EP 不足时各系统自动暂停消耗，回升后自动恢复（v3.2.2：去除「需手动恢复」的自动关闭）
+const QS_STYLE_ON = 'padding:4px 14px;font-size:11.5px;background:var(--good,#3fb950);color:#fff;border:none;border-radius:4px;cursor:pointer';
+const QS_STYLE_OFF = 'padding:4px 14px;font-size:11.5px;background:var(--red,#f85149);color:#fff;border:none;border-radius:4px;cursor:pointer';
+function renderQuickSwitches() {
+  const panel = document.getElementById('quick-switches-panel');
+  const host = document.getElementById('quick-switches');
+  if (!panel || !host) return;
+  const items = [];
+  if ((S.upgrades.atrium || 0) >= 1) {
+    const on = S.atriumOn !== false;
+    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
+  }
+  if (vehicleDmPerMin() > 0) {
+    const on = S._probeEnabled !== false;
+    items.push(`<button data-qs="probe" title="载具探采：EP → DM（与「遗物」页探采开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">探采 ${on ? '开' : '关'}</button>`);
+  }
+  if (S.ptAutoHatch === true) {
+    const on = S.ptDistillOn === true;
+    items.push(`<button data-qs="hatch" title="异兽孵化：EP → PT（与「异兽」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">孵化 ${on ? '开' : '关'}</button>`);
+  }
+  panel.style.display = items.length ? '' : 'none';
+  const sig = items.join('|');
+  if (host._qsSig === sig) return;
+  host._qsSig = sig;
+  host.innerHTML = items.join('');
+}
+function bindQuickSwitches() {
+  const host = document.getElementById('quick-switches');
+  if (!host || host._qsBound) return;
+  host._qsBound = true;
+  host.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-qs]');
+    if (!b) return;
+    const k = b.dataset.qs;
+    if (k === 'atrium') S.atriumOn = S.atriumOn === false ? true : false;
+    else if (k === 'probe') S._probeEnabled = S._probeEnabled === false ? true : false;
+    else if (k === 'hatch') S.ptDistillOn = S.ptDistillOn === true ? false : true;
+    save(S); // 状态即时落盘（与原位置开关同口径）
+    dirty.shop = true; dirty.top = true; // 原位置开关卡（灵感工坊/探采页头）随渲染周期同步
+    renderQuickSwitches();
+    const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化' };
+    const nowOn = k === 'atrium' ? S.atriumOn !== false : k === 'probe' ? S._probeEnabled !== false : S.ptDistillOn === true;
+    log(`快捷开关：${labels[k]}${nowOn ? '开启（EP 不足时自动暂停消耗，回升后自动恢复）' : '关闭'}`, nowOn ? 'good' : 'bad');
+  });
+}
+
 // v2.5 ④：研究点（RP）独立栏目——v3.0.9 反馈②：解锁唯一入口 = 购入「矩阵存储库」；
 // tab 未解锁时入口整体隐藏，原「EP 已溢出存储上限…」引导文案随 v3.0.9 反馈① 移除
 function renderRpPanel() {
@@ -1022,6 +1071,7 @@ function bindEvents() {
   document.getElementById('btn-storyline')?.addEventListener('click', () => switchTab('storyline'));
   document.getElementById('btn-religion')?.addEventListener('click', () => switchTab('religion'));
   bindReligionPanel(document.getElementById('religion-panel')); // v2.5.7：宗教面板事件委托
+  bindQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关事件委托
   bindPolicyPanel(document.getElementById('policy-panel'));
   _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',');
   renderPolicyPanel(document.getElementById('policy-panel'));
@@ -1070,7 +1120,7 @@ function bindEvents() {
       ['默认线', '标准矩阵发展：不立誓不锁线，可一路推进主线到终章。'],
       ['秩序重构者', '立誓「秩序之柱」。新编译器路线：全局 ×3 起点、AI 自动科技/自动购买、负面仅减缓、乘区稳定。'],
       ['深渊行者', '立誓「深渊之锚」。混沌路线：混沌之子随机乘区、混沌心智接管 AI、裂隙余烬/DM 强化、触手协议自动点击。'],
-      ['信仰传播者', '立誓「信仰圣龛」。精神路线：神权协议全局 ×3 且信仰 ×2、信仰长线升级、异兽/神殿联动。'],
+      ['信仰传播者', '立誓「信仰圣龛」。精神路线：神权协议全局产出 ×3 且 FP（信仰）获取 ×2、信仰长线升级、异兽/神殿联动。'],
     ];
     let h = `<h4 class="wiki-title" style="margin-top:18px">故事线选择区别</h4>` + LINES.map(([n, d]) => `<p class="wiki-line"><b>${n}</b>：${d}</p>`).join('');
     h += `<h4 class="wiki-title" style="margin-top:14px">主线章节</h4>`;
@@ -1858,7 +1908,7 @@ function tick(now) {
     S.lazySince = null; S.lazyLowSince = null;
   }
 
-  // v2.8.30 ⑤：灵感工坊自动蒸馏（研究点开关）——消耗 EP 转化 RP（EP 归零自动停，懒惰可解除）
+  // v2.8.30 ⑤：灵感工坊自动蒸馏（研究点开关）——消耗 EP 转化 RP（v3.2.2 反馈①：EP 不足自然暂停，回升自动恢复，不再自动关闭）
   const atriumN = S.upgrades && S.upgrades.atrium ? S.upgrades.atrium : 0;
   if (atriumN > 0 && S.atriumOn !== false && S.ep > 0) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
@@ -1894,7 +1944,7 @@ function tick(now) {
     else if (p.type === 'fa_chance') {
       if (Math.random() < p.rate * n * dt) {
         S.faith = (S.faith || 0) + 1;
-        log(`神龛显灵：+1 信仰`, 'good');
+        log(`神龛显灵：+1 FP`, 'good');
       }
     }
   }
@@ -1908,7 +1958,8 @@ function tick(now) {
   tickBazaar(dt);
   // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干）
   // v3.2.1 反馈①：自动孵化需先购买「孵化升级」解锁（S.ptAutoHatch），不再开局直给
-  if (S.ptAutoHatch === true && S.ptDistillOn === true && (S.ep || 0) > 0.5) {
+  // v3.2.2 反馈①：去除「EP 归零自动停」——开关保持玩家手动控制，EP 不足时 take=0 自然暂停，回升自动恢复
+  if (S.ptAutoHatch === true && S.ptDistillOn === true) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
     const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
     const take = Math.min(need, S.ep);
@@ -2102,6 +2153,7 @@ function tick(now) {
     lastShopCheck = now;
     renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
     renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
+    renderQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关（解锁态/开关态随周期同步，sig 去重）
     let n = 0;
     for (const u of UPGRADES) {
       const owned = S.upgrades[u.id] || 0;

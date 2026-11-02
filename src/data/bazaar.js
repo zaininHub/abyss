@@ -34,7 +34,7 @@ export const BAZAAR = {
 };
 
 export const RES_LABEL = {
-  ep: '⚡ EP', rp: '🔬 RP', dm: '🌀 DM', faith: '🙏 信仰', ember: '🕯️ 余烬', vs: '🌑 VS', pt: '🍪 PT',
+  ep: '⚡ EP', rp: '🔬 RP', dm: '🌀 DM', faith: '🙏 FP', ember: '🕯️ 余烬', vs: '🌑 VS', pt: '🍪 PT',
 };
 
 export function dealerById(id) { return BAZAAR.dealers.find(d => d.id === id) || null; }

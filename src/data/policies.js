@@ -22,8 +22,8 @@ export const POLICY_GROUPS = [
   {
     id: 'faith', name: '信仰', unlock: (S) => !!(S.religion && S.religion.unlocked), hint: '需信仰已解锁',
     policies: [
-      { id: 'ascetic',   name: '苦行',     effect: { faith: 0.30, ep: -0.15 },    desc: '信仰产出 +30%，EP 产出 -15%' },
-      { id: 'abundant',  name: '富足',     effect: { ep: 0.20, faith: -0.15 },    desc: 'EP 产出 +20%，信仰 -15%' },
+      { id: 'ascetic',   name: '苦行',     effect: { faith: 0.30, ep: -0.15 },    desc: 'FP 产出 +30%，EP 产出 -15%' },
+      { id: 'abundant',  name: '富足',     effect: { ep: 0.20, faith: -0.15 },    desc: 'EP 产出 +20%，FP -15%' },
       { id: 'sacrifice', name: '牺牲',     effect: { devotion: 1.5, global: -0.10 }, desc: '虔诚获取 ×1.5，全局 -10%' },
     ],
   },

@@ -170,7 +170,7 @@ export const BALANCE = {
       { id: 'echo_global', name: '回响增幅', cap: 5, desc: '回响全局倍率 ×1.3/级' },
       { id: 'echo_rift', name: '裂隙共鸣', cap: 3, desc: '裂隙余烬获取 ×2/级' },
       { id: 'echo_delve', name: '深潜共振', cap: 3, desc: '深潜产出 ×1.5/级' },
-      { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: '信仰产出 ×1.5/级' },
+      { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: 'FP 产出 ×1.5/级' },
       { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 ×2/级' },
       // v2.9.0 大项②（参考 KG 长线克制）：扩充 2 项回响升级——存储/薪资双维度
       { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 ×1.25/级（跨轮回）' },
@@ -310,7 +310,7 @@ export const BALANCE = {
     { id: 'rp_wage',        name: '薪酬协商',   cap: 10, base: 70, growth: 1.6,  fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
     { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90, growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
-    { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: '信仰产出 +10%/级' },
+    { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: 'FP 产出 +10%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],

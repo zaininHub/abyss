@@ -68,11 +68,11 @@ export function upgradeSeal() {
   const lv = sealLevel();
   if (lv >= sealMaxLevel()) return { ok: false, reason: `圣印已达当前进度上限（Lv.${sealMaxLevel()}，解锁更多资源点可提升）` };
   const cost = sealUpgradeCost(lv);
-  if ((S.faith || 0) < cost) return { ok: false, reason: `信仰不足（需 ${fmt(cost)}，当前 ${fmt(S.faith || 0)}）` };
+  if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${fmt(S.faith || 0)}）` };
   S.faith -= cost;
   S.religion.seal = lv + 1;
   save(S);
-  rlog(`圣印升至 Lv.${lv + 1}（-${fmt(cost)} 信仰）——全局产出 +${8 * (lv + 1)}%`, 'good');
+  rlog(`圣印升至 Lv.${lv + 1}（-${fmt(cost)} FP）——全局产出 +${8 * (lv + 1)}%`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -86,7 +86,7 @@ export function buyTemple() {
   S.ep -= cost;
   S.religion.temple = lv + 1;
   save(S);
-  rlog(`信仰圣所升至 Lv.${lv + 1}（-${fmt(cost)} EP）：信仰产出 +${TEMPLE.faithPerSec.toFixed(2)}/s（当前合计 ${templeFaithPerSec().toFixed(2)}/s）`, 'good');
+  rlog(`信仰圣所升至 Lv.${lv + 1}（-${fmt(cost)} EP）：FP 产出 +${TEMPLE.faithPerSec.toFixed(2)}/s（当前合计 ${templeFaithPerSec().toFixed(2)}/s）`, 'good');
   return { ok: true };
 }
 
@@ -106,7 +106,7 @@ export function toggleTemple() {
     S.religion.templeOff = true;
     save(S);
     const parts = [];
-    if (faithLoss > 0) parts.push(`-${faithLoss.toFixed(2)} 信仰`);
+    if (faithLoss > 0) parts.push(`-${faithLoss.toFixed(2)} FP`);
     if (devLoss > 0) parts.push(`-${devLoss} 虔诚`);
     rlog(`信仰圣所已关闭：停止信仰产出与 EP 消耗${parts.length ? '（冷启动代价：' + parts.join('，') + '）' : '（无信仰/虔诚可损失）'}`, 'bad');
     if (toastFn) toastFn(`信仰圣所已关闭${parts.length ? '（损失 ' + parts.join('，') + '）' : ''}`);
@@ -116,7 +116,7 @@ export function toggleTemple() {
     S.religion._templeAutoPaused = false;
     S._templeEpShortSec = 0;
     save(S);
-    rlog(`信仰圣所已重启：恢复信仰产出（+${templeFaithPerSec().toFixed(2)} 信仰/s，消耗 -${fmt(faithDrainPerSec())} EP/s）`, 'good');
+    rlog(`信仰圣所已重启：恢复 FP 产出（+${templeFaithPerSec().toFixed(2)} FP/s，消耗 -${fmt(faithDrainPerSec())} EP/s）`, 'good');
     if (toastFn) toastFn('信仰圣所已重启');
   }
   return { ok: true };
@@ -129,11 +129,11 @@ export function buyOracle() {
   if (lv >= ORACLE.cap) return { ok: false, reason: '神谕塔已满级' };
   if (sealLevel() < 3) return { ok: false, reason: '神谕塔需圣印 ≥3 级（信仰深耕前置）' };
   const cost = oracleCost();
-  if ((S.faith || 0) < cost) return { ok: false, reason: `信仰不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
+  if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
   S.faith -= cost;
   S.religion.oracle = lv + 1;
   save(S);
-  rlog(`神谕塔升至 Lv.${lv + 1}（-${cost} 信仰）：信仰产出 ×${(1 + ORACLE.effect * (lv + 1)).toFixed(2)}`, 'good');
+  rlog(`神谕塔升至 Lv.${lv + 1}（-${cost} FP）：FP 产出 ×${(1 + ORACLE.effect * (lv + 1)).toFixed(2)}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -144,11 +144,11 @@ export function buyCrusade() {
   if (lv >= CRUSADE.cap) return { ok: false, reason: '圣战军已满级' };
   if (((S.religion && S.religion.temple) || 0) < 5) return { ok: false, reason: '圣战军需信仰圣所 ≥5 级（信仰根基前置）' };
   const cost = crusadeCost();
-  if ((S.faith || 0) < cost) return { ok: false, reason: `信仰不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
+  if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
   S.faith -= cost;
   S.religion.crusade = lv + 1;
   save(S);
-  rlog(`圣战军升至 Lv.${lv + 1}（-${cost} 信仰）：全局产出 ×${(1 + CRUSADE.effect * (lv + 1)).toFixed(2)}`, 'good');
+  rlog(`圣战军升至 Lv.${lv + 1}（-${cost} FP）：全局产出 ×${(1 + CRUSADE.effect * (lv + 1)).toFixed(2)}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -157,12 +157,12 @@ export function buyCrusade() {
 export function praiseSun() {
   if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
   const f = S.faith || 0;
-  if (f < faithCap() * PRAISE.thresholdRatio) return { ok: false, reason: `信仰未满 ${Math.round(PRAISE.thresholdRatio * 100)}%（当前 ${f.toFixed(2)} / 需 ${Math.round(faithCap() * PRAISE.thresholdRatio)}）` };
+  if (f < faithCap() * PRAISE.thresholdRatio) return { ok: false, reason: `FP 未满 ${Math.round(PRAISE.thresholdRatio * 100)}%（当前 ${f.toFixed(2)} / 需 ${Math.round(faithCap() * PRAISE.thresholdRatio)}）` };
   const gain = Math.floor(f * praiseRate() * policyMult('devotion')); // v2.8.6 B2a：牺牲——虔诚获取 ×1.5
   S.devotion = (S.devotion || 0) + gain;
   S.faith = 0;
   save(S);
-  rlog(`赞颂：消耗 ${f.toFixed(2)} 信仰 → +${gain} 虔诚（转化率 ×${praiseRate().toFixed(2)}，超验 ${transcendLevel()} 层）`, 'good');
+  rlog(`赞颂：消耗 ${f.toFixed(2)} FP → +${gain} 虔诚（转化率 ×${praiseRate().toFixed(2)}，超验 ${transcendLevel()} 层）`, 'good');
   if (toastFn) toastFn(`🙏 赞颂完成：+${gain} 虔诚（累计 ${S.devotion}）`);
   return { ok: true, gain };
 }
@@ -333,32 +333,32 @@ export function renderReligionPanel(container) {
   const tCost = templeLv >= TEMPLE.cap ? null : templeCost();
   container.innerHTML = `
     <div class="religion-desc">${r.icon} 已信奉 <b>${r.name}</b>：${r.effect}（+圣印全局产出）</div>
-    <div class="off-stat"><span>信仰余额</span><b>${(S.faith || 0).toFixed(2)}</b></div>
-    <div class="off-stat"><span>信仰产出</span><b>+${templeFaithPerSec().toFixed(2)}/s（圣所）</b></div>
+    <div class="off-stat"><span>FP 余额</span><b>${(S.faith || 0).toFixed(2)}</b></div>
+    <div class="off-stat"><span>FP 产出</span><b>+${templeFaithPerSec().toFixed(2)}/s（圣所）</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 圣印（全局产出 +8%/级）</div>
     <div class="religion-seal-row">
       <span>Lv.${seal}/${sealMax}</span>
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
-        title="消耗信仰升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} 信仰）`}</button>
+        title="消耗 FP 升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} FP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} 信仰/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} 信仰/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
       ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? 'warn' : '') : 'warn'}" data-religion-toggle="1"
-        title="${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '重启：恢复信仰产出（无代价，清除自动暂停）' : '重启：恢复信仰产出（无代价）') : '关闭：停止信仰产出与 EP 消耗，但损失 30% 信仰 + 15% 虔诚（冷启动代价）'}"
+        title="${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '重启：恢复 FP 产出（无代价，清除自动暂停）' : '重启：恢复 FP 产出（无代价）') : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
         style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '自动暂停·点击恢复' : '重启圣所') : '关闭圣所'}</button>` : ''}
     </div>
     ${seal >= 1 ? `
     <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验</div>
     <div class="off-stat"><span>虔诚（永久）</span><b style="color:var(--purple)">${S.devotion || 0}</b></div>
     <div class="off-stat"><span>超验层级</span><b style="color:var(--purple)">Lv.${transcendLevel()}（赞颂转化率 ×${praiseRate().toFixed(2)}）</b></div>
-    <div class="off-stat"><span>信仰容量</span><b>${Math.round(faithCap())}（赞颂需 ≥ ${Math.round(faithCap() * PRAISE.thresholdRatio)}）</b></div>
+    <div class="off-stat"><span>FP 容量</span><b>${Math.round(faithCap())}（赞颂需 ≥ ${Math.round(faithCap() * PRAISE.thresholdRatio)}）</b></div>
     <div class="religion-seal-row">
-      <span>赞颂：消耗全部信仰 → 虔诚（虔诚加成全局 ${(devotionMult() - 1 >= 0 ? '+' : '')}${((devotionMult() - 1) * 100).toFixed(1)}%）</span>
+      <span>赞颂：消耗全部 FP → 虔诚（虔诚加成全局 ${(devotionMult() - 1 >= 0 ? '+' : '')}${((devotionMult() - 1) * 100).toFixed(1)}%）</span>
       <button class="btn ${(S.faith || 0) < faithCap() * PRAISE.thresholdRatio ? 'disabled' : ''}" data-religion-praise="1"
-        title="需信仰 ≥ 容量 80%；消耗全部信仰转化虔诚（永久保留）">赞颂（${fmt(Math.floor((S.faith || 0) * praiseRate()))} 虔诚）</button>
+        title="需 FP ≥ 容量 80%；消耗全部 FP 转化虔诚（永久保留）">赞颂（${fmt(Math.floor((S.faith || 0) * praiseRate()))} 虔诚）</button>
     </div>
     ${(S.devotion || 0) > 0 ? `
     <div class="religion-seal-row">
@@ -384,15 +384,15 @@ export function renderReligionPanel(container) {
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
     ${sealLevel() >= 3 ? `
     <div class="religion-seal-row">
-      <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（信仰产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
+      <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
       <button class="btn ${oracleLevel() >= ORACLE.cap || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
-        title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} 信仰）`}</button>
+        title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} FP）`}</button>
     </div>` : '<div style="font-size:11px;color:var(--text-2)">神谕塔将在圣印 ≥3 级后解锁。</div>'}
     ${((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div class="religion-seal-row">
       <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ×${(1 + CRUSADE.effect * crusadeLevel()).toFixed(2)}）</span>
       <button class="btn ${crusadeLevel() >= CRUSADE.cap || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
-        title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} 信仰）`}</button>
+        title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} FP）`}</button>
     </div>` : '<div style="font-size:11px;color:var(--text-2)">圣战军将在信仰圣所 ≥5 级后解锁。</div>'}
     ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">神谕塔（圣印 ≥3）与圣战军（圣所 ≥5）将随深耕逐步解锁。</div>'}
     <div style="font-size:11px;color:var(--text-2);margin-top:8px">全流程：仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ 圣印/圣所 → 神谕塔（圣印≥3）与圣战军（圣所≥5）深耕 → 章节「神格」与终局共振。</div>`;

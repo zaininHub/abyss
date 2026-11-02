@@ -115,12 +115,12 @@ try {
   const talentModal = await page.$eval('#talent-modal', el => getComputedStyle(el).display !== 'none').catch(() => false);
   if (!talentModal) ok('转生锁定：吞噬期间晋升按钮不打开天赋弹框'); else bad('转生锁定', '天赋弹框仍打开');
 
-  // 11. v3.0.2 探采自动暂停不自动恢复（注入载具 + EP 充足 → 仍保持暂停，需手动恢复）
+  // 11. v3.2.2 ① 探采去除自动暂停：注入载具 + 旧档自动暂停标记 → EP 充足即自动清除并恢复采集
   await page.evaluate(() => { window.S.upgrades = window.S.upgrades || {}; window.S.upgrades.scooter = 1; window.S._probeEnabled = true; window.S._probeAutoPaused = true; window.S._probeEpShortSec = 0; window.S.ep = 1e7; window.S.vehCollectTimer = 0; });
   await sleep(500);
   const stillPaused = await page.evaluate(() => window.S._probeAutoPaused === true);
-  if (stillPaused) ok('探采：EP 充足后仍保持自动暂停（v3.0.2 不自动恢复）'); else bad('探采不自动恢复', `paused=${await page.evaluate(()=>window.S._probeAutoPaused)}`);
-  // 手动恢复：直接操作 S 字段（模拟按钮点击的恢复逻辑——shop.js 里 if(_probeAutoPaused){清除})
+  if (!stillPaused) ok('探采：旧档自动暂停标记自动清除（v3.2.2 去除自动关闭）'); else bad('探采自动恢复', `paused=${await page.evaluate(()=>window.S._probeAutoPaused)}`);
+  // 手动恢复语义废除：开关只由玩家切换（探采页头按钮切 _probeEnabled）
   await page.evaluate(() => {
     if (window.S._probeAutoPaused) { window.S._probeAutoPaused = false; window.S._probeEpShortSec = 0; }
   });

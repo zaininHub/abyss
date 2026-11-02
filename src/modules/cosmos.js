@@ -14,7 +14,7 @@ export const COSMOS = {
   collider: { id: 'collider', name: '暗物质对撞', icon: '🌀', res: 'dm',    ratio: 0.12, growth: 1.7, cap: 5, epPerUnit: 30000,
     desc: '对撞真空提取暗物质——巨量 EP 换 DM' },
   starwish: { id: 'starwish', name: '星辰祈愿',   icon: '🙏', res: 'faith', ratio: 0.10, growth: 1.8, cap: 5, epPerUnit: 50000,
-    desc: '向深空祈祷——巨量 EP 换信仰' },
+    desc: '向深空祈祷——巨量 EP 换 FP' },
   cinder:   { id: 'cinder',   name: '灰烬回收',   icon: '🕯️', res: 'ember', ratio: 0.15, growth: 1.8, cap: 4, epPerUnit: 120000,
     desc: '回收超新星残骸——巨量 EP 换裂隙余烬' },
   beacon:   { id: 'beacon',   name: '虚空信标',   icon: '🌑', res: 'vs',    ratio: 0.20, growth: 1.9, cap: 4, epPerUnit: 300000,
@@ -23,7 +23,7 @@ export const COSMOS = {
     desc: '蒸馏星际尘埃——巨量 EP 换研究点（RP）' },
 };
 
-export const COSMOS_RES_LABEL = { pt: '🍪 PT', dm: '🌀 DM', faith: '🙏 信仰', ember: '🕯️ 余烬', vs: '🌑 VS', rp: '🔬 RP' };
+export const COSMOS_RES_LABEL = { pt: '🍪 PT', dm: '🌀 DM', faith: '🙏 FP', ember: '🕯️ 余烬', vs: '🌑 VS', rp: '🔬 RP' };
 
 export function cosmosUnlocked() {
   return hasTech('deep_space') && !!(S.resDiscovered && S.resDiscovered.rp);
