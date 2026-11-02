@@ -11,7 +11,7 @@ import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier,
 function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift'); } // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
-import { researchMult, addDm } from './economy.js';
+import { researchMult, addDm, addRp } from './economy.js'; // v3.0.8：RP 上限统一入口
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
@@ -207,7 +207,7 @@ function grantRiftRewards(r, emberGain, embrace) {
   // RP：锚点解锁后 + level × 0.5（透镜同加成）
   if (S.resDiscovered && S.resDiscovered.rp) {
     const rpGain = BALANCE.rift.rpPerLevel * r.level * riftDmMult();
-    S.rp = (S.rp || 0) + rpGain;
+    addRp(rpGain); // v3.0.8：受 RP 上限约束
     log(`裂隙回响：+${rpGain.toFixed(1)} RP`, 'good');
   }
   // VS：深潜解锁后概率

@@ -10,7 +10,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, // v2.7.4 ⑦：RP 蒸馏效率
-  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线
+  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -705,8 +705,10 @@ function switchTab(id) {
 
 function refreshTabVisibility() {
   // v2.8.7：研究点 tab 仅 RP 解锁后显示（保持可探索性，未解锁不展示入口）
+  // v3.0.8：EP 已溢出（_rpOverflowSeen）即显示入口——面板内给出「抬上限 → 买矩阵存储库」的下一步，
+  // 避免玩家溢出后完全看不到研究点入口、以为功能坏了
   const rpBtn = document.getElementById('btn-rp');
-  if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
+  if (rpBtn) rpBtn.style.display = (anchorShown('rp', S) || S._rpOverflowSeen) ? '' : 'none';
   // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）
   const expBtn = document.getElementById('btn-expedition');
   if (expBtn) expBtn.style.display = (S.expeditionsDone > 0 || S.expeditions.length > 0) ? '' : 'none';
@@ -737,19 +739,25 @@ function renderRpPanel() {
   const panel = document.getElementById('rp-panel');
   if (!panel) return;
   if (!anchorShown('rp', S)) {
+    // v3.0.8：解锁提示按真实进度分两种——未溢出：先溢出；已溢出：把上限抬到仓库价再买仓库
+    const vault = UPGRADES.find(u => u.id === 'rp_vault');
+    const vaultCost = vault ? unitCost(vault, 0) : 0;
+    const cap = epStorageCap();
+    const body = S._rpOverflowSeen
+      ? `EP 已溢出存储上限。把 <b>EP 存储上限</b> 提升到 <b>${fmt(vaultCost)}</b> 以上（当前 ${fmt(cap)}），商店会开放「矩阵存储库」；<br>购入仓库后即解锁研究点，可消耗 EP 蒸馏转化为 RP。`
+      : `让 EP 溢出存储上限一次，商店会出现「矩阵存储库」（研究点仓库）。<br>购入仓库后：可消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。`;
     panel.innerHTML = `<div class="panel" style="padding:14px">
       <h3 style="margin-top:0;color:var(--dim)">🔬 研究点（RP）未解锁</h3>
-      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">让 EP 溢出存储上限一次，解锁「矩阵存储库」（研究点仓库）。<br>
-      购入仓库后：可消耗 EP 主动蒸馏转化为 RP，用于科技树、RP 加成、离线升级与族升级。</p>
+      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">${body}</p>
     </div>`;
     return;
   }
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
-    <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)}</span></div>
+    <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></div>
     <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
     </div>
     <div id="rp-atrium-host" style="margin-top:8px"></div>
@@ -757,7 +765,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：矩阵存储库每级 +500，达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500，矩阵存储库每级 +400（EP 购买），达到上限后停止积累。', () => {});
   });
 }
 
@@ -977,11 +985,13 @@ function bindEvents() {
   document.getElementById('rp-panel')?.addEventListener('click', (e) => {
     if (!e.target || e.target.id !== 'rp-distill-btn') return;
     const rate = rpDistillRate();
+    // v3.0.8：RP 已满上限时不再蒸馏（原实现直写 S.rp 绕过 rpCap，既浪费 EP 又让矩阵存储库的上限失去意义）
+    if ((S.rp || 0) >= rpCap()) { if (toast) toast(`RP 已达上限 ${fmt(rpCap())}：升级「矩阵存储库」扩容后再蒸馏`); return; }
     const spend = Math.max(Math.floor((S.ep || 0) * 0.25), rate); // v2.8.30：25% 不足 1 RP 时按最低 1 RP 额蒸馏（ep ≥ 蒸馏率即可点）
     if (spend < rate || (S.ep || 0) < spend) { if (toast) toast('EP 不足：需至少蒸馏出 1 RP'); return; }
     const rp = Math.floor(spend / rate);
     S.ep -= spend;
-    S.rp = (S.rp || 0) + rp;
+    addRp(rp); // v3.0.8：走统一入口，受 RP 上限约束
     S.epDistilledTotal = (S.epDistilledTotal || 0) + spend;
     save(S); dirty.top = true; dirty.rp = true;
     if (toast) toast(`蒸馏完成：-${fmt(spend)} EP → +${rp} RP`);
@@ -1048,7 +1058,7 @@ function bindEvents() {
     body.innerHTML = html;
   }
   function hintFor(key) {
-    const m = { rp:'让 EP 溢出一次解锁研究点', es:'完成首次晋升', faith:'信奉宗教分支', pt:'购入宠物乐园',
+    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'首次获得 PT',
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
       prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）',
       bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0
@@ -1585,7 +1595,7 @@ function settlePause() {
       for (const p of S.projects) {
         if ((now - p.startsAt) >= (p.deadline - p.startsAt)) {
           if (p.reward.kind === 'ep') addEp(p.reward.amount);
-          else if (p.reward.kind === 'rp') S.rp += p.reward.amount;
+          else if (p.reward.kind === 'rp') addRp(p.reward.amount); // v3.0.8：走统一入口，受 RP 上限约束
           S.projectsDone++; projDone++;
         } else still.push(p);
       }
@@ -1596,7 +1606,7 @@ function settlePause() {
     let bonusRp = 0;
     if (hours >= 1) {
       bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
-      if (bonusRp > 0) { S.rp += bonusRp; logPts.push(`+${bonusRp} RP`); }
+      if (bonusRp > 0) { addRp(bonusRp); logPts.push(`+${bonusRp} RP`); } // v3.0.8：受 RP 上限约束
     }
     if (logPts.length > 0) {
       log(`暂停恢复：离线 ${fmtTime(dt)}，${logPts.join('、')}`, 'good');
@@ -1633,7 +1643,7 @@ function checkMiles() {
     if (cps >= m.cps && !S.milesDone[m.cps]) {
       S.milesDone[m.cps] = true;
       const rpGain = Math.ceil(m.rp * (S.runTalent === 'fortunate' ? 2 : 1) * (1 + elv('mile') * 0.05));
-      S.rp += rpGain;
+      addRp(rpGain); // v3.0.8：受 RP 上限约束
       log(`里程碑：每秒 ${fmt(m.cps)}，+${rpGain} RP`, 'good');
     }
   }
@@ -1946,7 +1956,7 @@ function tick(now) {
     // v2.8.3：章节转变触发明显事件——toast + 日志 + 章节馈赠（RP 克制奖励）
     const chId = parseInt(chNowStr, 10);
     const gift = Math.max(5, chId * 5);
-    S.rp = (S.rp || 0) + gift;
+    addRp(gift); // v3.0.8：受 RP 上限约束
     const chName = chNow.name || `第 ${chId} 章`;
     if (toast) toast(`📖 进入${chName}：章节馈赠 +${gift} RP`);
     log(`章节推进：${chName}——时间线向前折叠，+${gift} RP 馈赠`, 'good');

@@ -773,6 +773,24 @@ export function epStorageCap() {
   return Math.round(cap);
 }
 
+// ========== v3.0.8：存储类文案统一口径 ==========
+// 「存储节点」卡面口径（只留一行「EP 存储上限 +{购买后总量}」）推广到所有扩容项。
+// 实现走「临时 +1 级 → 重算 → 还原」，乘区（研究协议/里程碑/遗存/回响/故事线）与
+// 各建筑 capAdd 增量自动生效，无需为每个扩容项单独维护增量表，显示值与实购值同源。
+// kind: 'upgrade'（S.upgrades 直读项：storage/cache/reserve_bin/deep_bin）
+//       'building'（S.buildings 建筑：量子缓存池/维度压缩仓/超限储存器/深渊蓄能池/共鸣回廊/深渊凝析塔/数据中心）
+export function epCapAfterBuy(id, kind = 'upgrade') {
+  const bucketKey = kind === 'building' ? 'buildings' : 'upgrades';
+  if (!S[bucketKey]) S[bucketKey] = {};
+  const bucket = S[bucketKey];
+  const had = Object.prototype.hasOwnProperty.call(bucket, id);
+  const cur = bucket[id] || 0;
+  bucket[id] = cur + 1;
+  let cap;
+  try { cap = epStorageCap(); } finally { if (had) bucket[id] = cur; else delete bucket[id]; } // 还原：原不存在的键直接删除，不往存档里写 0
+  return cap;
+}
+
 // ========== v2.2 缺陷B修复：溢出池公共记账（addEp 与 tickCorruption 同口径） ==========
 // 累计入 epOverflowTotal 页头统计；其中 5% 就地转化为 RP（换算 1/10000，满 1 转出、尾数滞留）
 function accountEpOverflow(overflow) {

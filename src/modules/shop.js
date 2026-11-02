@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap } from './economy.js'; // v2.8.30 ③：禁购检查
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -145,10 +145,11 @@ function vaultAnchorReady(u) {
   if (u.id === 'pt_vault') return !!((S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland)); // v3.0.3 第四批⑤：宠物乐园已删除——兼容旧档标记
   return false;
 }
-// v3.0.7 反馈①：资源仓库还要「EP 上限承载得起首价的一半」才摆出来——
-// 否则新档上限 2,000 时店里就挂着 150.00K 的矩阵存储库（玩家会误以为「仓库已解锁却永远买不起」）
+// v3.0.7 反馈① / v3.0.8 修正：资源仓库要「EP 上限存得下全价」才摆出来——
+// 原用「首价一半」（矩阵存储库 75K）会在 78K 上限时就把 150K 的仓库摆出来，玩家点半天买不起，
+// 而 RP 解锁链又必须买下它 → 研究点永久锁死（用户实测：溢出后 RP 标签依然不出现）
 function vaultCapacityReady(u) {
-  return epStorageCap() >= (u.base || Infinity) * 0.5;
+  return epStorageCap() >= unitCost(u, 0);
 }
 function vaultForced(u) {
   return VAULT_IDS.includes(u.id) && vaultAnchorReady(u) && vaultCapacityReady(u);
@@ -385,7 +386,7 @@ function makeShopItem(u) {
     div.className = 'item owned-item';
     div.title = '已满级：建筑数量受控，成长靠等级';
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${u.desc}</div>
+      <div class="desc">${storageDesc(u)}</div>
       <div class="cost mono">已满级</div>`;
     return div;
   }
@@ -394,7 +395,7 @@ function makeShopItem(u) {
   div.className = 'item' + (!afford ? ' cant' : '');
   const cpsStr = u.cps > 0 ? `${fmt(u.cps * globalMult())} EP/s` : storageDesc(u); // v3.0.3 后续①：storage desc 动态化
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
-    <div class="desc">${cpsStr}</div>${storagePreviewLine(u)}
+    <div class="desc">${cpsStr}</div>
     <div class="cost mono">${fmt(cost)}${u.dmCost ? ' DM' : ''}</div>`;
   return div;
 }
@@ -402,28 +403,28 @@ function makeShopItem(u) {
 // 购后原地更新单卡片（E 规范：可叠加项仅更新 ×N 计数与成本，不移动不重建）
 export function refreshShopItem(u) { updateShopItem(u); } // v2.6.6 ③：AI/混沌买入后单卡原地刷新（不整面板重建）
 
-// v3.0.3 后续反馈①：存储节点卡面动态化——静态「+4000」在高等级（×57 实际下一级 +~50M）严重失真，
-// 合并为单行「EP 存储上限 +{下一级后总量}」（原 desc 行 + preview 行二合一）
-function storageDesc(u) {
-  if (u.id !== 'storage') return u.desc || '';
-  try {
-    const lv = S.upgrades[u.id] || 0;
-    const per = BALANCE.storage.capPer * Math.pow(BALANCE.storage.capGrowth, lv);
-    return `EP 存储上限 +${fmt(epStorageCap() + per)}`;
-  } catch { return u.desc || ''; }
+// v3.0.8：存储类卡面统一口径——单行「EP 存储上限 +{购买后总量}」（与「存储节点」同款，不再有静态「+4,000」/「下一级」两行）
+const EP_STORAGE_IDS = ['storage', 'reserve_bin', 'deep_bin', 'cache'];
+const EP_STORAGE_EXTRA = { cache: '，线程消耗 -25% 起每级再 -3%' }; // cache 额外效果（原 desc 信息不丢）
+// 资源仓库（RP/DM/PT 上限）同口径：{资源} 上限 +{购买后总量}——原静态「每级 +500」既是一行复数又与实际 +400 不符
+const VAULT_RES = [['rp_vault', 'RP', () => rpCap()], ['dm_vault', 'DM', () => dmCap()], ['pt_vault', 'PT', () => ptCap()]];
+function vaultDesc(u) {
+  const row = VAULT_RES.find(([id]) => id === u.id);
+  if (!row) return null;
+  const [, label, capFn] = row;
+  const cur = S.upgrades[u.id] || 0;
+  S.upgrades[u.id] = cur + 1;
+  let cap;
+  try { cap = capFn(); } finally { S.upgrades[u.id] = cur; }
+  return `${label} 上限 +${fmt(cap)}`;
 }
-
-// v3.0.3 反馈⑧：EP 上限阶梯建筑渲染层动态预览（当前 → 下一级）；storage 已并入 desc 不再单出预览行
-function storagePreviewLine(u) {
-  if (!['reserve_bin', 'deep_bin'].includes(u.id)) return '';
+function storageDesc(u) {
+  const vd = vaultDesc(u);
+  if (vd) return vd;
+  if (!EP_STORAGE_IDS.includes(u.id)) return u.desc || '';
   try {
-    const cap = epStorageCap();
-    let per;
-    if (u.id === 'reserve_bin') per = 12000; // 与 economy.js epStorageCap 口径一致
-    else if (u.id === 'deep_bin') per = 8e5;
-    else { const lv = S.upgrades[u.id] || 0; per = BALANCE.storage.capPer * Math.pow(BALANCE.storage.capGrowth, lv); }
-    return `<div class="preview" style="font-size:11px;color:var(--text-2);margin-top:2px">EP 上限：下一级 ${fmt(cap + per)}</div>`;
-  } catch { return ''; }
+    return `EP 存储上限 +${fmt(epCapAfterBuy(u.id))}${EP_STORAGE_EXTRA[u.id] || ''}`;
+  } catch { return u.desc || ''; }
 }
 
 // v2.8.18 ③：购后满级/一次性已购 → 移入组最下侧「已升级」折叠区（不重建列表，无闪烁）
@@ -451,7 +452,7 @@ function updateShopItem(u) {
     el.className = 'item owned-item';
     el.title = '已满级：建筑数量受控，成长靠等级';
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${u.desc}</div>
+      <div class="desc">${storageDesc(u)}</div>
       <div class="cost mono">已满级</div>`;
     moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
@@ -514,7 +515,7 @@ function makeThreadItem(u) {
     div.className = 'item owned-item';
     div.title = '已满级：建筑数量受控，成长靠等级';
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${u.desc}</div>
+      <div class="desc">${storageDesc(u)}</div>
       <div class="cost mono">已满级</div>`;
     return div;
   }
@@ -522,7 +523,7 @@ function makeThreadItem(u) {
   const afford = S.ep >= cost;
   div.className = 'item' + (!afford ? ' cant' : '');
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${u.desc}</div>
+    <div class="desc">${storageDesc(u)}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -537,7 +538,7 @@ function updateThreadItem(u) {
     el.className = 'item owned-item';
     el.title = '已满级：建筑数量受控，成长靠等级';
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${u.desc}</div>
+      <div class="desc">${storageDesc(u)}</div>
       <div class="cost mono">已满级</div>`;
     moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
@@ -878,6 +879,14 @@ export function renderBuildings(container) {
   });
 }
 
+// v3.0.8：设施卡存储文案同口径——数据中心「EP 存储上限 +{购买后总量}」，其余设施原样
+function bldDesc(b) {
+  const lv = buildingLevel(b, S);
+  const text = b.desc[lv] || '';
+  if (b.id !== 'datacenter') return text;
+  try { return text.replace(/EP 存储上限 \+[\d,]+/, `EP 存储上限 +${fmt(epCapAfterBuy('datacenter', 'building'))}`); }
+  catch { return text; }
+}
 function makeBldItem(b) {
   const lv = buildingLevel(b, S);
   const cost = buildingCost(b, S, costMult());
@@ -887,7 +896,7 @@ function makeBldItem(b) {
   div.className = 'item bld' + (!afford ? ' cant' : '');
   div.title = `一次性多级建筑（${b.levels} 级）：效果经线程状态机生效，不直接加 CPS`;
   div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">Lv.${lv}/${b.levels}</span></div>
-    <div class="desc">${b.desc[lv]}</div>
+    <div class="desc">${bldDesc(b)}</div>
     <div class="cost mono">${fmt(cost)} EP</div>`;
   return div;
 }
@@ -898,7 +907,7 @@ function updateBldItem(b) {
   const lv = buildingLevel(b, S);
   const cost = buildingCost(b, S, costMult());
   el.querySelector('.count').textContent = `Lv.${lv}/${b.levels}`;
-  el.querySelector('.desc').textContent = b.desc[lv];
+  el.querySelector('.desc').textContent = bldDesc(b);
   el.querySelector('.cost').textContent = `${fmt(cost)} EP`;
   el.classList.toggle('cant', S.ep < cost);
 }
@@ -1049,6 +1058,21 @@ export function buyV21Building(b) {
 
 function v21UnlockedMark(b) { return !!(S.unlockedBuildings && S.unlockedBuildings[b.id]); }
 
+// v3.0.8：效能建筑扩容项同样走「EP 存储上限 +{购买后总量}」单行口径（多效果建筑保留其他效果文字）
+const V21_CAP_EXTRA = {
+  abyss_reservoir: '，DM 采集效率 +15%/级',
+  resonance_chamber: '，全局产出 +3%/级',
+  dm_condenser: '，DM 采集效率 +30%/级',
+};
+function v21HasCapAdd(b) {
+  const fxs = Array.isArray(b.fx) ? b.fx : (b.fx ? [b.fx] : []);
+  return fxs.some(f => f.key === 'capAdd');
+}
+function v21Desc(b) {
+  if (!v21HasCapAdd(b)) return b.desc;
+  try { return `EP 存储上限 +${fmt(epCapAfterBuy(b.id, 'building'))}${V21_CAP_EXTRA[b.id] || ''}`; }
+  catch { return b.desc; }
+}
 function makeV21Item(b) {
   const div = document.createElement('div');
   div.dataset.v21 = b.id;
@@ -1062,7 +1086,7 @@ function makeV21Item(b) {
     if (m && Object.keys(S.milesDone || {}).length < m) gate += `需里程碑 ${m} · `;
     if (gate) div.classList.add('locked');
     div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${fmt(cost)} EP</span></div>
-      <div class="desc">${b.desc}</div>
+      <div class="desc">${v21Desc(b)}</div>
       <div class="cost mono">${gate}${fmt(cost)} EP</div>`;
   } else {
     const lv = v21Level(b.id, S);
@@ -1073,7 +1097,7 @@ function makeV21Item(b) {
     const finite = isFinite(cap);
     div.title = finite ? `族内封顶：建筑数量受控（${cap} 级满，当前 Lv.${lv}）` : `无限升级：成本递增、后期性价比递减（当前 Lv.${lv}）`;
     div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${finite ? `Lv.${lv}/${cap}` : `Lv.${lv}`}</span></div>
-      <div class="desc">${b.desc}</div>
+      <div class="desc">${v21Desc(b)}</div>
       <div class="cost mono">${fmt(cost)} EP</div>`;
   }
   return div;
@@ -1091,6 +1115,8 @@ function updateV21Item(b) {
   if (cnt) cnt.textContent = isFinite(cap) ? `Lv.${lv}/${cap}` : `Lv.${lv}`; // v2.4 无限建筑显示无上限
   const c = el.querySelector('.cost');
   if (c) c.textContent = `${fmt(cost)} EP`;
+  const d = el.querySelector('.desc');
+  if (d) d.textContent = v21Desc(b); // v3.0.8：扩容项购后同步「EP 存储上限 +总量」
   el.classList.toggle('cant', S.ep < cost);
 }
 
@@ -1123,7 +1149,7 @@ export function renderV21Buildings(container) {
     const div = document.createElement('div');
     div.className = 'item owned-item';
     div.title = '族内封顶：建筑数量受控，成长靠等级';
-    div.innerHTML = ownedItemHtml(b.name, b.desc, `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
+    div.innerHTML = ownedItemHtml(b.name, v21Desc(b), `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
     v21Section.box.appendChild(div);
   }
   v21Section.updateCount(maxed.length);
@@ -1168,7 +1194,7 @@ function bindV21Delegate(container) {
         delete el.dataset.v21;
         el.className = 'item just-bought';
         el.title = '族内封顶：建筑数量受控，成长靠等级';
-        el.innerHTML = ownedItemHtml(b.name, b.desc, `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
+        el.innerHTML = ownedItemHtml(b.name, v21Desc(b), `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
         scheduleMoveToOwned(el, v21Section.box, () => v21Section.updateCount(v21RealList().filter(x => v21Maxed(x, S)).length));
       } else {
         updateV21Item(b);
@@ -1238,13 +1264,13 @@ export function renderCrossroadBuildings(container) {
         div.className = 'item v21 owned-item';
         div.title = '已立誓：本轮锁定该命运线（转生后可重新选择）';
         div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">已立誓</span></div>
-          <div class="desc">${b.desc}</div>
+          <div class="desc">${v21Desc(b)}</div>
           <div class="cost mono" style="color:var(--purple)">✦ 命运已定</div>`;
       } else {
         div.className = 'item v21 cant';
         div.title = `已被「${vowName}」封印：本局无法再立其他誓`;
         div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono" style="color:var(--text-3)">封印</span></div>
-          <div class="desc">${b.desc}</div>
+          <div class="desc">${v21Desc(b)}</div>
           <div class="cost mono" style="color:var(--text-3)">已被 ${vowName} 封印</div>`;
       }
     } else {
@@ -1253,7 +1279,7 @@ export function renderCrossroadBuildings(container) {
       div.className = 'item v21' + (!afford ? ' cant' : '');
       div.title = '三选一立誓：购买任意一栋后其余两栋封印；不买则保持中立（可走到终章）';
       div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">1 级封顶</span></div>
-        <div class="desc">${b.desc}</div>
+        <div class="desc">${v21Desc(b)}</div>
         <div class="cost mono">${fmt(3e5)} EP · 三选一</div>`;
       crossroadItemEls.set(b.id, div);
     }

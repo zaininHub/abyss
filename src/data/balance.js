@@ -47,7 +47,7 @@ export const BALANCE = {
     canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 0.95'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
     dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
-    datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 上限 +10,000', '每 10 线程全局产出 +10%，EP 上限 +25,000', '每 10 线程全局产出 +15%，EP 上限 +50,000'] },
+    datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 存储上限 +10,000', '每 10 线程全局产出 +10%，EP 存储上限 +25,000', '每 10 线程全局产出 +15%，EP 存储上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
     wish_well: { id: 'wish_well', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['投币（100 EP）：万一呢？0.01% 概率得 100K EP'] }, // v3.0.3：从研究升级移入通用设施（避免与研究点重复）
   },
@@ -79,13 +79,13 @@ export const BALANCE = {
     // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
     // v2.4 KG 模式改造：扩容类全部无限升级（unlimited），成本指数递增 + 30% 钳制 → 后期性价比自然递减；
     // 新增 3 座「多效果上限建筑」（EP 上限 + DM 采集效率 / 全局产出），先开放者后期性价比递减（数据见 PM v2.4）
-    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: '每级 EP 上限 +50,000' },
-    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: '每级 EP 上限 +5,000,000' },
-    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: '每级 EP 上限 +5,000,000,000' },
+    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: 'EP 存储上限 +50,000/级' },
+    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: 'EP 存储上限 +5,000,000/级' },
+    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: 'EP 存储上限 +5,000,000,000/级' },
     // v2.4 新增多效果上限建筑（unlimited；多键效果经 effectEngine fx 数组聚合，DM 采集效率加成作用于载具采集）
-    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: '每级 EP 上限 +1,000,000，DM 采集效率 +15% 每级' },
-    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: '每级 EP 上限 +100,000,000，全局产出 +3% 每级' },
-    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: '每级 EP 上限 +10,000,000,000，DM 采集效率 +30% 每级' },
+    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: 'EP 存储上限 +1,000,000/级，DM 采集效率 +15%/级' },
+    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: 'EP 存储上限 +100,000,000/级，全局产出 +3%/级' },
+    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: 'EP 存储上限 +10,000,000,000/级，DM 采集效率 +30%/级' },
     // ---- 组 E · 线程产出（5 座）----
     { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' }, // v2.8.30：线程产出降温（0.10→0.08）
     { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' }, // v2.8.30：线程产出降温（1.5→1.3）
@@ -117,12 +117,12 @@ export const BALANCE = {
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
-    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: '每级 EP 上限递增' },
-    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: '每级 EP 上限 +8,000' },
+    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: 'EP 存储上限递增（逐级 ×1.18）' },
+    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: 'EP 存储上限 +8,000/级' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 80000, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 8000 }, desc: '每级 EP 上限 +8,000' }, // v2.8.30 ⑤：大幅涨价（20K→80K）、储存量随涨（4000→8000）
-    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 2e5, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: '每级 EP 上限 +800,000' }, // v2.8.30 ⑤：涨价（50K→200K）、储存量随涨（500K→800K）
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 80000, growth: 1.50, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 12000 }, desc: 'EP 存储上限 +12,000/级' }, // v2.8.30 ⑤：大幅涨价（20K→80K）、储存量随涨（4000→8000）
+    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 2e5, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: 'EP 存储上限 +800,000/级' }, // v2.8.30 ⑤：涨价（50K→200K）、储存量随涨（500K→800K）
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
