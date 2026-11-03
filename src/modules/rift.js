@@ -54,6 +54,28 @@ export function riftSpawnSecAt(lv) {
 export function riftSpawnSec() {
   return riftSpawnSecAt(riftUpgradeLevel('sentinel'));
 }
+// v3.3.5 反馈③：裂隙改「确定性计时 + 随机抖动」——
+// 旧实现每帧掷骰（p = dt/spawnSec），理论上均值 10 分钟，但方差大、后台 rAF 挂起时几乎不推进，
+// 玩家长期看不到裂隙（反馈两次「裂隙不会触发」）。现改为计时器到点必出（抖动 0.85~1.15），
+// 随机提前只作为额外机会；首次发现前 90 秒内必出（新手首见）。
+export function riftNextSec() {
+  if (!(S._riftNextSec > 0)) {
+    const jitter = 0.95 + Math.random() * 0.1; // ±5%：体感随机但不偏离标称间隔
+    S._riftNextSec = S._riftSeen ? riftSpawnSec() * jitter : Math.min(90, riftSpawnSec() * jitter);
+  }
+  return S._riftNextSec;
+}
+// 距离下一次裂隙的秒数（0 = 已出现/探索中）
+export function riftEtaSec() {
+  if (S.activeRift || S.riftExpedition) return 0;
+  return Math.max(0, Math.ceil(riftNextSec() - (S._riftT || 0)));
+}
+export function fmtEta(sec) {
+  const s = Math.max(0, Math.ceil(sec));
+  if (s < 60) return `${s} 秒`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return r ? `${m} 分 ${r} 秒` : `${m} 分钟`;
+}
 // v3.3.4 反馈⑤：间隔文案统一「X 分钟」格式（非整分保留一位小数），显示值即实际生效值
 function fmtSpawnMin(sec) {
   const m = sec / 60;
@@ -77,6 +99,7 @@ export function buyRiftUpgrade(id) {
   if ((S.riftEmber || 0) < cost) return { ok: false, reason: `裂隙余烬不足（需 ${cost}，当前 ${S.riftEmber || 0}）` };
   S.riftEmber -= cost;
   S.riftUpgrades[id] = lv + 1;
+  if (id === 'sentinel') S._riftNextSec = 0; // v3.3.5 反馈③：升级后立即按新间隔重算倒计时
   save(S);
   log(`[裂隙] 「${u.name}」升至 Lv.${lv + 1}（-${cost} 余烬）：${u.desc}`, 'good');
   return { ok: true, level: lv + 1 };
@@ -173,37 +196,44 @@ export function tickRift(dt) {
   // 裂隙若照常出现会与吞噬倒计时叠加（一边吞噬一边领裂隙奖励，机制互相抵消）；吞噬倒计时/抉择/崩溃期间同样封锁
   const abyssDevouring = S.collapsed || S._collapseAt || S._collapseChoicePending
     || (S.corruption || 0) >= (BALANCE.corruption.max || 100);
-  // 深渊裂隙：随机出现（间隔受哨站升级缩短）
-  // v3.3.3 反馈⑤：后台标签页限流期间 dt 被钳 10s → 裂隙掷骰按真实流逝时间补偿（上限 60s/次），
-  // 修复「挂后台后裂隙从不出现」；产出台账（tick 主循环）不受影响
+  // 深渊裂隙：计时必出（间隔受哨站升级缩短）+ 随机提前
+  // v3.3.5 反馈③：不再只靠每帧掷骰——计时器到点必出，后台限流/挂起的时间由 _riftCatchup 补偿，
+  // 保证「挂机也会出现」；随机项仅让裂隙有概率提前到来。
   const sdt = dt + (S._riftCatchup || 0);
   S._riftCatchup = 0;
-  if (!S.activeRift && !abyssDevouring && Math.random() < sdt / spawnSec) {
-    const level = riftLevelOf(cps);
-    // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
-    const cap = epStorageCap();
-    const ratio = BALANCE.rift.sealRatioMin +
-      Math.random() * (BALANCE.rift.sealRatioMax - BALANCE.rift.sealRatioMin);
-    S.activeRift = {
-      power: level,
-      level: level,
-      sealCost: Math.ceil(cap * ratio * riftSealCostMult()),
-      dmReward: Math.ceil(1 * level),
-      expiresAt: Date.now() + 120000,
-    };
-    if (S.activeRift && S.riftAuto) {
-      // v2.8.30：裂隙自动动作（互斥单开——开关值即升级 id）
-      if (S.riftAuto === 'auto_seal') sealRift();
-      else if (S.riftAuto === 'auto_embrace') embraceRift();
-      else if (S.riftAuto === 'auto_descent') delveRift();
+  if (!S.activeRift && !abyssDevouring) {
+    S._riftT = (S._riftT || 0) + sdt;
+    const need = riftNextSec();
+    const lucky = Math.random() < Math.min(1, sdt / spawnSec);
+    if (S._riftT >= need || lucky) {
+      S._riftT = 0;
+      S._riftNextSec = 0; // 下一轮重新掷抖动
+      const level = riftLevelOf(cps);
+      // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
+      const cap = epStorageCap();
+      const ratio = BALANCE.rift.sealRatioMin +
+        Math.random() * (BALANCE.rift.sealRatioMax - BALANCE.rift.sealRatioMin);
+      S.activeRift = {
+        power: level,
+        level: level,
+        sealCost: Math.ceil(cap * ratio * riftSealCostMult()),
+        dmReward: Math.ceil(1 * level),
+        expiresAt: Date.now() + 120000,
+      };
+      if (S.activeRift && S.riftAuto) {
+        // v2.8.30：裂隙自动动作（互斥单开——开关值即升级 id）
+        if (S.riftAuto === 'auto_seal') sealRift();
+        else if (S.riftAuto === 'auto_embrace') embraceRift();
+        else if (S.riftAuto === 'auto_descent') delveRift();
+      }
+      // v2.5 ①：首次触发深渊裂隙 = 探采平台/深渊商店解锁（持久标记，跨转生保留）
+      if (!S._riftSeen) {
+        S._riftSeen = true;
+        dirty.shop = true;
+        log('裂隙开启：探采平台与深渊商店已解锁', 'good');
+      }
+      log(`深渊裂隙在代码底层裂开：${riftLevelName(level)}（Lv.${level}）`, 'bad');
     }
-    // v2.5 ①：首次触发深渊裂隙 = 探采平台/深渊商店解锁（持久标记，跨转生保留）
-    if (!S._riftSeen) {
-      S._riftSeen = true;
-      dirty.shop = true;
-      log('裂隙开启：探采平台与深渊商店已解锁', 'good');
-    }
-    log(`深渊裂隙在代码底层裂开：${riftLevelName(level)}（Lv.${level}）`, 'bad');
   }
   if (S.activeRift && Date.now() > S.activeRift.expiresAt) {
     // 放任裂隙：短期爆发但损失 EP
@@ -296,9 +326,22 @@ export function renderRift(container) {
   if (!container) return;
   const card = document.getElementById('rift-card');
   if (!S.activeRift) {
-    if (card) card.style.display = 'none';
-    if (container.firstChild) container.innerHTML = '';
-    riftSig = null;
+    // v3.3.5 反馈③：首次见过裂隙后卡片常驻，显示「下一次裂隙倒计时」——
+    // 原先无裂隙时整卡隐藏，玩家无法判断裂隙机制是否生效（误以为不会触发）
+    if (!S._riftSeen) {
+      if (card) card.style.display = 'none';
+      if (container.firstChild) container.innerHTML = '';
+      riftSig = null;
+      return;
+    }
+    if (card) card.style.display = '';
+    if (riftSig !== 'eta') {
+      riftSig = 'eta';
+      container.innerHTML = `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px">基础间隔 ${fmtSpawnMin(riftSpawnSec())} · 升级「裂隙哨站」可缩短</div>`;
+    }
+    const etaEl = container.querySelector('#rift-eta');
+    if (etaEl) etaEl.textContent = fmtEta(riftEtaSec());
     return;
   }
   if (card) card.style.display = '';
@@ -364,6 +407,7 @@ export function renderRiftPanel(container) {
   }
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
+    <div class="off-stat"><span>下次裂隙</span><b id="rift-eta-tab" style="color:var(--purple)">${fmtEta(riftEtaSec())}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技（余烬）</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);

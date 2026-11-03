@@ -126,25 +126,50 @@ export function bindThread(c, type) {
 export function unbindThread(c) { c.boundTo = null; }
 
 // ---- 方向③：智能分配（领导者决策选项）----
-// 把空闲线程分配到合适岗位：优先匹配职业，否则均衡负载；返回分配数量
+// v3.3.5 反馈①：改为「每次点击做一次全局重排」——已绑定线程同样参与计算，
+// 新开/关闭转化器或职业变动后再点一次即可收敛到当前最优；无变化时返回 0（不动任何线程）。
+// 分配规则：
+//   1) 职业与某个「已开启」转化器匹配 → 优先归位（匹配岗位零惩罚 + 更高加成，恒优于错配）
+//   2) 其余线程（含领导/懒散/职业岗位未开启）→ 均衡填充，人少的岗位优先
+//      （转化加成是乘区，多一人即多一乘区，均衡即最优）
+//   3) 没有任何开启的转化器 → 全部释放绑定（消耗恢复）
 export function autoAssignThreads() {
   const types = CONVERTER_IDS.filter(t => converterEnabled(t));
-  if (!types.length) return 0;
-  let assigned = 0;
-  for (const c of (S.cultists || [])) {
-    if (bindingActive(c)) continue;        // 已分配跳过
-    const p = threadProfession(c);
-    let target = null;
-    if (p && p.affinity && CONVERTERS[p.affinity] && converterEnabled(p.affinity)) {
-      target = p.affinity;                 // 优先匹配职业
-    } else {
-      target = leastLoadedConverter(types); // 否则均衡负载
-    }
-    if (target) { bindThread(c, target); assigned++; }
+  const cultists = (S.cultists || []);
+  if (!types.length) {
+    let released = 0;
+    for (const c of cultists) if (c.boundTo) { c.boundTo = null; released++; }
+    return released;
   }
-  return assigned;
+  const plan = new Map();
+  const rest = [];
+  for (const c of cultists) {
+    const p = threadProfession(c);
+    if (p && p.affinity && CONVERTERS[p.affinity] && types.includes(p.affinity)) plan.set(c, p.affinity);
+    else rest.push(c);
+  }
+  const load = {};
+  for (const t of types) load[t] = 0;
+  for (const t of plan.values()) load[t] += 1;
+  // 领导者优先落位（除全局加成外，还能再给该岗位 +8%）
+  rest.sort((a, b) => (isLeader(b) ? 1 : 0) - (isLeader(a) ? 1 : 0));
+  for (const c of rest) {
+    let best = types[0];
+    for (const t of types) if (load[t] < load[best]) best = t;
+    plan.set(c, best);
+    load[best] += 1;
+  }
+  let changed = 0;
+  for (const c of cultists) {
+    const target = plan.get(c) || null;
+    if ((c.boundTo || null) === target) continue;
+    if (target) { c.boundTo = target; c.assignSince = Date.now(); }
+    else c.boundTo = null;
+    changed++;
+  }
+  return changed;
 }
-function leastLoadedConverter(types) {
+export function leastLoadedConverter(types) {
   let best = null, bestN = Infinity;
   for (const t of types) {
     const n = (S.cultists || []).filter(c => c.boundTo === t && bindingActive(c)).length;

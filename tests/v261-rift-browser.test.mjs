@@ -37,7 +37,8 @@ try {
     await page.evaluate(() => document.getElementById('delve-rift').click());
     await sleep(300);
     const exp = await page.evaluate(() => ({
-      riftGone: document.getElementById('rift-panel').textContent.length === 0,
+      // v3.3.5 反馈③：首列裂隙卡在「已见过裂隙」后常驻显示下次倒计时——此处只断言「事件卡（封印/拥抱按钮）已关闭」
+      riftGone: !document.getElementById('seal-rift') && !document.getElementById('embrace-rift'),
       exRunning: document.querySelector('#rift-tab-panel') ? true : false,
       hasBtn: !!document.getElementById('btn-rift-tab'),
     }));

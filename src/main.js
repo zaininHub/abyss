@@ -45,7 +45,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm } from './modules/rift.js';
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta } from './modules/rift.js';
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -789,7 +789,12 @@ function refreshTabVisibility() {
   // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才开放
   setTabLocked(document.getElementById('btn-delve'), !(delveUnlocked() || canUnlockDelve()));
   // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后开放
-  setTabLocked(document.getElementById('btn-rift-tab'), !(S._riftSeen || (S.riftsSealed || 0) > 0));
+  const riftBtn = document.getElementById('btn-rift-tab');
+  setTabLocked(riftBtn, !(S._riftSeen || (S.riftsSealed || 0) > 0));
+  // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
+  if (riftBtn && riftBtn.dataset.locked === '1') {
+    riftBtn.title = `🔒 裂隙未解锁：约 ${fmtEta(riftEtaSec())} 后首次出现（后台挂机同样计时）`;
+  }
   // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
   setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
   // v2.8.6 B2a：政策——有开放政策组才开放
@@ -2037,8 +2042,9 @@ function tick(now) {
   frame++;
   const rawDt = (now - lastTick) / 1000;
   const dt = Math.max(0, Math.min(10, rawDt)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
-  // v3.3.3 反馈⑤：后台限流被钳掉的时间记账（单次上限 120s），供裂隙掷骰补偿
-  if (rawDt > 10) S._riftCatchup = Math.min(60, (S._riftCatchup || 0) + Math.min(rawDt, 120) - 10);
+  // v3.3.5 反馈③：后台限流/挂起被钳掉的时间记账（单次上限 30 分钟）——供裂隙计时补偿，
+  // 原上限 60s 导致「挂后台 2 小时回来，裂隙只推进 70 秒」，裂隙长期不出现
+  if (rawDt > 10) S._riftCatchup = Math.min(1800, (S._riftCatchup || 0) + Math.min(rawDt, 1800) - 10);
   lastTick = now;
   if (S.paused) {
     updatePausePreview(); // v2.5 ⑥：暂停弹框实时刷新（预计离线时间/收入）
@@ -2190,6 +2196,10 @@ function tick(now) {
     S._religCheckTimer = 0;
     refreshTabVisibility(); // 宗教/深潜/星图/裂隙/遗物/政策/集市入口条件达成后出现
     if (typeof refreshReligionAffordability === 'function') refreshReligionAffordability();
+    // v3.3.5 反馈③：裂隙倒计时每秒原地刷新（首列常驻卡 + 裂隙页签），让「裂隙会不会来」可见可验证
+    if (S._riftSeen && !S.activeRift && !S.riftExpedition) dirty.rift = true;
+    const etaTabEl = document.getElementById('rift-eta-tab');
+    if (etaTabEl) etaTabEl.textContent = fmtEta(riftEtaSec());
   }
   // v2.6.0 / v3.0.0：深潜与集市面板为 innerHTML 重建（无内容签名跳过），保持 5s 低频——1s 重建会吞点击/闪烁
   S._panelCheckTimer = (S._panelCheckTimer || 0) + dt;
@@ -2284,9 +2294,10 @@ function tick(now) {
       const nxt = peekNextEvent();
       if (nxt) {
         const changed = !S.prophecyNext || S.prophecyNext.id !== nxt.id;
-        S.prophecyNext = { id: nxt.id, name: nxt.name, type: nxt.type, at: Date.now() };
+        // v3.3.5 反馈②：广播同时给出事件效果（如「顿悟」+80 RP），不再只报名字
+        S.prophecyNext = { id: nxt.id, name: nxt.name, type: nxt.type, desc: nxt.desc || '', at: Date.now() };
         if (changed) {
-          log(`🔮 神谕广播：下一个事件将是「${nxt.name}」`, 'good');
+          log(`🔮 神谕广播：下一个事件将是「${nxt.name}」——${nxt.desc || '效果未知'}`, 'good');
           const wait = S.nextEventAt - Date.now();
           if (wait > 15 * 60 * 1000) S.nextEventAt = Date.now() + (5 + Math.random() * 10) * 60 * 1000; // 预言事件限时兑现
           dirty.ai = true;
@@ -2549,6 +2560,7 @@ if (typeof window !== 'undefined') {
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
   window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
+    riftEtaSec, riftNextSec, // v3.3.5 反馈③：裂隙倒计时/下次间隔（测试钩子）
     // v3.3.0 线程绑定系统 QA 钩子
     threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads },
   };

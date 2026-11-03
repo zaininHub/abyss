@@ -98,7 +98,7 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：把空闲线程分配到最合适岗位">智能分配（领导者决策）</button>
+      <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：对当前全部线程重新做一次岗位优化（已绑定的也会重排；无更优方案时不做改动）">智能分配（领导者决策）</button>
     </div>
     <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业无惩罚且加成更高：🔭勘探员→探采、⚗️蒸馏师→灵感工坊、🥚饲育师→异兽孵化、🕯️祭司→信仰圣所；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
     <div class="crew-grid">${cards}</div>
@@ -129,8 +129,9 @@ export function renderCrewPanel(container) {
       }
       const ab = ev.target.closest ? ev.target.closest('[data-autobind]') : null;
       if (ab) {
+        // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
-        crewPush(k > 0 ? `领导者调度：分配 ${k} 条线程到合适岗位` : '领导者调度：暂无可分配线程', 'good');
+        crewPush(k > 0 ? `领导者调度：重排 ${k} 条线程至更优岗位` : '领导者调度：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
         renderCrewPanel(container);
         return;
       }
