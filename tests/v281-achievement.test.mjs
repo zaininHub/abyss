@@ -34,7 +34,7 @@ await new Promise(r => setTimeout(r, 300));
 await page.evaluate(() => document.getElementById('btn-achievement').click());
 await new Promise(r => setTimeout(r, 300));
 const afterClick = await page.evaluate(() => document.getElementById('achievement-panel').textContent);
-rec('B3 点击后成就页即时显示「初次接触」', afterClick.includes('初次接触') && afterClick.includes('已解锁 1/19'), 'click1'); // v2.8.1 成就扩充至 19
+rec('B3 点击后成就页即时显示「初次接触」', afterClick.includes('初次接触') && /已解锁 1\/2\d/.test(afterClick), 'click1'); // v3.3.3 成就 24+（宽匹配）
 // 未解锁成就不显示（ep1m 不应出现）
 rec('B4 未解锁成就不显示（无「深流」）', !afterClick.includes('深流'), 'hidden');
 await page.close(); await browser.close();

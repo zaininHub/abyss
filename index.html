@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.3.2</title>
+<title>深渊效能工作台 v3.3.3</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -50,9 +50,36 @@
     </div>
   </div>
 
-  <!-- 主网格（v3.2.1 反馈④：三列布局——左列英雄/任务/班组，中列标签页，右列日志/故事线/晋升/成就） -->
+  <!-- 主网格（v3.3.3 反馈②：四列布局——第一列任务/自动转化/裂隙/成就、第二列英雄/班组、中列标签页、右列日志/故事线/晋升） -->
   <div class="grid">
-    <!-- 左列：英雄 + 裂隙 + 任务 + 班组 -->
+    <!-- 第二列：英雄 + 班组 -->
+    <!-- v3.3.3 反馈②：四列布局——第一列：任务版 / 自动转化 / 裂隙 / 成就 -->
+    <div class="first-col">
+      <!-- 任务版 -->
+      <div class="panel">
+        <h3>任务版</h3>
+        <div id="projects"></div>
+      </div>
+
+      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化 / FP 圣所）——v3.3.1 反馈④：常驻展示，未解锁的开关灰显 -->
+      <div class="panel" id="quick-switches-panel">
+        <h3>⚡ 自动转化</h3>
+        <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+      </div>
+
+      <!-- 深渊裂隙 -->
+      <div class="panel" id="rift-card" style="display:none">
+        <h3 style="color:var(--purple)">深渊裂隙</h3>
+        <div id="rift-panel"></div>
+      </div>
+
+      <!-- 成就（原 tab-achievement，常驻左一列）；v3.3.1 反馈⑨：可收起；v3.3.3 反馈⑩：一页 10 条分页 -->
+      <div class="panel" id="tab-achievement">
+        <h3 id="achievement-h3" style="cursor:pointer;user-select:none" title="点击收起 / 展开">成就 <span class="sl-ind" style="color:var(--text-3)">▾</span></h3>
+        <div id="achievement-panel"></div>
+      </div>
+    </div>
+
     <div class="left-col">
       <!-- 英雄面板 -->
       <div class="panel">
@@ -95,25 +122,7 @@
         </div>
       </div>
 
-      <!-- 深渊裂隙 -->
-      <div class="panel" id="rift-card" style="display:none">
-        <h3 style="color:var(--purple)">深渊裂隙</h3>
-        <div id="rift-panel"></div>
-      </div>
-
-      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化）——v3.3.1 反馈④：常驻展示，未解锁的开关灰显 -->
-      <div class="panel" id="quick-switches-panel">
-        <h3>⚡ 自动转化</h3>
-        <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
-      </div>
-
-      <!-- 任务版 -->
-      <div class="panel">
-        <h3>任务版</h3>
-        <div id="projects"></div>
-      </div>
-
-      <!-- v3.2.1 反馈④：班组面板移到任务版下方（线程拟人化个人档案 + 事件流水） -->
+      <!-- v3.2.1 反馈④：班组面板（线程拟人化个人档案）；v3.3.3 反馈②：留在第二列 -->
       <div class="panel">
         <h3>🧵 班组</h3>
         <div id="crew-panel"></div>
@@ -126,14 +135,14 @@
         <button class="btn on" id="btn-shop">升级商店</button>
         <button class="btn" id="btn-tech">科技树</button>
         <button class="btn" id="btn-rp">研究点</button>
-        <button class="btn" id="btn-relics" style="display:none">遗物</button>
+        <button class="btn" id="btn-relics">遗物</button>
         <button class="btn" id="btn-pets">异兽</button>
         <button class="btn" id="btn-expedition">星图</button>
-        <button class="btn" id="btn-religion" style="display:none">宗教</button>
-        <button class="btn" id="btn-policy" style="display:none">政策</button>
-        <button class="btn" id="btn-delve" style="display:none">深潜</button>
-        <button class="btn" id="btn-rift-tab" style="display:none">裂隙</button>
-        <button class="btn" id="btn-bazaar" style="display:none" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <button class="btn" id="btn-religion">宗教</button>
+        <button class="btn" id="btn-policy">政策</button>
+        <button class="btn" id="btn-delve">深潜</button>
+        <button class="btn" id="btn-rift-tab">裂隙</button>
+        <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
              保留隐藏桩元素与 switchTab 绑定（兼容程序化切换与既有测试） -->
         <button class="btn" id="btn-prestige" style="display:none">晋升</button>
@@ -212,7 +221,7 @@
       </div>
     </div>
 
-    <!-- 右列（v3.2.1 反馈④第三栏）：日志 / 故事线 / 晋升 / 成就（常驻可见） -->
+    <!-- 右列（v3.2.1 反馈④第三栏；v3.3.3 反馈②成就移至第一列）：日志 / 故事线 / 晋升（常驻可见） -->
     <div class="side-col">
       <!-- 日志 -->
       <div class="panel log-panel">
@@ -232,12 +241,6 @@
       <div class="panel" id="tab-prestige">
         <h3>晋升</h3>
         <div id="prestige-panel"></div>
-      </div>
-
-      <!-- 成就（原 tab-achievement，常驻右列）；v3.3.1 反馈⑨：与故事线一样可收起 -->
-      <div class="panel" id="tab-achievement">
-        <h3 id="achievement-h3" style="cursor:pointer;user-select:none" title="点击收起 / 展开">成就 <span class="sl-ind" style="color:var(--text-3)">▾</span></h3>
-        <div id="achievement-panel"></div>
       </div>
     </div>
   </div>

@@ -50,7 +50,7 @@ export function riftUpgradeCost(id) {
 }
 export function riftSpawnSec() {
   const lv = riftUpgradeLevel('sentinel');
-  return Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv)); // v2.8.30 ④：下限 10 分钟
+  return Math.max(240, BALANCE.rift.spawnSec * Math.pow(0.75, lv)); // v3.3.3 反馈⑤：下限 240s（原 600s）
 }
 export function riftDmMult() {
   return 1 + 0.2 * riftUpgradeLevel('lens');
@@ -167,7 +167,11 @@ export function tickRift(dt) {
   const abyssDevouring = S.collapsed || S._collapseAt || S._collapseChoicePending
     || (S.corruption || 0) >= (BALANCE.corruption.max || 100);
   // 深渊裂隙：随机出现（间隔受哨站升级缩短）
-  if (!S.activeRift && !abyssDevouring && Math.random() < dt / spawnSec) {
+  // v3.3.3 反馈⑤：后台标签页限流期间 dt 被钳 10s → 裂隙掷骰按真实流逝时间补偿（上限 60s/次），
+  // 修复「挂后台后裂隙从不出现」；产出台账（tick 主循环）不受影响
+  const sdt = dt + (S._riftCatchup || 0);
+  S._riftCatchup = 0;
+  if (!S.activeRift && !abyssDevouring && Math.random() < sdt / spawnSec) {
     const level = riftLevelOf(cps);
     // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
     const cap = epStorageCap();

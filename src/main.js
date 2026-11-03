@@ -9,7 +9,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
-  rpDistillRate, vehicleDmPerMin, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定
+  rpDistillRate, vehicleDmPerMin, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
@@ -742,35 +742,60 @@ function switchTab(id) {
   }
 }
 
+// v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性），点击提示解锁路径
+const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市' };
+const TAB_LOCK_HINTS = {
+  'btn-expedition': '星图未解锁：完成首次远征准备后开放',
+  'btn-relics': '遗物未解锁：触发首次深渊裂隙并发现 DM 后开放',
+  'btn-religion': '宗教未解锁：存储扩建 ≥3 级后可唤醒信仰',
+  'btn-policy': '政策未解锁：达成对应政策开放条件后出现',
+  'btn-delve': '深潜未解锁：ES≥3 + DM 已发现 + 宗教已信奉',
+  'btn-rift-tab': '裂隙未解锁：触发首次深渊裂隙后开放',
+  'btn-bazaar': '集市未解锁：达成集市开启条件后开放',
+};
+function setTabLocked(btn, locked) {
+  if (!btn) return;
+  const base = TAB_LABELS[btn.id] || btn.textContent;
+  if (locked) {
+    if (btn.dataset.locked !== '1') {
+      btn.dataset.locked = '1';
+      btn.textContent = '???';
+      btn.title = '🔒 ' + (TAB_LOCK_HINTS[btn.id] || '尚未解锁');
+      btn.classList.add('tab-locked');
+    }
+    btn.style.display = '';
+  } else {
+    if (btn.dataset.locked === '1') {
+      btn.dataset.locked = '';
+      btn.textContent = base;
+      btn.removeAttribute('title');
+      btn.classList.remove('tab-locked');
+    }
+    btn.style.display = '';
+  }
+}
 function refreshTabVisibility() {
   // v2.8.7：研究点 tab 仅 RP 解锁后显示（保持可探索性，未解锁不展示入口）
   // v3.0.9 反馈②：解锁口径收紧为「购入矩阵存储库」（anchorShown('rp')）——溢出只开放仓库购买入口，
   // 不再显示研究点 tab（未购仓库时的「未解锁」提示页与溢出引导文案一并移除）
   const rpBtn = document.getElementById('btn-rp');
   if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
-  // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）
-  const expBtn = document.getElementById('btn-expedition');
-  if (expBtn) expBtn.style.display = (S.expeditionsDone > 0 || S.expeditions.length > 0) ? '' : 'none';
-  // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才出现入口，达成前不显示
+  // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）——v3.3.3 反馈⑨：未解锁改「??？」锁定态
+  setTabLocked(document.getElementById('btn-expedition'), !(S.expeditionsDone > 0 || S.expeditions.length > 0));
+  // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才开放
   // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
   if (canUnlockReligion()) { S._religionHintSeen = true; }
-  const relBtn = document.getElementById('btn-religion');
-  if (relBtn) relBtn.style.display = (religionUnlocked() || canUnlockReligion() || S._religionHintSeen) ? '' : 'none';
-  // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才出现入口
-  const dvBtn = document.getElementById('btn-delve');
-  if (dvBtn) dvBtn.style.display = (delveUnlocked() || canUnlockDelve()) ? '' : 'none';
-  // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后出现栏目入口
-  const riftTabBtn = document.getElementById('btn-rift-tab');
-  if (riftTabBtn) riftTabBtn.style.display = (S._riftSeen || (S.riftsSealed || 0) > 0) ? '' : 'none';
-  // v2.7.0：深渊遗物入口——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
-  const relicBtn = document.getElementById('btn-relics');
-  if (relicBtn) relicBtn.style.display = relicsUnlocked() ? '' : 'none';
-  // v2.8.6 B2a：政策 tab——有开放政策组才显示
-  const polBtn = document.getElementById('btn-policy');
-  if (polBtn) polBtn.style.display = policyOpenGroups().length > 0 ? '' : 'none';
-  // v3.0.0：深渊集市 tab——解锁或可解锁时显示
-  const bzBtn = document.getElementById('btn-bazaar');
-  if (bzBtn) bzBtn.style.display = (bazaarUnlocked() || canUnlockBazaar()) ? '' : 'none';
+  setTabLocked(document.getElementById('btn-religion'), !(religionUnlocked() || canUnlockReligion() || S._religionHintSeen));
+  // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才开放
+  setTabLocked(document.getElementById('btn-delve'), !(delveUnlocked() || canUnlockDelve()));
+  // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后开放
+  setTabLocked(document.getElementById('btn-rift-tab'), !(S._riftSeen || (S.riftsSealed || 0) > 0));
+  // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
+  setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
+  // v2.8.6 B2a：政策——有开放政策组才开放
+  setTabLocked(document.getElementById('btn-policy'), !(policyOpenGroups().length > 0));
+  // v3.0.0：深渊集市——解锁或可解锁时开放
+  setTabLocked(document.getElementById('btn-bazaar'), !(bazaarUnlocked() || canUnlockBazaar()));
 }
 
 // ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
@@ -784,11 +809,13 @@ function renderQuickSwitches() {
   const panel = document.getElementById('quick-switches-panel');
   const host = document.getElementById('quick-switches');
   if (!panel || !host) return;
-  // v3.3.1 反馈④：常驻展示三枚开关，未解锁的灰显（不再整块隐藏）
+  // v3.3.1 反馈④：常驻展示开关，未解锁的灰显（不再整块隐藏）
+  // v3.3.3 反馈⑦：扩为四枚——蒸馏 / 探采 / 孵化 / 圣所（孵化、圣所接入线程绑定统一口径）
   const atriumOk = (S.upgrades.atrium || 0) >= 1;
   const vehCount = (BALANCE.vehicles.ids || []).reduce((a, id) => a + (S.upgrades[id] || 0), 0);
   const probeOk = vehCount > 0;
   const hatchOk = S.ptAutoHatch === true;
+  const templeOk = ((S.religion && S.religion.temple) || 0) >= 1;
   const items = [];
   if (atriumOk) {
     const on = converterEnabled('atrium');
@@ -803,10 +830,16 @@ function renderQuickSwitches() {
     items.push(`<button data-qs="-1" data-qs-lock="probe" style="${QS_STYLE_LOCK}" title="未解锁：在「遗物 · 探采平台」购入任一载具后可用">探采 未解锁</button>`);
   }
   if (hatchOk) {
-    const on = S.ptDistillOn === true;
+    const on = converterEnabled('hatch');
     items.push(`<button data-qs="hatch" title="异兽孵化：EP → PT（与「异兽」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">孵化 ${on ? '开' : '关'}</button>`);
   } else {
     items.push(`<button data-qs="-1" data-qs-lock="hatch" style="${QS_STYLE_LOCK}" title="未解锁：在「升级商店 · 设施」购入异兽孵化工坊后可用">孵化 未解锁</button>`);
+  }
+  if (templeOk) {
+    const on = converterEnabled('temple');
+    items.push(`<button data-qs="temple" title="信仰圣所：EP → FP（与「宗教」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">圣所 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="temple" style="${QS_STYLE_LOCK}" title="未解锁：信奉宗教后建造「信仰圣所」可用">圣所 未解锁</button>`);
   }
   panel.style.display = '';
   const sig = items.join('|');
@@ -824,18 +857,19 @@ function bindQuickSwitches() {
     const k = b.dataset.qs;
     if (k === '-1') { // 灰显态：给出解锁指引，不改变任何状态
       const lock = b.dataset.qsLock;
-      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊' };
+      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊', temple: '圣所未解锁：信奉宗教后建造「信仰圣所」' };
       if (toast) toast(`🔒 ${hint[lock] || '尚未解锁'}`);
       return;
     }
     if (k === 'atrium') setConverterEnabled('atrium', !converterEnabled('atrium'));
     else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
-    else if (k === 'hatch') S.ptDistillOn = S.ptDistillOn === true ? false : true;
+    else if (k === 'hatch') setConverterEnabled('hatch', !converterEnabled('hatch'));
+    else if (k === 'temple') setConverterEnabled('temple', !converterEnabled('temple'));
     save(S); // 状态即时落盘（与原位置开关同口径）
-    dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; // 原位置开关卡（设施/研究点/探采页头/异兽）随渲染周期同步
+    dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; dirty.religion = true; // 原位置开关卡随渲染周期同步
     renderQuickSwitches();
-    const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化' };
-    const nowOn = k === 'atrium' ? converterEnabled('atrium') : k === 'probe' ? converterEnabled('vehicles') : S.ptDistillOn === true;
+    const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化', temple: '圣所产出' };
+    const nowOn = converterEnabled(k);
     log(`快捷开关：${labels[k]}${nowOn ? '开启（EP 不足时自动暂停消耗，回升后自动恢复）' : '关闭'}`, nowOn ? 'good' : 'bad');
   });
 }
@@ -1144,6 +1178,14 @@ function bindEvents() {
   document.getElementById('btn-religion')?.addEventListener('click', () => switchTab('religion'));
   bindReligionPanel(document.getElementById('religion-panel')); // v2.5.7：宗教面板事件委托
   bindQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关事件委托
+  // v3.3.3 反馈⑨：锁定态（???）tab 点击不切换——捕获阶段拦截并提示解锁路径
+  document.querySelector('.tabs')?.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b && b.dataset && b.dataset.locked === '1') {
+      e.stopPropagation();
+      toast('🔒 ' + (b.title || '尚未解锁'));
+    }
+  }, true);
   bindPolicyPanel(document.getElementById('policy-panel'));
   _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',');
   renderPolicyPanel(document.getElementById('policy-panel'));
@@ -1878,6 +1920,8 @@ function checkAch() {
 }
 
 // v2.8.1：成就页面——只显示已解锁成就（达成即点亮，未达成不展示）
+const ACH_PAGE_SIZE = 10; // v3.3.3 反馈⑩：成就一页 10 条 + 分页（与班组同范式，会话级页码）
+let achPage = 0;
 function renderAchievementPanel(container) {
   if (!container) return;
   const defs = [
@@ -1914,7 +1958,12 @@ function renderAchievementPanel(container) {
   if (n === 0) {
     html += `<div style="font-size:13px;color:var(--text-3);padding:18px 0;text-align:center">尚未解锁任何成就——一切才刚刚开始。</div>`;
   } else {
-    for (const a of got) {
+    // v3.3.3 反馈⑩：一页 10 条 + 分页（页码会话级，新达成项自动钳回最后一页）
+    const pageCount = Math.max(1, Math.ceil(n / ACH_PAGE_SIZE));
+    if (!Number.isFinite(achPage) || achPage < 0) achPage = 0;
+    if (achPage >= pageCount) achPage = pageCount - 1;
+    const start = achPage * ACH_PAGE_SIZE;
+    for (const a of got.slice(start, start + ACH_PAGE_SIZE)) {
       html += `<div class="ach-card" style="border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin:6px 0;display:flex;align-items:center;gap:12px">
         <span style="font-size:22px">${a.icon}</span>
         <div style="flex:1">
@@ -1923,9 +1972,27 @@ function renderAchievementPanel(container) {
         </div>
       </div>`;
     }
+    if (pageCount > 1) {
+      html += `<div class="crew-pager" style="margin-top:8px">
+        <button data-ach-page="prev" ${achPage <= 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <span>第 ${achPage + 1} / ${pageCount} 页 · 共 ${n} 项</span>
+        <button data-ach-page="next" ${achPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
+      </div>`;
+    }
   }
   html += '</div>';
   container.innerHTML = html;
+  // v3.3.3 反馈⑩：分页按钮事件委托（容器级，重建不丢）
+  if (!container._achDelegated) {
+    container._achDelegated = true;
+    container.addEventListener('click', (ev) => {
+      const btn = ev.target.closest ? ev.target.closest('[data-ach-page]') : null;
+      if (btn && !btn.disabled) {
+        achPage += btn.dataset.achPage === 'prev' ? -1 : 1;
+        renderAchievementPanel(container);
+      }
+    });
+  }
 }
 
 // ========== v2.0 潮汐 tick ==========
@@ -1968,7 +2035,10 @@ let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
 let _codeRainStarted = false, _codeRainTimer = null; // v3.0.0：前置声明（配合 __advance 时间加速，消除 TDZ）
 function tick(now) {
   frame++;
-  const dt = Math.max(0, Math.min(10, (now - lastTick) / 1000)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
+  const rawDt = (now - lastTick) / 1000;
+  const dt = Math.max(0, Math.min(10, rawDt)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
+  // v3.3.3 反馈⑤：后台限流被钳掉的时间记账（单次上限 120s），供裂隙掷骰补偿
+  if (rawDt > 10) S._riftCatchup = Math.min(60, (S._riftCatchup || 0) + Math.min(rawDt, 120) - 10);
   lastTick = now;
   if (S.paused) {
     updatePausePreview(); // v2.5 ⑥：暂停弹框实时刷新（预计离线时间/收入）
@@ -2044,7 +2114,10 @@ function tick(now) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
     const used = Math.min(S.ep, epNeed);
     S.ep -= used;
-    addRp((used / (BALANCE.atrium.epRate || 150)) * (BALANCE.atrium.rate || 0.15) * atriumN * converterThreadBoost('atrium')); // v3.3.0：绑定线程（匹配/高等级/领导）提升 RP 蒸馏
+    // v3.3.3 反馈③（根因修复）：原公式 used/epRate × rate × atriumN 隐含 ×N²（used 已含 N）——
+    // 卡面宣称 +0.15×N RP/s 实际产出 0.15×N²，中期 RP 泛滥的元凶。改为严格线性：
+    // RP = 实扣 EP × (rate/epRate) × 绑定加成 ÷ 效率递增系数
+    addRp(used * ((BALANCE.atrium.rate || 0.15) / (BALANCE.atrium.epRate || 150)) * converterThreadBoost('atrium') / rpEffScale());
   }
 
   // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），
@@ -2100,7 +2173,8 @@ function tick(now) {
     S.ep -= take;
     // v3.0.3 后续反馈③附带修正：产出按实扣比例折算（原 take×0.00015×lv 实为 lv² 隐性加成——
     // 显示「+0.15×lv 饼干/s」但实产 0.15×lv²，升级过快的根因之一）；现为 0.15×lv 线性
-    S.pt = (S.pt || 0) + take * 0.00003; // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
+    // v3.3.3 反馈⑦：绑定线程参与孵化（饲育师匹配岗位加成更高）——与灵感工坊同范式
+    S.pt = (S.pt || 0) + take * 0.00003 * converterThreadBoost('hatch'); // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
   }
   // v3.2.1 反馈⑨：出战异兽存活维持——每秒消耗 PT（随等级/世代增长），PT 归零即休战（见 pets.petStarving）
   const petUpkeep = petUpkeepTotalPerSec();
@@ -2199,17 +2273,24 @@ function tick(now) {
 
   maybeTriggerEvent();
 
-  // v3.3.1 反馈③：预言系统（信仰线科技 prophecy）真正生效——神谕广播每 30 秒预告下一个随机事件；
+  // v3.3.1 反馈③：预言系统（信仰线科技 prophecy）真正生效——神谕广播预告下一个随机事件；
   // 预告写入 S.prophecyNext，事件触发时优先兑现（events.maybeTriggerEvent）
+  // v3.3.3 反馈④：广播频率 30s → 10 分钟（原频率刷屏且事件 4-7h 才触发一次，预言形同虚设）；
+  // 广播时若下一次事件过远（>15 分钟）则把事件提前到 5-15 分钟内——保证预言「真实生效、当场可验证」
   if (hasTech('prophecy')) {
     S._prophecyTimer = (S._prophecyTimer || 0) + dt;
-    if (S._prophecyTimer >= 30) {
+    if (S._prophecyTimer >= 600) {
       S._prophecyTimer = 0;
       const nxt = peekNextEvent();
       if (nxt) {
         const changed = !S.prophecyNext || S.prophecyNext.id !== nxt.id;
         S.prophecyNext = { id: nxt.id, name: nxt.name, type: nxt.type, at: Date.now() };
-        if (changed) { log(`🔮 神谕广播：下一个事件将是「${nxt.name}」`, 'good'); dirty.ai = true; }
+        if (changed) {
+          log(`🔮 神谕广播：下一个事件将是「${nxt.name}」`, 'good');
+          const wait = S.nextEventAt - Date.now();
+          if (wait > 15 * 60 * 1000) S.nextEventAt = Date.now() + (5 + Math.random() * 10) * 60 * 1000; // 预言事件限时兑现
+          dirty.ai = true;
+        }
       } else if (S.prophecyNext) {
         S.prophecyNext = null;
       }
@@ -2467,6 +2548,7 @@ if (typeof window !== 'undefined') {
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
   window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
+    rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
     // v3.3.0 线程绑定系统 QA 钩子
     threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads },
   };

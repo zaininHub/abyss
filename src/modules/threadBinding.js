@@ -24,6 +24,8 @@ export function converterEnabled(type) {
   if (S.converterOn && S.converterOn[type] === false) return false;
   if (type === 'atrium') return S.atriumOn !== false;
   if (type === 'vehicles') return S._probeEnabled !== false;
+  if (type === 'hatch') return S.ptDistillOn !== false; // v3.3.3 反馈⑦：孵化开关统一口径
+  if (type === 'temple') return !(S.religion && S.religion.templeOff); // v3.3.3 反馈⑦：圣所开关统一口径
   return true;
 }
 export function setConverterEnabled(type, on) {
@@ -31,6 +33,12 @@ export function setConverterEnabled(type, on) {
   S.converterOn[type] = !!on;
   if (type === 'atrium') S.atriumOn = !!on;
   if (type === 'vehicles') S._probeEnabled = !!on;
+  if (type === 'hatch') S.ptDistillOn = !!on;
+  if (type === 'temple') {
+    S.religion = S.religion || {};
+    S.religion.templeOff = !on;
+    if (on) { S.religion._templeAutoPaused = false; S._templeEpShortSec = 0; }
+  }
 }
 export function bindingActive(c) {
   if (!c || !c.boundTo) return false;

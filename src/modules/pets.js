@@ -1,6 +1,7 @@
 import { S, save } from '../state.js';
 import { PETS, petBaseMult } from '../data/pets.js';
 import { elv, computeCps, fmt } from './economy.js';
+import { converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径）
 import { checkEasterEggs } from './progression.js';
 
 export function activePetIds() {
@@ -140,12 +141,17 @@ export function renderPetGrid(container) {
     const upkLine = isActive
       ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
       : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
+    // v3.3.3 反馈①：进度条卡满时给出原因——升级被异兽饼干（PT）门槛挡住，显示所需 PT 与当前持有
+    const xpReady = isActive && !starving && p.level < 100 && p.exp >= petExpNeed(p.level);
+    const readyLine = xpReady
+      ? `<div class="lv" style="color:var(--warn);font-size:10px">经验已满 · 升级需 ${fmt(petPtNeed(p.level))} PT（当前 ${Math.floor(S.pt || 0)}）</div>`
+      : '';
     html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
       <div class="lv">Lv.${p.level}${stateTag}</div>
       <div class="lv" style="color:var(--green);font-size:10px">${def ? def.desc : ''}</div>
-      ${upkLine}
+      ${upkLine}${readyLine}
       <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`; // v2.8.17：已拥有卡直接显示效果（不靠悬浮）
   }
   const ownedIds = Object.keys(S.pets);
@@ -157,7 +163,7 @@ export function renderPetGrid(container) {
   const autoHatch = S.ptAutoHatch === true;
   const hatchLv = S.ptHatchLv || 1;
   const epPerS = 5000 * hatchLv; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000），与 main.js tick 同口径
-  const ptPerS = 0.15 * hatchLv;
+  const ptPerS = 0.15 * hatchLv * converterThreadBoost('hatch'); // v3.3.3 反馈⑦：显示含绑定线程加成（与 tick 同口径）
   const upkeep = petUpkeepTotalPerSec();
   // v3.3.1 反馈②：异兽页只保留「孵化开关」；孵化升级（购买/升级）移入「设施」区
   // v3.3.2 反馈④：文案只写当前总计（去掉「下级」预览，升级后的变化看设施卡）

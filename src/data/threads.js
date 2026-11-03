@@ -21,6 +21,8 @@ export function threadCost(count) {
 export const PROFESSIONS = [
   { id: 'prospector', name: '勘探员', icon: '🔭', affinity: 'vehicles', desc: '擅长探采平台（载具 DM 采集）' },
   { id: 'distiller',  name: '蒸馏师', icon: '⚗️', affinity: 'atrium',   desc: '擅长灵感工坊（RP 蒸馏）' },
+  { id: 'keeper',     name: '饲育师', icon: '🥚', affinity: 'hatch',    desc: '擅长异兽孵化（PT 孵化）' }, // v3.3.3 反馈⑦：孵化接入线程绑定
+  { id: 'acolyte',    name: '祭司',   icon: '🕯️', affinity: 'temple',   desc: '擅长信仰圣所（FP 生产）' }, // v3.3.3 反馈⑦：圣所接入线程绑定
   { id: 'overseer',  name: '统御官', icon: '🎖️', affinity: 'command',  desc: '领导材料：可晋升领导者，提供全局加成' },
   { id: 'slacker',   name: '懒散者', icon: '😪', affinity: null, trait: 'lazy', desc: '天生怠惰：绑定惩罚更重、加成更弱（出现概率低）' },
 ];
@@ -29,9 +31,11 @@ export const LEADER_PROFESSION_ID = 'overseer';
 export const LAZY_PROFESSION_ID = 'slacker';
 
 // 可绑定线程的「EP 转化类」生产建筑（dirty 1 的「所有的 ep 转化都需要绑定线程」）。
-// 本版实装探采平台(vehicles) 与 灵感工坊(atrium)，其余经同一 converterThreadBoost 钩子扩展。
+// v3.3.3 反馈⑦：实装全部四类——探采平台(vehicles)/灵感工坊(atrium)/异兽孵化(hatch)/信仰圣所(temple)。
 export const CONVERTERS = {
   vehicles: { id: 'vehicles', name: '探采平台', res: 'DM' },
   atrium:   { id: 'atrium',   name: '灵感工坊', res: 'RP' },
+  hatch:    { id: 'hatch',    name: '异兽孵化', res: 'PT' },
+  temple:   { id: 'temple',   name: '信仰圣所', res: 'FP' },
 };
 export const CONVERTER_IDS = Object.keys(CONVERTERS);

@@ -103,9 +103,9 @@ try {
       styles: btns.map(b => b.getAttribute('style').slice(0, 60)),
     };
   });
-  if (qs.visible && qs.n === 3) ok('④ 自动转化面板常驻三枚开关');
+  if (qs.visible && qs.n === 4) ok('④ 自动转化面板常驻四枚开关（v3.3.3：+圣所）');
   else bad('④ 面板形态', JSON.stringify(qs));
-  if (qs.locked.length === 1 && qs.locked[0] === 'probe') ok('④ 未解锁开关灰显（探采未解锁）', qs.locked.join(','));
+  if (qs.locked.length === 2 && qs.locked.includes('probe') && qs.locked.includes('temple')) ok('④ 未解锁开关灰显（探采/圣所未解锁）', qs.locked.join(','));
   else bad('④ 灰显判定', JSON.stringify(qs.locked));
 
   // ===== ⑤ 领导者唯一 =====
@@ -166,10 +166,10 @@ try {
   if (drain.state === 'dormant' && drain.total < drain.sal * 0.05) ok('⑪ 休眠且 EP=0 时消耗/s 不再虚报全额薪资', `sal=${drain.sal.toFixed(1)} total=${drain.total.toFixed(1)}`);
   else bad('⑪ 消耗口径', JSON.stringify(drain));
 
-  // ===== ③ 预言系统生效 =====
+  // ===== ③ 预言系统生效（v3.3.3：广播间隔 30s→600s） =====
   const proph = await page.evaluate(async () => {
     window.S.tech = { ...(window.S.tech || {}), prophecy: true };
-    window.S._prophecyTimer = 29.9;
+    window.S._prophecyTimer = 599.9;
     await new Promise(r => setTimeout(r, 900));
     return {
       next: window.S.prophecyNext,

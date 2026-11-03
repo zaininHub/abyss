@@ -100,7 +100,7 @@ export function renderCrewPanel(container) {
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：把空闲线程分配到最合适岗位">智能分配（领导者决策）</button>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业（🔭勘探员→探采、⚗️蒸馏师→灵感工坊）无惩罚且加成更高；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业无惩罚且加成更高：🔭勘探员→探采、⚗️蒸馏师→灵感工坊、🥚饲育师→异兽孵化、🕯️祭司→信仰圣所；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）

@@ -277,12 +277,24 @@ export function echoMult() {
 // v2.7.3 ⑤：回响特殊升级等级（细分系统加成用）
 // v2.7.4 ⑦：RP 蒸馏效率——主动消耗 EP 转化 RP（主源）
 // 基础 1 RP = 15,000 EP；灵感蒸馏塔每级 ÷1.12（效率提升）；低于 20,000 溢出转换 → 蒸馏为主源
+// v3.3.3 反馈③：RP 转化效率随 RP 生产量递增——EP/RP 基准价 ×rpEffScale()（√(1+RP产出/0.15)），
+// 压制中期 RP 泛滥：1 座工坊 ×1.41、5 座 ×2.45、10 座 ×3.3，产出越高换 1 RP 越贵（蒸馏/溢出同步生效）
+export function rpProdPerSec() {
+  const n = (S.upgrades && S.upgrades.atrium) || 0;
+  if (n < 1 || !converterEnabled('atrium')) return 0;
+  return (BALANCE.atrium.rate || 0.15) * n * converterThreadBoost('atrium');
+}
+export function rpEffScale() {
+  const p = rpProdPerSec();
+  if (!(p > 0)) return 1;
+  return Math.sqrt(1 + p / 0.15);
+}
 export function rpDistillRate() {
   const lv = S.upgrades['rp_distill'] || 0;
   // v2.8.6：星渊罗盘「研究点转换效率 +10%/级」接线（v2.8.2 改 desc 后漏接，效率提升 = 所需 EP 减少）
   const compass = (S.relics && S.relics.compass) || 0;
   const eff = 1 + compass * 0.10;
-  return 30000 / Math.pow(1.12, lv) / eff; // v2.8.24 ③：蒸馏 EP 消耗 ×2（15000→30000）——EP 满后转化 RP 更有消耗价值
+  return (30000 / Math.pow(1.12, lv) / eff) * rpEffScale(); // v2.8.24 ③：蒸馏 EP 消耗 ×2 // v3.3.3 反馈③：×效率递增
 }
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;

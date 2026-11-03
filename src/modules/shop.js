@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, vehicleEpPerDm, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, vehicleEpPerDm, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -77,7 +77,7 @@ export function buyUpgrade(u) {
 function threadCost(u) {
   if (CAP_EXPANSION_IDS.includes(u.id)) return unitCost(u, 0);
   const owned = S.upgrades[u.id] || 0;
-  return Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 陡峭化
+  return Math.ceil(u.base * Math.pow(1.55, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 // v3.3.3 反馈⑪：线程/薪资强化大幅涨价 1.30→1.55
 }
 
 export function buyThreadUpgrade(u) {
@@ -230,7 +230,8 @@ export function renderShop(container) {
 const RP_FAMILY_SRC_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute']; // v2.8.30 ②：灵感蒸馏塔（非晋升）移出 RP 加成组，主商店/蒸馏按钮保留
 function rpFamilyCost(u) {
   const owned = (S.upgrades[u.id] || 0);
-  return Math.ceil((u.rpCost || 8) * Math.pow(u.growth || 1.18, owned));
+  // v3.3.3 反馈⑪：晋升 RP 加成族大幅涨价——每级额外 ×1.35（有效曲线 1.28~1.42 → 1.73~1.92）
+  return Math.ceil((u.rpCost || 8) * Math.pow((u.growth || 1.18) * 1.35, owned));
 }
 function makeRpFamilyItem(u) {
   const owned = (S.upgrades[u.id] || 0);
@@ -320,8 +321,9 @@ export function renderAtriumDistill(container) {
   const epRate = BALANCE.atrium.epRate || 150, rate = BALANCE.atrium.rate || 0.15;
   const cost = owned ? atriumUpgCost(n) : Math.ceil(base); // 已购：下一级升级成本；未购：首购价
   const afford = (S.ep || 0) >= cost;
+  const rpPerS = (rate * n / rpEffScale()); // v3.3.3 反馈③：实际产出含效率递增折减
   const desc = owned
-    ? `自动蒸馏：-${fmt(epRate * n)} EP/s → +${fmt(rate * n)} RP/s`
+    ? `自动蒸馏：-${fmt(epRate * n)} EP/s → +${fmt(rpPerS)} RP/s`
     : `自动蒸馏：-${fmt(epRate)} EP/s → +${fmt(rate)} RP/s`;
   if (!el) {
     el = document.createElement('div');
@@ -375,7 +377,7 @@ export function renderAtriumSwitch(host) {
   host.style.display = '';
   const on = converterEnabled('atrium');
   const epS = (BALANCE.atrium.epRate || 150) * n;
-  const rpS = (BALANCE.atrium.rate || 0.15) * n;
+  const rpS = (BALANCE.atrium.rate || 0.15) * n / rpEffScale(); // v3.3.3 反馈③：实际产出含效率递增折减
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
     <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>
@@ -689,7 +691,9 @@ function updateVehicleCollectHeader() {
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
     info = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
-    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足时本轮跳过，回升后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径 // v3.2.2 反馈①：去除自动暂停口径
+    // v3.3.3 反馈⑧：DM 满仓提示（满仓时采集暂停、不扣 EP）
+    if (S._dmFull && (S.dm || 0) >= dmCap() - 1e-9) info += ' · <b style="color:var(--warn)">DM 已满，采集暂停（星尘金库扩容可提升上限）</b>';
+    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径 // v3.2.2 反馈①：去除自动暂停口径
   } else {
     info = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
     el.title = '购买载具后每 60 秒自动采集深渊物质';

@@ -3,7 +3,7 @@
 // 数值与档位表在 BALANCE.vehicles；产出 vehicleDmPerMin()/collectVehicleDm() 在 economy.js（纯读侧）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin } from './economy.js';
+import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin, dmCap } from './economy.js';
 import { addDm, fmt } from './economy.js'; // v2.8.27 ②：DM 上限
 
 let logFn = null;
@@ -22,6 +22,9 @@ export function tickVehicleCollect(dt) {
   if (S._probeAutoPaused) S._probeAutoPaused = false;
 
   const epCostPerCycle = (vehicleDmEpCostPerMin() / 60) * BALANCE.vehicles.collectInterval;
+  // v3.3.3 反馈⑧：DM 满仓跳过本轮（不扣 EP、计时冻结）——原实现 addDm 钳 0 但 EP 照扣，白烧资源
+  if ((S.dm || 0) >= dmCap() - 1e-9) { S._dmFull = true; S._probeEpShortSec = 0; return false; }
+  S._dmFull = false;
   // EP 不足：本轮跳过（不扣费、计时器冻结），EP 回升后自动继续
   if ((S.ep || 0) < epCostPerCycle) {
     S._probeEpShortSec = (S._probeEpShortSec || 0) + dt;

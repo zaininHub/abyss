@@ -74,14 +74,14 @@ body {
 .buff-on { background: rgba(63,185,80,.15); color: var(--green); }
 .buff-off { background: rgba(248,81,73,.15); color: var(--red); }
 
-/* ========== 主网格（v3.2.1 反馈④：三列——左列英雄/任务/班组、中列标签页、右列日志/故事线/晋升/成就） ========== */
+/* ========== 主网格（v3.3.3 反馈②：四列——第一列任务/自动转化/裂隙/成就、第二列英雄/班组、中列标签页、右列日志/故事线/晋升） ========== */
 .grid {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(0, 1.5fr) minmax(270px, 0.85fr);
+  grid-template-columns: minmax(270px, 0.95fr) minmax(280px, 0.95fr) minmax(0, 1.5fr) minmax(250px, 0.85fr);
   gap: 12px;
 }
 
-.left-col, .right-col, .side-col {
+.first-col, .left-col, .right-col, .side-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -89,15 +89,26 @@ body {
 
 /* 右列常驻面板：原 tab-pane 从标签页迁出，脱离 .on 显隐机制 */
 .side-col .panel { margin: 0; }
-.side-col #tab-prestige, .side-col #tab-achievement, .side-col #tab-storyline { display: block; }
+.side-col #tab-prestige, .side-col #tab-storyline { display: block; }
+/* v3.3.3 反馈②：成就常驻第一列（原 .side-col 规则同步） */
+.first-col .panel { margin: 0; }
+.first-col #tab-achievement { display: block; }
+
+/* v3.3.3 反馈⑨：未开放大模块 tab 的「??？」锁定态 */
+.tab-locked {
+  opacity: .55;
+  border-style: dashed !important;
+  color: var(--text-3, #6e7681) !important;
+  letter-spacing: 2px;
+}
 
 @media (max-width: 1280px) {
   .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
-  .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
+  .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
 }
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
-  .side-col { grid-template-columns: 1fr; }
+  .first-col, .side-col { grid-template-columns: 1fr; }
 }
 
 /* ========== 面板通用 ========== */
@@ -815,9 +826,9 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.3fr) minmax(240px, 0.8fr);
+    grid-template-columns: minmax(260px, 0.9fr) minmax(270px, 0.9fr) minmax(0, 1.3fr) minmax(230px, 0.8fr);
   }
-  .left-col, .side-col {
+  .first-col, .left-col, .side-col {
     overflow-y: auto;
     min-height: 0;
   }

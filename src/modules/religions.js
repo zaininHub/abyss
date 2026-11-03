@@ -1,6 +1,7 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
 import { epStorageCap, fmt, echoLv, faithTechMult } from './economy.js';
+import { converterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径）
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
@@ -198,6 +199,12 @@ export function buySecretSanctum(id) {
 
 // 每帧信仰产出（圣所确定性产出；神龛/万神殿/远征/晋升为既有源，不重复处理）
 // v2.8.30 ③：信仰生产每秒 EP 消耗（与 tickReligion 同口径，供消耗悬浮/禁购检查）
+// v3.3.3 反馈⑥：圣所 EP 消耗递增——单位 FP 的 EP 价格随圣所等级 ×(1+0.2×(Lv-1))（Lv.10 → 2.8×），
+// 压制中期信仰泛滥（产出与消耗同步增长，但高等级圣所 EP 压力显著增大）
+export function templeEpPerUnit() {
+  const lv = (S.religion && S.religion.temple) || 0;
+  return TEMPLE.faithEpPerUnit * (1 + 0.2 * Math.max(0, lv - 1));
+}
 export function faithDrainPerSec() {
   if (!religionUnlocked()) return 0;
   const r = templeFaithPerSec();
@@ -206,7 +213,7 @@ export function faithDrainPerSec() {
   mult *= policyMult('faith');
   mult *= (1 + 0.10 * secretSanctumLv('star_hall'));
   if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（消耗同步）
-  return r * mult * TEMPLE.faithEpPerUnit;
+  return r * mult * templeEpPerUnit();
 }
 // v3.0.2：自动暂停统一口径（与探采同）——EP 不足持续 AUTO_PAUSE_GRACE 秒才暂停；暂停后不自动恢复（需手动重启）
 const AUTO_PAUSE_GRACE = 5; // 秒
@@ -216,16 +223,18 @@ export function tickReligion(dt) {
   const r = templeFaithPerSec();
   if (r > 0) {
     // v3.0.1：圣所关闭（手动/自动）——停止产出与 EP 消耗
-    if (S.religion && S.religion.templeOff) { S._templeEpShortSec = 0; return; }
+    // v3.3.3 反馈⑦：开关统一口径 converterEnabled('temple')（快捷开关/班组绑定同源）
+    if (!converterEnabled('temple')) { S._templeEpShortSec = 0; return; }
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
     if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
-    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）
-    const epUse = r * dt * mult * TEMPLE.faithEpPerUnit;
+    const boost = converterThreadBoost('temple'); // v3.3.3 反馈⑦：绑定线程参与圣所生产（祭司匹配岗位加成更高，增产出不增耗）
+    // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）// v3.3.3 反馈⑥：单位 EP 随圣所等级递增
+    const epUse = r * dt * mult * templeEpPerUnit();
     if ((S.ep || 0) >= epUse) {
       S.ep -= epUse;
-      S.faith = (S.faith || 0) + r * dt * mult;
+      S.faith = (S.faith || 0) + r * dt * mult * boost;
       S._templeEpShortSec = 0; // v3.0.2：EP 充足，重置缓冲计时器
     } else {
       // v3.0.2：EP 不足缓冲——持续 5s 才自动暂停（防反复横跳）；暂停后不自动恢复（需手动重启圣所）
