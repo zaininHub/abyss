@@ -499,18 +499,25 @@ export function embraceDurMs() {
 // 载具采集产出（DM/min）
 // v2.4：显示与到账统一为确定性数值口径 = Σ(载具数×档位速率)×(1+dmRateAdd 建筑加成)；
 // 不再掷骰（原概率投掷方差导致「显示 55/s 实际 1.1/min」类感知偏差，v2.3.2 定性与本版修复依据）
+// v3.3.6：把乘区抽成 vehicleRateMult()，供页头/卡片显示与探采结算共用同一口径
+export function vehicleBaseDmPerMin() {
+  let sum = 0;
+  BALANCE.vehicles.ids.forEach((id, i) => { sum += (S.upgrades[id] || 0) * BALANCE.vehicles.dmRates[i]; });
+  return sum;
+}
+export function vehicleRateMult() {
+  if (!converterEnabled('vehicles')) return 1;
+  let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
+  if (hasAbyssMarket()) m *= 1.5;          // 深渊集市 ×1.5
+  m *= researchMult('dm');                 // 星尘精炼（研究点）+8%/级
+  m *= converterThreadBoost('vehicles');   // 班组绑定（匹配/等级/领导）
+  return m;
+}
 export function vehicleDmPerMin() {
   // v3.3.4 反馈①：探采开关统一口径——原来这里只读 converterOn.vehicles，而页头开关只写 _probeEnabled，
   // 两轨不同步 → 页头显示「探采中」但 rate=0（永不采集）、关掉也不影响消耗
   if (!converterEnabled('vehicles')) return 0;
-  let sum = 0;
-  BALANCE.vehicles.ids.forEach((id, i) => { sum += (S.upgrades[id] || 0) * BALANCE.vehicles.dmRates[i]; });
-  // v2.5.1：深渊鱼缸（DM 采集 +20%/级，深渊行者线专属建筑）+ 深渊集市（×1.5，叠乘）
-  let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
-  if (hasAbyssMarket()) m *= 1.5;
-  m *= researchMult('dm'); // v2.8.25 ②：星尘精炼（研究点）载具 DM 采集 +8%/级
-  m *= converterThreadBoost('vehicles'); // v3.3.0：绑定线程（匹配/高等级/领导）提升 DM 采集
-  return sum * m;
+  return vehicleBaseDmPerMin() * vehicleRateMult();
 }
 // 单次采集到账（确定性按速率计算，60s 节拍由 vehicles.tickVehicleCollect 承担；小数累加进 S.dm）
 export function collectVehicleDm() {
@@ -789,13 +796,35 @@ export function salaryDrainPerSec() {
   if (st === 'dormant' || st === 'losing') return sal * wageKeepCostMult(); // 休眠/流失预警只扣保命成本
   return sal;
 }
+// v3.3.6 反馈①：探采「实际结算」口径——按 DM 剩余容量钳制，只买装得下的部分。
+// 旧实现按理论产能（Σ载具×档位×建筑×研究×班组）全额扣 EP，DM 却按 1000 上限截断：
+// 27 辆载具 + 班组乘区 ≈6600× 时，一个周期名义采 16499 DM、实收 1000，94% 的 EP 白烧。
+export function probeFlowPerSec() {
+  const zero = { epPerSec: 0, dmPerSec: 0, nominalDmPerSec: 0, room: 0, limited: false, epPerDm: 0, wantPerCycle: 0 };
+  if (!converterEnabled('vehicles')) return zero;
+  const wantMin = vehicleDmPerMin();
+  if (wantMin <= 0) return zero;
+  const interval = BALANCE.vehicles.collectInterval || 60;
+  const wantPerCycle = (wantMin / 60) * interval;
+  const room = Math.max(0, dmCap() - (S.dm || 0));
+  const actualPerCycle = Math.min(wantPerCycle, room);      // 装得下多少买多少
+  const epPerDm = vehicleEpPerDm();
+  const cycleCost = actualPerCycle * epPerDm;
+  const affordable = (S.ep || 0) >= cycleCost;
+  return {
+    epPerSec: affordable ? cycleCost / interval : 0,
+    dmPerSec: affordable ? actualPerCycle / interval : 0,
+    nominalDmPerSec: wantMin / 60,
+    room,
+    limited: actualPerCycle < wantPerCycle - 1e-9,
+    epPerDm,
+    wantPerCycle,
+    affordable,
+    needPerCycle: cycleCost,
+  };
+}
 export function probeDrainPerSec() {
-  if (!converterEnabled('vehicles')) return 0; // v3.3.4 反馈①：与页头开关/快捷开关同口径
-  const perMin = vehicleDmEpCostPerMin();
-  if (perMin <= 0) return 0;
-  const cycleCost = (perMin / 60) * BALANCE.vehicles.collectInterval;
-  if ((S.ep || 0) < cycleCost) return 0; // 本周期 EP 不足 → 跳过（不扣费）
-  return perMin / 60;
+  return probeFlowPerSec().epPerSec; // v3.3.6：与 tick 实扣同口径（含容量钳制/EP 不足跳过）
 }
 export function faithDrainNow() {
   if ((S.ep || 0) <= 0) return 0; // EP 已空：圣所本轮不扣费

@@ -5,7 +5,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleDmEpCostPerMin, vehicleEpPerDm, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -686,14 +686,26 @@ function updateVehicleCollectHeader() {
   const el = document.getElementById('vehicle-collect');
   if (!el) return;
   const rate = vehicleDmPerMin();
-  const enabled = converterEnabled('vehicles'); // v3.3.4 反馈①：与快捷开关/tick 同一状态源（原读 _probeEnabled，与 vehicleDmPerMin 的 converterOn 双轨打架 → 开关假生效）
+  const enabled = converterEnabled('vehicles'); // v3.3.4 反馈①：与快捷开关/tick 同一状态源
   const dmTxt = `当前 DM: ${(S.dm || 0).toFixed(2)}`;
+  const flow = probeFlowPerSec();
   let info, tip;
   if (rate > 0) {
-    const epPerSec = vehicleDmEpCostPerMin() / 60;
-    // v3.3.4 反馈①：EP 消耗统一走 fmt（K/M 简化），原 Number(toFixed(1)) 会显示 1666.7 这类裸数字
-    info = `${dmTxt} · 探采 -${fmt(epPerSec)} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`;
-    tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`;
+    // v3.3.6 反馈①：显示口径与实扣一致——按 DM 剩余容量钳制，并标明原因
+    // （旧实现按理论产能全额展示/扣费，实际只入账 1000 DM，消耗看起来大得离谱且大半白烧）
+    const interval = BALANCE.vehicles.collectInterval || 60;
+    const epShown = flow.affordable ? flow.epPerSec : flow.needPerCycle / interval;
+    const dmShown = flow.dmPerSec;
+    const reason = !flow.affordable ? '（EP 不足，本周期跳过）' : (flow.limited ? '（受 DM 上限限制）' : '');
+    info = `${dmTxt} · 探采 -${fmt(epShown)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
+    tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(flow.epPerDm)} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增）\n`
+      + `每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊鱼缸/集市/研究/班组可提升采集效率\n`
+      + `理论产能 ${fmtDmPerSec(flow.nominalDmPerSec)} DM/s = 基础 ${fmtDmPerSec(vehicleDmPerMin() / 60 / Math.max(1e-9, vehicleRateMult()))} × 加成 ${vehicleRateMult().toFixed(2)}×（班组/研究/鱼缸/集市）\n`
+      + `DM 剩余容量 ${flow.room.toFixed(2)} → 本周期只采 ${Math.min(flow.wantPerCycle, flow.room).toFixed(2)} DM，按实际采集量扣 EP（不再为溢出量付费）\n`
+      + `EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集\n`
+      + (flow.nominalDmPerSec * interval > dmCap()
+        ? '⚠ 当前产能已超过 DM 存储上限：班组/建筑加成的边际收益为 0（只会更快满仓），可考虑撤回部分线程'
+        : '');
   } else {
     info = dmTxt; // v2.4.2：DM 精确到小数
     tip = enabled ? '购买载具后每 60 秒自动采集深渊物质' : '探采已暂停：点击「已暂停」恢复采集（EP 消耗同步恢复）';
@@ -809,9 +821,15 @@ function makeVehicleItem(u) {
   // v2.8.30：探采卡文案精简为两行（消耗负红 / 产出正绿），障碍信息移除
   const dmIdx = BALANCE.vehicles.ids.indexOf(u.id);
   const dmRate = dmIdx >= 0 ? BALANCE.vehicles.dmRates[dmIdx] : 0;
-  const probeEp = dmRate > 0 ? (dmRate * BALANCE.vehicles.epPerDm / 60) : 0;
+  // v3.3.6 反馈①：卡片单价与页头同口径——含「载具汇率 ×1.15^总载具数」与「班组/研究/鱼缸/集市乘区」；
+  // 原卡片只显示基础单价（12.5 EP/s），页头却按 6600× 乘区显示 179.58M/s，两者差 6 个数量级
+  const vehMult = vehicleRateMult();
+  const probeEp = dmRate > 0 ? (dmRate * vehicleEpPerDm() * vehMult / 60) : 0;
+  if (probeEp > 0) {
+    div.title = `基础单价 ${Number((dmRate * BALANCE.vehicles.epPerDm / 60).toFixed(2))} EP/s × 汇率 ${fmt(vehicleEpPerDm() / BALANCE.vehicles.epPerDm)} × 加成 ${vehMult.toFixed(2)}× = ${fmt(probeEp)} EP/s（单辆；DM 满仓时按剩余容量结算，可能低于名义值）`;
+  }
   const lines = probeEp > 0
-    ? `<div class="veh-line" style="color:var(--bad)">−${Number(probeEp.toFixed(1))} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate / 60)} DM/s</div>`
+    ? `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`
     : `<div class="veh-line">${fmt(cpsEach)} EP/s</div>`;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
     <div class="desc">${lines}</div>

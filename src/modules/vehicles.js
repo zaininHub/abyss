@@ -3,7 +3,7 @@
 // 数值与档位表在 BALANCE.vehicles；产出 vehicleDmPerMin()/collectVehicleDm() 在 economy.js（纯读侧）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin, dmCap } from './economy.js';
+import { collectVehicleDm, vehicleDmPerMin, vehicleEpPerDm, dmCap } from './economy.js';
 import { addDm, fmt } from './economy.js'; // v2.8.27 ②：DM 上限
 import { converterEnabled } from './threadBinding.js'; // v3.3.4 反馈①：开关统一口径
 
@@ -22,10 +22,15 @@ export function tickVehicleCollect(dt) {
   // v3.2.2：旧档自动暂停标记清理（机制已废除）
   if (S._probeAutoPaused) S._probeAutoPaused = false;
 
-  const epCostPerCycle = (vehicleDmEpCostPerMin() / 60) * BALANCE.vehicles.collectInterval;
   // v3.3.3 反馈⑧：DM 满仓跳过本轮（不扣 EP、计时冻结）——原实现 addDm 钳 0 但 EP 照扣，白烧资源
   if ((S.dm || 0) >= dmCap() - 1e-9) { S._dmFull = true; S._probeEpShortSec = 0; return false; }
   S._dmFull = false;
+  // v3.3.6 反馈①：只买「装得下」的部分——原实现按理论产能全额扣 EP，DM 却按上限截断，
+  // 高班组乘区下 94% 的 EP 白烧（名义 16499 DM/周期 → 实收 1000）
+  const room = Math.max(0, dmCap() - (S.dm || 0));
+  const wantDm = collectVehicleDm();
+  const dm = Math.min(wantDm, room);
+  const epCostPerCycle = dm * vehicleEpPerDm();
   // EP 不足：本轮跳过（不扣费、计时器冻结），EP 回升后自动继续
   if ((S.ep || 0) < epCostPerCycle) {
     S._probeEpShortSec = (S._probeEpShortSec || 0) + dt;
@@ -38,7 +43,6 @@ export function tickVehicleCollect(dt) {
   S.vehCollectTimer = (S.vehCollectTimer || 0) + dt;
   if (S.vehCollectTimer < BALANCE.vehicles.collectInterval) return false;
   S.vehCollectTimer -= BALANCE.vehicles.collectInterval;
-  const dm = collectVehicleDm();
   if (dm <= 0) return false;
   S.ep -= epCostPerCycle;
   addDm(dm); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
