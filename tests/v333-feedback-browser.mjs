@@ -80,7 +80,7 @@ try {
   });
   if (p1.rate > 0 && p1.moved) ok('① 经验持续增长、进度条移动', `${p1.rate.toFixed(0)} exp/s`); else bad('① 进度条', JSON.stringify(p1));
 
-  // PT 门：经验满 + 饼干不足 → 进度条悬浮提示（v3.3.4：卡面只留维持文案，门槛提示移入 title）
+  // PT 门：经验满 → 卡面出现「升级」按钮（v3.3.7：自动升级移除，改为手动升级）
   const p1b = await page.evaluate(async () => {
     const pet = window.S.pets.cat;
     pet.exp = Math.floor(1200 * Math.pow(pet.level, 2.8));
@@ -88,19 +88,25 @@ try {
     window.__gameDirty.pets = true;
     await new Promise(r => setTimeout(r, 700));
     const t = document.querySelector('.pet-xp')?.getAttribute('title') || '';
-    return { hint: /升级需/.test(t), level: pet.level };
+    return { hint: /升级/.test(t), level: pet.level };
   });
-  if (p1b.hint) ok('① 经验满且饼干不足时进度条悬浮给出「升级需 X PT」'); else bad('① PT 门提示', JSON.stringify(p1b));
+  if (p1b.hint) ok('① 经验满时进度条悬浮给出升级提示'); else bad('① PT 门提示', JSON.stringify(p1b));
 
-  // 饼干充足 → 正常升级
+  // v3.3.7：不再自动升级——等待期间等级不变；点「升级」按钮才消耗 PT 升级
   const p1c = await page.evaluate(async () => {
     const pet = window.S.pets.cat;
     window.S.pt = 5000;
     const lv0 = pet.level;
     await new Promise(r => setTimeout(r, 1200));
-    return { leveled: pet.level > lv0, lv: pet.level, pt: Math.floor(window.S.pt) };
+    const noAuto = pet.level === lv0;
+    const btn = document.querySelector('#pet-grid [data-pet-up]');
+    const btnText = btn ? btn.textContent : '';
+    if (btn) btn.click();
+    await new Promise(r => setTimeout(r, 400));
+    return { noAuto, btnText, leveled: pet.level > lv0, lv: pet.level, pt: Math.floor(window.S.pt) };
   });
-  if (p1c.leveled) ok('① 饼干充足 → 升级正常消耗 PT', `Lv.${p1c.lv} pt=${p1c.pt}`); else bad('① 升级失败', JSON.stringify(p1c));
+  if (p1c.noAuto && p1c.leveled && /升级.*PT/.test(p1c.btnText)) ok('① 无自动升级 + 手动「升级」按钮消耗 PT', `Lv.${p1c.lv} pt=${p1c.pt} btn="${p1c.btnText}"`);
+  else bad('① 手动升级', JSON.stringify(p1c));
 
   // ===== ③ RP 效率递增 =====
   const p3 = await page.evaluate(async () => {
@@ -254,7 +260,7 @@ try {
       res({ cost0, cost1, ratio: cost0 > 0 ? cost1 / cost0 : 0 });
     }, 500));
   });
-  if (p11.ratio > 1.4 && p11.ratio < 1.7) ok('⑪ 线程强化购后成本 ×≈1.55', `${p11.cost0}→${p11.cost1}`);
+  if (p11.ratio > 1.75 && p11.ratio < 2.05) ok('⑪ 线程强化购后成本 ×≈1.9（v3.3.7 再涨价）', `${p11.cost0}→${p11.cost1}`);
   else bad('⑪ 线程涨价', JSON.stringify(p11));
 
   const p11b = await page.evaluate(async () => {
@@ -271,7 +277,7 @@ try {
     const cost1 = parseFloat((card2?.querySelector('.cost')?.textContent || '0').replace(/[^0-9.]/g, '')) || 0;
     return { found: true, cost0, cost1, ratio: cost0 > 0 ? cost1 / cost0 : 0 };
   });
-  if (p11b.found && p11b.ratio > 1.6 && p11b.ratio < 1.9) ok('⑪ 晋升 RP 加成购后成本 ×≈1.73（1.28×1.35）', `${p11b.cost0}→${p11b.cost1}`);
+  if (p11b.found && p11b.ratio > 2.1 && p11b.ratio < 2.7) ok('⑪ 晋升 RP 加成购后成本 ×≈2.3（1.28×1.8，v3.3.7 再涨价）', `${p11b.cost0}→${p11b.cost1}`);
   else bad('⑪ RP 族涨价', JSON.stringify(p11b));
 
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);

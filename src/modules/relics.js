@@ -117,7 +117,9 @@ export function refreshRelicAffordability() {
       const def = PURIFIER_DEFS.find(x => x[0] === id);
       if (!def) continue;
       const lv = (S.upgrades && S.upgrades[id]) || 0;
-      const cost = Math.ceil(def[1] * Math.pow(1.8, lv));
+      // v3.3.7 反馈①：原 def[1] 取到的是名字字符串（'净化节点 I'）→ cost=NaN → canBuy 恒 false，
+      // 每 300ms 原地刷新把刚渲染成可购的按钮又强制置灰——「68DM 对 50 却一直闪烁无法购买」的另一根因
+      const cost = Math.ceil(def[2] * Math.pow(1.8, lv));
       const maxed = lv >= 3;
       canBuy = !maxed && (S.dm || 0) >= cost;
     } else {

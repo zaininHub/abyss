@@ -77,7 +77,7 @@ body {
 /* ========== 主网格（v3.3.3 反馈②：四列——第一列任务/自动转化/裂隙/成就、第二列英雄/班组、中列标签页、右列日志/故事线/晋升） ========== */
 .grid {
   display: grid;
-  grid-template-columns: minmax(270px, 0.95fr) minmax(280px, 0.95fr) minmax(0, 1.5fr) minmax(250px, 0.85fr);
+  grid-template-columns: minmax(225px, 0.62fr) minmax(330px, 1.18fr) minmax(0, 1.65fr) minmax(240px, 0.8fr); /* v3.3.7 反馈③：左一收窄/左二与中间两列扩宽 */
   gap: 12px;
 }
 
@@ -589,6 +589,11 @@ body {
 .off-upg .cost { color: var(--accent); }
 
 /* ========== 任务版 ========== */
+/* v3.3.7 反馈③：任务版尺寸固定——任务完成/新增时面板高度不再跳动（内容超出内部滚动） */
+#projects {
+  height: 360px;
+  overflow-y: auto;
+}
 #projects .proj {
   padding: 8px;
   border: 1px solid var(--border);
@@ -826,7 +831,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(260px, 0.9fr) minmax(270px, 0.9fr) minmax(0, 1.3fr) minmax(230px, 0.8fr);
+    grid-template-columns: minmax(215px, 0.6fr) minmax(310px, 1.1fr) minmax(0, 1.45fr) minmax(220px, 0.75fr); /* v3.3.7 反馈③：紧凑断点同步 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;

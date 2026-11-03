@@ -63,9 +63,9 @@ export function templeFaithPerSec() {
 }
 
 // ===== v2.6.4 ⑤ 信仰超长线：神谕塔 / 圣战军（消耗信仰的后期升级点） =====
-export const ORACLE = { id: 'oracle', name: '神谕塔', base: 600, growth: 2.2, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级' }; // v3.0.3 后续反馈⑦：600×2.2（原 100×1.8）
+export const ORACLE = { id: 'oracle', name: '神谕塔', base: 2500, growth: 2.6, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级' }; // v3.0.3 后续反馈⑦：600×2.2 // v3.3.7 反馈⑤：过于便宜 → 2500×2.6（到满级总投入 ×9.7）
 
-export const CRUSADE = { id: 'crusade', name: '圣战军', base: 1000, growth: 2.3, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级' }; // v3.0.3 后续反馈⑦：1000×2.3（原 200×1.9）
+export const CRUSADE = { id: 'crusade', name: '圣战军', base: 5000, growth: 2.7, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级' }; // v3.0.3 后续反馈⑦：1000×2.3 // v3.3.7 反馈⑤：过于便宜 → 5000×2.7（到满级总投入 ×8.6）
 export function oracleLevel() { return (S.religion && S.religion.oracle) || 0; }
 export function crusadeLevel() { return (S.religion && S.religion.crusade) || 0; }
 export function oracleCost() { const lv = oracleLevel(); return Math.round(ORACLE.base * Math.pow(ORACLE.growth, lv)); }

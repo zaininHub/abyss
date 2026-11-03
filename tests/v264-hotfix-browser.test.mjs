@@ -56,18 +56,20 @@ try {
     await sleep(900);
     await page.evaluate(() => document.getElementById('btn-religion').click());
     await sleep(300);
+    // 神谕塔升级按钮（圣印 3 达标 → 可点）；v3.3.7 反馈⑤：神谕塔涨价 2500×2.6，播种 10 万 FP 再验证扣费
+    await page.evaluate(() => { window.S.faith = 100000; });
+    await sleep(200);
     const before = await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
-      return { oracle: s.religion.oracle, faith: s.faith };
+      return { oracle: s.religion.oracle, faith: window.S.faith };
     });
-    // 神谕塔升级按钮（圣印 3 达标 → 可点）
     await page.evaluate(() => { const b = document.querySelector('[data-religion-oracle]'); if (b && !b.disabled) b.click(); });
     await sleep(300);
     const after = await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
-      return { oracle: s.religion.oracle || 0, faith: s.faith };
+      return { oracle: s.religion.oracle || 0, faith: window.S.faith };
     });
-    rec('V3 神谕塔购买成功（-10 信仰，期间圣所累计 ~+0.3）', after.oracle === 1 && after.faith > before.faith - 11 && after.faith < before.faith - 9, `oracle=${after.oracle},faith=${before.faith}→${after.faith.toFixed(2)}`);
+    rec('V3 神谕塔购买成功（-2500 信仰，v3.3.7 涨价口径）', after.oracle === 1 && after.faith > before.faith - 2510 && after.faith < before.faith - 2490, `oracle=${after.oracle},faith=${before.faith}→${after.faith.toFixed(2)}`);
     // 面板显示圣战军（圣所 5 达标）
     const panelTxt = await page.evaluate(() => document.getElementById('religion-panel').textContent);
     rec('V3 面板显示神谕塔/圣战军升级点', panelTxt.includes('神谕塔') && panelTxt.includes('圣战军'), '');

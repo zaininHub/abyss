@@ -135,15 +135,15 @@ try {
   else bad('② 班组转化器开关', JSON.stringify(crew2));
   if (crew2.autobind) ok('② 智能分配按钮保留'); else bad('② 智能分配丢失');
 
-  // ===== ④ 异兽页孵化文案只写当前总计 =====
+  // ===== ④ 异兽页孵化文案（v3.3.7：EP 总量去除，只留 ×N 与 +PT/s） =====
   await page.click('#btn-pets').catch(() => {});
   await sleep(700);
   const pets4 = await page.evaluate(() => {
     const g = document.getElementById('pet-grid');
     const t = g?.innerText || '';
-    return { hasTotal: /总计 -/.test(t), hasNext: /下级/.test(t) };
+    return { hasTotal: /总计 -/.test(t), hasNext: /下级/.test(t), hasPt: /PT\/s/.test(t) };
   });
-  if (pets4.hasTotal && !pets4.hasNext) ok('④ 孵化文案只写当前总计（无「下级」）'); else bad('④ 孵化文案', JSON.stringify(pets4));
+  if (!pets4.hasTotal && !pets4.hasNext && pets4.hasPt) ok('④ 孵化文案只留 ×N + PT/s（EP 总量已去除）'); else bad('④ 孵化文案', JSON.stringify(pets4));
 
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exitCode = fail ? 1 : 0;

@@ -52,20 +52,24 @@ export function gainPetExp(dt) {
     const p = S.pets[id];
     if (!p || p.level >= 100) continue;
     p.exp += computeCps() * dt * 0.1 * mult; // v3.0.3 后续反馈③：升级速率 ÷4（0.4→0.1）——异兽升级过快（叠加饼干门槛与孵化产出线性化）
-    while (p.exp >= petExpNeed(p.level) && p.level < 100) {
-      // v3.0.3 第二批⑤：升级需消耗异兽饼干；饼干不足时本回合停止升级（资源门槛陡峭化）
-      const ptNeed = petPtNeed(p.level);
-      if ((S.pt || 0) < ptNeed) {
-        // v3.3.4 反馈③：饼干不足付不起本级升级费时，经验封顶在升级线——原实现继续无限累积，
-        // 经验条永远 100% 且看不出「卡在等饼干」，升级后还会一口气跳好几级
-        p.exp = petExpNeed(p.level);
-        break;
-      }
-      S.pt = Math.max(0, (S.pt || 0) - ptNeed);
-      p.exp -= petExpNeed(p.level);
-      p.level++;
-    }
+    // v3.3.7 反馈④：异兽不再自动升级（不再自动扣 PT）——经验满即封顶，
+    // 由玩家在卡面点「升级」按钮手动消耗异兽饼干（levelUpPet）
+    if (p.exp > petExpNeed(p.level)) p.exp = petExpNeed(p.level);
   }
+}
+
+// v3.3.7 反馈④：手动升级——经验满 ∧ PT 足够时由玩家点击升级（原自动升级已移除）
+export function levelUpPet(id) {
+  const p = S.pets[id];
+  if (!p || p.level >= 100) return { ok: false, reason: '已满级' };
+  if (p.exp < petExpNeed(p.level)) return { ok: false, reason: '经验未满' };
+  const ptNeed = petPtNeed(p.level);
+  if ((S.pt || 0) < ptNeed) return { ok: false, reason: `PT 不足（需 ${fmt(ptNeed)}）` };
+  S.pt = Math.max(0, (S.pt || 0) - ptNeed);
+  p.exp = Math.max(0, p.exp - petExpNeed(p.level));
+  p.level++;
+  save(S);
+  return { ok: true, level: p.level };
 }
 
 // v3.2.1 反馈⑨：异兽存活维持——出战异兽每秒消耗 PT（随等级增长），PT 不足自动休战，恢复缓冲 PT ≥ 1 后重新出战
@@ -151,13 +155,17 @@ export function renderPetGrid(container) {
     const xpReady = isActive && !starving && p.level < 100 && p.exp >= petExpNeed(p.level);
     const xpNow = Math.floor(Math.min(p.exp, xpNeed));
     const xpTitle = p.level >= 100 ? '已满级'
-      : `经验 ${xpNow} / ${Math.floor(xpNeed)}${xpReady ? ` · 已满，升级需 ${fmt(petPtNeed(p.level))} PT（当前 ${Math.floor(S.pt || 0)}）` : ''}`;
+      : `经验 ${xpNow} / ${Math.floor(xpNeed)}${xpReady ? ` · 已满，点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
+    // v3.3.7 反馈④：经验满时卡面出现「升级」按钮（显示 PT 消耗），手动升级取代自动升级
+    const upBtn = xpReady
+      ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level))} PT</button>`
+      : '';
     html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
       <div class="lv">Lv.${p.level}${stateTag}</div>
       ${upkLine}
-      <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`;
+      <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div>${upBtn}</div>`;
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));
@@ -167,7 +175,6 @@ export function renderPetGrid(container) {
   const ptOn = S.ptDistillOn === true;
   const autoHatch = S.ptAutoHatch === true;
   const hatchLv = S.ptHatchLv || 1;
-  const epPerS = 5000 * hatchLv; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000），与 main.js tick 同口径
   const ptPerS = 0.15 * hatchLv * converterThreadBoost('hatch'); // v3.3.3 反馈⑦：显示含绑定线程加成（与 tick 同口径）
   const upkeep = petUpkeepTotalPerSec();
   // v3.3.1 反馈②：异兽页只保留「孵化开关」；孵化升级（购买/升级）移入「设施」区
@@ -176,7 +183,7 @@ export function renderPetGrid(container) {
   if (!autoHatch) {
     hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
   } else {
-    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：总计 <b style="color:var(--bad)">-${fmt(epPerS)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b></span>
+    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b></span>
       <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`;
   }
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
@@ -210,7 +217,9 @@ export function renderPetGrid(container) {
     });
   }
   container.querySelectorAll('[data-pet-card]').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (ev) => {
+      // v3.3.7 反馈④：升级按钮在卡内——点击升级不触发出战切换（stopPropagation）
+      if (ev.target.closest && ev.target.closest('[data-pet-up]')) return;
       const id = el.dataset.petCard;
       // v2.0：影猫点击彩蛋计数
       if (id === 'cat') {
@@ -232,6 +241,17 @@ export function renderPetGrid(container) {
         const floatEl = document.getElementById('pet-float');
         if (floatEl) renderPetFloat(floatEl);
       }
+    });
+  });
+  // v3.3.7 反馈④：手动升级按钮（经验满 → 消耗 PT 升 1 级）
+  container.querySelectorAll('[data-pet-up]').forEach(el => {
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation(); // 不触发出战切换
+      const r = levelUpPet(el.dataset.petUp);
+      if (!r.ok && r.reason !== '经验未满') console.debug('[pet] levelUp:', r.reason);
+      renderPetGrid(container);
+      const floatEl = document.getElementById('pet-float');
+      if (floatEl) renderPetFloat(floatEl);
     });
   });
 }
@@ -258,12 +278,21 @@ export function renderPetFloat(container) {
 }
 
 // v2.8.26：宠物商店 PT 可购判断每秒刷新（此前渲染时一次性——PT 花掉后卡仍亮）
+// v3.3.7 反馈④：升级按钮灰态同步原地刷新（PT 变动不整面重建）
 export function refreshPetsAffordability() {
   const cards = document.querySelectorAll('#pet-grid [data-pet-buy]');
   for (const card of cards) {
     const p = PETS.find(x => x.id === card.dataset.petBuy);
     if (!p) continue;
     card.classList.toggle('cant', (S.pt || 0) < p.price);
+  }
+  const upBtns = document.querySelectorAll('#pet-grid [data-pet-up]');
+  for (const btn of upBtns) {
+    const p = S.pets[btn.dataset.petUp];
+    if (!p) continue;
+    const can = (S.pt || 0) >= petPtNeed(p.level) && p.exp >= petExpNeed(p.level);
+    btn.classList.toggle('disabled', !can);
+    btn.disabled = !can;
   }
 }
 

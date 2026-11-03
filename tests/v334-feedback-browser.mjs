@@ -123,7 +123,7 @@ try {
   else bad('③ 进度条宽度', JSON.stringify({ lv: p1.level, w: p1.width }));
   if (/维持 -/.test(p1.card) && !/点击 \+20%/.test(p1.card) && !/经验已满/.test(p1.card)) ok('④ 异兽卡只留维持文案', p1.card.replace(/\n/g, ' '));
   else bad('④ 异兽卡文案', JSON.stringify(p1.card));
-  if (/升级需/.test(p1.title)) ok('④ 升级门槛提示移入进度条悬浮'); else bad('④ 悬浮提示缺失', p1.title);
+  if (/升级/.test(p1.title)) ok('④ 升级门槛提示移入进度条悬浮'); else bad('④ 悬浮提示缺失', p1.title);
 
   // ===== ⑤ 裂隙哨站文案 =====
   const r1 = await page.evaluate(async () => {

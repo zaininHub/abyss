@@ -36,7 +36,7 @@ import { renderCrewPanel, crewPush } from './modules/crew.js'; // v3.1.0 反馈�
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
-import { relicsUnlocked } from './data/relics.js'; // v2.7.0：遗物入口门控
+import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
@@ -2025,6 +2025,7 @@ function tickTide(dt) {
 let lastTick = performance.now();
 let lastShopCheck = 0;
 let lastAffordCheck = 0; // v3.0.5 反馈②：可购买态（灰态/价格）快刷节拍——原与 5s 解锁检测同块，玩家感知「能不能买」滞后严重
+let _relicSig = ''; // v3.3.7 反馈①：遗物面板结构签名（gate/等级/净化节点/解锁）——变化才整面重建，杜绝周期性闪烁
 let lastUnlockedCount = -1;
 let lastProjRender = 0;      // v2.0：任务面板 1s 节流重绘
 let tideCachePhase = -1;     // v2.0：潮汐脏检查缓存
@@ -2378,9 +2379,16 @@ function tick(now) {
   // → 轮回卡/岔路口卡 hover 每帧替换闪烁。购买/转生等事件仍即时置位，此处仅降频兜底刷新
   if ((frame % 20) === 0) { dirty.prestige = true; dirty.story = true; dirty.storyline = true; dirty.achievements = true; } // v3.2.4 反馈②：右列故事线/成就随 2s 兜底刷新
 
-  // v2.7.4 ①：遗物 gate 状态周期刷新（DM 满足但进度不足时，进度推进后按钮状态及时更新，
-  // 避免刷新页面才可买）——独立于 5s 商店节流，每 2s 置位，render() 每 tick 消费
-  if ((frame % 20) === 0) dirty.relics = true;
+  // v2.7.4 ①：遗物 gate 状态周期刷新——v3.3.7 反馈①：不再无条件每 2s 整面重建！
+  // 原实现 dirty.relics 每 2s 置位 → renderRelics 每 2s innerHTML 全量替换 → 按钮/卡片每 2s 销毁重建，
+  // hover 一直闪烁、慢速点击（mousedown→mouseup 间隔跨重建点）被吞——「净化节点存活 68DM 消耗 50 一直闪烁无法购买」
+  // 现改为结构签名比对：仅 gate/等级/解锁结构变化时才整面重建；可购态（DM 够不够）由 300ms
+  // refreshRelicAffordability 原地维护（纯 class/disabled 切换，不动 DOM 结构，零闪烁）
+  const relicSigNow = RELICS.map(r => `${r.id}:${relicLevel(r.id)}:${r.gate() ? 1 : 0}`).join(',')
+    + `|P:${['purifier1', 'purifier2', 'purifier3'].map(id => (S.upgrades && S.upgrades[id]) || 0).join('.')}`
+    + `|T:${(S.tech && S.tech.entropy_reduce) ? 1 : 0}`
+    + `|U:${relicsUnlocked() ? 1 : 0}`;
+  if (relicSigNow !== _relicSig) { _relicSig = relicSigNow; dirty.relics = true; }
 
   // v3.0.5 反馈②：可购买态快刷（灰态/价格，纯 class/textContent 原地更新不重建 DOM）——300ms
   // 原实现与 5s 解锁检测同块执行，导致「EP 已够但卡片仍灰」「新解锁卡片迟迟不出现」肉眼可见延迟

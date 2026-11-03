@@ -77,7 +77,7 @@ export function buyUpgrade(u) {
 function threadCost(u) {
   if (CAP_EXPANSION_IDS.includes(u.id)) return unitCost(u, 0);
   const owned = S.upgrades[u.id] || 0;
-  return Math.ceil(u.base * Math.pow(1.55, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 // v3.3.3 反馈⑪：线程/薪资强化大幅涨价 1.30→1.55
+  return Math.ceil(u.base * Math.pow(1.9, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 // v3.3.3 反馈⑪：1.30→1.55 // v3.3.7 反馈②：1.55→1.90（线程/薪资强化再大幅涨价）
 }
 
 export function buyThreadUpgrade(u) {
@@ -231,7 +231,8 @@ const RP_FAMILY_SRC_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk
 function rpFamilyCost(u) {
   const owned = (S.upgrades[u.id] || 0);
   // v3.3.3 反馈⑪：晋升 RP 加成族大幅涨价——每级额外 ×1.35（有效曲线 1.28~1.42 → 1.73~1.92）
-  return Math.ceil((u.rpCost || 8) * Math.pow((u.growth || 1.18) * 1.35, owned));
+  // v3.3.7 反馈②：再大幅涨价 ×1.35→×1.8（有效曲线 2.30~2.56）
+  return Math.ceil((u.rpCost || 8) * Math.pow((u.growth || 1.18) * 1.8, owned));
 }
 function makeRpFamilyItem(u) {
   const owned = (S.upgrades[u.id] || 0);
