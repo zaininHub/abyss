@@ -30,7 +30,7 @@ const rec = (name, ok, extra = '') => {
 
 const mkSave = (extra = {}) => JSON.stringify(Object.assign({
   _version: 6, chapter: '3', storyline: 'default', ep: 5e8, rp: 50, es: 0, dm: 0, vs: 0,
-  upgrades: { storage: 300, cpu: 1 }, buildings: {}, tech: {}, ai: {}, milesDone: {},
+  upgrades: { storage: 300, cpu: 1, scooter: 1 }, buildings: {}, tech: {}, ai: {}, milesDone: {},
   // 三个已知职业的线程（覆盖匹配/不匹配/领导三种链路）
   cultists: [
     { id: 'c1', name: '勘探员A', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
@@ -60,8 +60,9 @@ try {
         .every(fn => tb.includes(`export function ${fn}`)),
       '');
     const crew = fs.readFileSync('src/modules/crew.js', 'utf-8');
-    rec('源码 crew.js 含绑定/领导/智能分配/转化器开关钩子',
-      ['data-bind', 'data-leader', 'data-autobind', 'data-conv-toggle'].every(k => crew.includes(k)),
+    // v3.3.2 反馈②：班组面板不再提供转化器开关（统一到快捷开关/研究点/异兽页）
+    rec('源码 crew.js 含绑定/领导/智能分配钩子（无转化器开关）',
+      ['data-bind', 'data-leader', 'data-autobind'].every(k => crew.includes(k)) && !crew.includes('data-conv-toggle'),
       '');
     const main = fs.readFileSync('src/main.js', 'utf-8');
     rec('源码 main.js 暴露 window.__qa.threadBind 与 window.S',
@@ -98,7 +99,7 @@ try {
     const selCount = await page.evaluate(() => document.querySelectorAll('#crew-panel select[data-bind]').length);
     rec('每张线程卡含绑定下拉 select[data-bind]', selCount === 3, `selCount=${selCount}`);
     const convCount = await page.evaluate(() => document.querySelectorAll('#crew-panel [data-conv-toggle]').length);
-    rec('含 2 个转化器开关按钮', convCount === 2, `convCount=${convCount}`);
+    rec('班组不再含转化器开关按钮（v3.3.2）', convCount === 0, `convCount=${convCount}`);
   }
 
   // ② 领导晋升：c3 初始为领导者 → leaderCount=1
@@ -170,20 +171,21 @@ try {
   }
 
   // ④ 转化器开关：关闭探采 → 释放绑定、boost 归 1
+  // v3.3.2：班组开关已移除——改走任务版上方快捷开关（同一 setConverterEnabled 口径）
   {
     const onBefore = await page.evaluate(() => window.__qa.threadBind.converterThreadBoost('vehicles'));
-    await page.evaluate(() => document.querySelector('[data-conv-toggle="vehicles"]').click());
+    await page.evaluate(() => document.querySelector('[data-qs="probe"]').click());
     await wait(150);
     const r = await page.evaluate(() => ({
       off: window.S.converterOn.vehicles === false,
       boost: window.__qa.threadBind.converterThreadBoost('vehicles'),
-      btnTxt: document.querySelector('[data-conv-toggle="vehicles"]').textContent,
+      btnTxt: document.querySelector('[data-qs="probe"]').textContent,
     }));
-    rec('点击探采开关后 converterOn.vehicles=false', r.off, `onBefore=${onBefore}`);
+    rec('点击探采快捷开关后 converterOn.vehicles=false', r.off, `onBefore=${onBefore}`);
     rec('关闭探采后绑定 boost 归 1（释放）', r.boost === 1, `boost=${r.boost}`);
-    rec('开关按钮文案显示「关」', r.btnTxt.includes('关'), `txt=${r.btnTxt}`);
+    rec('快捷开关按钮文案显示「关」', r.btnTxt.includes('关'), `txt=${r.btnTxt}`);
     // 再开启恢复
-    await page.evaluate(() => document.querySelector('[data-conv-toggle="vehicles"]').click());
+    await page.evaluate(() => document.querySelector('[data-qs="probe"]').click());
     await wait(150);
     const restored = await page.evaluate(() => window.S.converterOn.vehicles !== false);
     rec('再次点击恢复探采开启', restored, '');

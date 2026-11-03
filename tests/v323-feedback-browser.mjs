@@ -53,7 +53,7 @@ try {
   await page.evaluate(() => { window.S.ep = 30000; window.S.allTimeEp = 30000; window.S.upgrades = { ...(window.S.upgrades || {}) }; delete window.S.upgrades.atrium; window.__gameDirty.shop = true; });
   await sleep(500);
   let atriumCard = await page.evaluate(() => { const h = document.querySelector('#building-list'); return h ? h.textContent : ''; });
-  if (atriumCard.includes('灵感工坊') && atriumCard.includes('购入')) ok('③ 未购时摆出首购卡（EP≥15K 揭示）'); else bad('③ 首购卡', atriumCard.slice(0, 50));
+  if (atriumCard.includes('灵感工坊') && atriumCard.includes('自动蒸馏')) ok('③ 未购时摆出首购卡（EP≥15K 揭示）'); else bad('③ 首购卡', atriumCard.slice(0, 50));
   await page.evaluate(() => {
     window.S.ep = 60000; window.S.allTimeEp = 1e8;
     window.S.upgrades.storage = 300; // 抬高 EP 存储上限（否则 tick 把 ep 钳回 cap，50K 买不起）
@@ -62,11 +62,12 @@ try {
     window.__gameDirty.shop = true;
   });
   await sleep(1300);
-  const buyAtrium = await page.$('#building-list [data-atrium-buy]');
+  // v3.3.2：整卡点击购买（data-atrium-upg），原 data-atrium-buy 按钮已移除
+  const buyAtrium = await page.$('#building-list [data-atrium-upg]');
   if (buyAtrium) { await buyAtrium.click(); await sleep(400); }
   const atriumLv = await page.evaluate(() => (window.S.upgrades.atrium || 0));
   if (atriumLv === 1) ok('③ 点击购入 → 灵感工坊 ×1（EP 扣 50K）'); else bad('③ 首购', `atrium=${atriumLv} ep=${await page.evaluate(() => Math.floor(window.S.ep))}`);
-  const atriumOwned = await page.evaluate(() => { const h = document.querySelector('#building-list'); return h ? h.textContent.includes('灵感工坊 ×1') : false; });
+  const atriumOwned = await page.evaluate(() => { const h = document.querySelector('#building-list'); return h ? h.textContent.includes('灵感工坊') && h.textContent.includes('×1') : false; });
   if (atriumOwned) ok('③ 购后切已拥有卡（升级）'); else bad('③ 已拥有卡');
   await sleep(1400); // 快捷开关随 1s 周期刷新出现
   const qsDistill = await page.evaluate(() => { const p = document.getElementById('quick-switches-panel'); return p ? (p.style.display !== 'none' && p.textContent.includes('蒸馏')) : false; });

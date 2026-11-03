@@ -13,8 +13,8 @@ import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
   threadBindOutputFactor, threadBindSalaryFactor, converterThreadBoost,
-  leaderGlobalMult, threadLevel, threadLevelMult,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统
+  leaderGlobalMult, threadLevel, threadLevelMult, converterEnabled,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈③：工坊消耗与开关同口径
 
 const B = BALANCE;
 
@@ -761,6 +761,8 @@ export function drainBreakdown() {
   if (faith > 0.005) parts.push(`信仰生产 -${fmt(faith)}/s`);
   const hatch = hatchDrainPerSec(); // v3.2.1 反馈⑥：异兽孵化 EP 扣减计入消耗值
   if (hatch > 0.005) parts.push(`异兽孵化 -${fmt(hatch)}/s`);
+  const atrium = atriumDrainPerSec(); // v3.3.2 反馈③：灵感工坊蒸馏 EP 扣减计入消耗值
+  if (atrium > 0.005) parts.push(`灵感工坊 -${fmt(atrium)}/s`);
   return parts;
 }
 // v3.3.1 反馈⑪：消耗口径与实际扣减对齐——
@@ -790,8 +792,18 @@ export function hatchDrainPerSec() {
   const h = ptHatchEpPerSec();
   return (S.ep || 0) > 0 ? h : 0; // EP 为 0 时孵化取不到 EP，不产生消耗
 }
+// v3.3.2 反馈③：灵感工坊 EP 消耗计入总消耗——原 totalDrainPerSec/drainBreakdown 遗漏工坊
+// （150×级数 EP/s），升级后顶栏「消耗」不变多的观感根因。口径与 main.js tick 一致：
+// 已购 × 蒸馏开启 × EP 可扣才计。
+export function atriumDrainPerSec() {
+  const n = (S.upgrades && S.upgrades.atrium) || 0;
+  if (n < 1) return 0;
+  if (!converterEnabled('atrium')) return 0; // 工坊关闭：不蒸馏不消耗（与 tick 同口径）
+  if ((S.ep || 0) <= 0) return 0; // EP 已空：扣费被钳到 0
+  return (BALANCE.atrium.epRate || 150) * n;
+}
 export function totalDrainPerSec() {
-  return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec();
+  return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
 }
 // v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 main.js tick 同口径：5000×级数 EP/s，解锁自动孵化且开关开启时生效）
 export function ptHatchEpPerSec() {

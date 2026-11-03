@@ -69,8 +69,9 @@ try {
   }));
   if (t3b.titleShown && t3b.card.includes('灵感工坊')) ok('③ EP 达标后首购卡+设施标题自动出现');
   else bad('③ 揭示', JSON.stringify(t3b).slice(0, 80));
+  // v3.3.2：首购卡改标准 item 文案「自动蒸馏：-X EP/s → +Y RP/s」
   if (t3b.card.includes('灵感工坊') && !t3b.card.includes('未购') && !t3b.card.includes('常驻本区')
-    && t3b.card.includes('EP 不足时暂停')) ok('③ 首购卡文案已修正（无「未购」/「常驻本区」）', t3b.card.slice(0, 60));
+    && t3b.card.includes('自动蒸馏')) ok('③ 首购卡文案已精简（无「未购」/「常驻本区」）', t3b.card.slice(0, 60));
   else bad('③ 首购卡文案', t3b.card.slice(0, 80));
 
   // ④ AI 自动购建：未全解锁不展示（先解锁 AI 核心科技）

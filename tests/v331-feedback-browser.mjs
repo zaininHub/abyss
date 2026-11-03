@@ -48,8 +48,8 @@ try {
   if (fac.hatchInBld) ok('② 异兽孵化工坊（购买/升级）在「设施」'); else bad('② 孵化卡缺失');
   if (fac.bldTitleShown) ok('① 设施标题随工坊卡显示'); else bad('① 设施标题被隐藏');
 
-  // 购入灵感工坊
-  await page.evaluate(() => document.querySelector('#building-list [data-atrium-buy]')?.click());
+  // 购入灵感工坊（v3.3.2：整卡点击购买，data-atrium-buy 按钮已移除）
+  await page.evaluate(() => document.querySelector('#building-list [data-atrium-upg]')?.click());
   await sleep(500);
   const bought = await page.evaluate(() => (window.S.upgrades.atrium || 0));
   if (bought >= 1) ok('① 购入灵感工坊成功', `Lv.${bought}`); else bad('① 购入失败');

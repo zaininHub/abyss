@@ -9,8 +9,7 @@ import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel, leaderCount,
   autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
-  converterEnabled, setConverterEnabled,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
 const STATE_META = {
@@ -55,9 +54,7 @@ export function renderCrewPanel(container) {
   const start = crewPage * PAGE_SIZE;
   const pageCultists = S.cultists.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
-  // v3.3.1：转化器开关状态并入签名——面板不再展示流水后，开关翻转必须触发重建（否则按钮文案停在旧态）
-  const convSig = CONVERTER_IDS.map(t => converterEnabled(t) ? 1 : 0).join('');
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${convSig}`;
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -102,11 +99,6 @@ export function renderCrewPanel(container) {
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：把空闲线程分配到最合适岗位">智能分配（领导者决策）</button>
-      <span style="font-size:12px;color:var(--text-2)">转化器开关：</span>
-      ${CONVERTER_IDS.map(t => {
-        const on = converterEnabled(t);
-        return `<button class="btn crew-conv-btn" data-conv-toggle="${t}" style="font-size:11px;padding:2px 8px;${on ? 'background:var(--good,#3fb950);color:#04210f' : 'background:#444;color:#ddd'}">${CONVERTERS[t].name} ${on ? '开' : '关'}</button>`;
-      }).join('')}
     </div>
     <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业（🔭勘探员→探采、⚗️蒸馏师→灵感工坊）无惩罚且加成更高；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
     <div class="crew-grid">${cards}</div>
@@ -139,16 +131,6 @@ export function renderCrewPanel(container) {
       if (ab) {
         const k = autoAssignThreads();
         crewPush(k > 0 ? `领导者调度：分配 ${k} 条线程到合适岗位` : '领导者调度：暂无可分配线程', 'good');
-        renderCrewPanel(container);
-        return;
-      }
-      const ct = ev.target.closest ? ev.target.closest('[data-conv-toggle]') : null;
-      if (ct) {
-        const t = ct.dataset.convToggle;
-        // v3.3.1：与「自动转化」/研究点开关同一口径（关→释放绑定、消耗恢复）
-        const nextOn = !converterEnabled(t);
-        setConverterEnabled(t, nextOn);
-        crewPush(`${CONVERTERS[t].name}已${nextOn ? '开启' : '关闭（释放绑定、线程消耗恢复）'}`, nextOn ? 'good' : 'bad');
         renderCrewPanel(container);
         return;
       }

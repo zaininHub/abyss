@@ -158,15 +158,14 @@ export function renderPetGrid(container) {
   const hatchLv = S.ptHatchLv || 1;
   const epPerS = 5000 * hatchLv; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000），与 main.js tick 同口径
   const ptPerS = 0.15 * hatchLv;
-  const epNext = 5000 * (hatchLv + 1);
-  const ptNext = 0.15 * (hatchLv + 1);
   const upkeep = petUpkeepTotalPerSec();
   // v3.3.1 反馈②：异兽页只保留「孵化开关」；孵化升级（购买/升级）移入「设施」区
+  // v3.3.2 反馈④：文案只写当前总计（去掉「下级」预览，升级后的变化看设施卡）
   let hatchCtl;
   if (!autoHatch) {
     hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
   } else {
-    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：总计 <b style="color:var(--bad)">-${fmt(epPerS)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b>　下级 <b style="color:var(--bad)">-${fmt(epNext)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptNext)} PT/s</b></span>
+    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：总计 <b style="color:var(--bad)">-${fmt(epPerS)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b></span>
       <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`;
   }
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
