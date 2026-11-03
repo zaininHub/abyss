@@ -13,6 +13,7 @@ import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { researchMult, addDm, addRp } from './economy.js'; // v3.0.8：RP 上限统一入口
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
+import { showAbyssGaze } from './abyssGaze.js'; // v3.4.2：凝视深渊彩蛋视觉层（独立模块，避免环形引用）
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
 export function discoverDm() {
@@ -188,6 +189,7 @@ export function buyRiftUpgrade(id) {
   S.riftEmber -= cost;
   S.riftUpgrades[id] = lv + 1;
   if (id === 'sentinel') S._riftNextSec = 0; // v3.3.5 反馈③：升级后立即按新间隔重算倒计时
+  if (id === 'gaze') { S.abyssGazeUnlocked = true; showAbyssGaze(); } // v3.4.2：凝视深渊彩蛋——首购常驻 + 触发裂开动画
   save(S);
   log(`[裂隙] 「${u.name}」升至 Lv.${lv + 1}（-${cost} 余烬）：${u.desc}`, 'good');
   return { ok: true, level: lv + 1 };

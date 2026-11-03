@@ -114,6 +114,7 @@ export function defaultState() {
     _prestigeSkips: 0,             // 连续不选天赋次数
     _idleSec: 0,                   // 连续不操作秒数
     _catClicks: 0,                 // 影猫点击次数
+    abyssGazeUnlocked: false,      // v3.4.2：凝视深渊彩蛋——已购裂隙「深渊凝视」升级（跨局保留）
     // v2.3.2 反馈②：_vehicleNames（载具命名记录）随命名彩蛋移除一并废除；旧档残留键无害随行
     _lastActionAt: Date.now(),     // 上次操作时间
     // 系统
@@ -312,7 +313,7 @@ export function load() {
     const migrated = migrateSave(raw);
     const defs = defaultState();
     // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', 'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
+    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', 'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar', 'abyssGazeUnlocked']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
     for (const k of crossRun) {
       if (migrated[k] !== undefined) defs[k] = migrated[k];
     }
@@ -323,7 +324,7 @@ export function load() {
                        'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar',
                        'cosmos',
                        'faithTemples', 'miraclesTriggered', 'prophecyNext',
-                       '_prestigeSkips', '_idleSec', '_catClicks', '_lastActionAt', 'resDiscovered']; // v2.3.2 反馈②：_vehicleNames 移除
+                       '_prestigeSkips', '_idleSec', '_catClicks', '_lastActionAt', 'resDiscovered', 'abyssGazeUnlocked']; // v2.3.2 反馈②：_vehicleNames 移除
     for (const k of newFields) {
       if (migrated[k] === undefined) migrated[k] = defs[k];
     }

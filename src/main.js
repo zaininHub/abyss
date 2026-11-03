@@ -46,6 +46,7 @@ import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）
+import { ensureAbyssGaze } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -1896,37 +1897,62 @@ function checkMiles() {
   }
 }
 
+// v3.4.2：统一成就表（判定 + 面板同源，消除 tests/defs 双表漂移隐患）
+// id 唯一；含 test 的项由 checkAch 自动判定，无 test 的项（demon_friend / gaze_abyss）由剧情手动点亮
+const ACHIEVEMENTS = [
+  { id: 'click1',    name: '初次接触', icon: '👆', desc: '第一次点击工作台，深渊回应了你的触碰', test: s => s.totalClicks >= 1 },
+  { id: 'ep1k',      name: '一丝涟漪', icon: '🌊', desc: '累计获得 1K EP', test: s => s.allTimeEp >= 1e3 },
+  { id: 'ep100k',    name: '涌动',     icon: '🌊', desc: '累计获得 100K EP', test: s => s.allTimeEp >= 1e5 },
+  { id: 'ep1m',      name: '深流',     icon: '🌊', desc: '累计获得 1M EP', test: s => s.allTimeEp >= 1e6 },
+  { id: 'ep1b',      name: '渊海',     icon: '🌊', desc: '累计获得 1B EP', test: s => s.allTimeEp >= 1e9 },
+  { id: 'ep1t',      name: '滔天',     icon: '🌊', desc: '累计获得 1T EP', test: s => s.allTimeEp >= 1e12 },
+  { id: 'ep1qa',     name: '湮灭临界', icon: '🌊', desc: '累计获得 1Qa EP', test: s => s.allTimeEp >= 1e15 },
+  { id: 'ep1sx',     name: '奇点之外', icon: '🌊', desc: '累计获得 1Sx EP', test: s => s.allTimeEp >= 1e18 },
+  { id: 'own10',     name: '十件造物', icon: '🏗️', desc: '同时拥有 10 个升级/建筑', test: s => totalOwned() >= 10 },
+  { id: 'own25',     name: '造物者',   icon: '🏗️', desc: '同时拥有 25 个升级/建筑', test: s => totalOwned() >= 25 },
+  { id: 'own100',    name: '百工',     icon: '🏗️', desc: '同时拥有 100 个升级/建筑', test: s => totalOwned() >= 100 },
+  { id: 'thread3',   name: '三人成众', icon: '🧵', desc: '同时拥有 3 条产出线程', test: s => (s.cultists || []).length >= 3 },
+  { id: 'thread10',  name: '军团',     icon: '🧵', desc: '拥有 10 条产出线程', test: s => (s.cultists || []).length >= 10 },
+  { id: 'thread50',  name: '文明',     icon: '🧵', desc: '拥有 50 条产出线程', test: s => (s.cultists || []).length >= 50 },
+  { id: 'pre1',      name: '初次超脱', icon: '⬆️', desc: '完成首次晋升转生', test: s => s.prestige >= 1 },
+  { id: 'pre5',      name: '五度超脱', icon: '⬆️', desc: '完成 5 次晋升', test: s => s.prestige >= 5 },
+  { id: 'pre50',     name: '五十度轮回', icon: '⬆️', desc: '完成 50 次晋升', test: s => s.prestige >= 50 },
+  { id: 'pre150',    name: '百五十度', icon: '⬆️', desc: '完成 150 次晋升', test: s => s.prestige >= 150 },
+  { id: 'reincarn1', name: '循环之始', icon: '♻️', desc: '完成首次轮回（第二层循环）', test: s => (s.reincarned || 0) >= 1 },
+  { id: 'reincarn5', name: '五重循环', icon: '♻️', desc: '完成 5 次轮回', test: s => (s.reincarned || 0) >= 5 },
+  { id: 'es1',       name: '永恒碎片', icon: '💎', desc: '首次获得 ES（晋升结算）', test: s => (s.es || 0) >= 1 },
+  { id: 'es100',     name: '永恒印记', icon: '💎', desc: '持有 100 ES', test: s => (s.es || 0) >= 100 },
+  { id: 'es1000',    name: '永恒之主', icon: '💎', desc: '持有 1000 ES', test: s => (s.es || 0) >= 1000 },
+  { id: 'tech1',     name: '认知扩展', icon: '🔬', desc: '解锁首个科技', test: s => techCount() >= 1 },
+  { id: 'offline',   name: '短暂告别', icon: '🌙', desc: '离开一段时间后回归，领取离线收益', test: s => s.gotOffline },
+  { id: 'pet1',      name: '深渊伙伴', icon: '🐈', desc: '拥有一位深渊宠物伙伴', test: s => petCount() >= 1 },
+  { id: 'pet5',      name: '群兽之主', icon: '🐈', desc: '拥有 5 只异兽', test: s => petCount() >= 5 },
+  { id: 'rift1',     name: '裂缝缝合', icon: '🌀', desc: '首次封印深渊裂隙', test: s => (s.riftsSealed || 0) >= 1 },
+  { id: 'delve1',    name: '深渊之下', icon: '🌑', desc: '深潜达到 10 层', test: s => (s.delve && s.delve.depth) >= 10 },
+  { id: 'delve50',   name: '深潜者',   icon: '🌑', desc: '深潜达到 50 层', test: s => (s.delve && s.delve.depth) >= 50 },
+  { id: 'faith1',    name: '信仰觉醒', icon: '🙏', desc: '信奉一个宗教分支', test: s => !!(s.religion && s.religion.unlocked) },
+  { id: 'faith500',  name: '万世朝拜', icon: '🙏', desc: '持有 500 信仰', test: s => (s.faith || 0) >= 500 },
+  { id: 'dm100',     name: '深渊物质', icon: '🜏', desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
+  { id: 'dm1k',      name: '深渊富翁', icon: '🜏', desc: '持有 1000 DM', test: s => (s.dm || 0) >= 1000 },
+  { id: 'dm100k',    name: '深渊之渊', icon: '🜏', desc: '持有 100K DM', test: s => (s.dm || 0) >= 100000 },
+  { id: 'fishbowl1', name: '缸中之渊', icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
+  { id: 'collapsed', name: '被深渊吞噬', icon: '🌊', desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
+  { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
+  { id: 'crossroad', name: '三岔抉择', icon: '🛤️', desc: '在岔路口立誓，选择一条故事线', test: s => !!(s.storyline && s.storyline !== 'default') },
+  { id: 'abyss_gaze_egg', name: '凝视深渊', icon: '👁️', desc: '在裂隙余烬中购得「深渊凝视」——屏幕左下方裂开，你看见了触手尽头的它', test: s => !!s.abyssGazeUnlocked },
+  { id: 'wish1',    name: '掷币入井', icon: '🪙', desc: '首次向许愿池投币（100 EP）', test: s => (s.wishCoins || 0) >= 1 },
+  { id: 'wishwin',  name: '奇迹发生', icon: '✨', desc: '许愿池中奖（0.01% 概率 +100K EP）', test: s => !!s.wishWon },
+  { id: 'bazaar1',    name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },
+  { id: 'bazaar_t3',  name: '集市巨贾', icon: '💼', desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: s => (s.bazaar && s.bazaar.trades) >= 60 },
+  { id: 'bazaar100', name: '百笔成交', icon: '📈', desc: '在深渊集市累计完成 100 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 100 },
+  { id: 'bazaar_t5', name: '星际巨贾', icon: '🛰️', desc: '在深渊集市累计完成 500 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 500 },
+  { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' },
+  { id: 'gaze_abyss', name: '同归于尽', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' },
+];
+
 function checkAch() {
   // v2.8.1：成就列表扩充（名称/描述/判定；仅判定不渲染，页面只显示已解锁）
-  const tests = [
-    { id: 'click1',    name: '初次接触',      desc: '第一次点击工作台，深渊回应了你的触碰', test: s => s.totalClicks >= 1 },
-    { id: 'ep1k',      name: '一丝涟漪',      desc: '累计获得 1K EP', test: s => s.allTimeEp >= 1e3 },
-    { id: 'ep100k',    name: '涌动',          desc: '累计获得 100K EP', test: s => s.allTimeEp >= 1e5 },
-    { id: 'ep1m',      name: '深流',          desc: '累计获得 1M EP', test: s => s.allTimeEp >= 1e6 },
-    { id: 'ep1b',      name: '渊海',          desc: '累计获得 1B EP', test: s => s.allTimeEp >= 1e9 },
-    { id: 'own10',     name: '十件造物',      desc: '同时拥有 10 个升级/建筑', test: s => totalOwned() >= 10 },
-    { id: 'thread3',   name: '三人成众',      desc: '同时拥有 3 条产出线程', test: s => (s.cultists || []).length >= 3 },
-    { id: 'pre1',      name: '初次超脱',      desc: '完成首次晋升转生', test: s => s.prestige >= 1 },
-    { id: 'reincarn1', name: '循环之始',      desc: '完成首次轮回（第二层循环）', test: s => (s.reincarned || 0) >= 1 },
-    { id: 'es1',       name: '永恒碎片',      desc: '首次获得 ES（晋升结算）', test: s => (s.es || 0) >= 1 },
-    { id: 'tech1',     name: '认知扩展',      desc: '解锁首个科技', test: s => techCount() >= 1 },
-    { id: 'offline',   name: '短暂告别',      desc: '离开一段时间后回归，领取离线收益', test: s => s.gotOffline },
-    { id: 'pet1',      name: '深渊伙伴',      desc: '拥有一位深渊宠物伙伴', test: s => petCount() >= 1 },
-    { id: 'rift1',     name: '裂缝缝合',      desc: '首次封印深渊裂隙', test: s => (s.riftsSealed || 0) >= 1 },
-    { id: 'delve1',    name: '深渊之下',      desc: '深潜达到 10 层', test: s => (s.delve && s.delve.depth) >= 10 },
-    { id: 'faith1',    name: '信仰觉醒',      desc: '信奉一个宗教分支', test: s => !!(s.religion && s.religion.unlocked) },
-    { id: 'dm100',     name: '深渊物质',      desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
-    { id: 'fishbowl1', name: '缸中之渊',      desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
-    { id: 'collapsed', name: '被深渊吞噬',    desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
-    { id: 'idle60', name: '静默一分钟',    desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
-    // v3.0.3 第二批①：许愿池
-    { id: 'wish1',    name: '掷币入井',     desc: '首次向许愿池投币（100 EP）', test: s => (s.wishCoins || 0) >= 1 },
-    { id: 'wishwin',  name: '奇迹发生',     desc: '许愿池中奖（0.01% 概率 +100K EP）', test: s => !!s.wishWon },
-    // v3.0.0：深渊集市
-    { id: 'bazaar1',    name: '初次交易',     desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },
-    { id: 'bazaar_t3',  name: '集市巨贾',     desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: s => (s.bazaar && s.bazaar.trades) >= 60 },
-    { id: 'bazaar100',  name: '百笔成交',     desc: '在深渊集市累计完成 100 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 100 },
-  ];
+  const tests = ACHIEVEMENTS.filter(a => typeof a.test === "function");
   let unlocked = false;
   for (const a of tests) {
     if (!S.achievements[a.id] && a.test(S)) {
@@ -1944,32 +1970,7 @@ const ACH_PAGE_SIZE = 10; // v3.3.3 反馈⑩：成就一页 10 条 + 分页（�
 let achPage = 0;
 function renderAchievementPanel(container) {
   if (!container) return;
-  const defs = [
-    { id: 'click1',    name: '初次接触',  icon: '👆', desc: '第一次点击工作台，深渊回应了你的触碰' },
-    { id: 'ep1k',      name: '一丝涟漪',  icon: '🌊', desc: '累计获得 1K EP' },
-    { id: 'ep100k',    name: '涌动',      icon: '🌊', desc: '累计获得 100K EP' },
-    { id: 'ep1m',      name: '深流',      icon: '🌊', desc: '累计获得 1M EP' },
-    { id: 'ep1b',      name: '渊海',      icon: '🌊', desc: '累计获得 1B EP' },
-    { id: 'own10',     name: '十件造物',  icon: '🏗️', desc: '同时拥有 10 个升级/建筑' },
-    { id: 'thread3',   name: '三人成众',  icon: '🧵', desc: '同时拥有 3 条产出线程' },
-    { id: 'pre1',      name: '初次超脱',  icon: '⬆️', desc: '完成首次晋升转生' },
-    { id: 'reincarn1', name: '循环之始',  icon: '♻️', desc: '完成首次轮回（第二层循环）' },
-    { id: 'es1',       name: '永恒碎片',  icon: '💎', desc: '首次获得 ES（晋升结算）' },
-    { id: 'tech1',     name: '认知扩展',  icon: '🔬', desc: '解锁首个科技' },
-    { id: 'offline',   name: '短暂告别',  icon: '🌙', desc: '离开一段时间后回归，领取离线收益' },
-    { id: 'pet1',      name: '深渊伙伴',  icon: '🐈', desc: '拥有一位深渊宠物伙伴' },
-    { id: 'rift1',     name: '裂缝缝合',  icon: '🌀', desc: '首次封印深渊裂隙' },
-    { id: 'delve1',    name: '深渊之下',  icon: '🌑', desc: '深潜达到 10 层' },
-    { id: 'faith1',    name: '信仰觉醒',  icon: '🙏', desc: '信奉一个宗教分支' },
-    { id: 'dm100',     name: '深渊物质',  icon: '🜏', desc: '持有 100 DM' },
-    { id: 'fishbowl1', name: '缸中之渊',  icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）' },
-    { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）' },
-    { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' }, // v2.9.0
-    { id: 'gaze_abyss', name: '凝视深渊', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' }, // v2.9.0
-    { id: 'bazaar1',   name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易' }, // v3.0.0
-    { id: 'bazaar_t3', name: '集市巨贾', icon: '💼', desc: '集市等级达到 Lv.3（累计 60 笔成交）' }, // v3.0.0
-    { id: 'bazaar100', name: '百笔成交', icon: '📈', desc: '在深渊集市累计完成 100 笔交易' }, // v3.0.0
-  ];
+  const defs = ACHIEVEMENTS;
   const got = defs.filter(d => S.achievements[d.id]);
   const n = got.length;
   let html = `<div class="panel" style="padding:14px">
@@ -2510,6 +2511,7 @@ function ensureStorylineRuntime() {
 
 function startApp() {
   ensureStorylineRuntime();
+  ensureAbyssGaze(S.abyssGazeUnlocked); // v3.4.2：已解锁凝视深渊则重载后裂开常驻
 
   // v2.5 ⑥：暂停态重开——不结算普通离线（避免双重入账），改弹暂停恢复框结算暂停时长
   if (S.paused && S.pausedAt) {

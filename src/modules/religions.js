@@ -1,6 +1,6 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
-import { epStorageCap, fmt, echoLv, faithTechMult } from './economy.js';
+import { epStorageCap, fmt, echoLv, faithTechMult, researchMult } from './economy.js';
 import { converterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径）
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
@@ -228,6 +228,7 @@ export function tickReligion(dt) {
     let mult = faithTechMult() * (1 + 0.5 * (echoLv('echo_faith') || 0)); // v2.7.3 ⑤：回响·信仰共鸣 + v2.8.4 神启之光
     mult *= policyMult('faith'); // v2.8.6 B2a：信仰政策（苦行/虚无/实证/富足）
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
+    mult *= researchMult('faith'); // v3.4.2：信徒训导（RP）——信仰产出 +12%/级
     if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
     const boost = converterThreadBoost('temple'); // v3.3.3 反馈⑦：绑定线程参与圣所生产（祭司匹配岗位加成更高，增产出不增耗）
     // v3.3.9 反馈⑦：信仰满仓即停——不产出也不消耗 EP（开关保持开启，赞颂腾空后自动恢复）

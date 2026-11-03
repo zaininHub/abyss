@@ -86,25 +86,29 @@ export const BALANCE = {
   // unlockTech = 原 52 科技 ID（作 RP 解锁定价基准：原 RP × buildingUnlockRatio）；保留钥匙（click_up 等 6 项）另作族门控
   buildingsV21: [
     // ---- 组 A · 全局乘数（10 座）----
-    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 1e5,  growth: 1.30, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%' }, // v2.8.7：成本大幅提高
-    { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 1.5e4, growth: 1.18, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%' },
-    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 6e4, growth: 1.22, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12' },
-    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 5e5,  growth: 1.25, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%' },
-    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e5,  growth: 1.30, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.5e5,growth: 1.35, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
-    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3e5,  growth: 1.35, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 4e5,  growth: 1.40, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.5e5,growth: 1.45, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22' },
-    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5e5,  growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
+    // v3.4.2 反馈①「效能建筑还是太便宜了，提升多消耗又少」：全组重标价——
+    //   base 抬到原值 3~8 倍、growth 统一陡化（1.18~1.50 → 1.35~1.52），
+    //   使「满级总投入」与收益同阶：效能尖塔 +90% 全局 ≈1,500 万 EP（原 ≈29 万，×52）。
+    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 2.5e5, growth: 1.35, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%' },
+    { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 2.5e5, growth: 1.45, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%' },
+    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 4e5,   growth: 1.38, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12' },
+    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1.2e6, growth: 1.40, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%' },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e6,   growth: 1.45, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
+    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.6e6, growth: 1.48, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
+    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3.2e6, growth: 1.48, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
+    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 3.8e6, growth: 1.50, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
+    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.6e6, growth: 1.50, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22' },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5.4e6, growth: 1.52, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
     // ---- 组 B · 点击乘数（7 座）----
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
-    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 3e4,  growth: 1.35, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98' }, // v2.8.7：成本大幅提高
-    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 2e5,  growth: 1.40, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96' }, // v2.8.7：成本大幅提高
-    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 1e6,  growth: 1.45, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95' }, // v2.8.7：成本大幅提高
-    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 6e6,  growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92' }, // v2.8.7：成本大幅提高
-    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 1.5e5,growth: 1.28, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88' },
-    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5000, growth: 1.20, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75' },
+    // v3.4.2 反馈①：折价类同样重标价（成本 ×0.98/级 的复利极强，原 3 万起、5 万即可买到永久降本）
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e5, growth: 1.40, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98' },
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.3e6, growth: 1.45, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96' },
+    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 4.2e6, growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95' },
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 1.4e7, growth: 1.55, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92' },
+    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 3e7,  growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88' },
+    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5.5e5, growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75' },
     // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
     // v2.4 KG 模式改造：扩容类全部无限升级（unlimited），成本指数递增 + 30% 钳制 → 后期性价比自然递减；
     // 新增 3 座「多效果上限建筑」（EP 上限 + DM 采集效率 / 全局产出），先开放者后期性价比递减（数据见 PM v2.4）
@@ -116,18 +120,19 @@ export const BALANCE = {
     { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: 'EP 存储上限 +100,000,000/级，全局产出 +3%/级' },
     { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: 'EP 存储上限 +10,000,000,000/级，DM 采集效率 +30%/级' },
     // ---- 组 E · 线程产出（5 座）----
-    // v3.3.9 反馈②：组 E/F/H 首档定价过低（1.2K~6K EP 即可买到永久乘区），整体上调一个量级
-    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 3e5,  growth: 1.40, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' },
-    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1.2e6,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' },
-    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 2.4e6,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' },
-    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 3.5e5,  growth: 1.40, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
-    { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 3.5e5,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
+    // v3.3.9 反馈② / v3.4.1 反馈⑤ / v3.4.2 反馈①：三轮涨价；本轮 base 再抬 2.5~6 倍、growth 陡化。
+    // 红线保留：产出族（coop_hall/eco_battery/eco_battery_2）满档扩展级 ≤ m=9 期上限 4.0e7。
+    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 8e5,  growth: 1.38, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' },
+    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 5e6,  growth: 1.42, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' },
+    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.15e7,growth: 1.45, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' },
+    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 8e5,  growth: 1.38, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
+    { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 1.1e6, growth: 1.40, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
     // ---- 组 F · RP 加成（5 座）----
-    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 2e5,  rpCost: 300, growth: 1.40, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
-    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6e5,rpCost: 600, growth: 1.32, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
-    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 1e6,rpCost: 1000, growth: 1.38, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
-    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1.6e6,  rpCost: 1800, growth: 1.40, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 2.4e6,  rpCost: 3000, growth: 1.42, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 6.6e5, rpCost: 300, growth: 1.45, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.75e6,rpCost: 600, growth: 1.45, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 5.6e6, rpCost: 1000, growth: 1.50, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 8e6,   rpCost: 1800, growth: 1.52, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.55, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
@@ -279,6 +284,8 @@ export const BALANCE = {
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
       auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },
       auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）' },
+      // v3.4.2：凝视深渊彩蛋——一次性余烬升级，购后屏幕左下方裂开、触手尽头浮现异兽（见 main.js showAbyssGaze）
+      gaze: { name: '深渊凝视', cap: 1, desc: '凝视裂隙最深处——屏幕左下方裂开，触手尽头有东西在回望你（彩蛋）', egg: true },
     },
   },
   // 里程碑（v2.3 奖励校准，PM §5.1 两锚点）：
@@ -343,6 +350,17 @@ export const BALANCE = {
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: 'FP 产出 +10%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
+    // v3.4.2：研究点菜单扩充（10→20 项）——覆盖产出/消耗/资源/深渊/星空多轴，成本指数涨、cap 6~8
+    { id: 'rp_quantum',  name: '量子推演',   cap: 8, base: 70,  growth: 1.6,  fx: { key: 'ep',      v: 0.06 }, desc: '基础 EP 产出 +6%/级' },
+    { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 80,  growth: 1.6,  fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
+    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 90,  growth: 1.6,  fx: { key: 'global',  v: 0.05 }, desc: '全局产出 ×1.05/级' },
+    { id: 'rp_frugal',   name: '精益管理',   cap: 8, base: 75,  growth: 1.6,  fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
+    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 95,  growth: 1.65, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
+    { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 110, growth: 1.65, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
+    { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 140, growth: 1.7,  fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
+    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 160, growth: 1.7,  fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' },
+    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 130, growth: 1.7,  fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
+    { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 220, growth: 1.8,  fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {
