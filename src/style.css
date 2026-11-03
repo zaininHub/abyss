@@ -24,12 +24,20 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 13px/1.5 "Cascadia Code", Consolas, monospace;
+  overflow: hidden; /* v3.3.9 反馈①：整页不滚动，列内自滚 */
 }
 
 #app {
-  max-width: 1200px;
+  /* v3.3.9 反馈①：取消 1200px 宽度上限——四列铺满屏幕，页面高度锁 100vh 不上下滚动 */
+  max-width: none;
+  width: 100%;
+  height: 100vh;
   margin: 0 auto;
-  padding: 12px;
+  padding: 10px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ========== 顶部栏 ========== */
@@ -41,8 +49,9 @@ body {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .stat-src { font-size: 9.5px; color: var(--text-3); line-height: 1.3; margin-top: 1px; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -77,15 +86,30 @@ body {
 /* ========== 主网格（v3.3.3 反馈②：四列——第一列任务/自动转化/裂隙/成就、第二列英雄/班组、中列标签页、右列日志/故事线/晋升） ========== */
 .grid {
   display: grid;
-  grid-template-columns: minmax(225px, 0.62fr) minmax(330px, 1.18fr) minmax(0, 1.65fr) minmax(240px, 0.8fr); /* v3.3.7 反馈③：左一收窄/左二与中间两列扩宽 */
-  gap: 12px;
+  /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口 */
+  grid-template-columns: minmax(240px, 0.58fr) minmax(340px, 1.02fr) minmax(0, 1.95fr) minmax(255px, 0.78fr);
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
 }
 
 .first-col, .left-col, .right-col, .side-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
+
+/* v3.3.9 反馈①：列内面板保持自然高度（不被压缩变形），超出由列滚动承担 */
+.first-col > .panel, .left-col > .panel, .side-col > .panel { flex: 0 0 auto; }
+
+/* v3.3.9 反馈①：中列标签内容独立滚动，页面本身不动 */
+.right-col { overflow: hidden; }
+.right-col .tab-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* 右列常驻面板：原 tab-pane 从标签页迁出，脱离 .on 显隐机制 */
 .side-col .panel { margin: 0; }
@@ -103,8 +127,11 @@ body {
 }
 
 @media (max-width: 1280px) {
+  /* 窄屏回退：允许整页滚动（列不再挤成一团） */
+  #app { height: auto; overflow: visible; }
+  body { overflow: auto; }
   .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
-  .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; }
+  .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; overflow: visible; }
 }
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
@@ -395,7 +422,7 @@ body {
 /* ========== 异兽网格 ========== */
 .pet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); /* v3.3.9 反馈⑥：卡面加效果行，格子略加宽 */
   gap: 8px;
 }
 
@@ -455,6 +482,22 @@ body {
   height: 100%;
   background: var(--pink);
   border-radius: 2px;
+}
+
+/* v3.3.9 反馈⑥：卡面显示异兽实际加成 + 升级倒计时 */
+.pet-grid .pet-card .pet-fx {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--cyan);
+  margin-top: 2px;
+  min-height: 13px;
+}
+
+.pet-grid .pet-card .pet-eta {
+  font-size: 9.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+  letter-spacing: .2px;
 }
 
 /* ========== 浮动异兽 ========== */
@@ -821,7 +864,7 @@ body.paused .pet-grid .pet-card {
    页面级不再出现滚动条；窄屏/移动端回退为自然文档流。 */
 @media (min-width: 900px) {
   #app {
-    max-width: 1720px;
+    max-width: none; /* v3.3.9 反馈①：单屏布局不再限宽 1720px，四列吃满屏宽 */
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -833,7 +876,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(215px, 0.6fr) minmax(310px, 1.1fr) minmax(0, 1.45fr) minmax(220px, 0.75fr); /* v3.3.7 反馈③：紧凑断点同步 */
+    grid-template-columns: minmax(240px, 0.58fr) minmax(340px, 1.02fr) minmax(0, 1.95fr) minmax(255px, 0.78fr); /* v3.3.9 反馈①：四列同步加宽 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;
@@ -1128,7 +1171,8 @@ body {
 .pet-card.starving { filter: saturate(.4); opacity: .75; }
 @keyframes petFloatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-6deg); } }
 @keyframes petFloatB { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
-@keyframes petFloatC { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+/* v3.3.9 反馈⑥：去掉「不停放大缩小」的缩放脉冲，改为轻浮动 */
+@keyframes petFloatC { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes petFloatD { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-3px) rotate(8deg); } }
 /* 点击粒子（按宠物 spark 字符，彩色无边框） */
 .pet-spark {

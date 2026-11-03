@@ -230,21 +230,22 @@ export function tickReligion(dt) {
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
     if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
     const boost = converterThreadBoost('temple'); // v3.3.3 反馈⑦：绑定线程参与圣所生产（祭司匹配岗位加成更高，增产出不增耗）
+    // v3.3.9 反馈⑦：信仰满仓即停——不产出也不消耗 EP（开关保持开启，赞颂腾空后自动恢复）
+    if ((S.faith || 0) >= faithCap() - 1e-9) { S._templeEpShortSec = 0; return; }
     // v2.8.30 ②：信仰生产消耗 EP（参考 DM 采集）// v3.3.3 反馈⑥：单位 EP 随圣所等级递增
     const epUse = r * dt * mult * templeEpPerUnit();
     if ((S.ep || 0) >= epUse) {
       S.ep -= epUse;
-      S.faith = (S.faith || 0) + r * dt * mult * boost;
+      S.faith = Math.min(faithCap(), (S.faith || 0) + r * dt * mult * boost);
       S._templeEpShortSec = 0; // v3.0.2：EP 充足，重置缓冲计时器
+      if (S.religion._templeEpNotice) S.religion._templeEpNotice = false; // v3.3.9：恢复后可再次提示
     } else {
-      // v3.0.2：EP 不足缓冲——持续 5s 才自动暂停（防反复横跳）；暂停后不自动恢复（需手动重启圣所）
+      // v3.3.9 反馈⑦：EP 不足不再「自动关闭」圣所——稳态不产出、不消耗，EP 回升后自动恢复
       S._templeEpShortSec = (S._templeEpShortSec || 0) + dt;
-      if (S._templeEpShortSec >= AUTO_PAUSE_GRACE) {
-        S.religion.templeOff = true;
-        S.religion._templeAutoPaused = true;
-        S._templeEpShortSec = 0;
-        rlog(`信仰圣所自动暂停：EP 持续不足 ${AUTO_PAUSE_GRACE}s——需手动重启圣所（损失 30% 信仰 + 15% 虔诚）`, 'bad');
-        if (toastFn) toastFn('信仰圣所自动暂停（EP 不足）——需手动重启');
+      if (S._templeEpShortSec >= AUTO_PAUSE_GRACE && !S.religion._templeEpNotice) {
+        S.religion._templeEpNotice = true;
+        rlog(`信仰圣所暂停产出：EP 不足（不消耗 EP，也不产生 FP）——EP 回升后自动恢复`, 'warn');
+        if (toastFn) toastFn('信仰圣所：EP 不足，暂时停产（EP 回升自动恢复）');
       }
     }
   }
@@ -350,14 +351,14 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗 FP 升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} FP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:${(S.religion && S.religion._templeAutoPaused) ? 'var(--warn)' : 'var(--text-3)'}"> · ${(S.religion && S.religion._templeAutoPaused) ? '已自动暂停（EP 不足·停止产出/不消耗 EP，点击重启恢复）' : '已关闭（停止产出/不消耗 EP）'}</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}/${TEMPLE.cap}</span>
       <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
-      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? 'warn' : '') : 'warn'}" data-religion-toggle="1"
-        title="${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '重启：恢复 FP 产出（无代价，清除自动暂停）' : '重启：恢复 FP 产出（无代价）') : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
-        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? ((S.religion && S.religion._templeAutoPaused) ? '自动暂停·点击恢复' : '重启圣所') : '关闭圣所'}</button>` : ''}
+      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
+        title="${(S.religion && S.religion.templeOff) ? '重启：恢复 FP 产出（无代价）' : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
+        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}
     </div>
     ${seal >= 1 ? `
     <div style="margin:12px 0 6px;font-size:11px;color:var(--accent);font-weight:600">赞颂与超验</div>

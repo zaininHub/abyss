@@ -32,44 +32,36 @@ const reset = () => Object.assign(S, {
   rpTheories: {}, delve: { up: {} }, secretSanctums: {}, storyline: 'default',
 });
 
-// ===== ① 圣所 EP 不足自动暂停（5s 缓冲 + 不自动恢复）=====
-test('① 圣所 EP 不足持续 5s → 自动暂停（templeOff + _templeAutoPaused）', () => {
+// ===== ① 圣所：EP 不足不再自动关闭（v3.3.9 反馈⑦：不自动关闭、不产出不消耗）=====
+test('① 圣所 EP 不足 → 不产出、不消耗、但不自动关闭', () => {
   reset();
   S.ep = 0; // EP 不足
-  // 前 4.9s 不暂停（缓冲期内）
-  for (let i = 0; i < 49; i++) tickReligion(0.1);
-  assert.equal(S.religion.templeOff, false, '缓冲期内（4.9s）不暂停');
-  assert.equal(S.religion._templeAutoPaused, false, '_templeAutoPaused 未置');
-  // 第 5s 触发暂停
-  tickReligion(0.2);
-  assert.equal(S.religion.templeOff, true, '持续 5s+ → templeOff=true');
-  assert.equal(S.religion._templeAutoPaused, true, '_templeAutoPaused=true（自动暂停标记）');
+  const faith0 = S.faith;
+  for (let i = 0; i < 80; i++) tickReligion(0.1); // 跑 8s（超过旧 5s 缓冲）
+  assert.equal(S.religion.templeOff, false, 'EP 不足也不再自动关闭圣所');
+  assert.equal(S.faith, faith0, 'EP 不足 → 不产信仰');
+  assert.equal(S.ep, 0, 'EP 不足 → 不扣 EP');
 });
 
-test('① 圣所自动暂停后不自动恢复（EP 充足仍保持 templeOff）', () => {
+test('① 圣所 EP 恢复后自动恢复产出（开关一直开着）', () => {
   reset();
-  S.religion.templeOff = true; S.religion._templeAutoPaused = true;
-  S.ep = 1e8; // EP 充足
-  tickReligion(10); // 跑 10s
-  assert.equal(S.religion.templeOff, true, 'EP 充足仍保持 templeOff（不自动恢复）');
-  assert.equal(S.religion._templeAutoPaused, true, '_templeAutoPaused 仍 true');
+  S.ep = 0;
+  for (let i = 0; i < 30; i++) tickReligion(0.1);
+  const faith0 = S.faith;
+  S.ep = 1e8;
+  tickReligion(1);
+  assert.equal(S.religion.templeOff, false, '保持开启');
+  assert.ok(S.faith > faith0, 'EP 恢复 → 自动恢复产出（无需手动重启）');
+  assert.ok(S.ep < 1e8, '恢复产出后正常扣 EP');
 });
 
-test('① 圣所缓冲期内 EP 恢复 → 不暂停（防反复横跳）', () => {
+test('① 信仰满仓 → 不产出也不消耗 EP（满仓即停）', () => {
   reset();
-  S.ep = 0;
-  tickReligion(3); // 3s 不足
-  assert.equal(S._templeEpShortSec, 3, '缓冲计时器累积 3s');
-  S.ep = 1e8; // EP 恢复
-  tickReligion(0.1);
-  assert.equal(S._templeEpShortSec, 0, 'EP 恢复 → 缓冲计时器重置');
-  assert.equal(S.religion.templeOff, false, '不暂停');
-  // 再次 EP 不足需重新累积 5s
-  S.ep = 0;
-  tickReligion(4);
-  assert.equal(S.religion.templeOff, false, '再次不足 4s 仍不暂停');
-  tickReligion(1.1);
-  assert.equal(S.religion.templeOff, true, '再次持续 5s+ → 暂停');
+  S.faith = 1e9; // 远超上限
+  S.ep = 1e8;
+  tickReligion(1);
+  assert.equal(S.ep, 1e8, '满仓不扣 EP');
+  assert.equal(S.faith, 1e9, '满仓不增产');
 });
 
 test('① 圣所手动重启清除自动暂停标记（无代价）', () => {
@@ -125,14 +117,12 @@ test('③ vehicles.js：AUTO_PAUSE_GRACE=5 + 无自动恢复逻辑', () => {
   assert.ok(src.includes('需手动点开关恢复'), '暂停日志含"需手动恢复"');
 });
 
-test('③ religions.js：圣所 EP 不足自动暂停 + 缓冲期 + 不自动恢复', () => {
+test('③ religions.js：圣所 EP 不足只停产停耗、不自动关闭（v3.3.9 反馈⑦）', () => {
   const src = readFileSync(new URL('../src/modules/religions.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('_templeEpShortSec'), '圣所 EP 不足缓冲计时器');
-  assert.ok(src.includes('_templeAutoPaused'), '自动暂停标记');
-  assert.ok(src.includes('AUTO_PAUSE_GRACE'), '缓冲期常量');
-  assert.ok(src.includes('需手动重启圣所'), '暂停日志含"需手动重启"');
-  // toggleTemple 重启清除自动暂停标记
-  assert.ok(/重启[\s\S]*?_templeAutoPaused = false/.test(src), '重启清除 _templeAutoPaused');
+  assert.ok(src.includes('_templeEpShortSec'), '圣所 EP 不足计时器（仅用于提示节流）');
+  assert.ok(!/S\.religion\.templeOff = true;\s*\n\s*S\.religion\._templeAutoPaused = true;/.test(src), '不再自动置 templeOff');
+  assert.ok(src.includes('EP 回升后自动恢复'), '注释/日志声明自动恢复');
+  assert.ok(src.includes('faithCap() - 1e-9'), '满仓即停判定');
 });
 
 test('③ shop.js：探采开关手动恢复 + 文案"自动暂停·点击恢复"', () => {

@@ -24,17 +24,82 @@ let riftSig = null;      // v2.1 R2：当前已渲染裂隙签名，避免 100ms
 let delegateBound = false; // v2.1 R2：容器级事件委托只绑一次
 
 // ---- v2.6.1 裂隙等级 ----
-// v3.1.1 反馈④：裂隙等级 = cps 潜力级 ∧ 探测井解锁上限 的较小值——
-// 前期首见恒为浅层（Lv.1），深层/深渊/虚空随「深空探测井」余烬升级逐级开放
+// v3.3.9 反馈⑤：等级 = cps 潜力级（1~5）+ 科技树「裂隙等级」无限升级（EP+DM）；
+// 余烬探测井的等级上限职能移除（科技等级即上限，可无限叠加）
+export function riftLevelTech() {
+  return (S.riftLevelTech | 0);
+}
+export function riftLevelTechCost() {
+  const c = BALANCE.rift.levelTech || {};
+  const lv = riftLevelTech();
+  return {
+    ep: Math.ceil((c.baseEp || 2e5) * Math.pow(c.epGrowth || 1.9, lv)),
+    dm: Math.ceil((c.baseDm || 10) * Math.pow(c.dmGrowth || 1.7, lv)),
+  };
+}
 export function riftMaxLevel() {
-  return 1 + riftUpgradeLevel('depth');
+  return 5 + riftLevelTech();
 }
 export function riftLevelOf(cps) {
   const lv = 1 + Math.floor(Math.log10(Math.max(1, cps || 1)));
-  return Math.max(1, Math.min(5, Math.min(lv, riftMaxLevel())));
+  return Math.max(1, Math.min(5, lv) + riftLevelTech());
 }
 export function riftLevelName(lv) {
+  if (lv > 5) return `虚空之隙 Lv.${lv}`;
   return (BALANCE.rift.levelNames[lv - 1]) || `Lv.${lv}`;
+}
+// v3.3.9 反馈⑤：科技树购买裂隙等级（EP + DM 双消耗，无限升级）
+export function buyRiftLevelTech() {
+  const cost = riftLevelTechCost();
+  if ((S.ep || 0) < cost.ep) return { ok: false, reason: `EP 不足（需 ${fmt(cost.ep)}）` };
+  if ((S.dm || 0) < cost.dm) return { ok: false, reason: `DM 不足（需 ${fmt(cost.dm)}）` };
+  S.ep -= cost.ep;
+  S.dm -= cost.dm;
+  S.riftLevelTech = riftLevelTech() + 1;
+  // 已存在的裂隙不追加强度（下一次裂隙按新等级生成）
+  save(S);
+  log(`[裂隙] 裂隙等级科技升至 Lv.${S.riftLevelTech}（-${fmt(cost.ep)} EP / -${fmt(cost.dm)} DM）：裂隙等级与奖励 +1 级`, 'good');
+  return { ok: true, level: S.riftLevelTech };
+}
+// 科技树「裂隙等级」卡片：结构签名去重，可购态原地刷新
+let riftTechSig = '';
+export function renderRiftLevelTech(container) {
+  if (!container) return;
+  const title = document.getElementById('rift-tech-title');
+  const shown = !!S._riftSeen || (S.riftsSealed || 0) > 0;
+  if (title) title.style.display = shown ? '' : 'none';
+  container.style.display = shown ? '' : 'none';
+  if (!shown) { container.innerHTML = ''; riftTechSig = ''; return; }
+  const lv = riftLevelTech();
+  const cost = riftLevelTechCost();
+  const afford = (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
+  const sig = String(lv);
+  if (sig !== riftTechSig) {
+    riftTechSig = sig;
+    container.innerHTML = `<div class="item v21" data-rift-level style="max-width:520px">
+      <div class="name"><span>裂隙等级 Lv.${lv}</span><span class="count mono">当前裂隙 Lv.${Math.min(riftMaxLevel(), riftLevelOf(computeCps()))}</span></div>
+      <div class="desc">每级裂隙等级 +1（上限与 DM/RP/余烬奖励同步提升，无限升级）；消耗 EP + DM</div>
+      <div class="cost mono" data-rift-level-cost>${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</div>
+    </div>`;
+    const el = container.querySelector('[data-rift-level]');
+    if (el && !el._bound) {
+      el._bound = true;
+      el.addEventListener('click', () => {
+        const r = buyRiftLevelTech();
+        if (!r.ok && toast) toast(r.reason);
+        dirty.tech = true;
+        dirty.rift = true;
+      });
+    }
+  }
+  const el = container.querySelector('[data-rift-level]');
+  if (el) {
+    el.classList.toggle('cant', !afford);
+    const c = el.querySelector('[data-rift-level-cost]');
+    if (c) c.textContent = `${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM`;
+    const cnt = el.querySelector('.count');
+    if (cnt) cnt.textContent = `当前裂隙 Lv.${Math.min(riftMaxLevel(), riftLevelOf(computeCps()))}`;
+  }
 }
 
 // ---- v2.6.1 余烬升级树 ----
@@ -432,13 +497,6 @@ export function renderRiftPanel(container) {
           ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)} · 每级 -25%，下限 4 分钟`
           : `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已到最短，继续升级不再缩短`;
       }
-    }
-    // v3.1.1 反馈④：探测井动态文案（当前最高等级 → 下一级等级名）
-    if (id === 'depth') {
-      const cur = riftMaxLevel();
-      desc = lv < u.cap
-        ? `裂隙最高等级 +1/级：当前最高「${riftLevelName(cur)}」→ 下一级开放「${riftLevelName(Math.min(5, cur + 1))}」`
-        : `裂隙最高等级 +1/级：已开放至「${riftLevelName(5)}」（虚空之隙）`;
     }
     // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
     const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');

@@ -77,7 +77,7 @@ try {
     const panel = await page.evaluate(() => document.getElementById('rift-tab-panel').innerHTML);
     rec('V2 裂隙 tab 显示余烬升级树（v2.8 渲染口径：余烬科技行）', panel.includes('裂隙科技') && panel.includes('余烬'), '');
     const upgRows = await page.evaluate(() => document.querySelectorAll('.rift-upg-row').length);
-    rec('V2 升级树渲染 8 项（4 基础科技 + 深空探测井 + 3 自动动作）', upgRows === 8, `rows=${upgRows}`);
+    rec('V2 升级树渲染 7 项（4 基础科技 + 3 自动动作；探测井已移入科技树 · v3.3.9 反馈⑤）', upgRows === 7, `rows=${upgRows}`);
     // 购买哨站 Lv.1（20 余烬）
     await page.evaluate(() => document.querySelector('[data-rift-upg="sentinel"] button').click());
     await sleep(300);

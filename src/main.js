@@ -45,7 +45,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta } from './modules/rift.js';
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -232,6 +232,9 @@ function render() {
       if (esDiscovered()) { renderEternal(eternalEl); if (eternalTitle) eternalTitle.style.display = ''; }
       else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
     }
+    // v3.3.9 反馈⑤：科技树「裂隙等级」（EP + DM 无限升级）
+    const riftTechEl = document.getElementById('rift-tech-list');
+    if (riftTechEl) renderRiftLevelTech(riftTechEl);
     dirty.tech = false;
   }
   if (dirty.pets) {
@@ -914,7 +917,8 @@ function updateTabLocks() {
     { id: 'btn-tech', stage: 'P1', label: '科技树' },
     { id: 'btn-pets', stage: 'P2', label: '异兽' },
     { id: 'btn-prestige', stage: 'P3', label: '晋升' },
-    { id: 'btn-expedition', stage: 'P4', label: '星图' },
+    // v3.3.9 反馈④：星图不再走阶段门控——改由 refreshTabVisibility 的 setTabLocked 统一接管
+    // （两处同时写 textContent/title，原实现会把「???」覆盖回「星图」并清空 title，点击只弹「🔒 尚未解锁」）
     { id: 'btn-storyline', stage: 'P4', label: '故事线' },
   ];
   // v2.3.1 ②（rev18 9.2）：科技树/异兽 tab 叠加锚点串联——章节门控 ∧ 锚点门控一条判定链：
@@ -929,6 +933,7 @@ function updateTabLocks() {
     // v3.0.4 反馈②：异兽回归 P2 章节门控（chapter≥3）——此前 petsPt 恒 true 导致开局即解锁
     const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
     if (!unlocked) {
+      if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」与解锁提示）
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';
       btn.title = anchorKey && isStageUnlocked(stage, S) && !anchorShown(anchorKey, S)
@@ -936,6 +941,7 @@ function updateTabLocks() {
         : `${label} 将在 ${stage} 阶段解锁`;
       btn.disabled = true;
     } else {
+      if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：锁定态由 setTabLocked 管，勿覆盖其文案
       btn.classList.remove('tab-locked');
       btn.title = '';
       btn.disabled = false;
@@ -1192,7 +1198,9 @@ function bindEvents() {
     const b = e.target.closest('button');
     if (b && b.dataset && b.dataset.locked === '1') {
       e.stopPropagation();
-      toast('🔒 ' + (b.title || '尚未解锁'));
+      // v3.3.9 反馈④：提示走统一文案表（原 b.title 被清空时只弹「🔒 尚未解锁」，信息量为零）
+      const hint = b.title || TAB_LOCK_HINTS[b.id] || '尚未解锁';
+      toast(hint.startsWith('🔒') ? hint : '🔒 ' + hint);
     }
   }, true);
   bindPolicyPanel(document.getElementById('policy-panel'));
@@ -2121,7 +2129,9 @@ function tick(now) {
   const atriumN = S.upgrades && S.upgrades.atrium ? S.upgrades.atrium : 0;
   // v3.3.0：灵感工坊绑定开关（关闭→停止蒸馏、释放绑定→线程消耗恢复）
   const atriumOn = converterEnabled('atrium'); // v3.3.1：统一口径（班组/快捷开关/研究点任一处关闭都生效）
-  if (atriumN > 0 && atriumOn && S.ep > 0) {
+  // v3.3.9 反馈⑦：满仓即停——RP 达到上限时不产出也不消耗（开关保持开启，腾出空间自动恢复）
+  const atriumRpFull = (S.rp || 0) >= rpCap();
+  if (atriumN > 0 && atriumOn && S.ep > 0 && !atriumRpFull) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
     const used = Math.min(S.ep, epNeed);
     S.ep -= used;
@@ -2177,15 +2187,20 @@ function tick(now) {
   // v3.0.3 反馈⑫：饼干蒸馏（消耗 EP 自动产饼干）
   // v3.2.1 反馈①：自动孵化需先购买「孵化升级」解锁（S.ptAutoHatch），不再开局直给
   // v3.2.2 反馈①：去除「EP 归零自动停」——开关保持玩家手动控制，EP 不足时 take=0 自然暂停，回升自动恢复
+  // v3.3.9 反馈⑦：PT 达到存储上限后不再生产、不再扣 EP（原实现直接 S.pt += 无视上限，溢出后继续烧 EP）
   if (S.ptAutoHatch === true && S.ptDistillOn === true) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
-    const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
-    const take = Math.min(need, S.ep);
-    S.ep -= take;
-    // v3.0.3 后续反馈③附带修正：产出按实扣比例折算（原 take×0.00015×lv 实为 lv² 隐性加成——
-    // 显示「+0.15×lv 饼干/s」但实产 0.15×lv²，升级过快的根因之一）；现为 0.15×lv 线性
-    // v3.3.3 反馈⑦：绑定线程参与孵化（饲育师匹配岗位加成更高）——与灵感工坊同范式
-    S.pt = (S.pt || 0) + take * 0.00003 * converterThreadBoost('hatch'); // 5000 EP → 0.15 饼干（EP 不足时产出同步缩减）
+    const ptRoom = Math.max(0, ptCap() - (S.pt || 0));
+    if (ptRoom > 1e-9) {
+      const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
+      const rate = 0.00003 * converterThreadBoost('hatch'); // 5000 EP → 0.15 饼干
+      // 满仓前最后一帧只按剩余容量折算消耗，避免溢出的那部分 EP 白烧
+      const needClamped = Math.min(need, ptRoom / Math.max(rate, 1e-12));
+      const take = Math.min(needClamped, S.ep);
+      S.ep -= take;
+      // v3.3.3 反馈⑦：绑定线程参与孵化（饲育师匹配岗位加成更高）——与灵感工坊同范式
+      S.pt = Math.min(ptCap(), (S.pt || 0) + take * rate);
+    }
   }
   // v3.2.1 反馈⑨：出战异兽存活维持——每秒消耗 PT（随等级/世代增长），PT 归零即休战（见 pets.petStarving）
   const petUpkeep = petUpkeepTotalPerSec();
@@ -2405,6 +2420,8 @@ function tick(now) {
     refreshReligionAffordability(); // v2.8.26 ④：宗教按钮可购
     refreshRiftAffordability(); // v2.8.26 ④：裂隙余烬/深入按钮可购
     refreshExpeditionAffordability(); // v3.0.5 反馈②：深空殖民 / 宇宙探索卡片可购态
+    const riftTechEl2 = document.getElementById('rift-tech-list'); // v3.3.9 反馈⑤：裂隙等级卡可购态
+    if (riftTechEl2) renderRiftLevelTech(riftTechEl2);
   }
 
   // v2.6.7：商店解锁检测（链窗揭示 + toast），v3.0.5 由 5s 收紧到 1s；

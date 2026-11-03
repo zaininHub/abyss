@@ -111,17 +111,18 @@ export const BALANCE = {
     { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: 'EP 存储上限 +100,000,000/级，全局产出 +3%/级' },
     { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: 'EP 存储上限 +10,000,000,000/级，DM 采集效率 +30%/级' },
     // ---- 组 E · 线程产出（5 座）----
-    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 1500, growth: 1.18, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' }, // v2.8.30：线程产出降温（0.10→0.08）
-    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 1e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' }, // v2.8.30：线程产出降温（1.5→1.3）
-    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.5e5,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' }, // v2.8.30：线程产出降温（2→1.8）
-    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 2000, growth: 1.18, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
+    // v3.3.9 反馈②：组 E/F/H 首档定价过低（1.2K~6K EP 即可买到永久乘区），整体上调一个量级
+    { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 6e4,  growth: 1.40, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' },
+    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 3e5,  growth: 1.24, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' },
+    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 6e5,growth: 1.28, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' },
+    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 8e4,  growth: 1.40, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 8e4,  growth: 1.26, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
     // ---- 组 F · RP 加成（5 座）----
-    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 1200, rpCost: 300, growth: 1.28, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' }, // v2.8.30 ⑤：可升级 4/3
-    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 6000, rpCost: 600, growth: 1.32, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
-    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 6e4,  rpCost: 1000, growth: 1.38, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
-    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 1e5,  rpCost: 1800, growth: 1.40, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.5e5,rpCost: 3000, growth: 1.42, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 5e4,  rpCost: 300, growth: 1.40, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.5e5,rpCost: 600, growth: 1.32, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 2.5e5,rpCost: 1000, growth: 1.38, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 4e5,  rpCost: 1800, growth: 1.40, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 6e5,  rpCost: 3000, growth: 1.42, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
     // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
@@ -131,12 +132,12 @@ export const BALANCE = {
     { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 1e5,  growth: 1.25, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时' },
     { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 1.3e5,growth: 1.27, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时' },
     // ---- 组 H · 事件/项目（6 座）----
-    { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 1500, growth: 1.18, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
-    { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 8000, growth: 1.22, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
-    { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 1e5,  growth: 1.24, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%' },
-    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 1.5e5,growth: 1.28, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2' },
-    { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 6000, growth: 1.20, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
-    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 1.4e5,growth: 1.28, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
+    { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 5e4,  growth: 1.40, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
+    { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 1.5e5,growth: 1.30, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
+    { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%' },
+    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 4e5,  growth: 1.28, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2' },
+    { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 1.2e5,growth: 1.35, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
+    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 4e5,  growth: 1.28, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
     // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径）----
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
@@ -261,12 +262,14 @@ export const BALANCE = {
     // 裂隙余烬（跨转生保留）
     emberSeal: 10, emberEmbrace: 8, emberDelve: 5,
     upgBase: 20, upgGrowth: 1.6,
+    // v3.3.9 反馈⑤：裂隙等级改「科技树 · EP+DM 无限升级」——移除余烬探测井的等级上限职能，
+    // 裂隙等级 = cps 潜力级（1~5）+ 科技等级（无限），每级提升奖励（DM/RP/余烬）
+    levelTech: { baseEp: 2e5, epGrowth: 1.9, baseDm: 10, dmGrowth: 1.7 },
     upgrades: {
       sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔 -25%/级（下限 4 分钟）' }, // v3.3.4 反馈⑤：文案与 riftSpawnSec 同口径
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
-      depth:    { name: '深空探测井', cap: 4, desc: '裂隙最高等级 +1/级（浅层 → 虚空之隙）' }, // v3.1.1 反馈④：裂隙等级上限走余烬升级树——首见裂隙恒为浅层，深层随探测井逐级开放
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
       auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },

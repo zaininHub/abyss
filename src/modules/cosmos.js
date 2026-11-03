@@ -3,7 +3,7 @@
 // 一次性把 EP 转化为稀缺资源（PT/DM/信仰/余烬/VS/RP），跨资源发展通道（与集市互补、成本口径随存储上限缩放）。
 // 克制：每项等级上限 4~5、成本 ×1.7~1.9/级陡峭增长、转化率劣于最优通道（集市/深潜）但不占库存不占队列。
 import { S, save } from '../state.js';
-import { fmt, epStorageCap, addRp, addDm, addPt, hasTech } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap } from './economy.js';
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
 
@@ -42,6 +42,15 @@ export function cosmosReward(p, cost) {
   return Math.max(1, Math.floor(cost / p.epPerUnit));
 }
 
+// v3.3.9 反馈⑦：可存储资源满仓判定（余烬/VS 无上限，恒 false）
+function resFull(key) {
+  if (key === 'pt') return (S.pt || 0) >= ptCap() - 1e-9;
+  if (key === 'dm') return (S.dm || 0) >= dmCap() - 1e-9;
+  if (key === 'rp') return (S.rp || 0) >= rpCap() - 1e-9;
+  if (key === 'faith') return (S.faith || 0) >= faithCap() - 1e-9;
+  return false;
+}
+
 function grantRes(key, n) {
   switch (key) {
     case 'rp': addRp(n); break;
@@ -64,6 +73,9 @@ export function buyCosmos(id) {
   S.cosmos.lv = S.cosmos.lv || {};
   const cost = cosmosCost(p, lv);
   if ((S.ep || 0) < cost) return { ok: false, reason: `EP 不足（需 ${fmt(cost)}，当前 ${fmt(S.ep || 0)}）` };
+  // v3.3.9 反馈⑦：目标资源满仓时不下单——满仓不生成，避免 EP 白烧
+  const full = resFull(p.res);
+  if (full) return { ok: false, reason: `${COSMOS_RES_LABEL[p.res]} 已满仓，先消耗再转化（满仓不生成、不消耗）` };
   S.ep -= cost;
   const gain = cosmosReward(p, cost);
   grantRes(p.res, gain);

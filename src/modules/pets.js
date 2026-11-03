@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { PETS, petBaseMult } from '../data/pets.js';
-import { elv, computeCps, fmt } from './economy.js';
+import { elv, fmt, ptCap } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
 import { converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径）
 import { checkEasterEggs } from './progression.js';
 
@@ -51,7 +51,8 @@ export function gainPetExp(dt) {
   for (const id of ids) {
     const p = S.pets[id];
     if (!p || p.level >= 100) continue;
-    p.exp += computeCps() * dt * 0.1 * mult; // v3.0.3 后续反馈③：升级速率 ÷4（0.4→0.1）——异兽升级过快（叠加饼干门槛与孵化产出线性化）
+    // v3.3.9 反馈③：经验按「陪伴时间」累积（与实际产脱钩）——每级固定耗时，买入不会秒满级
+    p.exp += petXpPerSec(p.level) * dt * mult;
     // v3.3.7 反馈④：异兽不再自动升级（不再自动扣 PT）——经验满即封顶，
     // 由玩家在卡面点「升级」按钮手动消耗异兽饼干（levelUpPet）
     if (p.exp > petExpNeed(p.level)) p.exp = petExpNeed(p.level);
@@ -131,129 +132,197 @@ export function fusePets(aId, bId) {
   return S.pets[newId];
 }
 
-let _gridHtml = '';
+// v3.3.9 反馈③：异兽升级条件改为「陪伴时间」——每级需累积固定时长，购买/升级后必从头计时，
+// 杜绝「高产出下买入即满经验、立即可升」。等级越高单级耗时越长（45s 起，每级 +6s）。
+export function petLevelSeconds(level) {
+  return 45 + Math.max(1, level) * 6;
+}
+export function petXpPerSec(level) {
+  return petExpNeed(level) / petLevelSeconds(level);
+}
+export function petXpRemainSec(p) {
+  if (!p || p.level >= 100) return 0;
+  const rate = petXpPerSec(p.level);
+  return Math.max(0, Math.ceil((petExpNeed(p.level) - p.exp) / Math.max(rate, 1e-9)));
+}
+
+// v3.3.9 反馈⑥：卡面展示异兽当前实际加成（等级/世代/里程碑/永恒宠物乘区都算进去）
+const PET_EFFECT_KEYS = [['global', '全局'], ['click', '点击'], ['offline', '离线'], ['event', '事件']];
+export function petEffectText(id, p) {
+  if (!p) return '';
+  const parts = [];
+  for (const [k, label] of PET_EFFECT_KEYS) {
+    const base = p.mixed ? (p.mixed[k] || 1) : petBaseMult(id, k);
+    if (base <= 1.0001) continue;
+    const levelMult = 1 + p.level * 0.02;
+    const MILESTONES = [[25, 1.25], [50, 1.5], [80, 1.8], [100, 2.2]];
+    let mileMult = 1;
+    for (const [lv, mv] of MILESTONES) if (p.level >= lv) mileMult *= mv;
+    const genMult = 1 + (p.gen - 1) * 0.5 * (1 + elv('fuse') * 0.1);
+    const total = base * levelMult * genMult * mileMult * (1 + elv('pet') * 0.08);
+    parts.push(`${label} +${Math.round((total - 1) * 100)}%`);
+  }
+  if (!parts.length) {
+    const def = PETS.find(x => x.id === id);
+    return def ? def.desc : '无加成';
+  }
+  return parts.join(' · ');
+}
+
+let _gridSig = '';
 let _floatHtml = '';
+const _petEls = new Map(); // id -> card el（原地刷新用）
+
+function petCardHtml(id, p, actives, starving) {
+  const isActive = actives.includes(id);
+  const def = PETS.find(x => x.id === id);
+  const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
+  const upk = petUpkeepPerSec(p);
+  const upkLine = isActive
+    ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
+    : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
+  const xpNeed = petExpNeed(p.level);
+  const xpReady = isActive && !starving && p.level < 100 && p.exp >= xpNeed;
+  const xpTitle = p.level >= 100 ? '已满级'
+    : `经验 ${Math.floor(Math.min(p.exp, xpNeed))} / ${Math.floor(xpNeed)} · 还需 ${petXpRemainSec(p)} 秒陪伴${xpReady ? ` · 点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
+  const upBtn = xpReady
+    ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level))} PT</button>`
+    : '';
+  return `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
+      <div class="icon">${def ? def.icon : p.icon}</div>
+      <div class="n">${p.name}</div>
+      <div class="lv">Lv.${p.level}${isActive ? (starving ? ' · <span style="color:var(--warn)">💤 休战中</span>' : ' · 出战') : ''}</div>
+      <div class="pet-fx" title="当前实际加成（含等级/世代/里程碑乘区）">${petEffectText(id, p)}</div>
+      ${upkLine}
+      <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div>
+      <div class="pet-eta mono" title="${xpTitle}">${p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${petXpRemainSec(p)}s`}</div>${upBtn}</div>`;
+}
+
+// 结构未变时只做原地数值刷新（经验条/倒计时/按钮灰态）——原实现每帧因经验条宽度变化整面重建，
+// 升级按钮被反复销毁重建，视觉上一直闪
+function refreshPetGridLive(container) {
+  const actives = activePetIds();
+  const starving = petStarving();
+  for (const [id, el] of _petEls) {
+    const p = S.pets[id];
+    if (!p || !el.isConnected) continue;
+    const xpNeed = petExpNeed(p.level);
+    const fill = el.querySelector('.pet-xp > div');
+    if (fill) fill.style.width = `${Math.min(100, p.exp / xpNeed * 100)}%`;
+    const eta = el.querySelector('.pet-eta');
+    if (eta) eta.textContent = p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${petXpRemainSec(p)}s`;
+    const btn = el.querySelector('[data-pet-up]');
+    if (btn) {
+      const can = actives.includes(id) && !starving && (S.pt || 0) >= petPtNeed(p.level) && p.exp >= xpNeed;
+      btn.classList.toggle('disabled', !can);
+      btn.disabled = !can;
+    }
+  }
+}
+
 export function renderPetGrid(container) {
   if (!container) return;
   const actives = activePetIds();
   const starving = petStarving(); // v3.2.3 反馈⑥：休战状态在卡片/浮标可见（异兽「回家」）
-  let html = '';
-  html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效${starving ? ' —— <b style="color:var(--bad)">PT 不足，全部休战中</b>' : ''}</div>`;
-  for (const [id, p] of Object.entries(S.pets)) {
-    const isActive = actives.includes(id);
-    const stateTag = isActive ? (starving ? ' · <span style="color:var(--warn)">💤 休战中</span>' : ' · 出战') : '';
-    const xpNeed = petExpNeed(p.level);
-    const def = PETS.find(x => x.id === id);
-    const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
-    // v3.3.1 反馈⑥：每只异兽的维持消耗单独显示（原仅显示合计）
-    const upk = petUpkeepPerSec(p);
-    const upkLine = isActive
-      ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
-      : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
-    // v3.3.3 反馈① → v3.3.4 反馈④：卡级原因（饼干门槛）不再占卡面文案——卡面只留「维持」一行，
-    // 经验/升级所需 PT 移入进度条悬浮提示（信息不丢，文案不堆叠）
-    const xpReady = isActive && !starving && p.level < 100 && p.exp >= petExpNeed(p.level);
-    const xpNow = Math.floor(Math.min(p.exp, xpNeed));
-    const xpTitle = p.level >= 100 ? '已满级'
-      : `经验 ${xpNow} / ${Math.floor(xpNeed)}${xpReady ? ` · 已满，点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
-    // v3.3.7 反馈④：经验满时卡面出现「升级」按钮（显示 PT 消耗），手动升级取代自动升级
-    const upBtn = xpReady
-      ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level))} PT</button>`
-      : '';
-    html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
-      <div class="icon">${def ? def.icon : p.icon}</div>
-      <div class="n">${p.name}</div>
-      <div class="lv">Lv.${p.level}${stateTag}</div>
-      ${upkLine}
-      <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div>${upBtn}</div>`;
-  }
-  const ownedIds = Object.keys(S.pets);
-  const buyable = PETS.filter(p => !ownedIds.includes(p.id));
-  // v3.0.3 反馈⑫ + 第三批② + 第四批②③⑥：异兽孵化——去括号文案、按钮放大、升级按钮在开关旁
-  // v3.2.1 反馈①：自动孵化需解锁（首次购买「孵化升级」解锁，不再直接开放）
-  // v3.2.1 反馈⑥：文案改「总计 / 下级」双行口径；反馈⑨：出战维持消耗展示 + PT 不足休战提示
   const ptOn = S.ptDistillOn === true;
   const autoHatch = S.ptAutoHatch === true;
   const hatchLv = S.ptHatchLv || 1;
-  const ptPerS = 0.15 * hatchLv * converterThreadBoost('hatch'); // v3.3.3 反馈⑦：显示含绑定线程加成（与 tick 同口径）
-  const upkeep = petUpkeepTotalPerSec();
-  // v3.3.1 反馈②：异兽页只保留「孵化开关」；孵化升级（购买/升级）移入「设施」区
-  // v3.3.2 反馈④：文案只写当前总计（去掉「下级」预览，升级后的变化看设施卡）
-  let hatchCtl;
-  if (!autoHatch) {
-    hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
-  } else {
-    hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b></span>
-      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`;
+  const ownedIds = Object.keys(S.pets);
+  const buyable = PETS.filter(p => !ownedIds.includes(p.id));
+  const ptFull = (S.pt || 0) >= ptCap() - 1e-9; // v3.3.9 反馈⑦：满仓停产提示（开关保持开启）
+
+  // v3.3.9 反馈③⑥：结构签名——只在「等级/出战/可升级/孵化开关/可购买品种/休战」变化时重建，
+  // 经验条与倒计时走原地刷新（杜绝按钮闪烁）
+  const sig = [
+    actives.length, starving ? 1 : 0,
+    ...ownedIds.map(id => {
+      const p = S.pets[id];
+      const xpReady = actives.includes(id) && !starving && p.level < 100 && p.exp >= petExpNeed(p.level);
+      return `${id}:${p.level}:${p.gen}:${actives.includes(id) ? 1 : 0}:${xpReady ? 1 : 0}`;
+    }),
+    `b:${buyable.map(p => p.id).join(',')}`,
+    `h:${autoHatch ? 1 : 0}${ptOn ? 1 : 0}${hatchLv}${ptFull ? 'f' : ''}`,
+  ].join('|');
+  if (sig === _gridSig && container.childElementCount > 0) {
+    refreshPetGridLive(container);
+    return;
   }
+  _gridSig = sig;
+
+  let html = '';
+  html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效${starving ? ' —— <b style="color:var(--bad)">PT 不足，全部休战中</b>' : ''}</div>`;
+  for (const id of ownedIds) html += petCardHtml(id, S.pets[id], actives, starving);
+
+  const hatchCtl = autoHatch
+    ? `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(0.15 * hatchLv * converterThreadBoost('hatch'))} PT/s</b>${ptFull ? ' <b style="color:var(--warn)">· PT 已满，暂停产出与消耗</b>' : ''}</span>
+      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`
+    : `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
+  const upkeep = petUpkeepTotalPerSec();
   if (upkeep > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:${starving ? 'var(--bad)' : 'var(--text-3)'};margin:-2px 0 4px">出战维持：-${fmt(upkeep)} PT/s（随等级/世代增长）${starving ? ' · <b>PT 不足，异兽已回家休战（加成失效、不获经验、停扣维持）——PT 回升后自动重新出战</b>' : ''}</div>`;
   }
   if (buyable.length > 0) {
-    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（PT：${Math.floor(S.pt || 0)}）</div>`; // v2.8.17：去「来源/解锁」研发说明
+    html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（PT：${Math.floor(S.pt || 0)} / ${fmt(ptCap())}）</div>`;
     for (const p of buyable) {
       const afford = (S.pt || 0) >= p.price;
       html += `<div class="pet-card${!afford ? ' cant' : ''}" data-pet-buy="${p.id}">
         <div class="icon">${p.icon}</div><div class="n">${p.name}</div>
         <div class="lv" style="color:var(--pink)">${p.price} PT</div>
-        <div class="lv" style="color:var(--text-3);font-size:10px">${p.desc}</div></div>`;
+        <div class="pet-fx">${p.desc}</div></div>`;
     }
   }
-// v2.5.7 检查修复：HTML 未变化不重建（挂机经验/等级刷新复用同段标记，避免重建中断交互）
-  if (html === _gridHtml) return;
-  _gridHtml = html;
   container.innerHTML = html;
-  // v3.0.3 第四批⑥：改用事件委托——面板重建/HTML 复用后监听不丢失，点击一次即响应
+  _petEls.clear();
+  container.querySelectorAll('[data-pet-card]').forEach(el => _petEls.set(el.dataset.petCard, el));
   if (!container._ptDelegated) {
     container._ptDelegated = true;
     container.addEventListener('click', (ev) => {
-      const t = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle]') : ev.target;
-      if (t && t.hasAttribute('data-pt-distill-toggle')) {
+      const up = ev.target.closest ? ev.target.closest('[data-pet-up]') : null;
+      if (up) {
+        ev.stopPropagation();
+        const r = levelUpPet(up.dataset.petUp);
+        if (!r.ok && r.reason !== '经验未满') console.debug('[pet] levelUp:', r.reason);
+        _gridSig = ''; // 等级变化 → 允许重建
+        renderPetGrid(container);
+        const fel = document.getElementById('pet-float');
+        if (fel) renderPetFloat(fel);
+        return;
+      }
+      const tog = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle]') : null;
+      if (tog) {
         S.ptDistillOn = S.ptDistillOn === true ? false : true;
         save(S);
+        _gridSig = '';
         renderPetGrid(container);
+        return;
+      }
+      const buy = ev.target.closest ? ev.target.closest('[data-pet-buy]') : null;
+      if (buy) {
+        const p = PETS.find(x => x.id === buy.dataset.petBuy);
+        if (p && buyPet(p)) {
+          _gridSig = '';
+          renderPetGrid(container);
+          const fel = document.getElementById('pet-float');
+          if (fel) renderPetFloat(fel);
+        }
+        return;
+      }
+      const card = ev.target.closest ? ev.target.closest('[data-pet-card]') : null;
+      if (card) {
+        const id = card.dataset.petCard;
+        if (id === 'cat') {
+          S._catClicks = (S._catClicks || 0) + 1;
+          checkEasterEggs('pet_click', S);
+        }
+        togglePetActive(id);
+        _gridSig = '';
+        renderPetGrid(container);
+        const fel = document.getElementById('pet-float');
+        if (fel) renderPetFloat(fel);
       }
     });
   }
-  container.querySelectorAll('[data-pet-card]').forEach(el => {
-    el.addEventListener('click', (ev) => {
-      // v3.3.7 反馈④：升级按钮在卡内——点击升级不触发出战切换（stopPropagation）
-      if (ev.target.closest && ev.target.closest('[data-pet-up]')) return;
-      const id = el.dataset.petCard;
-      // v2.0：影猫点击彩蛋计数
-      if (id === 'cat') {
-        S._catClicks = (S._catClicks || 0) + 1;
-        checkEasterEggs('pet_click', S);
-      }
-      togglePetActive(id);
-      renderPetGrid(container);
-      // v2.5.8 检查修复：出战切换即时刷新浮标（原实现依赖 dirty.pets，延迟最多 5s / 需切 tab）
-      const floatEl = document.getElementById('pet-float');
-      if (floatEl) renderPetFloat(floatEl);
-    });
-  });
-  container.querySelectorAll('[data-pet-buy]').forEach(el => {
-    el.addEventListener('click', () => {
-      const p = PETS.find(x => x.id === el.dataset.petBuy);
-      if (p && buyPet(p)) {
-        renderPetGrid(container);
-        const floatEl = document.getElementById('pet-float');
-        if (floatEl) renderPetFloat(floatEl);
-      }
-    });
-  });
-  // v3.3.7 反馈④：手动升级按钮（经验满 → 消耗 PT 升 1 级）
-  container.querySelectorAll('[data-pet-up]').forEach(el => {
-    el.addEventListener('click', (ev) => {
-      ev.stopPropagation(); // 不触发出战切换
-      const r = levelUpPet(el.dataset.petUp);
-      if (!r.ok && r.reason !== '经验未满') console.debug('[pet] levelUp:', r.reason);
-      renderPetGrid(container);
-      const floatEl = document.getElementById('pet-float');
-      if (floatEl) renderPetFloat(floatEl);
-    });
-  });
 }
 
 export function renderPetFloat(container) {

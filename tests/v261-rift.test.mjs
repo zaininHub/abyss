@@ -6,9 +6,9 @@ const src = readFileSync(new URL('../src/modules/rift.js', import.meta.url), 'ut
 const bal = readFileSync(new URL('../src/data/balance.js', import.meta.url), 'utf8');
 
 // V1 分级
-rec('V1 分级公式 clamp(1+log10(cps), 1, 5) ∧ 探测井上限（v3.1.1 反馈④）', src.includes('1 + Math.floor(Math.log10(Math.max(1, cps || 1)))') && src.includes('Math.min(lv, riftMaxLevel())') && src.includes("1 + riftUpgradeLevel('depth')"), 'riftLevelOf');
+rec('V1 分级公式 base=clamp(1+log10(cps),1,5) + 裂隙等级科技（v3.3.9 反馈⑤）', src.includes('1 + Math.floor(Math.log10(Math.max(1, cps || 1)))') && src.includes('Math.min(5, lv) + riftLevelTech()'), 'riftLevelOf');
 rec('V1 五级名称（浅层/中层/深层/深渊/虚空之隙）', bal.includes("'浅层裂隙', '中层裂隙', '深层裂隙', '深渊裂隙', '虚空之隙'"), 'levelNames');
-rec('V1 探测井余烬升级（cap 4，等级上限走裂隙升级项）', bal.includes('depth:') && bal.includes("深空探测井"), 'depth-upg');
+rec('V1 裂隙等级科技（EP+DM 无限升级，取代余烬探测井）', bal.includes('levelTech:') && !bal.includes('深空探测井'), 'levelTech');
 // V2 余烬升级树
 rec('V2 四科技（哨站/透镜/护符/余烬共振）', bal.includes('sentinel') && bal.includes('lens') && bal.includes('charm') && bal.includes('echo'), 'upgrades');
 rec('V2 哨站间隔缩短（20min → v2.8.30 下限 10min）', src.includes('Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv))'), 'riftSpawnSec');

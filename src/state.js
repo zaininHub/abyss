@@ -60,6 +60,7 @@ export function defaultState() {
     abyssLevel: 0, abyssUnlocked: false,
     activeRift: null, riftsSealed: 0,
     riftEmber: 0, riftUpgrades: {}, riftExpedition: null,
+    riftLevelTech: 0, // v3.3.9 反馈⑤：裂隙等级科技（EP+DM，科技树无限升级；跨转生保留）
     _religionHintSeen: false,
     // v2.0 深渊潮汐
     tidePhase: 0,
@@ -311,7 +312,7 @@ export function load() {
     const migrated = migrateSave(raw);
     const defs = defaultState();
     // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', '_religionHintSeen', 'relics', 'bazaar']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
+    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', 'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
     for (const k of crossRun) {
       if (migrated[k] !== undefined) defs[k] = migrated[k];
     }
