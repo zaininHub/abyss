@@ -6,6 +6,11 @@ export const BALANCE = {
   script: { base: 960, cps: 0.85 },  // v2.8.27：×3 / ×0.5
   parallel: { base: 10800, cps: 3.5 }, // v2.8.27：×3 / ×0.5
   atrium: { base: 5e4, rate: 0.15, epRate: 150, growth: 2.2 }, // v3.0.3 第四批③：升级曲线陡化（消耗 EP 大幅增多）
+  // v3.4.0 反馈③：异兽孵化（EP→PT）统一配置——此前 5000 EP/s 与 0.00003 PT/EP 硬编码在 main.js/pets.js 两处，
+  // 产出与消耗口径易漂移（线程加成只乘产出、不乘消耗 → 线程越多单位 PT 越便宜）。
+  // 新口径：15000 EP/s/级 ÷ 15 万 EP/PT = 0.10 PT/s/级（boost 1）；原 5000 EP/s → 0.15 PT/s（3.3 万 EP/PT）。
+  // 即：PT 产出 -33%，单位 PT 的 EP 成本 ×4.5；线程加成同时乘「消耗」与「产出」，EP/PT 恒定。
+  hatch: { epPerSec: 15000, epPerPt: 150000 },
   oracle: { base: 5e11, rate: 2 },
   dataForge: { name: '数据熔炉', base: 1e8, cps: 0, desc: '研究点已改由灵感蒸馏塔与任务获取' }, // v3.0.3 第四批④：移除直产 RP
   thread: {
@@ -53,11 +58,11 @@ export const BALANCE = {
   // v1.3 模块 D：探采平台联动数值
   vehicles: {
     ids: ['scooter', 'convoy', 'orbital', 'submersible'],
-    // v3.3.8 反馈①：整体重标定——探采不再吃班组乘区，改为「低兑换率 + 按秒连续结算」：
-    // 目标口径（27 辆典型配置）≈ 消耗 100K EP/s、产出 10 DM/s 量级
-    epPerDm: 3000,                      // v3.3.8：15000→3000（旧口径在 27 辆时 653K EP/DM，消耗高到失控）
+    // v3.3.8 反馈①：整体重标定——探采不再吃班组乘区，改为「低兑换率 + 按秒连续结算」
+    // v3.4.0 反馈④：DM 产出再降（27 辆 ≈ 15 DM/s → ≈1 DM/s），单位 DM 的 EP 成本 ×5（汇率随辆数递增照旧）
+    epPerDm: 15000,                     // v3.4.0：3000→15000（DM 稀缺化后单 DM 该更贵；27 辆 ≈ ×4.8 → 约 72K EP/DM）
     epPerDmGrowth: 1.06,                // v3.3.8：1.15→1.06（逐辆递增保留，但不再呈指数爆炸；27 辆 ≈ ×4.8）
-    dmRates: [6, 12, 30, 60],           // v3.3.8：每辆 DM/min（原 0.05/0.1/0.25/0.5，×120 重标定——去掉班组后仍能到 10 DM/s 量级）
+    dmRates: [0.4, 0.8, 2, 4],          // v3.4.0：每辆 DM/min（6/12/30/60 → ÷15；27 辆实测约 1 DM/s）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
     embraceBonusSec: 5,                     // 拥抱裂隙爆发时长加成（秒 × 档位）

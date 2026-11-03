@@ -43,11 +43,13 @@ try {
   });
   // ① 页头数量级：EP 消耗 10^5 级、DM 产出 10^0~10^1 级
   const epPerSec = h0.flow.epPerSec, dmPerSec = h0.flow.dmPerSec;
-  if (epPerSec > 3e4 && epPerSec < 3e5 && dmPerSec > 1 && dmPerSec < 30) ok('① 消耗 ≈100K EP/s、产出 ≈10 DM/s 量级', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
+  // v3.4.0 反馈④：DM 产出再降（每辆 DM/min ÷15），单位 DM 的 EP 成本 ×5
+  // 本用例载具构成 10 摩托 + 15 车队 + 2 轨道 = 20 DM/min（0.33 DM/s）；27 辆高配 ≈1 DM/s 见 v340
+  if (epPerSec > 1.5e4 && epPerSec < 1e5 && dmPerSec > 0.2 && dmPerSec < 1.5) ok('① 消耗 ≈24K EP/s、产出 ≈0.33 DM/s（按载具构成）', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
   else bad('① 数量级不符', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
   if (!/本周期跳过|EP 不足/.test(h0.txt + h0.title)) ok('① 页头无「EP 不足，本周期跳过」文案');
   else bad('① 仍有旧文案', h0.txt.slice(0, 80));
-  if (h0.epPerDm > 1000 && h0.epPerDm < 3e4) ok('① 汇率重标定（27 辆 ≈1.4万 EP/DM，非 65 万）', Math.round(h0.epPerDm));
+  if (h0.epPerDm > 3e4 && h0.epPerDm < 2e5) ok('① 汇率重标定（27 辆 ≈7.2万 EP/DM，非 65 万）', Math.round(h0.epPerDm));
   else bad('① 汇率口径', String(h0.epPerDm));
 
   // 卡片单价含汇率（不再是基础 300 EP/s 的裸值）

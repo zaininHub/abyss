@@ -370,13 +370,18 @@ export function embraceRift() {
 export function refreshRiftAffordability() {
   if (S.riftExpedition) return; // 深入中不刷升级按钮
   for (const row of document.querySelectorAll('[data-rift-upg]')) {
-    const u = BALANCE.rift.upgrades[row.dataset.riftUpg];
+    // v3.4.0 反馈②：此前用 u.id 取键——BALANCE.rift.upgrades 的条目没有 id 字段，
+    // riftUpgradeLevel/Cost 拿到 undefined 恒返回 Lv.0 + 基础价（20），于是每秒快刷把
+    // 渲染时正确置灰的按钮又全部「点亮」（余烬 84 也能买 200 的项）。改用 dataset 里的真实 id。
+    const id = row.dataset.riftUpg;
+    const u = BALANCE.rift.upgrades[id];
     if (!u) continue;
-    const lv = riftUpgradeLevel(u.id);
-    const cost = lv >= u.cap ? null : riftUpgradeCost(u.id);
+    const lv = riftUpgradeLevel(id);
+    const cost = lv >= u.cap ? null : riftUpgradeCost(id);
     const btn = row.querySelector('button');
     const ember = Math.floor(S.riftEmber || 0); // v3.3.8 反馈②：与显示/扣费同口径（旧档浮点余烬不再出现「显示够、判定不够」）
     if (btn) { btn.disabled = cost === null || ember < cost; btn.classList.toggle('disabled', cost !== null && ember < cost); }
+    row.classList.toggle('cant', cost !== null && ember < cost);
   }
   const delve = document.getElementById('delve-rift');
   if (delve) {
@@ -477,9 +482,16 @@ export function renderRiftPanel(container) {
     });
     return;
   }
+  // v3.4.0 反馈①：裂隙已在场时不展示「下次裂隙 X 后出现」——此时 riftEtaSec() 恒为 0，
+  // 显示「0 秒后出现」既无意义又误导（裂隙就在主界面浮卡上等你处理）；
+  // 改为同一行的两种语义（标签+数值均由 1s 快刷原地更新，不重建面板）
+  const etaLabel = S.activeRift ? '当前裂隙' : '下次裂隙';
+  const etaText = S.activeRift
+    ? `进行中 · 剩余 ${fmtEta(Math.max(0, Math.ceil((S.activeRift.expiresAt - Date.now()) / 1000)))}`
+    : fmtEta(riftEtaSec());
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
-    <div class="off-stat"><span>下次裂隙</span><b id="rift-eta-tab" style="color:var(--purple)">${fmtEta(riftEtaSec())}</b></div>
+    <div class="off-stat"><span id="rift-eta-label">${etaLabel}</span><b id="rift-eta-tab" style="color:var(--purple)">${etaText}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技 · 余烬购买</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);

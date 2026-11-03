@@ -752,7 +752,7 @@ function switchTab(id) {
 // v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性），点击提示解锁路径
 const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市' };
 const TAB_LOCK_HINTS = {
-  'btn-expedition': '星图未解锁：完成首次远征准备后开放',
+  'btn-expedition': '星图未解锁：完成首次远征准备（或研究科技「深空探测」）后开放',
   'btn-relics': '遗物未解锁：触发首次深渊裂隙并发现 DM 后开放',
   'btn-religion': '宗教未解锁：存储扩建 ≥3 级后可唤醒信仰',
   'btn-policy': '政策未解锁：达成对应政策开放条件后出现',
@@ -788,7 +788,9 @@ function refreshTabVisibility() {
   const rpBtn = document.getElementById('btn-rp');
   if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
   // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）——v3.3.3 反馈⑨：未解锁改「??？」锁定态
-  setTabLocked(document.getElementById('btn-expedition'), !(S.expeditionsDone > 0 || S.expeditions.length > 0));
+  // v3.4.0 反馈⑤：科技树「深空探测」本身即解锁星图（深空殖民/第二路探索都在星图内），
+  // 此前只认 expeditionsDone/expeditions，玩家买完科技仍看到「???」，以为解锁没生效
+  setTabLocked(document.getElementById('btn-expedition'), !(S.expeditionsDone > 0 || S.expeditions.length > 0 || hasTech('deep_space')));
   // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才开放
   // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
   if (canUnlockReligion()) { S._religionHintSeen = true; }
@@ -2190,10 +2192,14 @@ function tick(now) {
   // v3.3.9 反馈⑦：PT 达到存储上限后不再生产、不再扣 EP（原实现直接 S.pt += 无视上限，溢出后继续烧 EP）
   if (S.ptAutoHatch === true && S.ptDistillOn === true) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
+    const hatchCfg = BALANCE.hatch || { epPerSec: 15000, epPerPt: 150000 };
     const ptRoom = Math.max(0, ptCap() - (S.pt || 0));
     if (ptRoom > 1e-9) {
-      const need = 5000 * hatchLv * dt; // v3.0.3 后续反馈②：孵化 EP 消耗 ×5（1000→5000 EP/s/级）——饼干获取过廉
-      const rate = 0.00003 * converterThreadBoost('hatch'); // 5000 EP → 0.15 饼干
+      // v3.4.0 反馈③：EP 消耗与 PT 汇率统一走 BALANCE.hatch（15000 EP/s/级 ÷ 15 万 EP/PT = 0.10 PT/s/级）
+      // 线程加成同时作用于「消耗」与「产出」——否则人越多单位 PT 越便宜（旧口径 5000 EP/s 固定，PT/s 却 ×boost）
+      const boost = converterThreadBoost('hatch'); // v3.3.3 反馈⑦：绑定线程参与孵化（只放大 EP 消耗，PT 按汇率等比例产出）
+      const need = hatchCfg.epPerSec * hatchLv * boost * dt;
+      const rate = 1 / Math.max(hatchCfg.epPerPt, 1); // PT/EP：线程不再二次放大汇率（否则人越多单位 PT 越便宜）
       // 满仓前最后一帧只按剩余容量折算消耗，避免溢出的那部分 EP 白烧
       const needClamped = Math.min(need, ptRoom / Math.max(rate, 1e-12));
       const take = Math.min(needClamped, S.ep);
@@ -2218,8 +2224,18 @@ function tick(now) {
     if (typeof refreshReligionAffordability === 'function') refreshReligionAffordability();
     // v3.3.5 反馈③：裂隙倒计时每秒原地刷新（首列常驻卡 + 裂隙页签），让「裂隙会不会来」可见可验证
     if (S._riftSeen && !S.activeRift && !S.riftExpedition) dirty.rift = true;
+    const etaLabelEl = document.getElementById('rift-eta-label');
     const etaTabEl = document.getElementById('rift-eta-tab');
-    if (etaTabEl) etaTabEl.textContent = fmtEta(riftEtaSec());
+    if (etaTabEl) {
+      // v3.4.0 反馈①：裂隙在场时该行改语义（当前裂隙 · 剩余 Xs），不再显示「下次裂隙 0 秒」
+      if (S.activeRift) {
+        if (etaLabelEl) etaLabelEl.textContent = '当前裂隙';
+        etaTabEl.textContent = `进行中 · 剩余 ${fmtEta(Math.max(0, Math.ceil((S.activeRift.expiresAt - Date.now()) / 1000)))}`;
+      } else {
+        if (etaLabelEl) etaLabelEl.textContent = '下次裂隙';
+        etaTabEl.textContent = fmtEta(riftEtaSec());
+      }
+    }
   }
   // v2.6.0 / v3.0.0：深潜与集市面板为 innerHTML 重建（无内容签名跳过），保持 5s 低频——1s 重建会吞点击/闪烁
   S._panelCheckTimer = (S._panelCheckTimer || 0) + dt;

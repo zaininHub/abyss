@@ -86,8 +86,9 @@ body {
 /* ========== 主网格（v3.3.3 反馈②：四列——第一列任务/自动转化/裂隙/成就、第二列英雄/班组、中列标签页、右列日志/故事线/晋升） ========== */
 .grid {
   display: grid;
-  /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口 */
-  grid-template-columns: minmax(240px, 0.58fr) minmax(340px, 1.02fr) minmax(0, 1.95fr) minmax(255px, 0.78fr);
+  /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口
+     v3.4.0 反馈①：最左列再放宽（0.58→0.70fr，下限 240→280px）——裂隙/任务文案不再频繁换行 */
+  grid-template-columns: minmax(280px, 0.70fr) minmax(340px, 1.00fr) minmax(0, 1.88fr) minmax(255px, 0.74fr);
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
@@ -876,7 +877,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(240px, 0.58fr) minmax(340px, 1.02fr) minmax(0, 1.95fr) minmax(255px, 0.78fr); /* v3.3.9 反馈①：四列同步加宽 */
+    grid-template-columns: minmax(280px, 0.70fr) minmax(340px, 1.00fr) minmax(0, 1.88fr) minmax(255px, 0.74fr); /* v3.3.9 反馈①：四列同步加宽 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;

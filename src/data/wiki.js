@@ -180,7 +180,7 @@ export const WIKI_SECTIONS = [
       <li>扩容类：无限升级 + 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）</li>
       <li>线程招募：firstCost × 1.25^线程数</li>
       <li>专注：30 × 1.6^级</li>
-      <li>探采平台：载具价 ×1.30^已购数；EP→DM 汇率 = 15,000 × 1.15^总载具数（DM 速率固定，保持稀缺）</li>
+      <li>探采平台：载具价 ×1.30^已购数；EP→DM 汇率 = ${fmt(D.vehicles.epPerDm)} × ${D.vehicles.epPerDmGrowth}^总载具数（DM 速率固定，保持稀缺）</li>
     </ul>
     <h4>全局乘数软上限</h4>
     <p>m > ${fmt(D.softCapThreshold)} → ${fmt(D.softCapThreshold)} + √(m-${fmt(D.softCapThreshold)}) × ${D.softCapFactor}（防无限滚）。</p>

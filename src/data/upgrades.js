@@ -59,7 +59,7 @@ export const UPGRADES = [
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:2.2,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP，升级在蒸馏开关处`}, // v3.0.3 第四批③：升级入口移至开关处
   {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,desc:'解锁信仰系统（信仰由此获得）'}, // v3.0.3 第三批④：移除直接资源产出
   {id:'dataforge',name:B.dataForge.name,base:B.dataForge.base,cps:B.dataForge.cps,desc:'研究点已改由灵感蒸馏塔与任务获取'}, // v3.0.3 第四批④：移除直产 RP
-  {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.5},desc:'每秒 +0.5 PT'},
+  {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.15},desc:'每秒 +0.15 PT'}, // v3.4.0 反馈③：0.5→0.15 PT/s（PT 供给过快，孵化即满仓）
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:300000000000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）

@@ -1,6 +1,7 @@
 import { S, save } from '../state.js';
 import { PETS, petBaseMult } from '../data/pets.js';
 import { elv, fmt, ptCap } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
+import { BALANCE } from '../data/balance.js'; // v3.4.0 反馈③：孵化汇率与 tick 同源
 import { converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径）
 import { checkEasterEggs } from './progression.js';
 
@@ -253,8 +254,12 @@ export function renderPetGrid(container) {
   html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效${starving ? ' —— <b style="color:var(--bad)">PT 不足，全部休战中</b>' : ''}</div>`;
   for (const id of ownedIds) html += petCardHtml(id, S.pets[id], actives, starving);
 
+  const hatchCfg = BALANCE.hatch || { epPerSec: 15000, epPerPt: 150000 };
+  const hatchBoost = converterThreadBoost('hatch');
+  const hatchPtPerSec = (hatchCfg.epPerSec / Math.max(hatchCfg.epPerPt, 1)) * hatchLv * hatchBoost;
+  const hatchEpPerSec = hatchCfg.epPerSec * hatchLv * hatchBoost;
   const hatchCtl = autoHatch
-    ? `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(0.15 * hatchLv * converterThreadBoost('hatch'))} PT/s</b>${ptFull ? ' <b style="color:var(--warn)">· PT 已满，暂停产出与消耗</b>' : ''}</span>
+    ? `<span style="font-size:12px;color:var(--text-2)" title="消耗 ${fmt(hatchEpPerSec)} EP/s（${fmt(hatchCfg.epPerPt)} EP/PT）">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(hatchPtPerSec)} PT/s</b>${ptFull ? ' <b style="color:var(--warn)">· PT 已满，暂停产出与消耗</b>' : ''}</span>
       <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`
     : `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
