@@ -133,6 +133,7 @@ try {
     window.S._specialTasksDone = {}; window.S._farewellBought = false;
     window.S.wageState = { state: 'dormant', debtSec: 999, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
     window.S.ep = 100; window.S.cultists = [{ name: 't1', output: 1, mood: '正常' }];
+    window.S.converterOn = { ...(window.S.converterOn || {}), vehicles: false }; // v3.3.8：探采连续扣费会瞬间吃掉 100 EP，先关掉再测礼盒
     window.__gameDirty.hero = true; window.__gameDirty.top = true;
   });
   await sleep(400); // 等 wageStateCache 脏检查 + renderTop 创建按钮

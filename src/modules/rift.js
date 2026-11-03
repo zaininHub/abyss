@@ -96,7 +96,7 @@ export function buyRiftUpgrade(id) {
   const lv = riftUpgradeLevel(id);
   if (lv >= u.cap) return { ok: false, reason: `「${u.name}」已满级` };
   const cost = riftUpgradeCost(id);
-  if ((S.riftEmber || 0) < cost) return { ok: false, reason: `裂隙余烬不足（需 ${cost}，当前 ${S.riftEmber || 0}）` };
+  if (Math.floor(S.riftEmber || 0) < cost) return { ok: false, reason: `裂隙余烬不足（需 ${cost}，当前 ${Math.floor(S.riftEmber || 0)}）` };
   S.riftEmber -= cost;
   S.riftUpgrades[id] = lv + 1;
   if (id === 'sentinel') S._riftNextSec = 0; // v3.3.5 反馈③：升级后立即按新间隔重算倒计时
@@ -171,7 +171,7 @@ function settleRiftExpedition(dt) {
       addDm(dmTotal); // v2.8.27 ②：DM 上限
       if (dmTotal > 0) discoverDm();
       if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
-      S.riftEmber = (S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul();
+      S.riftEmber = Math.round((S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul()); // v3.3.8 反馈②：整数化
       log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${BALANCE.rift.emberDelve * lv} 余烬`, 'good');
       if (toast) toast('🌌 深入完成：裂隙深处之物已带回');
     }
@@ -267,7 +267,7 @@ function grantRiftRewards(r, emberGain, embrace) {
     S.faith = (S.faith || 0) + 1;
     log(`裂隙神谕：+1 FP`, 'good');
   }
-  S.riftEmber = (S.riftEmber || 0) + emberGain * emberMul();
+  S.riftEmber = Math.round((S.riftEmber || 0) + emberGain * emberMul()); // v3.3.8 反馈②：余烬整数化（浮点四舍五入显示与判定不一致）
   return dmGain;
 }
 
@@ -310,7 +310,8 @@ export function refreshRiftAffordability() {
     const lv = riftUpgradeLevel(u.id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(u.id);
     const btn = row.querySelector('button');
-    if (btn) { btn.disabled = cost === null || (S.riftEmber || 0) < cost; btn.classList.toggle('disabled', cost !== null && (S.riftEmber || 0) < cost); }
+    const ember = Math.floor(S.riftEmber || 0); // v3.3.8 反馈②：与显示/扣费同口径（旧档浮点余烬不再出现「显示够、判定不够」）
+    if (btn) { btn.disabled = cost === null || ember < cost; btn.classList.toggle('disabled', cost !== null && ember < cost); }
   }
   const delve = document.getElementById('delve-rift');
   if (delve) {
@@ -325,16 +326,22 @@ export function refreshRiftAffordability() {
 export function renderRift(container) {
   if (!container) return;
   const card = document.getElementById('rift-card');
+  // v3.3.8 反馈③：深入裂隙状态与矩阵腐化条已移入本卡——只要在深入或有腐化，卡片就必须可见
+  const hudDirty = !!S.riftExpedition || (S.corruption || 0) > 0.01;
   if (!S.activeRift) {
     // v3.3.5 反馈③：首次见过裂隙后卡片常驻，显示「下一次裂隙倒计时」——
     // 原先无裂隙时整卡隐藏，玩家无法判断裂隙机制是否生效（误以为不会触发）
-    if (!S._riftSeen) {
+    if (!S._riftSeen && !hudDirty) {
       if (card) card.style.display = 'none';
       if (container.firstChild) container.innerHTML = '';
       riftSig = null;
       return;
     }
     if (card) card.style.display = '';
+    if (!S._riftSeen) { // 只承载 HUD（腐化/深入），不显示裂隙倒计时
+      if (riftSig !== 'hud') { riftSig = 'hud'; container.innerHTML = ''; }
+      return;
+    }
     if (riftSig !== 'eta') {
       riftSig = 'eta';
       container.innerHTML = `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>
@@ -408,7 +415,7 @@ export function renderRiftPanel(container) {
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
     <div class="off-stat"><span>下次裂隙</span><b id="rift-eta-tab" style="color:var(--purple)">${fmtEta(riftEtaSec())}</b></div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技（余烬）</div>`;
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技 · 余烬购买</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(id);
@@ -418,12 +425,12 @@ export function renderRiftPanel(container) {
     if (id === 'sentinel') {
       const cur = riftSpawnSec();
       if (lv >= u.cap) {
-        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)}（已满级 · 每级 -25%）`;
+        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已满级，每级 -25%`;
       } else {
         const next = riftSpawnSecAt(lv + 1);
         desc = next < cur - 1
-          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)}（每级 -25%，下限 4 分钟）`
-          : `裂隙出现间隔 ${fmtSpawnMin(cur)}（已到最短，继续升级不再缩短）`;
+          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)} · 每级 -25%，下限 4 分钟`
+          : `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已到最短，继续升级不再缩短`;
       }
     }
     // v3.1.1 反馈④：探测井动态文案（当前最高等级 → 下一级等级名）

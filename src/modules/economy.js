@@ -510,7 +510,8 @@ export function vehicleRateMult() {
   let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
   if (hasAbyssMarket()) m *= 1.5;          // 深渊集市 ×1.5
   m *= researchMult('dm');                 // 星尘精炼（研究点）+8%/级
-  m *= converterThreadBoost('vehicles');   // 班组绑定（匹配/等级/领导）
+  // v3.3.8 反馈①：探采不吃班组乘区——线程加成曾让 27 辆×18 条线程把产出放大到 6600×（274 DM/s），
+  // 与「消耗 100K 级 / 产出 10 DM 级」的目标口径差两个数量级，且超出 DM 容量后收益归零
   return m;
 }
 export function vehicleDmPerMin() {
@@ -797,30 +798,29 @@ export function salaryDrainPerSec() {
   return sal;
 }
 // v3.3.6 反馈①：探采「实际结算」口径——按 DM 剩余容量钳制，只买装得下的部分。
-// 旧实现按理论产能（Σ载具×档位×建筑×研究×班组）全额扣 EP，DM 却按 1000 上限截断：
-// 27 辆载具 + 班组乘区 ≈6600× 时，一个周期名义采 16499 DM、实收 1000，94% 的 EP 白烧。
+// v3.3.8 反馈①：改连续口径（无「周期」）——EP 一路扣到 0，产出按 DM/s 连续入账；
+// EP 余量不足时按剩余 EP 折算，绝不出现「本周期跳过」的中断。
 export function probeFlowPerSec() {
   const zero = { epPerSec: 0, dmPerSec: 0, nominalDmPerSec: 0, room: 0, limited: false, epPerDm: 0, wantPerCycle: 0 };
   if (!converterEnabled('vehicles')) return zero;
   const wantMin = vehicleDmPerMin();
   if (wantMin <= 0) return zero;
-  const interval = BALANCE.vehicles.collectInterval || 60;
-  const wantPerCycle = (wantMin / 60) * interval;
+  const wantDmPerSec = wantMin / 60;
   const room = Math.max(0, dmCap() - (S.dm || 0));
-  const actualPerCycle = Math.min(wantPerCycle, room);      // 装得下多少买多少
   const epPerDm = vehicleEpPerDm();
-  const cycleCost = actualPerCycle * epPerDm;
-  const affordable = (S.ep || 0) >= cycleCost;
+  const budgetDm = epPerDm > 0 ? (S.ep || 0) / epPerDm : Infinity; // 剩余 EP 还能换多少 DM
+  const dmPerSec = room > 1e-9 ? Math.min(wantDmPerSec, budgetDm) : 0;
   return {
-    epPerSec: affordable ? cycleCost / interval : 0,
-    dmPerSec: affordable ? actualPerCycle / interval : 0,
-    nominalDmPerSec: wantMin / 60,
+    epPerSec: dmPerSec * epPerDm,
+    dmPerSec,
+    nominalDmPerSec: wantDmPerSec,
     room,
-    limited: actualPerCycle < wantPerCycle - 1e-9,
+    limited: wantDmPerSec > dmPerSec + 1e-12,
     epPerDm,
-    wantPerCycle,
-    affordable,
-    needPerCycle: cycleCost,
+    wantPerCycle: wantDmPerSec * 60,
+    affordable: dmPerSec > 1e-12,
+    epEmpty: (S.ep || 0) <= 1e-9,
+    dmFull: room <= 1e-9,
   };
 }
 export function probeDrainPerSec() {

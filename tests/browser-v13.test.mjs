@@ -112,6 +112,9 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   // ---- D1：裂隙封印 DM 加成（orbital=1 → 档位3 → tierDmBonus[3]=1；dmReward 1 → 实到 2）----
   const dmDisplay = parseFloat(await page.$eval('#rift-dm', el => el.textContent));
   rec('D1 裂隙卡片预览 DM = 2（dmReward 1 + 档位3 加成 1）', dmDisplay === 2, `rift-dm = ${dmDisplay}`);
+  // v3.3.8：探采改连续结算（后台持续入账），封印前后差值需先关掉探采才可精确断言
+  await page.evaluate(() => { window.S.converterOn = { ...(window.S.converterOn || {}), vehicles: false }; });
+  await new Promise(r => setTimeout(r, 300));
   const dmBefore = parseFloat(await page.$eval('#h-dm', el => el.textContent.replace(/,/g, '')));
   await page.click('#seal-rift');
   await new Promise(r => setTimeout(r, 400));
@@ -205,7 +208,7 @@ const url = 'file://' + new URL('../dist/index.html', import.meta.url).pathname;
   rec('D0 采集档加载无 JS 报错', errors.length === 0, errors.join('; '));
   const vc = await page.$eval('#vehicle-collect', el => ({ text: el.textContent, title: el.title }));
   rec('D2 采集页头：当前 DM + 期望 +DM/s（v2.8.26 per-s 格式）', vc.text.includes('当前 DM:') && vc.text.includes('→ +'), `text="${vc.text}"`);
-  rec('D2 采集页头 tooltip 含各载具期望率', /0\.05/.test(vc.title), vc.title.slice(0, 60));
+  rec('D2 采集页头 tooltip 含各载具期望率', /6\/12\/30\/60 DM\/min/.test(vc.title), vc.title.slice(0, 60)); // v3.3.8 费率重标定
   await page.evaluate(() => localStorage.clear());
   await page.close();
 }

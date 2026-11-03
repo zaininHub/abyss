@@ -765,8 +765,10 @@ body.paused .pet-grid .pet-card {
 
 /* ========== v2.0 矩阵腐化 ========== */
 .ep-cap-hint{font-size:11px;margin-top:4px;text-align:center;padding:2px 4px;border-radius:3px}
+/* v3.3.8 反馈③：深入裂隙状态行移入左一窄列——紧凑排版（原先在 hero 区无专属样式） */
+.rift-exp-hero{margin:6px 0 4px;padding:5px 8px;border:1px solid rgba(168,85,247,.35);border-radius:4px;background:rgba(168,85,247,.10);color:var(--purple);font-size:11px;line-height:1.55}
 .corruption-bar{margin-top:8px;padding:6px 8px;background:linear-gradient(90deg,#f851490d,#8b5cf614);border:1px solid rgba(248,81,73,.3);border-radius:4px}
-.corruption-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}
+.corruption-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;flex-wrap:wrap} /* v3.3.8 反馈③：移入左一窄列后允许换行（主动净化/紧急脱出并排不挤爆） */
 .corruption-label{color:var(--bad);font-weight:600;flex:0 0 auto}
 .corruption-num{color:var(--bad);font-weight:700;flex:1;text-align:right}
 .btn-mini{font-size:10px;padding:2px 6px;background:#6e768133;border:1px solid var(--border);color:var(--text-1);border-radius:3px;cursor:pointer;transition:all .15s}

@@ -112,15 +112,16 @@ test('方向③：领导者提供全局加成，且封顶', () => {
   assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalCap);
 });
 
-test('方向①/②：绑定提升转化器产出（探采平台 DM），且关闭后归 1', () => {
+test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.3.8 口径），关闭后归 0', () => {
   resetState();
   S.upgrades.scooter = 1; // 一辆探采载具，DM 基础 >0
   const base = vehicleDmPerMin();
   assert.ok(base > 0);
-  // 绑定一个匹配勘探员 → boost >1
+  // 绑定一个匹配勘探员 → boost >1（boost 本身仍计算，供其他转化器/展示用）
   S.cultists.push(mkCultist({ profession: 'prospector', boundTo: 'vehicles' }));
   assert.ok(converterThreadBoost('vehicles') > 1);
-  assert.ok(vehicleDmPerMin() > base);
+  // v3.3.8 反馈①：探采产出不再乘班组乘区——去掉 6600× 级的产出爆炸
+  assert.equal(vehicleDmPerMin(), base);
   // 关闭探采 → boost 归 1 且 DM 产出为 0
   S.converterOn.vehicles = false;
   assert.equal(converterThreadBoost('vehicles'), 1);

@@ -692,24 +692,23 @@ function updateVehicleCollectHeader() {
   const flow = probeFlowPerSec();
   let info, tip;
   if (rate > 0) {
-    // v3.3.6 反馈①：显示口径与实扣一致——按 DM 剩余容量钳制，并标明原因
-    // （旧实现按理论产能全额展示/扣费，实际只入账 1000 DM，消耗看起来大得离谱且大半白烧）
-    const interval = BALANCE.vehicles.collectInterval || 60;
-    const epShown = flow.affordable ? flow.epPerSec : flow.needPerCycle / interval;
+    // v3.3.8 反馈①：连续结算口径——不再出现「EP 不足，本周期跳过」；
+    // 开着就一路扣到 EP 为 0，只标「EP 已耗尽 / DM 已满」这类结果态
     const dmShown = flow.dmPerSec;
-    const reason = !flow.affordable ? '（EP 不足，本周期跳过）' : (flow.limited ? '（受 DM 上限限制）' : '');
-    info = `${dmTxt} · 探采 -${fmt(epShown)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
+    let reason = '';
+    if (flow.dmFull) reason = '（DM 已满，暂停采集）';
+    else if (flow.epEmpty) reason = '（EP 已耗尽，停止采集）';
+    info = `${dmTxt} · 探采 -${fmt(flow.epPerSec)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
     tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(flow.epPerDm)} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增）\n`
-      + `每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊鱼缸/集市/研究/班组可提升采集效率\n`
-      + `理论产能 ${fmtDmPerSec(flow.nominalDmPerSec)} DM/s = 基础 ${fmtDmPerSec(vehicleDmPerMin() / 60 / Math.max(1e-9, vehicleRateMult()))} × 加成 ${vehicleRateMult().toFixed(2)}×（班组/研究/鱼缸/集市）\n`
-      + `DM 剩余容量 ${flow.room.toFixed(2)} → 本周期只采 ${Math.min(flow.wantPerCycle, flow.room).toFixed(2)} DM，按实际采集量扣 EP（不再为溢出量付费）\n`
-      + `EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集\n`
-      + (flow.nominalDmPerSec * interval > dmCap()
-        ? '⚠ 当前产能已超过 DM 存储上限：班组/建筑加成的边际收益为 0（只会更快满仓），可考虑撤回部分线程'
+      + `每辆摩托队/车队/轨道器/潜航器 6/12/30/60 DM/min；深渊鱼缸/集市/研究点可提升采集效率（不吃班组加成）\n`
+      + `理论产能 ${fmtDmPerSec(flow.nominalDmPerSec)} DM/s = 基础 ${fmtDmPerSec(vehicleDmPerMin() / 60 / Math.max(1e-9, vehicleRateMult()))} × 加成 ${vehicleRateMult().toFixed(2)}×（研究/鱼缸/集市）\n`
+      + `开启后持续扣 EP 直到归零（不设周期、不跳过）；DM 剩余容量 ${flow.room.toFixed(2)}，满仓后自动暂停采集\n`
+      + (flow.nominalDmPerSec * 60 > dmCap()
+        ? '⚠ 当前产能已超过 DM 存储上限：加成的边际收益为 0（只会更快满仓），可考虑少买载具或扩容星尘金库'
         : '');
   } else {
     info = dmTxt; // v2.4.2：DM 精确到小数
-    tip = enabled ? '购买载具后每 60 秒自动采集深渊物质' : '探采已暂停：点击「已暂停」恢复采集（EP 消耗同步恢复）';
+    tip = enabled ? '购买载具后自动采集深渊物质' : '探采已暂停：点击「已暂停」恢复采集（EP 消耗同步恢复）';
   }
   const dmFull = rate > 0 && S._dmFull && (S.dm || 0) >= dmCap() - 1e-9;
   // v3.3.4 反馈①：只建一次 DOM，之后原地改文本/class——原实现每次刷新都 innerHTML 重建，

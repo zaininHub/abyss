@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.3.7</title>
+<title>深渊效能工作台 v3.3.8</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -67,10 +67,23 @@
         <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       </div>
 
-      <!-- 深渊裂隙 -->
+      <!-- 深渊裂隙（v3.3.8 反馈③：深入裂隙状态 + 矩阵腐化条自 hero 移入此处） -->
       <div class="panel" id="rift-card" style="display:none">
         <h3 style="color:var(--purple)">深渊裂隙</h3>
         <div id="rift-panel"></div>
+        <div id="rift-exp-status" style="display:none"></div>
+        <div id="corruption-bar" class="corruption-bar" style="display:none">
+          <div class="corruption-row">
+            <span class="corruption-label">🧪 矩阵腐化</span>
+            <span class="corruption-num mono" id="corruption-num">0%</span>
+            <button class="btn-mini" id="corruption-purge" title="主动净化：消耗 EP 清除腐化（每次最多 50%，成本约为 0.6%×净化量×EP 上限），腐化越严重析出 DM 越多；吞噬倒计时中净化至满额以下可自救">主动净化</button>
+            <button class="btn-mini" id="abort-rift-ex" style="display:none;color:var(--bad);border-color:var(--bad)" title="紧急脱出：中止深入探索（二次确认，确认期间一切计时暂停；提前脱出无结算奖励）">紧急脱出</button>
+          </div>
+          <div class="corruption-track">
+            <div class="corruption-fill" id="corruption-fill" style="width:0%"></div>
+          </div>
+          <div class="corruption-pen">产出惩罚 <span id="corruption-pen">-0%</span></div>
+        </div>
       </div>
 
       <!-- 成就（原 tab-achievement，常驻左一列）；v3.3.1 反馈⑨：可收起；v3.3.3 反馈⑩：一页 10 条分页 -->
@@ -106,20 +119,6 @@
         </div>
         <!-- v2.0 矩阵腐化进度条 -->
         <div id="abyss-collapse" style="display:none;margin:10px 0;padding:12px 16px;border:1px solid var(--red,#e5484d);border-radius:8px;background:rgba(229,72,77,.12);color:var(--red,#ff6b6b);font-size:12.5px;line-height:1.7"></div>
-        <!-- v2.8.12：深入裂隙状态显示到腐化进度条处（原置顶 hero，裂隙 tab 不再展示剩余时间） -->
-        <div id="rift-exp-status" style="display:none"></div>
-        <div id="corruption-bar" class="corruption-bar" style="display:none">
-          <div class="corruption-row">
-            <span class="corruption-label">🧪 矩阵腐化</span>
-            <span class="corruption-num mono" id="corruption-num">0%</span>
-            <button class="btn-mini" id="corruption-purge" title="主动净化：消耗 EP 清除腐化（每次最多 50%，成本约为 0.6%×净化量×EP 上限），腐化越严重析出 DM 越多；吞噬倒计时中净化至满额以下可自救">主动净化</button>
-            <button class="btn-mini" id="abort-rift-ex" style="display:none;color:var(--bad);border-color:var(--bad)" title="紧急脱出：中止深入探索（二次确认，确认期间一切计时暂停；提前脱出无结算奖励）">紧急脱出</button>
-          </div>
-          <div class="corruption-track">
-            <div class="corruption-fill" id="corruption-fill" style="width:0%"></div>
-          </div>
-          <div class="corruption-pen">产出惩罚 <span id="corruption-pen">-0%</span></div>
-        </div>
       </div>
 
       <!-- v3.2.1 反馈④：班组面板（线程拟人化个人档案）；v3.3.3 反馈②：留在第二列 -->

@@ -3,7 +3,7 @@
 // 数值与档位表在 BALANCE.vehicles；产出 vehicleDmPerMin()/collectVehicleDm() 在 economy.js（纯读侧）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { collectVehicleDm, vehicleDmPerMin, vehicleEpPerDm, dmCap } from './economy.js';
+import { vehicleDmPerMin, vehicleEpPerDm, dmCap } from './economy.js';
 import { addDm, fmt } from './economy.js'; // v2.8.27 ②：DM 上限
 import { converterEnabled } from './threadBinding.js'; // v3.3.4 反馈①：开关统一口径
 
@@ -12,39 +12,23 @@ export function setVehicleLogFn(fn) { logFn = fn; }
 
 export { vehicleDmPerMin };
 
-// 每 60s 触发一次确定性采集到账；返回 false（无变化）/ true（到账）
-// v3.2.2 反馈①：去除「EP 不足自动暂停、需手动恢复」——开关只由玩家手动控制，
-// EP 不足时本轮跳过（不扣费），EP 回升后下一周期自动恢复采集（提升挂机可玩性）
+// v3.3.8 反馈①：改为**连续结算**（每帧按 EP/s 扣、DM/s 入账）——不再有「周期」概念：
+// 开启后一路扣 EP 直到扣到 0，EP 归零即停产（回升自动继续），不会再出现「EP 不足，本周期跳过」这类打断感文案。
+// DM 按剩余容量钳制（装不下就不买），永不为溢出量付费。
 export function tickVehicleCollect(dt) {
-  // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取全部暂停
-  if (!converterEnabled('vehicles')) { S.vehCollectTimer = 0; S._probeEpShortSec = 0; return false; } // v3.3.4 反馈①：统一口径
-  if (vehicleDmPerMin() <= 0) { S.vehCollectTimer = 0; S._probeEpShortSec = 0; return false; } // 无载具不计时
-  // v3.2.2：旧档自动暂停标记清理（机制已废除）
-  if (S._probeAutoPaused) S._probeAutoPaused = false;
-
-  // v3.3.3 反馈⑧：DM 满仓跳过本轮（不扣 EP、计时冻结）——原实现 addDm 钳 0 但 EP 照扣，白烧资源
-  if ((S.dm || 0) >= dmCap() - 1e-9) { S._dmFull = true; S._probeEpShortSec = 0; return false; }
-  S._dmFull = false;
-  // v3.3.6 反馈①：只买「装得下」的部分——原实现按理论产能全额扣 EP，DM 却按上限截断，
-  // 高班组乘区下 94% 的 EP 白烧（名义 16499 DM/周期 → 实收 1000）
+  if (!converterEnabled('vehicles')) { S.vehCollectTimer = 0; return false; } // v3.3.4 反馈①：统一口径
+  const perMin = vehicleDmPerMin();
+  if (perMin <= 0) { S.vehCollectTimer = 0; return false; } // 无载具不采集
+  if (S._probeAutoPaused) S._probeAutoPaused = false; // v3.2.2：旧档自动暂停标记清理（机制已废除）
+  S.vehCollectTimer = (S.vehCollectTimer || 0) + dt; // 兼容旧档字段（仅计时展示用）
   const room = Math.max(0, dmCap() - (S.dm || 0));
-  const wantDm = collectVehicleDm();
-  const dm = Math.min(wantDm, room);
-  const epCostPerCycle = dm * vehicleEpPerDm();
-  // EP 不足：本轮跳过（不扣费、计时器冻结），EP 回升后自动继续
-  if ((S.ep || 0) < epCostPerCycle) {
-    S._probeEpShortSec = (S._probeEpShortSec || 0) + dt;
-    return false;
-  }
-  // EP 充足：重置不足计时器
-  S._probeEpShortSec = 0;
-
-  // 正常 60s 周期采集
-  S.vehCollectTimer = (S.vehCollectTimer || 0) + dt;
-  if (S.vehCollectTimer < BALANCE.vehicles.collectInterval) return false;
-  S.vehCollectTimer -= BALANCE.vehicles.collectInterval;
-  if (dm <= 0) return false;
-  S.ep -= epCostPerCycle;
+  if (room <= 1e-9) { S._dmFull = true; return false; } // DM 满仓：停止采集也不扣 EP
+  S._dmFull = false;
+  const epPerDm = vehicleEpPerDm();
+  const budgetDm = epPerDm > 0 ? (S.ep || 0) / epPerDm : Infinity; // 当前 EP 还能买多少 DM
+  const dm = Math.min((perMin / 60) * dt, room, budgetDm);
+  if (dm <= 1e-12) return false;
+  S.ep = Math.max(0, (S.ep || 0) - dm * epPerDm);
   addDm(dm); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
   return true;
 }

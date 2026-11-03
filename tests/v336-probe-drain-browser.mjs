@@ -1,7 +1,7 @@
-// v3.3.6 反馈回归：探采「班组乘区 × 载具汇率」导致的 EP 消耗爆炸与白烧
-// ① 卡片单价与页头同口径（含汇率 ×1.15^载具数 与 班组/研究/鱼缸/集市乘区），不再是基础 12.5 EP/s
-// ② 采集按 DM 剩余容量结算：本周期名义 16499 DM、容量只有 1000 → 只扣 1000 DM 的 EP（原全额扣费，94% 白烧）
-// ③ DM 满仓时页头消耗归零（与 tick 实扣一致，不再虚报）
+// v3.3.6 反馈回归（探采消耗对账）→ v3.3.8 口径重写：
+// ① 探采**不吃班组乘区**（线程挂满也不改变产出），页头消耗 ≈ 100K EP/s、产出 ≈ 10 DM/s 量级
+// ② **连续结算**：开启后每帧按 EP/s 扣、DM/s 入账；EP 归零才停（不存在「本周期跳过」文案）
+// ③ DM 满仓时停止采集且不扣 EP（不再为溢出量付费）
 import puppeteer from 'puppeteer-core';
 const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
@@ -21,82 +21,88 @@ try {
   await page.reload({ waitUntil: 'networkidle0', timeout: 30000 });
   await sleep(1200);
 
-  // 播种：与反馈截图一致的载具构成（10 / 15 / 2 = 27 辆，汇率 1.15^27 ≈ 43.6×）
-  const base = await page.evaluate(() => {
-    window.S.cultists = []; window.S.dm = 0; window.S._riftSeen = true; // 探采平台由首次裂隙门控
-    // 27 辆载具的每周理论成本 ≈ 6.5e8 EP → 需要把存储上限也抬起来，否则 EP 被 cap 截断测不出真实扣费
+  // 播种：与反馈截图一致的载具构成（10 / 15 / 2 = 27 辆）
+  await page.evaluate(() => {
+    window.S.cultists = []; window.S.dm = 0; window.S._riftSeen = true;
     window.S.upgrades = { ...(window.S.upgrades || {}), scooter: 10, convoy: 15, orbital: 2, deep_bin: 4000 };
-    window.S.ep = 2e9; // 27 辆载具一周期约 6.5e8 EP，需在存储上限（≈4.8e9）内
+    window.S.ep = 2e9;
     window.S.resDiscovered = { ...(window.S.resDiscovered || {}), dm: true };
     window.S.converterOn = { ...(window.S.converterOn || {}), vehicles: true };
-    window.S._probeEnabled = true;
     window.__gameDirty.shop = true; window.__gameDirty.top = true;
-    return { epPerDm: window.__qa.vehicleEpPerDm(), cap: window.__qa.epStorageCap() };
   });
   await sleep(1500);
 
   const h0 = await page.evaluate(() => {
     const el = document.getElementById('vehicle-collect');
-    return { txt: el?.querySelector('.probe-info')?.textContent || '', title: el?.title || '', cards: [...document.querySelectorAll('#vehicle-shop .item')].map(x => x.innerText).slice(0, 4) };
+    const flow = window.__qa.probeFlowPerSec();
+    return {
+      txt: el?.querySelector('.probe-info')?.textContent || '', title: el?.title || '',
+      cards: [...document.querySelectorAll('#vehicle-shop .item')].map(x => x.innerText).slice(0, 4),
+      flow, mult: window.__qa.vehicleRateMult(), epPerDm: window.__qa.vehicleEpPerDm(),
+    };
   });
-  // ① 页头：27 辆载具 → 汇率 43.6×，无班组时约 -27.21K EP/s
-  if (/探采 -27\.\d+K EP\/s/.test(h0.txt)) ok('① 页头含载具汇率（10/15/2 → -27.2K EP/s）', h0.txt.slice(0, 60));
-  else bad('① 页头汇率未生效', h0.txt.slice(0, 90));
+  // ① 页头数量级：EP 消耗 10^5 级、DM 产出 10^0~10^1 级
+  const epPerSec = h0.flow.epPerSec, dmPerSec = h0.flow.dmPerSec;
+  if (epPerSec > 3e4 && epPerSec < 3e5 && dmPerSec > 1 && dmPerSec < 30) ok('① 消耗 ≈100K EP/s、产出 ≈10 DM/s 量级', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
+  else bad('① 数量级不符', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
+  if (!/本周期跳过|EP 不足/.test(h0.txt + h0.title)) ok('① 页头无「EP 不足，本周期跳过」文案');
+  else bad('① 仍有旧文案', h0.txt.slice(0, 80));
+  if (h0.epPerDm > 1000 && h0.epPerDm < 3e4) ok('① 汇率重标定（27 辆 ≈1.4万 EP/DM，非 65 万）', Math.round(h0.epPerDm));
+  else bad('① 汇率口径', String(h0.epPerDm));
 
-  // 卡片单价 = 12.5 × 43.6 ≈ 545 EP/s（不再是基础 12.5）
+  // 卡片单价含汇率（不再是基础 300 EP/s 的裸值）
   const cardTxt = h0.cards.join(' | ');
-  if (/[−-]54\d EP\/s/.test(cardTxt)) ok('① 卡片单价含汇率乘区（≈544 EP/s，非基础 12.5）', cardTxt.slice(0, 80));
-  else bad('① 卡片仍显示基础单价', cardTxt.slice(0, 120));
+  const cardEp = (cardTxt.match(/[−-]([\d.]+)([KMB]?) EP\/s/) || []);
+  if (cardEp.length) ok('① 卡片显示真实单价', cardTxt.replace(/\n/g, ' ').slice(0, 60));
+  else bad('① 卡片单价缺失', cardTxt.slice(0, 120));
 
-  // ===== 班组把产能推到离谱区间 =====
-  const tid = await page.evaluate(() => {
-    // 18 条匹配职业高等级线程 → 乘区 ≈ 1.51^18 ≈ 1600×
+  // ② 班组不再影响探采产出（挂满 18 条高等级线程，乘区仍为 1 附近）
+  const tid = await page.evaluate(async () => {
+    const before = { mult: window.__qa.vehicleRateMult(), dm: window.__qa.vehicleDmPerMin() };
     window.S.cultists = Array.from({ length: 18 }, (_, i) => ({
       id: 'c' + i, name: 'T' + i, profession: 'prospector', level: 10,
       boundTo: 'vehicles', mood: '正常', output: 10, hiredAt: Date.now(), moodTimer: 90, leader: false,
     }));
     window.__gameDirty.shop = true; window.__gameDirty.top = true;
-    return {
-      mult: window.__qa.vehicleRateMult ? window.__qa.vehicleRateMult() : null,
-      nominalDmPerSec: (window.__qa.vehicleDmPerMin ? window.__qa.vehicleDmPerMin() / 60 : null),
-      epPerDm: window.__qa.vehicleEpPerDm ? window.__qa.vehicleEpPerDm() : null,
-    };
+    await new Promise(r => setTimeout(r, 900));
+    return { before, after: { mult: window.__qa.vehicleRateMult(), dm: window.__qa.vehicleDmPerMin() } };
   });
-  await sleep(1600);
-  const h1 = await page.evaluate(() => {
-    const el = document.getElementById('vehicle-collect');
-    window.S.ep = 2e9;
-    return { txt: el?.querySelector('.probe-info')?.textContent || '', title: el?.title || '' };
-  });
-  if (/受 DM 上限限制/.test(h1.txt)) ok('① 产能超容量时页头标注「受 DM 上限限制」', h1.txt.slice(0, 80));
-  else bad('① 未标注上限限制', h1.txt.slice(0, 90));
+  if (Math.abs(tid.after.mult - tid.before.mult) < 1e-9 && Math.abs(tid.after.dm - tid.before.dm) < 1e-9) ok('② 探采不吃班组加成（18 条线程不改变产出/乘区）', `mult=${tid.after.mult.toFixed(2)}`);
+  else bad('② 班组仍影响探采', JSON.stringify(tid));
 
-  // ② 一个采集周期：名义 16499 DM、容量 1000 → 只扣 1000 DM 的钱
-  const cycle = await page.evaluate(async () => {
-    window.S.ep = Math.min(window.__qa.epStorageCap() * 0.9, 1e9); window.S.dm = 0; window.S.vehCollectTimer = 59.99;
-    const epBefore = window.S.ep;
-    window.__tick(performance.now() + 1000);
-    await new Promise(r => setTimeout(r, 50));
-    const epSpent = epBefore - window.S.ep;
-    const epPerDm = window.__qa.vehicleEpPerDm();
-    return { dm: window.S.dm, epSpent, epPerDm, wantPerCycle: window.__qa.vehicleDmPerMin() * 1, cap: 1000 };
+  // ③ 连续结算：1 秒实扣 ≈ epPerDm × 入账 DM；扣到 EP=0 后停产
+  const cont = await page.evaluate(async () => {
+    window.S.ep = Math.min(window.__qa.epStorageCap() * 0.9, 5e6); window.S.dm = 0;
+    await new Promise(r => setTimeout(r, 200));
+    const ep0 = window.S.ep, dm0 = window.S.dm;
+    await new Promise(r => setTimeout(r, 2000));
+    const ep1 = window.S.ep, dm1 = window.S.dm;
+    return { epSpent: ep0 - ep1, dmGain: dm1 - dm0, epPerDm: window.__qa.vehicleEpPerDm() };
   });
-  const capCost = 1000 * cycle.epPerDm;
-  if (cycle.dm <= 1001 && cycle.dm >= 999) ok('② 单周期实际入账不超过 DM 上限', `dm=${cycle.dm.toFixed(1)}`);
-  else bad('② DM 入账异常', JSON.stringify(cycle));
-  if (cycle.epSpent <= capCost * 1.15) ok('② 只按实际采集量扣 EP（不再为溢出量付费）', `扣 ${Math.round(cycle.epSpent)} / 名义 ${Math.round(cycle.wantPerCycle * cycle.epPerDm)}`);
-  else bad('② 仍按名义产能扣费', `扣 ${Math.round(cycle.epSpent)}，上限应付 ${Math.round(capCost)}`);
+  const expectCost = cont.dmGain * cont.epPerDm;
+  if (cont.dmGain > 0 && Math.abs(cont.epSpent - expectCost) / Math.max(1, expectCost) < 0.1) ok('③ 按 DM 实收量连续扣费（无周期、无跳过）', `+${cont.dmGain.toFixed(2)} DM / -${Math.round(cont.epSpent)} EP`);
+  else bad('③ 连续结算比例异常', JSON.stringify(cont));
 
-  // ③ DM 满仓 → 页头消耗归零
+  const zero = await page.evaluate(async () => {
+    window.S.ep = 200; window.S.dm = 0; // 只够买极少量 DM
+    await new Promise(r => setTimeout(r, 1600));
+    const a = { ep: window.S.ep, dm: window.S.dm };
+    await new Promise(r => setTimeout(r, 1200));
+    return { a, epAfter: window.S.ep, dmAfter: window.S.dm, txt: document.getElementById('vehicle-collect')?.querySelector('.probe-info')?.textContent || '' };
+  });
+  if (zero.epAfter <= 1 && zero.a.ep <= 1) ok('③ EP 扣到 0 后停止（无负值、无中断文案）', zero.txt.slice(0, 60));
+  else bad('③ EP 归零行为', JSON.stringify(zero));
+
+  // ④ DM 满仓 → 停止采集、消耗归零
   const full = await page.evaluate(async () => {
-    window.S.dm = 1000; window.S._dmFull = true;
+    window.S.ep = 2e9; window.S.dm = 1000; window.S._dmFull = true;
     window.__gameDirty.shop = true; window.__gameDirty.top = true;
     await new Promise(r => setTimeout(r, 1400));
     const txt = document.getElementById('vehicle-collect')?.querySelector('.probe-info')?.textContent || '';
-    return { txt, drain: window.__qa.totalDrainPerSec ? window.__qa.totalDrainPerSec() : null };
+    return { txt, probeDrain: window.__qa.probeFlowPerSec().epPerSec, dm: window.S.dm };
   });
-  if (/DM 已满/.test(full.txt) || /探采 -0 EP\/s/.test(full.txt)) ok('③ 满仓时不再虚报探采消耗', full.txt.slice(0, 60));
-  else bad('③ 满仓仍显示消耗', full.txt.slice(0, 90));
+  if (/DM 已满/.test(full.txt) && full.probeDrain === 0) ok('④ 满仓停止采集且探采消耗归零', full.txt.slice(0, 50));
+  else bad('④ 满仓仍在扣费', JSON.stringify(full));
 
   if (errs.length === 0) ok('全程无 JS 报错');
   else bad('页面异常', errs.slice(0, 2).join(' | '));

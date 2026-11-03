@@ -379,7 +379,7 @@ function renderTop() {
   const emberStat = document.getElementById('ember-stat');
   if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
     emberStat.style.display = S._riftSeen ? '' : 'none';
-    hEmber.textContent = Math.round((S.riftEmber || 0) * 10) / 10; // v3.0.3 第二批④：余烬浮点显示收敛
+    hEmber.textContent = Math.floor(S.riftEmber || 0); // v3.3.8 反馈②：整数显示，与购买判定同口径（原四舍五入会出现「显示 20 但买不了 20 的项」）
   }
   const hVs = document.getElementById('h-vs');
   const vsStat = document.getElementById('vs-stat');
@@ -519,6 +519,8 @@ function renderHero() {
   const expStatus = document.getElementById('rift-exp-status');
   if (expStatus) {
     const ex = S.riftExpedition;
+    const riftCard = document.getElementById('rift-card'); // v3.3.8 反馈③：HUD 已移入裂隙卡，深入时确保卡片可见
+    if (ex && riftCard) riftCard.style.display = '';
     if (ex) {
       const left = Math.max(0, Math.ceil((ex.until - Date.now()) / 1000));
       expStatus.style.display = '';
@@ -592,6 +594,8 @@ function renderHero() {
   if (cbar) {
     if ((S.corruption || 0) > 0.01 || S.riftExpedition) { // v2.8.30：深入探索中腐化条恒显（含紧急脱出按钮）
       cbar.style.display = '';
+      const rc = document.getElementById('rift-card'); // v3.3.8 反馈③：腐化条在裂隙卡内，确保卡片可见
+      if (rc) rc.style.display = '';
       const fill = document.getElementById('corruption-fill');
       const num = document.getElementById('corruption-num');
       const pen = document.getElementById('corruption-pen');
@@ -875,7 +879,7 @@ function bindQuickSwitches() {
     renderQuickSwitches();
     const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化', temple: '圣所产出' };
     const nowOn = converterEnabled(k);
-    log(`快捷开关：${labels[k]}${nowOn ? '开启（EP 不足时自动暂停消耗，回升后自动恢复）' : '关闭'}`, nowOn ? 'good' : 'bad');
+    log(`快捷开关：${labels[k]}${nowOn ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, nowOn ? 'good' : 'bad');
   });
 }
 
