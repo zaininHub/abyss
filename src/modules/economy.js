@@ -957,6 +957,14 @@ export function fmt(n) {
   return n.toFixed(2) + units[u];
 }
 
+// v3.4.1 反馈④：资源数值统一口径——两侧同函数，低于 1000 保 2 位小数、≥1000 走 k/M 缩写。
+// 旧实现 DM 用 toFixed(2)、上限用 fmt → 顶部出现「2000.00 / 2.00k」的混排。
+export function fmtRes(n) {
+  const v = Number(n) || 0;
+  if (Math.abs(v) < 1000) return v.toFixed(2);
+  return fmt(v);
+}
+
 export function fmtTime(sec) {
   sec = Math.floor(sec);
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;

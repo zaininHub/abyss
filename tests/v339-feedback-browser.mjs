@@ -81,7 +81,8 @@ try {
   });
   if (pe.expAfterBuy >= 0 && pe.expAfterBuy < 60 && !pe.upAfterBuy) ok('③ 购买后经验从头累积、不可立即升级', `exp=${Math.round(pe.expAfterBuy)}`);
   else bad('③ 买入即可升级', JSON.stringify(pe));
-  if (pe.expLater > pe.expAfterBuy + 5) ok('③ 经验随时间增长（与实际产脱钩）', `${Math.round(pe.expAfterBuy)}→${Math.round(pe.expLater)}`);
+  // v3.4.1 反馈③：单级拉到 1 小时后，1.2 秒只涨 0.4 点左右——阈值改为 >0.05 的相对增长
+  if (pe.expLater > pe.expAfterBuy + 0.05) ok('③ 经验随时间增长（与实际产脱钩）', `${pe.expAfterBuy.toFixed(2)}→${pe.expLater.toFixed(2)}`);
   else bad('③ 经验未按时间累积', JSON.stringify(pe));
   if (pe.sameNode) ok('③ 经验条刷新不重建卡片（按钮不再闪）');
   else bad('③ 卡片被整面重建');
@@ -89,7 +90,8 @@ try {
   else bad('③ 升级按钮未出现');
   if (/全局\s*\+/.test(pe.fx)) ok('⑥ 卡面展示异兽实际效果', pe.fx.slice(0, 30));
   else bad('⑥ 卡面无效果行', pe.fx);
-  if (/升级\s*\d+s|已满级|可升级/.test(pe.eta)) ok('⑥ 卡面展示升级倒计时', pe.eta);
+  // v3.4.1 反馈③：升级时长改小时制（"升级 1h 15m"），断言放宽到 s/m/h 三种量级
+  if (/升级\s*[\d.]+\s*(s|m|h)|\d+m\s*\d+s|\d+h(\s*\d+m)?|已满级|可升级/.test(pe.eta)) ok('⑥ 卡面展示升级倒计时', pe.eta);
 
   // ===== ⑥ 动画无缩放 =====
   const anim = await page.evaluate(() => {

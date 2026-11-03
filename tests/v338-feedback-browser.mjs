@@ -54,9 +54,9 @@ try {
   });
   if (!/本周期跳过/.test(p1.txt0 + p1.title + p1.txtEnd)) ok('① 探采无「EP 不足，本周期跳过」文案');
   else bad('① 仍出现旧文案', p1.txt0.slice(0, 80));
-  if (p1.flow.epPerSec > 1.5e4 && p1.flow.epPerSec < 1e5) ok('① 消耗量级 ≈24K EP/s（10/15/2 辆构成）', `-${Math.round(p1.flow.epPerSec)} EP/s`);
+  if (p1.flow.epPerSec > 5e3 && p1.flow.epPerSec < 3e4) ok('① 消耗量级 ≈12K EP/s（10/15/2 辆构成）', `-${Math.round(p1.flow.epPerSec)} EP/s`);
   else bad('① 消耗量级', String(Math.round(p1.flow.epPerSec)));
-  if (p1.flow.dmPerSec > 0.2 && p1.flow.dmPerSec < 1.5) ok('① 产出量级 ≈0.33 DM/s（v3.4.0 再降）', `+${p1.flow.dmPerSec.toFixed(2)} DM/s`);
+  if (p1.flow.dmPerSec > 0.08 && p1.flow.dmPerSec < 0.5) ok('① 产出量级 ≈0.17 DM/s（v3.4.1 再降）', `+${p1.flow.dmPerSec.toFixed(2)} DM/s`);
   else bad('① 产出量级', String(p1.flow.dmPerSec));
   if (Math.abs(p1.after.dm - p1.before.dm) < 1e-9) ok('① 探采不吃班组加成', `mult ${p1.before.mult.toFixed(2)}→${p1.after.mult.toFixed(2)}`);
   else bad('① 班组影响了探采', JSON.stringify({ before: p1.before, after: p1.after }));

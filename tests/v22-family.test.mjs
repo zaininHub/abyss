@@ -209,14 +209,15 @@ t('组D 35 级满配 capAdd 贡献生效（capOf 经 effectiveLevel 读侧贯通
 });
 t('产出族扩展级价格红线（PM §3.4 状态感知口径）：按该级实际可达时刻的上限判，全部 ≤ m=9 期上限', () => {
   // 产出族档位门控 m=9 → 扩展级存在前提是 9 里程碑已达成；PM 终稿重算锚点（base×growth^(L-1)）：
-  // v3.3.9 反馈②：组E 首档大幅涨价（1.5K→60K / 2K→80K，growth 1.18→1.40）——锚点同步重算
-  //   协作大厅 L8/L12 = 632,481/2,429,739；节能电池 L8/L12 = 843,308/3,239,652；节能电池·II L8/L10 = 403,352/640,361
+  // v3.3.9 反馈②：组E 首档大幅涨价（1.5K→60K / 2K→80K，growth 1.18→1.40）
+  // v3.4.1 反馈⑤：继续涨价（协作大厅 60K→300K、节能电池 80K→350K）——锚点同步重算
+  //   协作大厅 L8/L12 = 3,162,405/12,148,696；节能电池 L8/L12 = 3,689,473/14,173,478；节能电池·II L8/L10 = 1,764,663/2,801,579
   // 全部 ≤ m=9 期上限 4.0e7（PM 终稿口径，非终局快照单点判）
   const M9_CAP = 4.0e7;
   const anchors = [
-    { id: 'coop_hall', lv: 8, price: 632481 }, { id: 'coop_hall', lv: 12, price: 2429739 },
-    { id: 'eco_battery', lv: 8, price: 843308 }, { id: 'eco_battery', lv: 12, price: 3239652 },
-    { id: 'eco_battery_2', lv: 8, price: 403352 }, { id: 'eco_battery_2', lv: 10, price: 640361 },
+    { id: 'coop_hall', lv: 8, price: 3162405 }, { id: 'coop_hall', lv: 12, price: 12148696 },
+    { id: 'eco_battery', lv: 8, price: 3689473 }, { id: 'eco_battery', lv: 12, price: 14173478 },
+    { id: 'eco_battery_2', lv: 8, price: 1764663 }, { id: 'eco_battery_2', lv: 10, price: 2801579 },
   ];
   for (const a of anchors) {
     const b = V21_BUILDINGS.find(x => x.id === a.id);

@@ -142,7 +142,8 @@ try {
     const gain = window.S.dm - dm0, spent = ep0 - window.S.ep;
     return { dmPerSec: gain / dt, epPerDm: spent / Math.max(gain, 1e-9), rate: window.__qa.vehicleEpPerDm(), perMin: window.__qa.vehicleDmPerMin() };
   });
-  if (dm.dmPerSec > 0.8 && dm.dmPerSec < 1.3) ok('④ 27 辆 DM 产出 ≈1 DM/s', `${dm.dmPerSec.toFixed(2)} DM/s（${dm.perMin} DM/min）`);
+  // v3.4.1 反馈⑦：dmRates 再砍半 → 27 辆 ≈0.5 DM/s（个位数 DM/s 区间内）
+  if (dm.dmPerSec > 0.3 && dm.dmPerSec < 0.75) ok('④ 27 辆 DM 产出 ≈0.5 DM/s', `${dm.dmPerSec.toFixed(2)} DM/s（${dm.perMin} DM/min）`);
   else bad('④ DM 产出', `${dm.dmPerSec.toFixed(2)} DM/s`);
   if (dm.rate > 6e4 && dm.rate < 9e4) ok('④ 单位 DM 的 EP 成本 ≈7.2 万（原 1.4 万）', Math.round(dm.rate));
   else bad('④ EP/DM 汇率', Math.round(dm.rate));

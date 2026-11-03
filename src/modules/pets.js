@@ -134,9 +134,25 @@ export function fusePets(aId, bId) {
 }
 
 // v3.3.9 反馈③：异兽升级条件改为「陪伴时间」——每级需累积固定时长，购买/升级后必从头计时，
-// 杜绝「高产出下买入即满经验、立即可升」。等级越高单级耗时越长（45s 起，每级 +6s）。
+// 杜绝「高产出下买入即满经验、立即可升」。
+// v3.4.1 反馈③：口径由「秒级」抬到「小时级」且逐级更陡——1 级 1 小时，之后每级 ×1.12（复利）：
+// Lv.1 1.0h / Lv.5 1.6h / Lv.10 2.8h / Lv.20 8.6h / Lv.30 27h / Lv.40 83h，越练越慢
 export function petLevelSeconds(level) {
-  return 45 + Math.max(1, level) * 6;
+  return Math.round(3600 * Math.pow(1.12, Math.max(1, level) - 1));
+}
+
+// v3.4.1 反馈③：时长可读化（小时级后不再显示「升级 3612s」）
+export function fmtPetDur(sec) {
+  sec = Math.max(0, Math.ceil(sec));
+  if (sec >= 3600) {
+    const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+    return m > 0 && h < 100 ? `${h}h ${m}m` : `${h}h`;
+  }
+  if (sec >= 60) {
+    const m = Math.floor(sec / 60), s2 = sec % 60;
+    return s2 > 0 && m < 10 ? `${m}m ${s2}s` : `${m}m`;
+  }
+  return `${sec}s`;
 }
 export function petXpPerSec(level) {
   return petExpNeed(level) / petLevelSeconds(level);
@@ -185,7 +201,7 @@ function petCardHtml(id, p, actives, starving) {
   const xpNeed = petExpNeed(p.level);
   const xpReady = isActive && !starving && p.level < 100 && p.exp >= xpNeed;
   const xpTitle = p.level >= 100 ? '已满级'
-    : `经验 ${Math.floor(Math.min(p.exp, xpNeed))} / ${Math.floor(xpNeed)} · 还需 ${petXpRemainSec(p)} 秒陪伴${xpReady ? ` · 点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
+    : `经验 ${Math.floor(Math.min(p.exp, xpNeed))} / ${Math.floor(xpNeed)} · 还需陪伴 ${fmtPetDur(petXpRemainSec(p))}${xpReady ? ` · 点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
   const upBtn = xpReady
     ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level))} PT</button>`
     : '';
@@ -196,7 +212,7 @@ function petCardHtml(id, p, actives, starving) {
       <div class="pet-fx" title="当前实际加成（含等级/世代/里程碑乘区）">${petEffectText(id, p)}</div>
       ${upkLine}
       <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div>
-      <div class="pet-eta mono" title="${xpTitle}">${p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${petXpRemainSec(p)}s`}</div>${upBtn}</div>`;
+      <div class="pet-eta mono" title="${xpTitle}">${p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${fmtPetDur(petXpRemainSec(p))}`}</div>${upBtn}</div>`;
 }
 
 // 结构未变时只做原地数值刷新（经验条/倒计时/按钮灰态）——原实现每帧因经验条宽度变化整面重建，
@@ -211,7 +227,7 @@ function refreshPetGridLive(container) {
     const fill = el.querySelector('.pet-xp > div');
     if (fill) fill.style.width = `${Math.min(100, p.exp / xpNeed * 100)}%`;
     const eta = el.querySelector('.pet-eta');
-    if (eta) eta.textContent = p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${petXpRemainSec(p)}s`;
+    if (eta) eta.textContent = p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${fmtPetDur(petXpRemainSec(p))}`;
     const btn = el.querySelector('[data-pet-up]');
     if (btn) {
       const can = actives.includes(id) && !starving && (S.pt || 0) >= petPtNeed(p.level) && p.exp >= xpNeed;

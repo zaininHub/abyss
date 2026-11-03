@@ -44,8 +44,9 @@ try {
   // ① 页头数量级：EP 消耗 10^5 级、DM 产出 10^0~10^1 级
   const epPerSec = h0.flow.epPerSec, dmPerSec = h0.flow.dmPerSec;
   // v3.4.0 反馈④：DM 产出再降（每辆 DM/min ÷15），单位 DM 的 EP 成本 ×5
-  // 本用例载具构成 10 摩托 + 15 车队 + 2 轨道 = 20 DM/min（0.33 DM/s）；27 辆高配 ≈1 DM/s 见 v340
-  if (epPerSec > 1.5e4 && epPerSec < 1e5 && dmPerSec > 0.2 && dmPerSec < 1.5) ok('① 消耗 ≈24K EP/s、产出 ≈0.33 DM/s（按载具构成）', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
+  // 本用例载具构成 10 摩托 + 15 车队 + 2 轨道 = 10 DM/min（0.17 DM/s）；27 辆高配 ≈0.5 DM/s 见 v340
+  // v3.4.1 反馈⑦：dmRates 再砍半（0.4/0.8/2/4 → 0.2/0.4/1/2），产出落进「个位数 DM/s」区间
+  if (epPerSec > 5e3 && epPerSec < 3e4 && dmPerSec > 0.08 && dmPerSec < 0.5) ok('① 消耗 ≈12K EP/s、产出 ≈0.17 DM/s（按载具构成）', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
   else bad('① 数量级不符', `-${Math.round(epPerSec)} EP/s → +${dmPerSec.toFixed(2)} DM/s`);
   if (!/本周期跳过|EP 不足/.test(h0.txt + h0.title)) ok('① 页头无「EP 不足，本周期跳过」文案');
   else bad('① 仍有旧文案', h0.txt.slice(0, 80));
@@ -74,7 +75,9 @@ try {
 
   // ③ 连续结算：1 秒实扣 ≈ epPerDm × 入账 DM；扣到 EP=0 后停产
   const cont = await page.evaluate(async () => {
-    window.S.ep = Math.min(window.__qa.epStorageCap() * 0.9, 5e6); window.S.dm = 0;
+    // v3.4.1 反馈⑦：DM 产出减半后，「扣 EP 量」里自然产出占比变大（12% 误差）——
+    // 把 EP 顶到上限，多余产出走溢出池不入账，ep0-ep1 即为纯扣费量
+    window.S.ep = window.__qa.epStorageCap(); window.S.dm = 0;
     await new Promise(r => setTimeout(r, 200));
     const ep0 = window.S.ep, dm0 = window.S.dm;
     await new Promise(r => setTimeout(r, 2000));

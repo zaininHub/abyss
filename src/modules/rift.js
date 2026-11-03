@@ -62,7 +62,16 @@ export function buyRiftLevelTech() {
   return { ok: true, level: S.riftLevelTech };
 }
 // 科技树「裂隙等级」卡片：结构签名去重，可购态原地刷新
+// v3.4.1 反馈②：与科技树其余卡片完全同构（.tech / .name / .desc / .cost + .locked 灰显），
+// 不再用 .item v21（在 .tech-grid 里没有 .cant 规则 → 买不起也不灰，且 max-width:520px 破坏栅格）；
+// 文案同步收紧为「每级…」句式（对齐「每级全局产出 +2%」）
 let riftTechSig = '';
+function riftTechAfford(cost) {
+  return (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
+}
+function riftTechTip(lv, cur) {
+  return `裂隙等级 Lv.${lv} → Lv.${lv + 1}（无限升级）\n每级：裂隙上限 +1，DM / RP / 余烬奖励同步提升\n当前裂隙 Lv.${cur}`;
+}
 export function renderRiftLevelTech(container) {
   if (!container) return;
   const title = document.getElementById('rift-tech-title');
@@ -72,19 +81,22 @@ export function renderRiftLevelTech(container) {
   if (!shown) { container.innerHTML = ''; riftTechSig = ''; return; }
   const lv = riftLevelTech();
   const cost = riftLevelTechCost();
-  const afford = (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
-  const sig = String(lv);
+  const cur = Math.min(riftMaxLevel(), riftLevelOf(computeCps()));
+  // v3.4.1 反馈②：与「研究升级」卡完全同构（name + count + desc + cost，两行内收口），
+  // 不再自造 .name span[style] 双段行——此前描述换行 3 行、多一行「当前裂隙」，比同排 tech 卡高 40%
+  const sig = `${lv}|${cur}`;
   if (sig !== riftTechSig) {
     riftTechSig = sig;
-    container.innerHTML = `<div class="item v21" data-rift-level style="max-width:520px">
-      <div class="name"><span>裂隙等级 Lv.${lv}</span><span class="count mono">当前裂隙 Lv.${Math.min(riftMaxLevel(), riftLevelOf(computeCps()))}</span></div>
-      <div class="desc">每级裂隙等级 +1（上限与 DM/RP/余烬奖励同步提升，无限升级）；消耗 EP + DM</div>
+    container.innerHTML = `<div class="tech" data-rift-level title="${riftTechTip(lv, cur)}">
+      <div class="name"><span>裂隙等级</span><span class="count mono">Lv.${lv}</span></div>
+      <div class="desc">每级裂隙上限 +1<br>DM/RP/余烬同步提升</div>
       <div class="cost mono" data-rift-level-cost>${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</div>
     </div>`;
     const el = container.querySelector('[data-rift-level]');
     if (el && !el._bound) {
       el._bound = true;
       el.addEventListener('click', () => {
+        if (!riftTechAfford(riftLevelTechCost())) return; // 灰态不可点，避免连点误买
         const r = buyRiftLevelTech();
         if (!r.ok && toast) toast(r.reason);
         dirty.tech = true;
@@ -92,14 +104,25 @@ export function renderRiftLevelTech(container) {
       });
     }
   }
-  const el = container.querySelector('[data-rift-level]');
-  if (el) {
-    el.classList.toggle('cant', !afford);
-    const c = el.querySelector('[data-rift-level-cost]');
-    if (c) c.textContent = `${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM`;
-    const cnt = el.querySelector('.count');
-    if (cnt) cnt.textContent = `当前裂隙 Lv.${Math.min(riftMaxLevel(), riftLevelOf(computeCps()))}`;
-  }
+  refreshRiftLevelTechAfford();
+}
+
+// v3.4.1 反馈②⑥：可购态每秒原地刷新（此前只在 dirty.tech 时重算，EP/DM 变化后卡片长期停在旧灰态）
+export function refreshRiftLevelTechAfford() {
+  const el = document.querySelector('[data-rift-level]');
+  if (!el) return;
+  const cost = riftLevelTechCost();
+  const afford = riftTechAfford(cost);
+  el.classList.toggle('locked', !afford);
+  const c = el.querySelector('[data-rift-level-cost]');
+  const txt = `${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM`;
+  if (c && c.textContent !== txt) c.textContent = txt;
+  const lv = riftLevelTech();
+  const cur = Math.min(riftMaxLevel(), riftLevelOf(computeCps()));
+  const t = el.querySelector('.name .count');
+  const wantLv = `Lv.${lv}`;
+  if (t && t.textContent !== wantLv) t.textContent = wantLv;
+  el.title = riftTechTip(lv, cur);
 }
 
 // ---- v2.6.1 余烬升级树 ----
@@ -378,7 +401,9 @@ export function refreshRiftAffordability() {
     if (!u) continue;
     const lv = riftUpgradeLevel(id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(id);
-    const btn = row.querySelector('button');
+    // v3.4.1 反馈⑥：只动「购买」按钮——此前 row.querySelector('button') 会命中自动动作的
+    // 「开启/已开启」互斥开关，余烬不足时把开关一起置灰（点不动、也不报错，看起来像功能坏了）
+    const btn = row.querySelector('button[data-rift-buy]');
     const ember = Math.floor(S.riftEmber || 0); // v3.3.8 反馈②：与显示/扣费同口径（旧档浮点余烬不再出现「显示够、判定不够」）
     if (btn) { btn.disabled = cost === null || ember < cost; btn.classList.toggle('disabled', cost !== null && ember < cost); }
     row.classList.toggle('cant', cost !== null && ember < cost);
@@ -527,7 +552,7 @@ export function renderRiftPanel(container) {
           <div style="font-size:11px;color:var(--text-3)">${desc}</div>
         </div>
         ${autoToggle}
-        ${maxed ? pricePill : `<button class="btn ${afford ? '' : 'disabled'}" ${afford ? '' : 'disabled'}>${cost} 余烬</button>`}
+        ${maxed ? pricePill : `<button class="btn ${afford ? '' : 'disabled'}" data-rift-buy="${id}" ${afford ? '' : 'disabled'}>${cost} 余烬</button>`}
       </div>`;
   }
   container.innerHTML = html;

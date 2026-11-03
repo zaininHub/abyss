@@ -10,7 +10,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
-  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线
+  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -428,8 +428,9 @@ function renderTop() {
   if (hRp) hRp.textContent = fmt(S.rp) + ' / ' + fmt(rpCap()); // v2.8.27 ②：RP 存储上限（矩阵存储库扩容）
   if (hEs) hEs.textContent = fmt(S.es);
   if (hFaith) hFaith.textContent = (S.faith || 0).toFixed(2); // v2.6.4 ③：信仰精确 2 位小数
-  if (hPt) hPt.textContent = Math.floor(S.pt || 0) + ' / ' + Math.floor(ptCap()); // v2.8.27 ②：PT 存储上限（饵料仓库扩容）
-  if (hDm) hDm.textContent = (S.dm || 0).toFixed(2) + ' / ' + fmt(dmCap()); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
+  // v3.4.1 反馈④：PT/DM 两侧统一走 fmtRes（<1000 两位小数，≥1000 k/M）——不再出现「2000.00 / 2.00k」
+  if (hPt) hPt.textContent = fmtRes(S.pt || 0) + ' / ' + fmtRes(ptCap()); // v2.8.27 ②：PT 存储上限（饵料仓库扩容）
+  if (hDm) hDm.textContent = fmtRes(S.dm || 0) + ' / ' + fmtRes(dmCap()); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
   if (hBuff) hBuff.innerHTML = buffTag;
   // v2.1 P1：科技树页头常显 RP / ES
   const tRp = document.getElementById('tech-rp');
