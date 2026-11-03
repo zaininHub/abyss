@@ -500,7 +500,9 @@ export function embraceDurMs() {
 // v2.4：显示与到账统一为确定性数值口径 = Σ(载具数×档位速率)×(1+dmRateAdd 建筑加成)；
 // 不再掷骰（原概率投掷方差导致「显示 55/s 实际 1.1/min」类感知偏差，v2.3.2 定性与本版修复依据）
 export function vehicleDmPerMin() {
-  if (S.converterOn && S.converterOn.vehicles === false) return 0; // v3.3.0：探采平台关闭 → 停止采集（绑定释放、消耗恢复）
+  // v3.3.4 反馈①：探采开关统一口径——原来这里只读 converterOn.vehicles，而页头开关只写 _probeEnabled，
+  // 两轨不同步 → 页头显示「探采中」但 rate=0（永不采集）、关掉也不影响消耗
+  if (!converterEnabled('vehicles')) return 0;
   let sum = 0;
   BALANCE.vehicles.ids.forEach((id, i) => { sum += (S.upgrades[id] || 0) * BALANCE.vehicles.dmRates[i]; });
   // v2.5.1：深渊鱼缸（DM 采集 +20%/级，深渊行者线专属建筑）+ 深渊集市（×1.5，叠乘）
@@ -788,7 +790,7 @@ export function salaryDrainPerSec() {
   return sal;
 }
 export function probeDrainPerSec() {
-  if (S._probeEnabled === false) return 0;
+  if (!converterEnabled('vehicles')) return 0; // v3.3.4 反馈①：与页头开关/快捷开关同口径
   const perMin = vehicleDmEpCostPerMin();
   if (perMin <= 0) return 0;
   const cycleCost = (perMin / 60) * BALANCE.vehicles.collectInterval;

@@ -686,33 +686,47 @@ function updateVehicleCollectHeader() {
   const el = document.getElementById('vehicle-collect');
   if (!el) return;
   const rate = vehicleDmPerMin();
-  const enabled = S._probeEnabled !== false; // v2.8.30：探采开关（默认开启）
-  let info;
+  const enabled = converterEnabled('vehicles'); // v3.3.4 反馈①：与快捷开关/tick 同一状态源（原读 _probeEnabled，与 vehicleDmPerMin 的 converterOn 双轨打架 → 开关假生效）
+  const dmTxt = `当前 DM: ${(S.dm || 0).toFixed(2)}`;
+  let info, tip;
   if (rate > 0) {
     const epPerSec = vehicleDmEpCostPerMin() / 60;
-    info = `当前 DM: ${(S.dm || 0).toFixed(2)} · 探采 -${Number(epPerSec.toFixed(1))} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`; // v2.8.15：单位统一 EP/s + DM/s（按秒换算）
-    // v3.3.3 反馈⑧：DM 满仓提示（满仓时采集暂停、不扣 EP）
-    if (S._dmFull && (S.dm || 0) >= dmCap() - 1e-9) info += ' · <b style="color:var(--warn)">DM 已满，采集暂停（星尘金库扩容可提升上限）</b>';
-    el.title = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`; // v3.1.1 反馈⑤：汇率递增口径 // v3.2.2 反馈①：去除自动暂停口径
+    // v3.3.4 反馈①：EP 消耗统一走 fmt（K/M 简化），原 Number(toFixed(1)) 会显示 1666.7 这类裸数字
+    info = `${dmTxt} · 探采 -${fmt(epPerSec)} EP/s → +${fmtDmPerSec(rate / 60)} DM/s`;
+    tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(vehicleEpPerDm())} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增；EP 不足或 DM 满仓时本轮跳过，回升/扩容后自动恢复采集）：每辆摩托队/车队/轨道器/潜航器 0.05/0.1/0.25/0.5 DM/min；深渊蓄能池/凝析塔等建筑可提升采集效率`;
   } else {
-    info = `当前 DM: ${(S.dm || 0).toFixed(2)}`; // v2.4.2：DM 精确到小数
-    el.title = '购买载具后每 60 秒自动采集深渊物质';
+    info = dmTxt; // v2.4.2：DM 精确到小数
+    tip = enabled ? '购买载具后每 60 秒自动采集深渊物质' : '探采已暂停：点击「已暂停」恢复采集（EP 消耗同步恢复）';
   }
-  // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取暂停
-  // v3.2.2 反馈①：去除「EP 不足自动暂停需手动恢复」——开关只由玩家控制，EP 不足自动跳过、回升自动恢复
-  const btnCls = enabled ? '' : ' off';
-  const stateText = enabled ? '探采中' : '已暂停';
-  el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span>${info}</span>
-      <button id="probe-toggle" class="btn probe-toggle${btnCls}" data-probe-toggle="1" style="padding:2px 10px;font-size:11px">${stateText}</button>
-    </div>`;
-  const tb = el.querySelector('#probe-toggle');
-  if (tb) tb.addEventListener('click', () => {
-    S._probeEnabled = S._probeEnabled === false ? true : false;
-    save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
-    updateVehicleCollectHeader();
-    dirty.top = true;
-  });
+  const dmFull = rate > 0 && S._dmFull && (S.dm || 0) >= dmCap() - 1e-9;
+  // v3.3.4 反馈①：只建一次 DOM，之后原地改文本/class——原实现每次刷新都 innerHTML 重建，
+  // 每秒重建一次按钮导致 hover 过渡反复重启（鼠标移上去闪烁）
+  let infoEl = el.querySelector('.probe-info');
+  if (!infoEl) {
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="probe-info"></span><b class="probe-warn" style="color:var(--warn);display:none">DM 已满，采集暂停（星尘金库扩容可提升上限）</b>
+        <button class="btn probe-toggle" data-probe-toggle="1" style="padding:2px 10px;font-size:11px"></button>
+      </div>`;
+    infoEl = el.querySelector('.probe-info');
+    const btn = el.querySelector('[data-probe-toggle]');
+    if (btn) btn.addEventListener('click', () => {
+      // v3.3.4 反馈①：统一走 setConverterEnabled（写 converterOn + _probeEnabled 镜像），
+      // 避免「页头开关只改 _probeEnabled，而采购率读 converterOn」导致开启后仍不采集
+      setConverterEnabled('vehicles', !converterEnabled('vehicles'));
+      save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
+      updateVehicleCollectHeader();
+      dirty.top = true;
+    });
+  }
+  if (infoEl.textContent !== info) { infoEl.textContent = info; el.title = tip; }
+  const warnEl = el.querySelector('.probe-warn');
+  if (warnEl) warnEl.style.display = dmFull ? '' : 'none';
+  const tb = el.querySelector('[data-probe-toggle]');
+  if (tb) {
+    const stateText = enabled ? '探采中' : '已暂停';
+    if (tb.textContent !== stateText) tb.textContent = stateText;
+    tb.classList.toggle('off', !enabled);
+  }
 }
 
 export function renderVehicles(container) {

@@ -48,9 +48,16 @@ export function riftUpgradeCost(id) {
     ? BALANCE.rift.upgBase * 10 : BALANCE.rift.upgBase;
   return Math.round(base * Math.pow(BALANCE.rift.upgGrowth, riftUpgradeLevel(id)));
 }
-export function riftSpawnSec() {
-  const lv = riftUpgradeLevel('sentinel');
+export function riftSpawnSecAt(lv) {
   return Math.max(240, BALANCE.rift.spawnSec * Math.pow(0.75, lv)); // v3.3.3 反馈⑤：下限 240s（原 600s）
+}
+export function riftSpawnSec() {
+  return riftSpawnSecAt(riftUpgradeLevel('sentinel'));
+}
+// v3.3.4 反馈⑤：间隔文案统一「X 分钟」格式（非整分保留一位小数），显示值即实际生效值
+function fmtSpawnMin(sec) {
+  const m = sec / 60;
+  return `${Number.isInteger(m) ? m : Number(m.toFixed(1))} 分钟`;
 }
 export function riftDmMult() {
   return 1 + 0.2 * riftUpgradeLevel('lens');
@@ -356,20 +363,23 @@ export function renderRiftPanel(container) {
     return;
   }
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
-    <div class="off-stat"><span>裂隙间隔</span><b>${Math.round(riftSpawnSec() / 60)} 分钟</b></div>
+    <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技（余烬）</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(id);
-    // v2.6.4 ⑦：哨站动态文案（当前间隔 → 下一级间隔 → 下限）
+    // v2.6.4 ⑦ → v3.3.4 反馈⑤：哨站文案改「当前 → 下一级」，且下一级与 riftSpawnSec 同口径
+    // （原 next 用 Math.max(600, ...) 硬编码旧下限，Lv.0 时算出来也是 10 分钟 → 文案与实际生效不符）
     let desc = u.desc;
     if (id === 'sentinel') {
-      const cur = Math.round(riftSpawnSec() / 60);
-      if (lv < u.cap) {
-        const next = Math.round(Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv + 1)) / 60);
-        desc = `裂隙出现间隔缩短 25%/级：当前 ${cur} 分钟 → 下一级 ${next} 分钟`; // v2.8.13：去除「下限」文案
+      const cur = riftSpawnSec();
+      if (lv >= u.cap) {
+        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)}（已满级 · 每级 -25%）`;
       } else {
-        desc = `裂隙出现间隔缩短 25%/级：已达最短 ${cur} 分钟`;
+        const next = riftSpawnSecAt(lv + 1);
+        desc = next < cur - 1
+          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)}（每级 -25%，下限 4 分钟）`
+          : `裂隙出现间隔 ${fmtSpawnMin(cur)}（已到最短，继续升级不再缩短）`;
       }
     }
     // v3.1.1 反馈④：探测井动态文案（当前最高等级 → 下一级等级名）

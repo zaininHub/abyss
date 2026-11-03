@@ -148,7 +148,8 @@ export function renderExpeditions(container) {
       : g.reward.type === 'rp' ? `${g.reward.amount} RP`
       : `${g.reward.amount} ES`;
     if (!unlocked) {
-      html += `<div class="off-upg" style="opacity:.5"><span>${g.name}<br><span style="color:var(--text-3)">需 cps ${fmt(g.cpsReq)}</span></span>
+      // v3.3.4 反馈②：未解锁星系按渐进披露口径显示「???」（原直接露出「月球基地/火星前哨…」等名称）
+      html += `<div class="off-upg" style="opacity:.5"><span>???<br><span style="color:var(--text-3)">需 cps ${fmt(g.cpsReq)}</span></span>
         <span style="color:var(--text-3)">—</span></div>`;
     } else {
       html += `<div class="off-upg" data-galaxy="${g.id}" style="cursor:${busy ? 'not-allowed' : 'pointer'}">

@@ -80,17 +80,17 @@ try {
   });
   if (p1.rate > 0 && p1.moved) ok('① 经验持续增长、进度条移动', `${p1.rate.toFixed(0)} exp/s`); else bad('① 进度条', JSON.stringify(p1));
 
-  // PT 门：经验满 + 饼干不足 → 卡面提示（不回家不冻结）
+  // PT 门：经验满 + 饼干不足 → 进度条悬浮提示（v3.3.4：卡面只留维持文案，门槛提示移入 title）
   const p1b = await page.evaluate(async () => {
     const pet = window.S.pets.cat;
     pet.exp = Math.floor(1200 * Math.pow(pet.level, 2.8));
     window.S.pt = 3; // 少于升级所需，但 >0（不触发休战）
     window.__gameDirty.pets = true;
     await new Promise(r => setTimeout(r, 700));
-    const t = document.querySelector('#pet-grid')?.innerText || '';
-    return { hint: /经验已满 · 升级需/.test(t), level: pet.level };
+    const t = document.querySelector('.pet-xp')?.getAttribute('title') || '';
+    return { hint: /升级需/.test(t), level: pet.level };
   });
-  if (p1b.hint) ok('① 经验满且饼干不足时显示「升级需 X PT」提示'); else bad('① PT 门提示', JSON.stringify(p1b));
+  if (p1b.hint) ok('① 经验满且饼干不足时进度条悬浮给出「升级需 X PT」'); else bad('① PT 门提示', JSON.stringify(p1b));
 
   // 饼干充足 → 正常升级
   const p1c = await page.evaluate(async () => {

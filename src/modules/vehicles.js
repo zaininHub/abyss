@@ -5,6 +5,7 @@ import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { collectVehicleDm, vehicleDmPerMin, vehicleDmEpCostPerMin, dmCap } from './economy.js';
 import { addDm, fmt } from './economy.js'; // v2.8.27 ②：DM 上限
+import { converterEnabled } from './threadBinding.js'; // v3.3.4 反馈①：开关统一口径
 
 let logFn = null;
 export function setVehicleLogFn(fn) { logFn = fn; }
@@ -16,7 +17,7 @@ export { vehicleDmPerMin };
 // EP 不足时本轮跳过（不扣费），EP 回升后下一周期自动恢复采集（提升挂机可玩性）
 export function tickVehicleCollect(dt) {
   // v2.8.30：探采开关——关闭后 EP 扣减与 DM 获取全部暂停
-  if (S._probeEnabled === false) { S.vehCollectTimer = 0; S._probeEpShortSec = 0; return false; }
+  if (!converterEnabled('vehicles')) { S.vehCollectTimer = 0; S._probeEpShortSec = 0; return false; } // v3.3.4 反馈①：统一口径
   if (vehicleDmPerMin() <= 0) { S.vehCollectTimer = 0; S._probeEpShortSec = 0; return false; } // 无载具不计时
   // v3.2.2：旧档自动暂停标记清理（机制已废除）
   if (S._probeAutoPaused) S._probeAutoPaused = false;

@@ -55,7 +55,12 @@ export function gainPetExp(dt) {
     while (p.exp >= petExpNeed(p.level) && p.level < 100) {
       // v3.0.3 第二批⑤：升级需消耗异兽饼干；饼干不足时本回合停止升级（资源门槛陡峭化）
       const ptNeed = petPtNeed(p.level);
-      if ((S.pt || 0) < ptNeed) break;
+      if ((S.pt || 0) < ptNeed) {
+        // v3.3.4 反馈③：饼干不足付不起本级升级费时，经验封顶在升级线——原实现继续无限累积，
+        // 经验条永远 100% 且看不出「卡在等饼干」，升级后还会一口气跳好几级
+        p.exp = petExpNeed(p.level);
+        break;
+      }
       S.pt = Math.max(0, (S.pt || 0) - ptNeed);
       p.exp -= petExpNeed(p.level);
       p.level++;
@@ -141,18 +146,18 @@ export function renderPetGrid(container) {
     const upkLine = isActive
       ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
       : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
-    // v3.3.3 反馈①：进度条卡满时给出原因——升级被异兽饼干（PT）门槛挡住，显示所需 PT 与当前持有
+    // v3.3.3 反馈① → v3.3.4 反馈④：卡级原因（饼干门槛）不再占卡面文案——卡面只留「维持」一行，
+    // 经验/升级所需 PT 移入进度条悬浮提示（信息不丢，文案不堆叠）
     const xpReady = isActive && !starving && p.level < 100 && p.exp >= petExpNeed(p.level);
-    const readyLine = xpReady
-      ? `<div class="lv" style="color:var(--warn);font-size:10px">经验已满 · 升级需 ${fmt(petPtNeed(p.level))} PT（当前 ${Math.floor(S.pt || 0)}）</div>`
-      : '';
+    const xpNow = Math.floor(Math.min(p.exp, xpNeed));
+    const xpTitle = p.level >= 100 ? '已满级'
+      : `经验 ${xpNow} / ${Math.floor(xpNeed)}${xpReady ? ` · 已满，升级需 ${fmt(petPtNeed(p.level))} PT（当前 ${Math.floor(S.pt || 0)}）` : ''}`;
     html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
       <div class="lv">Lv.${p.level}${stateTag}</div>
-      <div class="lv" style="color:var(--green);font-size:10px">${def ? def.desc : ''}</div>
-      ${upkLine}${readyLine}
-      <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`; // v2.8.17：已拥有卡直接显示效果（不靠悬浮）
+      ${upkLine}
+      <div class="pet-xp" title="${xpTitle}"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`;
   }
   const ownedIds = Object.keys(S.pets);
   const buyable = PETS.filter(p => !ownedIds.includes(p.id));

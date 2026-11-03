@@ -260,7 +260,7 @@ export const BALANCE = {
     emberSeal: 10, emberEmbrace: 8, emberDelve: 5,
     upgBase: 20, upgGrowth: 1.6,
     upgrades: {
-      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现更快：间隔缩短 25%/级' }, // v2.8.13：去除「下限」文案
+      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔 -25%/级（下限 4 分钟）' }, // v3.3.4 反馈⑤：文案与 riftSpawnSec 同口径
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
