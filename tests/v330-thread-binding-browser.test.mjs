@@ -89,7 +89,8 @@ try {
     const txt = await page.evaluate(() => document.getElementById('crew-panel').textContent);
     rec('卡片展示「Lv.1」等级', txt.includes('Lv.1'), '');
     rec('卡片展示职业（勘探员/蒸馏师/统御官）', txt.includes('勘探员') && txt.includes('蒸馏师') && txt.includes('统御官'), '');
-    rec('面板含 v3.3 调度协议帮助文案', txt.includes('班组调度协议 v3.3'), '');
+    // v3.3.1 反馈⑩：协议标题与「关闭开关释放绑定」尾句已删除，只保留规则本身
+    rec('面板含绑定规则帮助文案（无协议标题）', txt.includes('匹配职业') && !txt.includes('班组调度协议'), '');
   }
 
   // 绑定下拉存在

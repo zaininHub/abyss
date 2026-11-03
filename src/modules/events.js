@@ -4,15 +4,14 @@ import { UPGRADES } from '../data/upgrades.js';
 import { computeCps, eventFreqMult, offlineRate, fmt, elv, tideMult, addEp, addRp } from './economy.js';
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：机会感知器·锐
 
-export function maybeTriggerEvent() {
-  if (Date.now() < S.nextEventAt) return null;
-  const base = (4 * 3600 + Math.random() * 3 * 3600) * 1000 / eventFreqMult();
-  S.nextEventAt = Date.now() + base;
+// v3.3.1 反馈③：预言系统（信仰线科技 prophecy）——把「抽取下一个事件」拆出来，
+// 供神谕广播（每 30 秒预告）与实际触发共用同一结果，预告不再是空话
+function eventPool() {
   const cps = computeCps();
-  const events = getEvents();
-  let pool = events.filter(e => cps >= e.minCps);
-  if (S.runTalent === 'lucky2') pool = pool.filter(e => !e.rare || Math.random() < 0.5);
-  if (pool.length === 0) return null;
+  const pool = getEvents().filter(e => cps >= e.minCps);
+  return S.runTalent === 'lucky2' ? pool.filter(e => !e.rare || Math.random() < 0.5) : pool;
+}
+function weightedPick(pool) {
   const weighted = [];
   for (const e of pool) {
     let w = e.rare ? 2 : 10;
@@ -20,7 +19,28 @@ export function maybeTriggerEvent() {
     if (e.type === 'debuff' || e.type === 'lose_ep') w *= tideMult('eventBad');
     for (let i = 0; i < w; i++) weighted.push(e);
   }
-  const ev = weighted[Math.floor(Math.random() * weighted.length)];
+  return weighted[Math.floor(Math.random() * weighted.length)] || null;
+}
+export function peekNextEvent() {
+  const pool = eventPool();
+  if (!pool.length) return null;
+  return weightedPick(pool);
+}
+
+export function maybeTriggerEvent() {
+  if (Date.now() < S.nextEventAt) return null;
+  const base = (4 * 3600 + Math.random() * 3 * 3600) * 1000 / eventFreqMult();
+  S.nextEventAt = Date.now() + base;
+  const pool = eventPool();
+  if (pool.length === 0) return null;
+  // v3.3.1：若已预告，优先兑现预言（保证「神谕广播」说的是真的）
+  let ev = null;
+  if (S.prophecyNext && S.prophecyNext.id) {
+    ev = pool.find(e => e.id === S.prophecyNext.id) || null;
+  }
+  S.prophecyNext = null;
+  if (!ev) ev = weightedPick(pool);
+  if (!ev) return null;
   // v2.0 潮汐：正面增益事件时长受 eventGoodDur 相位系数影响（涨潮 ×1.5）
   applyEvent(ev, tideMult('eventGoodDur'));
   return ev;

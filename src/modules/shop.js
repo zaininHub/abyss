@@ -10,6 +10,8 @@ import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
+import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
+import { converterEnabled, setConverterEnabled } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
@@ -345,43 +347,36 @@ export function renderAtriumDistill(container) {
     container.appendChild(div);
     return;
   }
-  const on = S.atriumOn !== false;
+  const on = converterEnabled('atrium');
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n;
   const nextCost = atriumUpgCost(n); // v3.0.3 第四批③：升级成本（EP 指数曲线，参考其他升级项）
   const upgAfford = (S.ep || 0) >= nextCost; // v3.0.3 第六批②：EP 不足灰显
   const div = document.createElement('div');
   div.className = 'atrium-distill item';
-  // v3.0.3 第四批①③：移动到顶部蒸馏按钮处；去括号文案；升级按钮放开关旁（EP 指数消耗）
+  // v3.3.1 反馈①：设施区只保留「购买/升级」；自动蒸馏开关移入「研究点」页
   div.innerHTML = `<div class="name"><span>灵感工坊 ×${n}</span><span class="count mono">${fmt(epS)} EP/s → +${fmt(rpS)} RP/s</span></div>
-    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 不足时暂停，回升后自动继续）</div>
+    <div class="desc">自动蒸馏：每秒消耗 ${fmt(epS)} EP 转化 +${fmt(rpS)} RP（EP 不足时暂停，回升后自动继续）· 开关在「研究点」页${on ? '' : '（当前已关闭）'}</div>
     <div style="display:flex;gap:8px;margin-top:6px">
-      <button data-atrium-toggle class="mini-btn" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 14px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '蒸馏开' : '蒸馏关'}</button>
       <button data-atrium-upg class="mini-btn" style="cursor:${upgAfford ? 'pointer' : 'not-allowed'};opacity:${upgAfford ? 1 : 0.5};border:1px solid ${upgAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${upgAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(nextCost)} EP</button>
     </div>`;
   // v3.0.3 第四批⑥：容器级事件委托——研究点面板重渲染后监听不丢失
   if (!container._atriumDelegated) {
     container._atriumDelegated = true;
     container.addEventListener('click', (ev) => {
-      const t = ev.target.closest ? ev.target.closest('[data-atrium-toggle],[data-atrium-upg]') : ev.target;
-      if (!t) return;
-      if (t.hasAttribute('data-atrium-toggle')) {
-        S.atriumOn = S.atriumOn === false ? true : false;
-        save(S);
-        renderAtriumDistill(container);
-      } else if (t.hasAttribute('data-atrium-upg')) {
-        // v3.0.3 第六批①：修复 EP 无限 bug——原 buyUpgrade({id:'atrium'}) 裸对象致 unitCost 读 u.base=undefined → 成本 NaN → 成本检查失效（可无视 EP 无限升级）
-        // 改为与按钮显示同口径（atriumUpgCost）手动拦截扣费，与异兽孵化升级同范式
-        const lvl = (S.upgrades && S.upgrades.atrium) || 0;
-        const cost = atriumUpgCost(lvl);
-        if (!Number.isFinite(cost) || (S.ep || 0) < cost) return;
-        S.ep -= cost;
-        S.upgrades.atrium = lvl + 1;
-        S.totalBuys = (S.totalBuys || 0) + 1;
-        S.lazySince = null;
-        save(S);
-        renderAtriumDistill(container);
-      }
+      const t = ev.target.closest ? ev.target.closest('[data-atrium-upg]') : ev.target;
+      if (!t || !t.hasAttribute('data-atrium-upg')) return;
+      // v3.0.3 第六批①：修复 EP 无限 bug——原 buyUpgrade({id:'atrium'}) 裸对象致 unitCost 读 u.base=undefined → 成本 NaN → 成本检查失效（可无视 EP 无限升级）
+      // 改为与按钮显示同口径（atriumUpgCost）手动拦截扣费，与异兽孵化升级同范式
+      const lvl = (S.upgrades && S.upgrades.atrium) || 0;
+      const cost = atriumUpgCost(lvl);
+      if (!Number.isFinite(cost) || (S.ep || 0) < cost) return;
+      S.ep -= cost;
+      S.upgrades.atrium = lvl + 1;
+      S.totalBuys = (S.totalBuys || 0) + 1;
+      S.lazySince = null;
+      save(S);
+      renderAtriumDistill(container);
     });
   }
   container.appendChild(div);
@@ -389,6 +384,76 @@ export function renderAtriumDistill(container) {
 // v3.0.3 第四批③：灵感工坊升级成本——EP 指数曲线（参考研究升级项），消耗大幅增多
 export function atriumUpgCost(n) {
   return Math.ceil((BALANCE.atrium.base || 5e4) * Math.pow(BALANCE.atrium.growth || 2.2, n - 1));
+}
+
+// v3.3.1 反馈①：灵感工坊「自动蒸馏」开关移入研究点页（设施区只留购买/升级）
+export function renderAtriumSwitch(host) {
+  if (!host) return;
+  const n = (S.upgrades && S.upgrades.atrium) || 0;
+  if (n < 1) { host.innerHTML = ''; host.style.display = 'none'; return; }
+  host.style.display = '';
+  const on = converterEnabled('atrium');
+  const epS = (BALANCE.atrium.epRate || 150) * n;
+  const rpS = (BALANCE.atrium.rate || 0.15) * n;
+  host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+    <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
+    <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>
+    <span style="font-size:11px;color:var(--text-3)">每秒 -${fmt(epS)} EP → +${fmt(rpS)} RP（EP 不足自动暂停，回升继续）</span>
+  </div>`;
+  const btn = host.querySelector('[data-atrium-switch]');
+  if (btn) btn.addEventListener('click', () => {
+    setConverterEnabled('atrium', !converterEnabled('atrium'));
+    save(S);
+    dirty.shop = true;
+    dirty.rp = true;
+    renderAtriumSwitch(host);
+  });
+}
+
+// v3.3.1 反馈②：异兽孵化「购买/升级」移入设施区（异兽页只保留开关）
+export function renderHatchUpgrade(container) {
+  if (!container) return;
+  const old = container.querySelector('.hatch-upg');
+  if (old) old.remove();
+  const unlocked = S.ptAutoHatch === true;
+  const discovered = unlocked || (S.resDiscovered && S.resDiscovered.pt) || (S.pt || 0) > 0 || (S.ptHatchLv || 1) > 1;
+  if (!discovered) return;
+  const lv = S.ptHatchLv || 1;
+  const cost = ptHatchUpgCost(lv);
+  const afford = (S.ep || 0) >= cost;
+  const div = document.createElement('div');
+  div.className = 'hatch-upg item';
+  div.innerHTML = unlocked
+    ? `<div class="name"><span>异兽孵化工坊 ×${lv}</span><span class="count mono">${fmt(5000 * lv)} EP/s → +${fmt(0.15 * lv)} PT/s</span></div>
+       <div class="desc">自动孵化：每秒消耗 ${fmt(5000 * lv)} EP 转化 +${fmt(0.15 * lv)} PT（开关在「异兽」页）</div>
+       <div style="display:flex;gap:8px;margin-top:6px">
+         <button data-hatch-upg class="mini-btn" style="cursor:${afford ? 'pointer' : 'not-allowed'};opacity:${afford ? 1 : 0.5};border:1px solid ${afford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${afford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(cost)} EP</button>
+       </div>`
+    : `<div class="name"><span>异兽孵化工坊</span><span class="count mono">${fmt(cost)} EP</span></div>
+       <div class="desc">解锁自动孵化：每秒消耗 ${fmt(5000)} EP 转化 +${fmt(0.15)} PT（解锁后到「异兽」页开关）</div>
+       <div style="display:flex;gap:8px;margin-top:6px">
+         <button data-hatch-upg class="mini-btn" style="cursor:${afford ? 'pointer' : 'not-allowed'};opacity:${afford ? 1 : 0.5};border:1px solid ${afford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:4px 14px;font-size:12px;background:var(--bg-2,#141821);color:${afford ? 'var(--accent)' : 'var(--text-3)'}">解锁 ${fmt(cost)} EP</button>
+       </div>`;
+  if (!container._hatchDelegated) {
+    container._hatchDelegated = true;
+    container.addEventListener('click', (ev) => {
+      const t = ev.target.closest ? ev.target.closest('[data-hatch-upg]') : null;
+      if (!t) return;
+      const lvl = S.ptHatchLv || 1;
+      const c = ptHatchUpgCost(lvl);
+      if ((S.ep || 0) < c) return;
+      S.ep -= c;
+      S.ptHatchLv = lvl + 1;
+      if (S.ptAutoHatch !== true) S.ptAutoHatch = true; // 首次购买即解锁自动孵化
+      S.totalBuys = (S.totalBuys || 0) + 1;
+      S.lazySince = null;
+      save(S);
+      log(`异兽孵化工坊升至 Lv.${S.ptHatchLv}：-${fmt(5000 * S.ptHatchLv)} EP/s → +${fmt(0.15 * S.ptHatchLv)} PT/s`, 'good');
+      dirty.pets = true;
+      renderHatchUpgrade(container);
+    });
+  }
+  container.appendChild(div);
 }
 let rpFamilyItemEls = new Map();
 

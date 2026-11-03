@@ -3,12 +3,13 @@
 // 个体差异通过「个人产出基数（招募时随机）/ 心情（正交叠加）/ 累计贡献（按实际入账份额分摊）/ 工龄」表达。
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
-import { fmt, isLazy } from './economy.js';
+import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
 import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, CONVERTER_IDS, LAZY_PROFESSION_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel, leaderCount,
   autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
+  converterEnabled, setConverterEnabled,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
@@ -46,7 +47,6 @@ function tenure(c) {
 export function renderCrewPanel(container) {
   if (!container) return;
   const meta = crewStateMeta();
-  const feed = (S.crewFeed || []).slice(-8).reverse();
   const n = S.cultists.length;
   // v3.2.3 反馈①：分页——一页 10 条；线程数变化后钳制页码
   const pageCount = Math.max(1, Math.ceil(n / PAGE_SIZE));
@@ -55,7 +55,9 @@ export function renderCrewPanel(container) {
   const start = crewPage * PAGE_SIZE;
   const pageCultists = S.cultists.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${feed.map(f => f.msg).join('|')}`;
+  // v3.3.1：转化器开关状态并入签名——面板不再展示流水后，开关翻转必须触发重建（否则按钮文案停在旧态）
+  const convSig = CONVERTER_IDS.map(t => converterEnabled(t) ? 1 : 0).join('');
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${convSig}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -89,26 +91,26 @@ export function renderCrewPanel(container) {
         <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
       </div>`
     : '';
-  const feedHtml = feed.length
-    ? feed.map(f => `<div class="crew-feed-item ${f.cls || ''}"><span class="mono">${new Date(f.t).toTimeString().slice(0, 5)}</span> ${f.msg}</div>`).join('')
-    : '<div class="crew-feed-item dim">暂无班组动态——招募、状态切换与流失都会记录在这里</div>';
+  // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
+  const totOut = staffOutputPerSec();
+  const totSal = staffSalaryPerSec();
   container.innerHTML = `
     <div class="crew-head">
       <span class="crew-state" style="color:${meta.color}">● ${meta.label}</span>
       <span class="crew-count">${n} 条线程在岗</span>
     </div>
+    <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：把空闲线程分配到最合适岗位">智能分配（领导者决策）</button>
       <span style="font-size:12px;color:var(--text-2)">转化器开关：</span>
       ${CONVERTER_IDS.map(t => {
-        const on = !(S.converterOn && S.converterOn[t] === false);
+        const on = converterEnabled(t);
         return `<button class="btn crew-conv-btn" data-conv-toggle="${t}" style="font-size:11px;padding:2px 8px;${on ? 'background:var(--good,#3fb950);color:#04210f' : 'background:#444;color:#ddd'}">${CONVERTERS[t].name} ${on ? '开' : '关'}</button>`;
       }).join('')}
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">💡 <b>班组调度协议 v3.3</b>：把线程绑定到探采平台/灵感工坊——绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。<b>匹配职业</b>（🔭勘探员→探采、⚗️蒸馏师→灵感工坊）无惩罚且加成更高；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）。关闭转化器开关即可释放绑定、消耗恢复。</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业（🔭勘探员→探采、⚗️蒸馏师→灵感工坊）无惩罚且加成更高；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
     <div class="crew-grid">${cards}</div>
-    ${pager}
-    <div class="crew-feed">${feedHtml}</div>`;
+    ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
   if (!container._crewDelegated) {
     container._crewDelegated = true;
@@ -118,7 +120,19 @@ export function renderCrewPanel(container) {
       const lb = ev.target.closest ? ev.target.closest('[data-leader]') : null;
       if (lb) {
         const c = S.cultists.find(x => String(x.id) === String(lb.dataset.leader));
-        if (c) { c.leader = !c.leader; crewPush(c.leader ? `【${c.name}】晋升为领导者，全局产出提升` : `【${c.name}】卸任领导者`, c.leader ? 'good' : ''); renderCrewPanel(container); }
+        if (c) {
+          // v3.3.1 反馈⑤：领导者同一时间只能有一位——晋升新人即自动卸任上一位
+          if (!c.leader) {
+            const prev = S.cultists.find(x => x.leader && x !== c);
+            if (prev) { prev.leader = false; crewPush(`【${prev.name}】卸任领导者（领导者只能存在一位）`); }
+            c.leader = true;
+            crewPush(`【${c.name}】晋升为领导者，全局产出提升`, 'good');
+          } else {
+            c.leader = false;
+            crewPush(`【${c.name}】卸任领导者`);
+          }
+          renderCrewPanel(container);
+        }
         return;
       }
       const ab = ev.target.closest ? ev.target.closest('[data-autobind]') : null;
@@ -131,9 +145,10 @@ export function renderCrewPanel(container) {
       const ct = ev.target.closest ? ev.target.closest('[data-conv-toggle]') : null;
       if (ct) {
         const t = ct.dataset.convToggle;
-        S.converterOn = S.converterOn || {};
-        S.converterOn[t] = (S.converterOn[t] === false); // 切换：关→开、开→关
-        crewPush(`${CONVERTERS[t].name}已${S.converterOn[t] === false ? '关闭（释放绑定、线程消耗恢复）' : '开启'}`, S.converterOn[t] === false ? 'bad' : 'good');
+        // v3.3.1：与「自动转化」/研究点开关同一口径（关→释放绑定、消耗恢复）
+        const nextOn = !converterEnabled(t);
+        setConverterEnabled(t, nextOn);
+        crewPush(`${CONVERTERS[t].name}已${nextOn ? '开启' : '关闭（释放绑定、线程消耗恢复）'}`, nextOn ? 'good' : 'bad');
         renderCrewPanel(container);
         return;
       }
@@ -158,6 +173,12 @@ export function renderCrewPanel(container) {
 // 每秒原地更新动态数值（个人产出/累计贡献/工龄），不重建 DOM（v2.6.7 防闪烁纪律）
 // v3.2.3 反馈①：索引跟随当前分页切片（原全量前 24 条直读）
 function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0, PAGE_SIZE)) {
+  // 班组概览（产出/薪资）每秒原地更新（不计入内容签名，避免每秒重建 DOM）
+  const sumEls = container.querySelectorAll('.crew-sum b');
+  if (sumEls.length >= 2) {
+    sumEls[0].textContent = fmt(staffOutputPerSec());
+    sumEls[1].textContent = fmt(staffSalaryPerSec());
+  }
   const outEls = container.querySelectorAll('.c-out');
   const earnEls = container.querySelectorAll('.c-earned');
   const tenEls = container.querySelectorAll('.c-tenure');

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.2.4</title>
+<title>深渊效能工作台 v3.3.1</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-Cmfk2NrF.js"></script>
-  <link rel="stylesheet" href="./assets/index-wnAGCw_q.css">
+  <script defer src="./assets/index-CwnVdvTl.js"></script>
+  <link rel="stylesheet" href="./assets/index-DMJFs4Wl.css">
 </head>
 <body>
 <div id="app">
@@ -102,8 +102,8 @@
         <div id="rift-panel"></div>
       </div>
 
-      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化）——解锁后出现，原位置开关保留、两者功能一致 -->
-      <div class="panel" id="quick-switches-panel" style="display:none">
+      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化）——v3.3.1 反馈④：常驻展示，未解锁的开关灰显 -->
+      <div class="panel" id="quick-switches-panel">
         <h3>⚡ 自动转化</h3>
         <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       </div>
@@ -152,9 +152,7 @@
           <div id="thread-shop" class="shop-grid"></div>
           <h3 style="margin-top:12px" id="v21-title">效能建筑</h3>
           <div id="v21-building-list" class="shop-grid"></div>
-          <!-- v3.2.1 反馈⑧：灵感工坊（自动蒸馏）移入设施区 -->
-          <h3 style="margin-top:12px" id="atrium-title">设施 · 灵感工坊</h3>
-          <div id="atrium-host"></div>
+          <!-- v3.3.1 反馈①②：灵感工坊 / 异兽孵化升级并入「设施」区（卡内只有购买与升级；开关分别在研究点/异兽页） -->
           <h3 style="margin-top:12px" id="bld-title">设施</h3>
           <div id="building-list" class="shop-grid"></div>
         </div>
@@ -237,9 +235,9 @@
         <div id="prestige-panel"></div>
       </div>
 
-      <!-- 成就（原 tab-achievement，常驻右列） -->
+      <!-- 成就（原 tab-achievement，常驻右列）；v3.3.1 反馈⑨：与故事线一样可收起 -->
       <div class="panel" id="tab-achievement">
-        <h3>成就</h3>
+        <h3 id="achievement-h3" style="cursor:pointer;user-select:none" title="点击收起 / 展开">成就 <span class="sl-ind" style="color:var(--text-3)">▾</span></h3>
         <div id="achievement-panel"></div>
       </div>
     </div>

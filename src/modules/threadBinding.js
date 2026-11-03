@@ -18,10 +18,23 @@ export function isLeader(c) { return !!(c && c.leader); }
 export function threadLevel(c) { return Math.max(1, Math.min(B().levelCap, c && c.level ? c.level : 1)); }
 
 // ---- 绑定生效性（转化器开启且已分配）----
+// v3.3.1 反馈④：转化器开关统一口径——班组「转化器开关」/「自动转化」快捷开关/研究点蒸馏开关
+// 读写同一组状态（converterOn + atriumOn/_probeEnabled 镜像），避免两处开关互相打架
+export function converterEnabled(type) {
+  if (S.converterOn && S.converterOn[type] === false) return false;
+  if (type === 'atrium') return S.atriumOn !== false;
+  if (type === 'vehicles') return S._probeEnabled !== false;
+  return true;
+}
+export function setConverterEnabled(type, on) {
+  S.converterOn = S.converterOn || {};
+  S.converterOn[type] = !!on;
+  if (type === 'atrium') S.atriumOn = !!on;
+  if (type === 'vehicles') S._probeEnabled = !!on;
+}
 export function bindingActive(c) {
   if (!c || !c.boundTo) return false;
-  const on = S.converterOn ? S.converterOn[c.boundTo] : true;
-  return on !== false;
+  return converterEnabled(c.boundTo);
 }
 export function affinityMatches(c, type) {
   const p = threadProfession(c);
@@ -81,7 +94,7 @@ export function leaderGlobalMult() {
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
 // 每个生效绑定的线程按等级/职业/领导叠加；转化器关闭或无绑定 → 1
 export function converterThreadBoost(type) {
-  if (S.converterOn && S.converterOn[type] === false) return 1;
+  if (!converterEnabled(type)) return 1;
   let mult = 1;
   for (const c of (S.cultists || [])) {
     if (!bindingActive(c) || c.boundTo !== type) continue;
@@ -107,14 +120,14 @@ export function unbindThread(c) { c.boundTo = null; }
 // ---- 方向③：智能分配（领导者决策选项）----
 // 把空闲线程分配到合适岗位：优先匹配职业，否则均衡负载；返回分配数量
 export function autoAssignThreads() {
-  const types = CONVERTER_IDS.filter(t => !(S.converterOn && S.converterOn[t] === false));
+  const types = CONVERTER_IDS.filter(t => converterEnabled(t));
   if (!types.length) return 0;
   let assigned = 0;
   for (const c of (S.cultists || [])) {
     if (bindingActive(c)) continue;        // 已分配跳过
     const p = threadProfession(c);
     let target = null;
-    if (p && p.affinity && CONVERTERS[p.affinity] && !(S.converterOn && S.converterOn[p.affinity] === false)) {
+    if (p && p.affinity && CONVERTERS[p.affinity] && converterEnabled(p.affinity)) {
       target = p.affinity;                 // 优先匹配职业
     } else {
       target = leastLoadedConverter(types); // 否则均衡负载
@@ -134,7 +147,7 @@ function leastLoadedConverter(types) {
 
 // ---- 方向⑤：AI 与线程职业联动 —— 招募时按需求建议职业 ----
 export function aiSuggestedProfession() {
-  const types = CONVERTER_IDS.filter(t => !(S.converterOn && S.converterOn[t] === false));
+  const types = CONVERTER_IDS.filter(t => converterEnabled(t));
   let best = 'prospector', bestN = Infinity;
   for (const t of types) {
     const n = (S.cultists || []).filter(c => c.boundTo === t && bindingActive(c)).length;

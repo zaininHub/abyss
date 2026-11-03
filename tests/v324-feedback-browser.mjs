@@ -56,18 +56,18 @@ try {
 
   // ③ 灵感工坊首购卡文案修正 + 区标题随卡显隐
   const t3a = await page.evaluate(() => ({
-    titleShown: getComputedStyle(document.getElementById('atrium-title')).display !== 'none',
-    hostText: document.getElementById('atrium-host')?.textContent || '',
+    hasOldTitle: !!document.getElementById('atrium-title'),
+    hostText: document.getElementById('building-list')?.textContent || '',
   }));
-  if (!t3a.titleShown && !t3a.hostText.includes('灵感工坊')) ok('③ 未解锁时区标题不空挂');
-  else bad('③ 未解锁标题', JSON.stringify(t3a).slice(0, 80));
+  if (!t3a.hasOldTitle && !t3a.hostText.includes('灵感工坊')) ok('③ 无独立工坊栏目、图标未达成时不显示');
+  else bad('③ 工坊栏目形态', JSON.stringify(t3a).slice(0, 80));
   await page.evaluate(() => { window.S.ep = 30000; window.S.allTimeEp = 30000; window.S.upgrades.storage = 300; });
   await sleep(1600); // 1s 周期揭示
   const t3b = await page.evaluate(() => ({
-    titleShown: getComputedStyle(document.getElementById('atrium-title')).display !== 'none',
-    card: document.getElementById('atrium-host')?.textContent || '',
+    titleShown: document.getElementById('bld-title')?.style.display !== 'none',
+    card: document.querySelector('#building-list')?.textContent || '',
   }));
-  if (t3b.titleShown) ok('③ EP 达标后首购卡+标题自动出现');
+  if (t3b.titleShown && t3b.card.includes('灵感工坊')) ok('③ EP 达标后首购卡+设施标题自动出现');
   else bad('③ 揭示', JSON.stringify(t3b).slice(0, 80));
   if (t3b.card.includes('灵感工坊') && !t3b.card.includes('未购') && !t3b.card.includes('常驻本区')
     && t3b.card.includes('EP 不足时暂停')) ok('③ 首购卡文案已修正（无「未购」/「常驻本区」）', t3b.card.slice(0, 60));

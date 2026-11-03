@@ -24,9 +24,9 @@ import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked } from './data/religions.js';
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
-import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, setConverterEnabled } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -42,7 +42,7 @@ import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './mo
 import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
-import { maybeTriggerEvent } from './modules/events.js';
+import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm } from './modules/rift.js';
@@ -68,7 +68,8 @@ function renderStorylinePanel() {
   const current = getCurrentStoryline();
   const completed = S.storylinesCompleted || [];
   const crossById = (BALANCE.crossroadBuildings || []).find(b => b.id === S.crossroadLockedBy);
-  let html = `<h3>故事线</h3>`;
+  // v3.3.1 反馈⑧：面板标题已在 index.html（#storyline-h3）——此处不再重复输出「故事线」行
+  let html = '';
   // v2.3 顺延小修：线名中文映射（getCurrentStoryline 返回 id，直接展示对玩家不可读）
   const lineName = getStorylinePackage(current)?.name || current;
   // v3.2.1 反馈③：展示当前进度——已解锁剧情章节数（含顺次可见）占该线总章节数
@@ -192,7 +193,15 @@ function render() {
     const threadEl = document.getElementById('thread-shop');
     if (threadEl) renderThreadShop(threadEl);
     const bldEl = document.getElementById('building-list'); // v1.3 B：设施分区
-    if (bldEl) renderBuildings(bldEl);
+    if (bldEl) {
+      renderBuildings(bldEl);
+      // v3.3.1 反馈①②：灵感工坊 / 异兽孵化升级并入「设施」列表（只有购买与升级）
+      renderAtriumDistill(bldEl);
+      renderHatchUpgrade(bldEl);
+      // 设施区标题：建筑未解锁但工坊卡已可见时仍需显示（原按建筑门控会空挂无标题的卡片）
+      const bldT = document.getElementById('bld-title');
+      if (bldT) bldT.style.display = bldEl.children.length > 0 ? '' : 'none';
+    }
     const v21El = document.getElementById('v21-building-list'); // v2.1：效能建筑分区
     if (v21El) renderV21Buildings(v21El);
     // v2.7.5 ⑦：探采/深渊商店移入遗物 tab、岔路口移入故事线、族升级移入研究点——
@@ -203,8 +212,6 @@ function render() {
     if (dmEl2) renderDmShop(dmEl2);
     const crEl2 = document.getElementById('crossroad-list');
     if (crEl2) { renderCrossroadBuildings(crEl2); lastCrRenderState = S.crossroad; }
-    // v3.2.1 反馈⑧：灵感工坊卡随商店周期刷新（消耗/产出数值联动）
-    renderAtriumDistill(document.getElementById('atrium-host'));
     const famEl2 = document.getElementById('family-upgrade-list');
     if (famEl2) renderFamilyUpgrades(famEl2);
     dirty.shop = false;
@@ -408,7 +415,10 @@ function renderTop() {
   if (hSalary) {
     hSalary.textContent = fmt(totalDrainPerSec()) + '/s';
     const st2 = hSalary.closest('.stat');
-    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
+    // v3.3.1 反馈⑪：消耗按实际扣减口径展示（休眠只扣保命成本、探采 EP 不足跳过、圣所关闭不扣）
+    const wSt = (S.wageState || {}).state;
+    const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `（休眠期仅扣保命成本 ×${wageKeepCostMult()}）` : '';
+    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
@@ -694,7 +704,7 @@ function switchTab(id) {
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderAtriumDistill(document.getElementById('atrium-host')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.2.1 反馈⑧：灵感工坊移入商店 tab 设施区 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.3.1 反馈①：灵感工坊开关并入研究点页 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
@@ -769,24 +779,36 @@ function refreshTabVisibility() {
 // EP 不足时各系统自动暂停消耗，回升后自动恢复（v3.2.2：去除「需手动恢复」的自动关闭）
 const QS_STYLE_ON = 'padding:4px 14px;font-size:11.5px;background:var(--good,#3fb950);color:#fff;border:none;border-radius:4px;cursor:pointer';
 const QS_STYLE_OFF = 'padding:4px 14px;font-size:11.5px;background:var(--red,#f85149);color:#fff;border:none;border-radius:4px;cursor:pointer';
+const QS_STYLE_LOCK = 'padding:4px 14px;font-size:11.5px;background:rgba(120,130,145,.16);color:var(--text-3,#6e7681);border:1px dashed var(--border);border-radius:4px;cursor:not-allowed;opacity:.75';
 function renderQuickSwitches() {
   const panel = document.getElementById('quick-switches-panel');
   const host = document.getElementById('quick-switches');
   if (!panel || !host) return;
+  // v3.3.1 反馈④：常驻展示三枚开关，未解锁的灰显（不再整块隐藏）
+  const atriumOk = (S.upgrades.atrium || 0) >= 1;
+  const vehCount = (BALANCE.vehicles.ids || []).reduce((a, id) => a + (S.upgrades[id] || 0), 0);
+  const probeOk = vehCount > 0;
+  const hatchOk = S.ptAutoHatch === true;
   const items = [];
-  if ((S.upgrades.atrium || 0) >= 1) {
-    const on = S.atriumOn !== false;
-    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「设施 · 灵感工坊」卡开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
+  if (atriumOk) {
+    const on = converterEnabled('atrium');
+    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="atrium" style="${QS_STYLE_LOCK}" title="未解锁：在「升级商店 · 设施」购入灵感工坊后可用">蒸馏 未解锁</button>`);
   }
-  if (vehicleDmPerMin() > 0) {
-    const on = S._probeEnabled !== false;
+  if (probeOk) {
+    const on = converterEnabled('vehicles');
     items.push(`<button data-qs="probe" title="载具探采：EP → DM（与「遗物」页探采开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">探采 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="probe" style="${QS_STYLE_LOCK}" title="未解锁：在「遗物 · 探采平台」购入任一载具后可用">探采 未解锁</button>`);
   }
-  if (S.ptAutoHatch === true) {
+  if (hatchOk) {
     const on = S.ptDistillOn === true;
     items.push(`<button data-qs="hatch" title="异兽孵化：EP → PT（与「异兽」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">孵化 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="hatch" style="${QS_STYLE_LOCK}" title="未解锁：在「升级商店 · 设施」购入异兽孵化工坊后可用">孵化 未解锁</button>`);
   }
-  panel.style.display = items.length ? '' : 'none';
+  panel.style.display = '';
   const sig = items.join('|');
   if (host._qsSig === sig) return;
   host._qsSig = sig;
@@ -800,14 +822,20 @@ function bindQuickSwitches() {
     const b = e.target.closest('[data-qs]');
     if (!b) return;
     const k = b.dataset.qs;
-    if (k === 'atrium') S.atriumOn = S.atriumOn === false ? true : false;
-    else if (k === 'probe') S._probeEnabled = S._probeEnabled === false ? true : false;
+    if (k === '-1') { // 灰显态：给出解锁指引，不改变任何状态
+      const lock = b.dataset.qsLock;
+      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊' };
+      if (toast) toast(`🔒 ${hint[lock] || '尚未解锁'}`);
+      return;
+    }
+    if (k === 'atrium') setConverterEnabled('atrium', !converterEnabled('atrium'));
+    else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
     else if (k === 'hatch') S.ptDistillOn = S.ptDistillOn === true ? false : true;
     save(S); // 状态即时落盘（与原位置开关同口径）
-    dirty.shop = true; dirty.top = true; // 原位置开关卡（灵感工坊/探采页头）随渲染周期同步
+    dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; // 原位置开关卡（设施/研究点/探采页头/异兽）随渲染周期同步
     renderQuickSwitches();
     const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化' };
-    const nowOn = k === 'atrium' ? S.atriumOn !== false : k === 'probe' ? S._probeEnabled !== false : S.ptDistillOn === true;
+    const nowOn = k === 'atrium' ? converterEnabled('atrium') : k === 'probe' ? converterEnabled('vehicles') : S.ptDistillOn === true;
     log(`快捷开关：${labels[k]}${nowOn ? '开启（EP 不足时自动暂停消耗，回升后自动恢复）' : '关闭'}`, nowOn ? 'good' : 'bad');
   });
 }
@@ -826,7 +854,10 @@ function renderRpPanel() {
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
       <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
     </div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.2.1 反馈⑧：灵感工坊挂载点移入商店 tab 设施区
+    <!-- v3.3.1 反馈①：灵感工坊自动蒸馏开关（设施区只保留购买/升级） -->
+    <div id="atrium-switch-host" style="margin-top:10px"></div>
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页
+  renderAtriumSwitch(document.getElementById('atrium-switch-host'));
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
@@ -1024,6 +1055,22 @@ function bindEvents() {
       applySl();
     });
     applySl();
+  }
+  // v3.3.1 反馈⑨：成就面板同样支持点击标题收起/展开（键独立记忆）
+  const achPanel = document.getElementById('tab-achievement');
+  const achH3 = document.getElementById('achievement-h3');
+  if (achPanel && achH3) {
+    const applyAch = () => {
+      const c = localStorage.getItem('abyss_ach_collapsed') === '1';
+      achPanel.classList.toggle('sl-collapsed', c);
+      const ind = achH3.querySelector('.sl-ind');
+      if (ind) ind.textContent = c ? '▸' : '▾';
+    };
+    achH3.addEventListener('click', () => {
+      localStorage.setItem('abyss_ach_collapsed', achPanel.classList.contains('sl-collapsed') ? '0' : '1');
+      applyAch();
+    });
+    applyAch();
   }
   document.getElementById('hero')?.addEventListener('click', doClick);
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
@@ -1992,7 +2039,7 @@ function tick(now) {
   // v2.8.30 ⑤：灵感工坊自动蒸馏（研究点开关）——消耗 EP 转化 RP（v3.2.2 反馈①：EP 不足自然暂停，回升自动恢复，不再自动关闭）
   const atriumN = S.upgrades && S.upgrades.atrium ? S.upgrades.atrium : 0;
   // v3.3.0：灵感工坊绑定开关（关闭→停止蒸馏、释放绑定→线程消耗恢复）
-  const atriumOn = (S.atriumOn !== false) && (S.converterOn ? S.converterOn.atrium !== false : true);
+  const atriumOn = converterEnabled('atrium'); // v3.3.1：统一口径（班组/快捷开关/研究点任一处关闭都生效）
   if (atriumN > 0 && atriumOn && S.ep > 0) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
     const used = Math.min(S.ep, epNeed);
@@ -2152,6 +2199,23 @@ function tick(now) {
 
   maybeTriggerEvent();
 
+  // v3.3.1 反馈③：预言系统（信仰线科技 prophecy）真正生效——神谕广播每 30 秒预告下一个随机事件；
+  // 预告写入 S.prophecyNext，事件触发时优先兑现（events.maybeTriggerEvent）
+  if (hasTech('prophecy')) {
+    S._prophecyTimer = (S._prophecyTimer || 0) + dt;
+    if (S._prophecyTimer >= 30) {
+      S._prophecyTimer = 0;
+      const nxt = peekNextEvent();
+      if (nxt) {
+        const changed = !S.prophecyNext || S.prophecyNext.id !== nxt.id;
+        S.prophecyNext = { id: nxt.id, name: nxt.name, type: nxt.type, at: Date.now() };
+        if (changed) { log(`🔮 神谕广播：下一个事件将是「${nxt.name}」`, 'good'); dirty.ai = true; }
+      } else if (S.prophecyNext) {
+        S.prophecyNext = null;
+      }
+    }
+  }
+
   // 异兽经验
   gainPetExp(dt);
   // v2.5.7 检查修复：挂机升级/经验增长驱动宠物 UI 低频刷新（5s；HTML 相同则重建跳过，不影响动画）
@@ -2246,17 +2310,17 @@ function tick(now) {
     renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
     renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
     renderQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关（解锁态/开关态随周期同步，sig 去重）
-    // v3.2.4 反馈③：灵感工坊首购卡揭示随周期出现（原仅 dirty.shop 时渲染 → EP 达标后卡不出现）；
-    // 仅在「应显示 ↔ 未显示」状态翻转时重建（卡内容静态，避免每秒重建按钮致点击丢失）；
-    // 区标题随卡有无显隐（未解锁时不再空挂「设施 · 灵感工坊」标题）
-    const atrHost = document.getElementById('atrium-host');
-    if (atrHost) {
+    // v3.3.1 反馈①②：设施区（灵感工坊 / 异兽孵化工坊）卡的揭示随周期检测——
+    // 只在「应显示 ↔ 未显示」翻转时整列表重建（避免每秒重建按钮致点击丢失）
+    const bldHost = document.getElementById('building-list');
+    if (bldHost) {
       const base = BALANCE.atrium.base || 5e4;
-      const should = ((S.upgrades && S.upgrades.atrium) || 0) >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
-      const has = !!atrHost.querySelector('.atrium-distill');
-      if (has !== should) renderAtriumDistill(atrHost);
-      const atrTitle = document.getElementById('atrium-title');
-      if (atrTitle) atrTitle.style.display = should ? '' : 'none';
+      const atrOwned = (S.upgrades && S.upgrades.atrium) || 0;
+      const shouldAtr = atrOwned >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
+      const hasAtr = !!bldHost.querySelector('.atrium-distill');
+      const shouldHatch = S.ptAutoHatch === true || (S.resDiscovered && S.resDiscovered.pt) || (S.pt || 0) > 0 || (S.ptHatchLv || 1) > 1;
+      const hasHatch = !!bldHost.querySelector('.hatch-upg');
+      if (hasAtr !== shouldAtr || hasHatch !== shouldHatch) dirty.shop = true;
     }
     let n = 0;
     for (const u of UPGRADES) {

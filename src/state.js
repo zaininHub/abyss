@@ -378,5 +378,11 @@ function normalizeCrew(raw) {
     if (c.leader === undefined) c.leader = false;
     if (c.boundTo !== undefined && c.boundTo !== null && raw.converterOn && raw.converterOn[c.boundTo] === false) c.boundTo = null;
   }
+  // v3.3.1 反馈⑤：领导者唯一——旧档若存在多位领导者，只保留第一位
+  let seenLeader = false;
+  for (const c of raw.cultists) {
+    if (!c.leader) continue;
+    if (seenLeader) c.leader = false; else seenLeader = true;
+  }
   return raw;
 }

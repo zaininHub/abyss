@@ -1082,6 +1082,9 @@ body {
 #tab-storyline.sl-collapsed #crossroad-title,
 #tab-storyline.sl-collapsed #crossroad-list { display: none; }
 #storyline-h3:hover { color: var(--accent); }
+/* v3.3.1 反馈⑨：成就面板同样可收起 */
+#tab-achievement.sl-collapsed #achievement-panel { display: none; }
+#achievement-h3:hover { color: var(--accent); }
 .codex-ch.on { border-left-color: var(--green, #3fb950); }
 .codex-ch.locked { border-left-color: var(--red, #f85149); opacity: .55; }
 .codex-ch-name { color: var(--text-1); }

@@ -135,11 +135,17 @@ export function renderPetGrid(container) {
     const xpNeed = petExpNeed(p.level);
     const def = PETS.find(x => x.id === id);
     const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
+    // v3.3.1 反馈⑥：每只异兽的维持消耗单独显示（原仅显示合计）
+    const upk = petUpkeepPerSec(p);
+    const upkLine = isActive
+      ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
+      : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
     html += `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
       <div class="n">${p.name}</div>
       <div class="lv">Lv.${p.level}${stateTag}</div>
       <div class="lv" style="color:var(--green);font-size:10px">${def ? def.desc : ''}</div>
+      ${upkLine}
       <div class="pet-xp"><div style="width:${Math.min(100, p.exp / xpNeed * 100)}%"></div></div></div>`; // v2.8.17：已拥有卡直接显示效果（不靠悬浮）
   }
   const ownedIds = Object.keys(S.pets);
@@ -154,17 +160,14 @@ export function renderPetGrid(container) {
   const ptPerS = 0.15 * hatchLv;
   const epNext = 5000 * (hatchLv + 1);
   const ptNext = 0.15 * (hatchLv + 1);
-  const hatchCost = ptHatchUpgCost(hatchLv);
-  const hatchAfford = (S.ep || 0) >= hatchCost; // v3.0.3 第六批②：EP 不足灰显
   const upkeep = petUpkeepTotalPerSec();
+  // v3.3.1 反馈②：异兽页只保留「孵化开关」；孵化升级（购买/升级）移入「设施」区
   let hatchCtl;
   if (!autoHatch) {
-    hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁</span>
-      <button data-pt-hatch-upg style="margin-left:auto;cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}" title="购买「孵化升级」即解锁自动孵化（EP → PT 持续转化），并提升孵化速率">解锁自动孵化 ${fmt(hatchCost)} EP</button>`;
+    hatchCtl = `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「升级商店 · 设施」购买孵化升级</span>`;
   } else {
     hatchCtl = `<span style="font-size:12px;color:var(--text-2)">异兽孵化 ×${hatchLv}：总计 <b style="color:var(--bad)">-${fmt(epPerS)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptPerS)} PT/s</b>　下级 <b style="color:var(--bad)">-${fmt(epNext)} EP/s</b> <b style="color:var(--pink)">+${fmt(ptNext)} PT/s</b></span>
-      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>
-      <button data-pt-hatch-upg style="cursor:${hatchAfford ? 'pointer' : 'not-allowed'};opacity:${hatchAfford ? 1 : 0.5};border:1px solid ${hatchAfford ? 'var(--accent)' : 'var(--border)'};border-radius:4px;padding:6px 16px;font-size:12.5px;background:var(--bg-2,#141821);color:${hatchAfford ? 'var(--accent)' : 'var(--text-3)'}">升级 ${fmt(hatchCost)} EP</button>`;
+      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`;
   }
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
   if (upkeep > 0) {
@@ -188,17 +191,9 @@ export function renderPetGrid(container) {
   if (!container._ptDelegated) {
     container._ptDelegated = true;
     container.addEventListener('click', (ev) => {
-      const t = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle],[data-pt-hatch-upg]') : ev.target;
+      const t = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle]') : ev.target;
       if (t && t.hasAttribute('data-pt-distill-toggle')) {
         S.ptDistillOn = S.ptDistillOn === true ? false : true;
-        save(S);
-        renderPetGrid(container);
-      } else if (t && t.hasAttribute('data-pt-hatch-upg')) {
-        const cost = ptHatchUpgCost(S.ptHatchLv || 1);
-        if ((S.ep || 0) < cost) return;
-        S.ep -= cost;
-        S.ptHatchLv = (S.ptHatchLv || 1) + 1;
-        if (S.ptAutoHatch !== true) S.ptAutoHatch = true; // v3.2.1 反馈①：首次购买孵化升级即解锁自动孵化
         save(S);
         renderPetGrid(container);
       }

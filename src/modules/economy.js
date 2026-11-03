@@ -753,18 +753,45 @@ export function cpsBreakdown() {
 }
 export function drainBreakdown() {
   const parts = [];
-  const sal = staffSalaryPerSec();
+  const sal = salaryDrainPerSec();
   if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
-  const probe = vehicleDmEpCostPerMin() / 60;
+  const probe = probeDrainPerSec();
   if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
-  const faith = faithDrainPerSec(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
+  const faith = faithDrainNow(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
   if (faith > 0.005) parts.push(`信仰生产 -${fmt(faith)}/s`);
-  const hatch = ptHatchEpPerSec(); // v3.2.1 反馈⑥：异兽孵化 EP 扣减计入消耗值
+  const hatch = hatchDrainPerSec(); // v3.2.1 反馈⑥：异兽孵化 EP 扣减计入消耗值
   if (hatch > 0.005) parts.push(`异兽孵化 -${fmt(hatch)}/s`);
   return parts;
 }
+// v3.3.1 反馈⑪：消耗口径与实际扣减对齐——
+// 原实现直接累加名义薪资/探采/圣所/孵化，休眠期实际只扣保命成本、探采 EP 不足整轮跳过、
+// 圣所关闭不扣、EP 为 0 时孵化不扣，导致「消耗/s 远大于产出/s 但 EP 仍在涨」的观感矛盾。
+export function salaryDrainPerSec() {
+  if ((S.ep || 0) <= 0) return 0; // EP 已空：扣费被钳到 0（与 tickWages 的 min(S.ep, 薪资) 同口径）
+  const sal = staffSalaryPerSec();
+  const st = (S.wageState || {}).state;
+  if (st === 'dormant' || st === 'losing') return sal * wageKeepCostMult(); // 休眠/流失预警只扣保命成本
+  return sal;
+}
+export function probeDrainPerSec() {
+  if (S._probeEnabled === false) return 0;
+  const perMin = vehicleDmEpCostPerMin();
+  if (perMin <= 0) return 0;
+  const cycleCost = (perMin / 60) * BALANCE.vehicles.collectInterval;
+  if ((S.ep || 0) < cycleCost) return 0; // 本周期 EP 不足 → 跳过（不扣费）
+  return perMin / 60;
+}
+export function faithDrainNow() {
+  if ((S.ep || 0) <= 0) return 0; // EP 已空：圣所本轮不扣费
+  if (S.religion && S.religion.templeOff) return 0; // 圣所关闭/自动暂停 → 不产出不扣费
+  return faithDrainPerSec();
+}
+export function hatchDrainPerSec() {
+  const h = ptHatchEpPerSec();
+  return (S.ep || 0) > 0 ? h : 0; // EP 为 0 时孵化取不到 EP，不产生消耗
+}
 export function totalDrainPerSec() {
-  return staffSalaryPerSec() + vehicleDmEpCostPerMin() / 60 + faithDrainPerSec() + ptHatchEpPerSec();
+  return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec();
 }
 // v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 main.js tick 同口径：5000×级数 EP/s，解锁自动孵化且开关开启时生效）
 export function ptHatchEpPerSec() {
