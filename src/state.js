@@ -230,12 +230,8 @@ function migrateSave(raw) {
       rp2:         { deep_lab: 1 },
       rp3:         { theory_desk: 1 },
       grand_rp:    { legend_institute: 2 },
-      offline_s:   { beacon_1: 1 },
-      offline1:    { beacon_1: 1 },
-      remote:      { beacon_2: 1 },
-      grand_off:   { beacon_3: 1 },
-      offline16:   { delay_cache: 1 },
-      offline24:   { delay_cache_2: 1 },
+      // v3.4.5：offline_s/offline1/remote/grand_off/offline16/offline24 不再迁移——信号塔与延时缓存站已从效能建筑删除，
+      // 离线效率/上限改由离线升级（off_eff1~3 / off_cap1~2）提供
       patience:    { chance_sensor: 1 },
       event_boost: { chance_sensor_2: 1 },
       luck:        { lucky_nebula: 1 },

@@ -340,6 +340,7 @@ export function offlineRate() {
   m += elv('off') * 0.05;
   if (S.offUpgrades.off_eff1) m += 0.2;
   if (S.offUpgrades.off_eff2) m += 0.3;
+  if (S.offUpgrades.off_eff3) m += 0.2; // v3.4.5：信号塔删除后由离线升级补齐 100%+ 档
   m *= petMult('offline');
   if (S.religion && S.religion.moon) m *= 1.5;
   // v2.7.0 遗物：虚空之眼——离线效率 +12%/级（DM 超长线消费）
@@ -353,6 +354,7 @@ export function offlineCap() {
   let h = 8;
   h = Math.max(h, fxValue('offlineCap')); // v2.1 建筑驱动：延时缓存站 16h/24h 取最大
   if (S.offUpgrades.off_cap1) h += 4;
+  if (S.offUpgrades.off_cap2) h += 12; // v3.4.5：延时缓存站删除后由离线升级补齐 24h 上限
   h += elv('off2') * 4;
   return h * 3600;
 }

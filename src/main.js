@@ -1939,7 +1939,7 @@ const ACHIEVEMENTS = [
   { id: 'collapsed', name: '被深渊吞噬', icon: '🌊', desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
   { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
   { id: 'crossroad', name: '三岔抉择', icon: '🛤️', desc: '在岔路口立誓，选择一条故事线', test: s => !!(s.storyline && s.storyline !== 'default') },
-  { id: 'abyss_gaze_egg', name: '凝视深渊', icon: '👁️', desc: '在裂隙余烬中购得「深渊凝视」——屏幕左下方裂开，你看见了触手尽头的它', test: s => !!s.abyssGazeUnlocked },
+  { id: 'abyss_gaze_egg', name: '凝视深渊', icon: '👁️', desc: '在裂隙余烬中购得「深渊凝视」——屏幕底部中央浮起一只眼睛，正左右打量着你', test: s => !!s.abyssGazeUnlocked },
   { id: 'wish1',    name: '掷币入井', icon: '🪙', desc: '首次向许愿池投币（100 EP）', test: s => (s.wishCoins || 0) >= 1 },
   { id: 'wishwin',  name: '奇迹发生', icon: '✨', desc: '许愿池中奖（0.01% 概率 +100K EP）', test: s => !!s.wishWon },
   { id: 'bazaar1',    name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },

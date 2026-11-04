@@ -11,7 +11,8 @@ const { S } = await import('../src/state.js');
 const { BALANCE } = await import('../src/data/balance.js');
 const { getAllBuildings, V21_BUILDINGS, buildingCostV21, unlockRpV21, unlockMilestoneV21, buildingUnlockedV21, v21Level, v21Maxed } = await import('../src/data/buildings.js');
 const { fxValue, fxBest, effectiveLevel, FX_KEYS } = await import('../src/core/effectEngine.js');
-const { epStorageCap, v21BuildingCost, globalMult } = await import('../src/modules/economy.js');
+const { epStorageCap, v21BuildingCost, globalMult, offlineRate, offlineCap } = await import('../src/modules/economy.js');
+const offMod = await import('../src/data/offlineUpgrades.js');
 
 let pass = 0, fail = 0, red = [];
 function t(name, fn) {
@@ -21,13 +22,13 @@ function t(name, fn) {
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 console.log('[1] 61 栋注册表 & 级制红线（组长硬性要求：非扩容类静态 cap ≤ 20；v2.4 扩容类 unlimited 豁免）');
-t('getAllBuildings() 恰好 59 栋且 ID 唯一（v3.0.3 许愿池移入通用设施）', () => {
+t('getAllBuildings() 恰好 44 栋且 ID 唯一（v3.4.5 删除存储与续航整组 15 项）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 59, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 59, 'ID 必须唯一');
+  assert.equal(all.length, 44, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 44, 'ID 必须唯一');
 });
-t('既有 4 座 + v2.1 表 50 项 + 定向 3 栋 = 57（v2.7.5 新增 3 仓库；存储/蒸馏经 via:upgrade 单独注册）', () => {
-  assert.equal(V21_BUILDINGS.length, 50);
+t('既有 6 座 + v2.1 表 35 项 + 定向 3 栋 = 44（v3.4.5：组D 6 + 镜像 4 + 组G 5 共 15 项删除）', () => {
+  assert.equal(V21_BUILDINGS.length, 35);
 });
 t('级制红线：非扩容类静态 cap/levels ≤ 20 且 ≥ 1；unlimited 扩容类豁免（禁止无限堆叠仅限非扩容）', () => {
   for (const b of getAllBuildings()) {
@@ -81,7 +82,7 @@ t('legacyTechRp 覆盖全部 46 个删除科技 + 6 钥匙', () => {
   for (const k of BALANCE.v21KeyTechs) assert.ok(allTechRp.includes(k), `钥匙 ${k} 缺原 RP`);
   // 每个建筑的 unlockTech 都有原 RP 记录（上面已断言 >0），此处校验钥匙族建筑存在
   const keyGated = V21_BUILDINGS.filter(b => b.unlockTech && BALANCE.v21KeyTechs.includes(b.unlockTech));
-  assert.ok(keyGated.length >= 2, '钥匙科技应门控至少 2 座建筑（click_up/focus_opt 族）');
+  assert.ok(keyGated.length >= 1, '钥匙科技应至少门控 1 座建筑（v3.4.5：offline1 族的信号塔删除后仅剩 focus_opt 族）');
 });
 
 console.log('[3] RESCALE 价梯（终章 §7 唯一数值基准）');
@@ -107,27 +108,7 @@ t('调度中枢：1.2e6 × 1.40、9 级封顶、末级 ≈ 1.77e7（v3.4.2 反�
   assert.equal(b.base, 1.2e6); assert.equal(b.growth, 1.40); assert.equal(b.cap, 9);
   assert.ok(Math.abs(b.base * Math.pow(b.growth, 8) - 1.2e6 * Math.pow(1.4, 8)) < 1, '末级应 ≈1.77e7');
 });
-t('组D 扩容梯：量子缓存池 8e4×1.25(+50K/级)、维度压缩仓 2e5×1.30(+5e6/级)、超限储存器 5e5×1.35(+5e9/级)，v2.4 均无限升级', () => {
-  const pool = V21_BUILDINGS.find(x => x.id === 'quantum_pool');
-  const dim = V21_BUILDINGS.find(x => x.id === 'dim_compressor');
-  const over = V21_BUILDINGS.find(x => x.id === 'overlimit_store');
-  assert.deepEqual([pool.base, pool.growth, pool.fx.value], [8e4, 1.25, 50000]);
-  assert.deepEqual([dim.base, dim.growth, dim.fx.value], [2e5, 1.30, 5e6]);
-  assert.deepEqual([over.base, over.growth, over.fx.value], [5e5, 1.35, 5e9]);
-  for (const b of [pool, dim, over]) assert.ok(b.unlimited, `${b.id} 应为 unlimited（KG 无限升级）`);
-});
-t('v2.4 新增多效果上限建筑：三座均 unlimited + 双效果键 + 30% 钳制', () => {
-  const r = V21_BUILDINGS.find(x => x.id === 'abyss_reservoir');
-  const rc = V21_BUILDINGS.find(x => x.id === 'resonance_chamber');
-  const dc = V21_BUILDINGS.find(x => x.id === 'dm_condenser');
-  assert.ok(r && r.unlimited && Array.isArray(r.fx) && r.fx.length === 2, '深渊蓄能池应双效果+无限');
-  assert.ok(rc && rc.unlimited && Array.isArray(rc.fx) && rc.fx.length === 2, '共鸣回廊应双效果+无限');
-  assert.ok(dc && dc.unlimited && Array.isArray(dc.fx) && dc.fx.length === 2, '深渊凝析塔应双效果+无限');
-  assert.ok(BALANCE.v21CapClampIds.includes('abyss_reservoir') && BALANCE.v21CapClampIds.includes('resonance_chamber') && BALANCE.v21CapClampIds.includes('dm_condenser'), '新增三座应纳入 30% 防死锁钳制');
-  // 效果键均注册：capAdd + dmRateAdd / globalAdd
-  const keys = [...r.fx, ...rc.fx, ...dc.fx].map(f => f.key);
-  assert.ok(keys.every(k => FX_KEYS.includes(k)), `新增建筑效果键 ${keys} 应全注册`);
-});
+// v3.4.5 反馈③：「存储与续航」整组删除（组D 扩容梯 6 座 + 镜像 4 条 + 组G 离线 5 座）——原组D 断言一并移除
 t('组I 晋升双楼：轮回圣殿 9e5×1.45（2 级 ×√2/级）、传奇职级殿 1.5e6×1.45（1 级 ×3），满级 ppMult=×6（v3.4.2 反馈① 重标）', () => {
   const c = V21_BUILDINGS.find(x => x.id === 'cycle_temple');
   const l = V21_BUILDINGS.find(x => x.id === 'legend_rank_hall');
@@ -139,35 +120,37 @@ t('组I 晋升双楼：轮回圣殿 9e5×1.45（2 级 ×√2/级）、传奇职�
   assert.ok(Math.abs(fxValue('ppMul') - 6) < 1e-9, `满级 ppMul 应 ×6，实际 ${fxValue('ppMul')}`);
   S.buildings = {};
 });
-t('各组高端楼（C/E/F/G/H）基价 ≤3.5e7、growth ×1.28~1.50、末级 ≤3.5e7（v3.4.2 反馈① 涨价后口径）', () => {
-  const high = ['purchase_office_3', 'super_team', 'legend_institute', 'beacon_3', 'delay_cache_2', 'event_tide_lab', 'proj_parallel'];
+t('各组高端楼（C/E/F/H）基价 ≤3e8、growth ×1.28~1.50、末级 ≤3.6e8（v3.4.5 降本类大幅涨价后）', () => {
+  const high = ['purchase_office_3', 'super_team', 'legend_institute', 'event_tide_lab', 'proj_parallel'];
   for (const id of high) {
     const b = V21_BUILDINGS.find(x => x.id === id);
     if (b.rpCost) continue; // RP 加成组按 RP 计价，不受 EP 阶梯约束
-    assert.ok(b.base <= 3.5e7, `${id} 基价 ${b.base} > 3.5e7`);
+    assert.ok(b.base <= 3e8, `${id} 基价 ${b.base} > 3e8`);
     assert.ok(b.growth >= 1.28 && b.growth <= 1.50, `${id} growth=${b.growth} 越界`);
     const last = b.base * Math.pow(b.growth, b.cap - 1);
-    assert.ok(last <= 3.5e7, `${id} 末级价 ${last} > 3.5e7`);
+    assert.ok(last <= 3.6e8, `${id} 末级价 ${last} > 3.6e8`);
   }
 });
-t('非钳制建筑全量：任一级价格 ≤ 5e7（终局档 base 3e7 允许；v3.4.2 反馈① 后重标）', () => {
-  const clamped = new Set([...BALANCE.v21CapClampIds, 'storage', 'cache']);
+t('非钳制建筑全量：任一级价格 ≤ 4e8（终局档 base 2e8 允许；v3.4.5 采购总署·极）', () => {
   for (const b of V21_BUILDINGS) {
-    if (b.via === 'upgrade' || clamped.has(b.id)) continue;
     for (let n = 0; n < b.cap; n++) {
       const price = b.base * Math.pow(b.growth, n);
-      assert.ok(price <= 5e7, `${b.id} 第 ${n + 1} 级价 ${price} > 5e7（终局档 base 3e7 允许）`);
+      assert.ok(price <= 4e8, `${b.id} 第 ${n + 1} 级价 ${price} > 4e8（终局档 base 2e8 允许）`);
     }
   }
 });
-t('解锁门控档位：6e5→m5、1.5e6→m6、4e6→m7（终章 §7 · v3.4.2 反馈① 价位映射同步上移）', () => {
+t('解锁门控档位：minMile 显式优先，其余按 6e5→m5、1.5e6→m6、4e6→m7 价位映射', () => {
   for (const b of V21_BUILDINGS) {
     const g = unlockMilestoneV21(b);
+    if (typeof b.minMile === 'number') { assert.equal(g, b.minMile); continue; }
     if (b.base >= 4e6) assert.equal(g, 7);
     else if (b.base >= 1.5e6) assert.equal(g, 6);
     else if (b.base >= 6e5) assert.equal(g, 5);
     else assert.equal(g, 0);
   }
+  // v3.4.5：降本类涨价后仍按原档位开放（base 2.5e6 按价位映射会被顶到 m6，显式锁 m5）
+  const bs = V21_BUILDINGS.find(x => x.id === 'bargain_shop');
+  assert.equal(unlockMilestoneV21(bs), 5);
 });
 t('DC 重标定：base 8e4、growth 4、3 档 = 8e4 / 3.2e5 / 1.28e6（≤ 各期上限）', () => {
   const dc = BALANCE.buildings.datacenter;
@@ -202,14 +185,20 @@ t('多建筑叠加：加法求和、乘算连乘', () => {
   assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.20, 3) * Math.pow(1.25, 3)) < 1e-9); // v2.8.3 收敛
   S.buildings = {};
 });
-t('档位效果取最大不叠加：三档信号塔 60%/100%/200%', () => {
-  S.buildings = { beacon_1: 1 };
-  assert.equal(fxValue('offlineRate'), 0.4); // v2.6.6 ① 离线整体下调
-  S.buildings = { beacon_1: 1, beacon_2: 1 };
-  assert.equal(fxValue('offlineRate'), 0.6); // v2.6.6 ① 离线整体下调
-  S.buildings = { beacon_1: 1, beacon_2: 1, beacon_3: 1 };
-  assert.equal(fxValue('offlineRate'), 1.0); // v2.6.6 ① 离线整体下调
-  S.buildings = {};
+t('离线续航改由离线升级承担（v3.4.5：信号塔/延时缓存站删除后 off_eff1~3 / off_cap1~2 接力）', () => {
+  const { OFF_UPGRADES } = offMod;
+  const ids = OFF_UPGRADES.map(o => o.id);
+  for (const id of ['off_eff1', 'off_eff2', 'off_eff3', 'off_cap1', 'off_cap2']) assert.ok(ids.includes(id), `离线升级应含 ${id}`);
+  S.buildings = {}; S.upgrades = {}; S.milesDone = {}; S.tech = {}; S.offUpgrades = {}; S.runTalent = null;
+  S.storyline = 'default'; S.religion = {}; S.delve = { up: {} }; S.prestigePoints = 0; S.offHistory = [];
+  const base = offlineRate();
+  S.offUpgrades = { off_eff1: true }; const r1 = offlineRate();
+  S.offUpgrades = { off_eff1: true, off_eff2: true }; const r2 = offlineRate();
+  S.offUpgrades = { off_eff1: true, off_eff2: true, off_eff3: true }; const r3 = offlineRate();
+  assert.ok(r1 > base && r2 > r1 && r3 > r2, `离线效率应逐级提升：${base}→${r1}→${r2}→${r3}`);
+  S.offUpgrades = { off_cap1: true, off_cap2: true };
+  assert.equal(offlineCap(), 24 * 3600, '离线上限 I+II 应达 24h');
+  S.offUpgrades = {};
 });
 t('v2.6.3 反馈①：B「点击与暴击」分区移除——暴击/点击乘数建筑不再存在于数据表', () => {
   const ids = ['field_1', 'field_2', 'field_3', 'field_4', 'crit_furnace', 'crit_reactor', 'crit_reactor_2'];
@@ -219,12 +208,11 @@ t('v2.6.3 反馈①：B「点击与暴击」分区移除——暴击/点击乘�
   assert.equal(fxBest('clickCrit'), null, '点击暴击应恒为 null');
   assert.equal(fxBest('autoCrit'), null, '自动暴击应恒为 null');
 });
-t('级制红线读侧：非扩容超封等级截断到 cap；unlimited 扩容类全额计入（v2.4）', () => {
-  S.buildings = { warmup_node: 99, quantum_pool: 30 };
+t('级制红线读侧：非扩容超封等级截断到 cap（v3.4.5：组D unlimited 建筑删除，扩容不再走建筑 fx）', () => {
+  S.buildings = { warmup_node: 99 };
   assert.equal(effectiveLevel('warmup_node'), 5);
-  assert.equal(effectiveLevel('quantum_pool'), 30, 'v2.4 unlimited 建筑不截断（30 级全额生效）');
   assert.ok(Math.abs(fxValue('globalAdd') - 0.10) < 1e-12, '超封等级不得贡献效果');
-  assert.equal(fxValue('capAdd'), 30 * 50000, 'unlimited 建筑按全额等级贡献上限');
+  assert.equal(fxValue('capAdd'), 0, '建筑侧不再提供 capAdd（EP 上限走升级商店 + 三仓库）');
   S.buildings = {};
 });
 t('镜像建筑（storage/cache）不参与 fx 聚合（由 epStorageCap 直读 upgrades）', () => {
@@ -241,13 +229,13 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
   for (let i = 0; i < miles; i++) S.milesDone['m' + i] = true;
   S.storyline = storyline || 'line_abyss';
 }
-t('m=6 期锚点：cache12/storage20/DC2/pool8 → epStorageCap = 3,611,402（v2.8.27 曲线）', () => {
-  setCapState(12, 20, 2, 8, 0, 0, 6);
-  assert.equal(epStorageCap(), 3189847, `实际 ${epStorageCap()}`); // v2.8.30 ⑤ capPer/growth 回升（2500→4000、1.15→1.18）
+t('m=6 期锚点：cache12/storage20/DC2 → epStorageCap = 2,039,847（v3.4.5：组D 扩容梯删除后重算）', () => {
+  setCapState(12, 20, 2, 0, 0, 0, 6);
+  assert.equal(epStorageCap(), 2039847, `实际 ${epStorageCap()}`);
 });
-t('S2 终局锚点：全满配 m=9 → epStorageCap ≈ 374,131,019,960（v2.8.27 曲线，容差 2e6）', () => {
-  setCapState(20, 20, 3, 20, 20, 20, 9);
-  assert.ok(Math.abs(epStorageCap() - 374131019960) < 2e6, `实际 ${epStorageCap()}`);
+t('storage/cache/DC3 满配 m=9 → epStorageCap = 2,984,438（60 级以前的老终局锚点作废）', () => {
+  setCapState(20, 20, 3, 0, 0, 0, 9);
+  assert.equal(epStorageCap(), 2984438, `实际 ${epStorageCap()}`);
 });
 t('开局锚点：storage1/其余 0 → 5,175（v2.8.30 capPer 2500×1.15 曲线）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
@@ -255,17 +243,8 @@ t('开局锚点：storage1/其余 0 → 5,175（v2.8.30 capPer 2500×1.15 曲线
 });
 
 console.log('[6] 防死锁 30% 钳制（组长硬性要求：组D 三梯任意阶段买得起）');
-t('v21BuildingCost：组D 三梯价格 ≤ 当前 epStorageCap() × 30%（购买/显示/灰态同一口径）', () => {
-  for (const [cache, storage, dc, pool, dim, over, miles] of [[0,1,0,0,0,0,0],[6,10,1,0,0,0,3],[10,15,2,0,0,0,5],[12,20,2,8,0,0,6],[20,20,3,20,10,5,9],[20,20,3,20,20,19,9]]) {
-    setCapState(cache, storage, dc, pool, dim, over, miles);
-    const cap = epStorageCap();
-    for (const id of BALANCE.v21CapClampIds) {
-      const b = V21_BUILDINGS.find(x => x.id === id);
-      const cost = v21BuildingCost(b);
-      assert.ok(cost <= Math.floor(cap * 0.3) + 1e-9, `${id} 在 m=${miles} 态价格 ${cost} > 30%×cap=${Math.floor(cap * 0.3)}`);
-      assert.ok(cost <= cap, `${id} 价格 ${cost} > cap ${cap}（红线）`);
-    }
-  }
+t('v3.4.5：v21CapClampIds 随组D 清空（30% 钳制仅剩升级商店 storage/cache 的 CAP_EXPANSION_IDS 路径）', () => {
+  assert.deepEqual(BALANCE.v21CapClampIds, [], '效能建筑侧不再有需要 30% 钳制的扩容梯');
 });
 t('钳制只作用于组D 三梯 + storage/cache，非扩容建筑不受 30% 约束（§5.4）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);

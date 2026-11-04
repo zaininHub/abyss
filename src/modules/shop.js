@@ -1214,11 +1214,8 @@ export function buyV21Building(b) {
 function v21UnlockedMark(b) { return !!(S.unlockedBuildings && S.unlockedBuildings[b.id]); }
 
 // v3.0.8：效能建筑扩容项同样走「EP 存储上限 +{购买后总量}」单行口径（多效果建筑保留其他效果文字）
-const V21_CAP_EXTRA = {
-  abyss_reservoir: '，DM 采集效率 +15%/级',
-  resonance_chamber: '，全局产出 +3%/级',
-  dm_condenser: '，DM 采集效率 +30%/级',
-};
+// v3.4.5 反馈③：原 D 组多效果建筑（深渊蓄能池/共鸣回廊/深渊凝析塔）随「存储与续航」整组删除，映射清空
+const V21_CAP_EXTRA = {};
 function v21HasCapAdd(b) {
   const fxs = Array.isArray(b.fx) ? b.fx : (b.fx ? [b.fx] : []);
   return fxs.some(f => f.key === 'capAdd');
@@ -1282,7 +1279,8 @@ function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); 
 // 合并为三大组 + 命运誓言 + 兜底「其他」；组序 = 大组声明序。
 const V21_GROUPS = [
   { title: '产出与效率', cats: ['A', 'C', 'E', 'I'] }, // 全局乘数 / 成本折扣 / 线程与薪资 / 职级强化
-  { title: '存储与续航', cats: ['D', 'G'] },           // 上限扩容 / 离线续航
+  // v3.4.5 反馈③：删除「存储与续航」组（原 D 上限扩容 + G 离线续航）——
+  // EP 上限走升级商店（存储节点/备用粮仓/深井仓储）+ 三仓库，离线续航走离线升级（off_eff1~3 / off_cap1~2）。
   { title: '研究与事件', cats: ['F', 'H'] },           // RP 加成 / 事件与项目
   { title: '命运誓言', cats: ['X'] },
 ];

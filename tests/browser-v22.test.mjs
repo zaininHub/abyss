@@ -53,7 +53,7 @@ const baseSave = (over) => ({
 console.log('\n[A] open 档买塔立誓含 5X toast 播报');
 {
   const { page, errs } = await openPage(baseSave({
-    ep: 400000, buildings: { quantum_pool: 8 }, // EP 上限 +400k（3e5 立誓价可负担）
+    ep: 400000, upgrades: { storage: 40 }, // v3.4.5：EP 上限改由存储节点 40 级支撑（3e5 立誓价可负担）
   }));
   await new Promise(r => setTimeout(r, 2000)); // 等 tick 推进岔路口渲染
   // 钩住 #toast 的 textContent setter：单元素 toast 会被后续事件 toast 覆盖，需全程记录播报日志
@@ -113,7 +113,7 @@ for (const L of LINES) {
   const { page, errs } = await openPage(baseSave({
     storyline: L.sl, crossroad: 'locked', crossroadLockedBy: L.bid,
     chapter: `6${L.sl.slice(-1).toUpperCase()}`,
-    buildings: { [L.bid]: 1, quantum_pool: 8 },
+    buildings: { [L.bid]: 1 }, upgrades: { storage: 40 },
   }));
   await new Promise(r => setTimeout(r, 2000));
   await page.evaluate(() => document.getElementById('btn-storyline')?.click()); // 故事线面板懒渲染：切 tab 才渲染
@@ -142,7 +142,7 @@ console.log('\n[C] 族升级购档');
   const { page, errs } = await openPage(baseSave({
     rp: 2500000, // 产出族 350k+900k + 扩容族 T1 260k 富余
     milesDone: { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1, m6: 1, m7: 1, m8: 1, m9: 1 }, // 里程碑 9 门控
-    buildings: { quantum_pool: 8 },
+    upgrades: { storage: 40 },
   }));
   await new Promise(r => setTimeout(r, 2000));
   const famBefore = await page.evaluate(() => {
@@ -180,7 +180,7 @@ console.log('\n[D] 旧档 v4→v5 迁移实测');
 {
   const v4Save = {
     _version: 4, ep: 5000, rp: 200, chapter: '6A', storyline: 'line_order',
-    tech: {}, buildings: { quantum_pool: 8 }, unlockedBuildings: {}, buildingOverflow: {},
+    tech: {}, buildings: {}, upgrades: { storage: 40 }, unlockedBuildings: {}, buildingOverflow: {},
     epOverflowTotal: 0, _overflowRpAcc: 0, _v21Migrated: true,
     storylinesCompleted: [], lastSeen: Date.now(),
   };

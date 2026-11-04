@@ -27,10 +27,10 @@ const floors = [
   ['量子叠加器', 'quantum_stacker', 2e6, 1.45], ['奇点反应堆', 'singularity_core', 2.6e6, 1.48],
   ['超越圣殿', 'transcend_temple', 3.2e6, 1.48], ['飞升尖塔', 'ascend_spire', 3.8e6, 1.50],
   ['永恒回廊', 'eternity_hall', 4.6e6, 1.50], ['终焉圣殿', 'end_shrine', 5.4e6, 1.50],
-  // 组 C
-  ['议价坊', 'bargain_shop', 2.5e5, 1.40], ['谈判席', 'negotiate_seat', 1.6e6, 1.45],
-  ['采购总署', 'purchase_office', 4.2e6, 1.50], ['采购总署·聚', 'purchase_office_2', 1.4e7, 1.50],
-  ['采购总署·极', 'purchase_office_3', 3e7, 1.30], ['专注心核', 'focus_core', 5.5e5, 1.25],
+  // 组 C（v3.4.5：降本类再涨价 + 加成削弱）
+  ['议价坊', 'bargain_shop', 2.5e6, 1.45], ['谈判席', 'negotiate_seat', 1.2e7, 1.48],
+  ['采购总署', 'purchase_office', 5e7, 1.50], ['采购总署·聚', 'purchase_office_2', 8e7, 1.50],
+  ['采购总署·极', 'purchase_office_3', 2e8, 1.30], ['专注心核', 'focus_core', 3e6, 1.25],
   // 组 E
   ['协作大厅', 'coop_hall', 8e5, 1.38], ['团队圣堂', 'team_temple', 5e6, 1.42],
   ['超级团队殿', 'super_team', 1.15e7, 1.45], ['节能电池', 'eco_battery', 8e5, 1.38],
@@ -39,10 +39,6 @@ const floors = [
   ['初探实验台', 'exp_bench', 6.6e5, 1.45], ['RP 蒸馏塔', 'rp_distiller', 1.75e6, 1.45],
   ['深度实验室', 'deep_lab', 5.6e6, 1.50], ['理论突破台', 'theory_desk', 8e6, 1.50],
   ['传奇研究所', 'legend_institute', 1.02e7, 1.50],
-  // 组 G（×2.5）
-  ['断线信号塔·初', 'beacon_1', 2500, 1.15], ['断线信号塔·中', 'beacon_2', 2.5e4, 1.20],
-  ['断线信号塔·永', 'beacon_3', 3e5, 1.30], ['延时缓存站', 'delay_cache', 2.5e5, 1.28],
-  ['延时缓存站·折', 'delay_cache_2', 3.2e5, 1.30],
   // 组 H
   ['机会感知器', 'chance_sensor', 6e5, 1.45], ['机会感知器·锐', 'chance_sensor_2', 1.8e6, 1.45],
   ['幸运星云', 'lucky_nebula', 3.6e6, 1.45], ['事件潮汐所', 'event_tide_lab', 4.8e6, 1.30],
@@ -53,9 +49,9 @@ const floors = [
 const under = floors.filter(([, id, fb, fg]) => !(B(id).base >= fb && B(id).growth >= fg));
 if (under.length === 0) ok('① 效能建筑 39 项 base/growth 全部 ≥ 新底价', `效能尖塔 ${B('eff_tower').base.toExponential(0)}×${B('eff_tower').growth} / 专注心核 ${B('focus_core').base.toExponential(0)} / 协作大厅 ${B('coop_hall').base.toExponential(0)}`);
 else bad('① 仍有未达标项', under.map(([n]) => n).join('，'));
-// 组 D（存储）在 v3.4.3 未随产出强化混涨；v3.4.4 才按「前期存储节点→后期粮仓」单独重标价（见 v344）
-if (B('quantum_pool').base === 8e4 && B('reserve_bin').base === 45000) ok('① 组 D 与产出强化隔离（缓存池不动、粮仓仅按 v3.4.4 存储口径调价）', `量子缓存池 ${B('quantum_pool').base} / 粮仓 ${B('reserve_bin').base}`);
-else bad('① 组 D 被误改', `quantum_pool ${B('quantum_pool').base} / reserve_bin ${B('reserve_bin').base}`);
+// v3.4.5：组 D（上限扩容）/ 组 G（离线续航）整组删除，建筑表里不得再有这两组
+if (!B('quantum_pool').base && !B('reserve_bin').base && !B('beacon_1').base && !B('delay_cache').base) ok('① 存储与续航整组已删除（量子缓存池/粮仓镜像/信号塔/缓存站均不在表内）', '');
+else bad('① 存储与续航仍有残留', ['quantum_pool', 'reserve_bin', 'beacon_1', 'delay_cache'].filter(x => B(x).base).join(','));
 
 // ===== ② 满级总投入抬升 =====
 const tower = total('eff_tower');
@@ -69,7 +65,8 @@ if (m9 <= 4.0e7) ok('② 产出族满档扩展级仍 ≤ m=9 期上限 4.0e7', `
 else bad('② 产出族突破红线', `协作大厅 L12 ${m9.toExponential(2)}`);
 
 // ===== ⑥ 里程碑门槛映射 =====
-const gate = [[B('exp_bench'), 5], [B('coop_hall'), 5], [B('negotiate_seat'), 6], [B('team_temple'), 7], [B('warmup_node'), 0], [B('focus_core'), 0]];
+// v3.4.5：降本类（bargain/negotiate/office/focus）带 minMile 显式档位，门槛按原档保留
+const gate = [[B('exp_bench'), 5], [B('coop_hall'), 5], [B('negotiate_seat'), 6], [B('team_temple'), 7], [B('warmup_node'), 0], [B('focus_core'), 5], [B('bargain_shop'), 5]];
 const gateBad = gate.filter(([b, m]) => unlockMilestoneV21(b) !== m);
 if (gateBad.length === 0) ok('⑥ 门槛随价位映射上移（6e5→m5 / 1.5e6→m6 / 4e6→m7 / <6e5→m0）', `初探实验台 m${unlockMilestoneV21(B('exp_bench'))} / 团队圣堂 m${unlockMilestoneV21(B('team_temple'))}`);
 else bad('⑥ 门槛映射错误', gateBad.map(([b]) => b.id).join('，'));
@@ -117,7 +114,7 @@ try {
     const leftovers = heads.filter(h => oldNames.includes(h));
     if (leftovers.length === 0 && heads.length > 0) ok('③ 旧 8 组名全部消失', `现组头：${heads.join(' / ')}`);
     else bad('③ 旧组名残留或无组头', `${heads.join(' / ')}`);
-    const expectHeads = ['产出与效率', '存储与续航', '研究与事件'];
+    const expectHeads = ['产出与效率', '研究与事件'];
     const merged = expectHeads.filter(h => heads.includes(h));
     if (merged.length >= 2) ok('③ 三大组标题出现', merged.join(' / '));
     else bad('③ 合并组头缺失', heads.join(' / '));
@@ -129,9 +126,9 @@ try {
       return null;
     };
     const belongs = [['eff_tower', '产出与效率'], ['focus_core', '产出与效率'], ['coop_hall', '产出与效率'],
-      ['quantum_pool', '存储与续航'], ['beacon_1', '存储与续航'], ['exp_bench', '研究与事件'], ['chance_sensor', '研究与事件']];
+      ['exp_bench', '研究与事件'], ['chance_sensor', '研究与事件']];
     const mis = belongs.filter(([id, g]) => grpOf(id) !== g);
-    if (mis.length === 0) ok('④ 卡片按大组归属正确', `效能尖塔→${grpOf('eff_tower')} / 量子缓存池→${grpOf('quantum_pool')} / 初探实验台→${grpOf('exp_bench')}`);
+    if (mis.length === 0) ok('④ 卡片按大组归属正确', `效能尖塔→${grpOf('eff_tower')} / 初探实验台→${grpOf('exp_bench')}`);
     else bad('④ 归属错误', mis.map(([id, g]) => `${id}→${grpOf(id)}(应${g})`).join('，'));
 
     // ⑤ 价格链路：Lv0 卡价格文案 = ceil(base × costMult)。无任何折价来源时 costMult=1

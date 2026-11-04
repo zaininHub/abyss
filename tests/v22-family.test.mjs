@@ -32,10 +32,10 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline, fami
 }
 
 console.log('[L1] 静态基线');
-t('getAllBuildings() 恰好 59 栋且 ID 唯一（v3.0.3 许愿池移入通用设施）', () => {
+t('getAllBuildings() 恰好 44 栋且 ID 唯一（v3.4.5 删除存储与续航整组 15 项）', () => {
   const all = getAllBuildings();
-  assert.equal(all.length, 59, `实际 ${all.length} 栋`);
-  assert.equal(new Set(all.map(b => b.id)).size, 59, 'ID 必须唯一');
+  assert.equal(all.length, 44, `实际 ${all.length} 栋`);
+  assert.equal(new Set(all.map(b => b.id)).size, 44, 'ID 必须唯一');
 });
 t('级制红线恒真：非扩容类静态 cap ≤ 20；unlimited 扩容类豁免（v2.4 KG 无限化）', () => {
   for (const b of getAllBuildings()) {
@@ -63,23 +63,23 @@ t('产出族满档 +7（+3→+4）；扩容族档位随 v2.4 移除', () => {
   const F = BALANCE.familyUpgradeTiers;
   assert.equal(F.output.tiers.reduce((a, x) => a + x.addCap, 0), 7);
 });
-t('不做清单交集空：族升级仅产出白名单(3)；扩容类（组D 全族 8 栋含新增）经 unlimited 豁免不入族档', () => {
+t('不做清单交集空：族升级仅产出白名单(3)；v3.4.5 起无 cat D 建筑，族映射只剩产出族', () => {
   const all = getAllBuildings();
   const inFam = all.filter(b => familyOfBuilding(b) !== null).map(b => b.id);
   const crossIds = ['order_pillar', 'abyss_anchor', 'faith_shrine'];
   for (const id of crossIds) assert.ok(!inFam.includes(id), `定向建筑 ${id} 不得入族`);
-  // 组D 建筑仍被 familyOfBuilding 映射为 'D'（capOf 对 unlimited 恒返回 Infinity，族档对其无钳制）
-  assert.equal(inFam.length, 13, `组D(8 含新增 3)+白名单(3) 应共 13 栋，实际 ${inFam.length}`);
+  assert.equal(inFam.length, 3, `白名单(3) 应共 3 栋，实际 ${inFam.length}`);
+  assert.ok(!all.some(b => b.cat === 'D'), 'v3.4.5：效能建筑不得再有 cat D（存储与续航整组删除）');
   for (const cat of ['A', 'B', 'C', 'F', 'G', 'H', 'I']) {
     assert.ok(!all.some(b => b.cat === cat && familyOfBuilding(b)), `组${cat} 不得入族（组B 整组不开放为 PM 终稿）`);
   }
 });
 
 console.log('[L2] capOf 动态上限');
-t('familyOfBuilding 映射：D 全族→D、白名单 3 楼→output、排除集 7 id 与其余组无映射', () => {
+t('familyOfBuilding 映射：白名单 3 楼→output、排除集与其余组无映射（v3.4.5 起无 D 族）', () => {
   const find = id => getAllBuildings().find(x => x.id === id);
-  for (const id of ['quantum_pool', 'dim_compressor', 'overlimit_store', 'storage', 'cache']) {
-    assert.equal(familyOfBuilding(find(id)), 'D', `${id} 应属组D 族`);
+  for (const id of ['quantum_pool', 'dim_compressor', 'overlimit_store']) {
+    assert.equal(find(id), undefined, `${id} 已随组D 删除`);
   }
   for (const id of OUTPUT_FAMILY_IDS) {
     assert.equal(familyOfBuilding(find(id)), 'output', `${id} 应属产出族白名单`);
@@ -100,12 +100,12 @@ t('无族升级态：非扩容建筑 capOf === 静态 cap；unlimited 扩容类 
     assert.equal(capOf(b, S), b.cap ?? b.levels, `${b.id} 默认 capOf 应等于静态 cap`);
   }
 });
-t('unlimited 扩容类 capOf = Infinity：组D 全族（三梯+storage/cache+新增 3 座）不受任何族档影响（v2.4）', () => {
-  const ids = ['quantum_pool', 'dim_compressor', 'overlimit_store', 'storage', 'cache', 'abyss_reservoir', 'resonance_chamber', 'dm_condenser'];
-  for (const id of ids) {
-    const b = getAllBuildings().find(x => x.id === id);
-    assert.equal(capOf(b, { familyUpgrades: {} }), Infinity, `${id} 基线应 Infinity`);
-    assert.equal(capOf(b, { familyUpgrades: { D: 3 } }), Infinity, `${id} 旧档 D 族档不得钳制`);
+t('v3.4.5：建筑表内已无 unlimited 扩容类（仅剩 via:upgrade 的灵感蒸馏塔）', () => {
+  const unlimited = getAllBuildings().filter(b => b.unlimited).map(b => b.id);
+  assert.deepEqual(unlimited, ['rp_distill'], `实际 ${unlimited.join(',')}`);
+  for (const b of getAllBuildings()) {
+    if (b.unlimited) continue;
+    assert.ok(Number.isFinite(capOf(b, { familyUpgrades: {} })), `${b.id} 上限应为有限值`);
   }
 });
 t('产出族 T1/T2：cap+3 → cap+7（以 coop_hall 5→8→12 为锚）', () => {
@@ -160,10 +160,10 @@ t('fuelMul 全来源乘积下界保险丝（PM 终稿断言 a）：满级全来�
   const expect = Math.pow(0.90, 12) * Math.pow(0.85, 10);
   assert.ok(Math.abs(expect - 0.0556) < 0.001, `锚点值漂移：×0.90^12×0.85^10 = ${expect.toExponential(3)}`);
 });
-t('unlimited 扩容类无硬顶：任意档数 capOf = Infinity（v2.4 替代原 35 硬顶）', () => {
+t('unlimited 项无硬顶：灵感蒸馏塔任意档数 capOf = Infinity', () => {
   const find = id => getAllBuildings().find(x => x.id === id);
   for (const n of [0, 1, 2, 3, 99]) {
-    assert.equal(capOf(find('quantum_pool'), { familyUpgrades: { D: n } }), Infinity, `档数 ${n} 时 quantum_pool 应为 Infinity`);
+    assert.equal(capOf(find('rp_distill'), { familyUpgrades: { D: n } }), Infinity, `档数 ${n} 时 rp_distill 应为 Infinity`);
   }
 });
 t('非族建筑（A/C/F/G/H/I/X、基础 4 栋与 B/E 乘算锚点）任意档数 capOf === 静态 cap（不被族升级抬升）', () => {
@@ -174,10 +174,12 @@ t('非族建筑（A/C/F/G/H/I/X、基础 4 栋与 B/E 乘算锚点）任意档�
   }
 });
 t('familyUpgrades 缺省/空对象兼容（旧档未购族升级；unlimited 恒 Infinity）', () => {
-  const b = getAllBuildings().find(x => x.id === 'quantum_pool');
+  const b = getAllBuildings().find(x => x.id === 'rp_distill');
   assert.equal(capOf(b, {}), Infinity);
   assert.equal(capOf(b, undefined), Infinity);
   assert.equal(capOf(b, { familyUpgrades: undefined }), Infinity);
+  const h = getAllBuildings().find(x => x.id === 'coop_hall');
+  assert.equal(capOf(h, {}), h.cap, '旧档 familyUpgrades 缺省时按静态 cap');
 });
 
 console.log('[L3] 数值红线延续（族升级后「任一建筑任一级价格 ≤ epStorageCap()」）');
@@ -197,15 +199,17 @@ t('组D 三梯满档 35 级态：v21BuildingCost 仍受 30% 防死锁钳制（�
     }
   }
 });
-t('组D 35 级满配 capAdd 贡献生效（capOf 经 effectiveLevel 读侧贯通，epStorageCap 单调上升）', () => {
-  setCapState(20, 20, 3, 20, 20, 20, 9, 'default', {});
+t('EP 上限曲线（v3.4.5 组D 删除后）：storage 20/30/40/50 → 2.98M / 12.6M / 63.0M / 326.9M，单调递增', () => {
+  setCapState(20, 20, 3, 0, 0, 0, 9, 'default', {});
   const cap20 = epStorageCap();
-  setCapState(20, 20, 3, 25, 25, 25, 9, 'default', { D: 1 });
-  const cap25 = epStorageCap();
-  setCapState(20, 20, 3, 35, 35, 35, 9, 'default', { D: 3 });
-  const cap35 = epStorageCap();
-  assert.ok(cap25 > cap20, `T1 后上限应上升（${cap20} → ${cap25}）`);
-  assert.ok(cap35 > cap25, `T3 后上限应上升（${cap25} → ${cap35}）`);
+  setCapState(20, 30, 3, 0, 0, 0, 9, 'default', {});
+  const cap30 = epStorageCap();
+  setCapState(20, 40, 3, 0, 0, 0, 9, 'default', {});
+  const cap40 = epStorageCap();
+  setCapState(20, 50, 3, 0, 0, 0, 9, 'default', {});
+  const cap50 = epStorageCap();
+  assert.ok(cap30 > cap20 && cap40 > cap30 && cap50 > cap40, `应单调上升：${cap20}/${cap30}/${cap40}/${cap50}`);
+  assert.ok(cap40 > 5e7, `storage40 上限应 >5e7（实际 ${cap40}）——否则中后期建筑买不起`);
 });
 t('产出族扩展级价格红线（PM §3.4 状态感知口径）：按该级实际可达时刻的上限判，全部 ≤ m=9 期上限', () => {
   // 产出族档位门控 m=9 → 扩展级存在前提是 9 里程碑已达成；PM 终稿重算锚点（base×growth^(L-1)）：
@@ -236,8 +240,8 @@ t('产出族扩展级价格红线（PM §3.4 状态感知口径）：按该级�
     }
   }
 });
-t('产出族满档 12 级：白名单楼全级价 ≤ 终局 epStorageCap（3.74e11 口径量级，延续既有红线）', () => {
-  setCapState(20, 20, 3, 20, 20, 20, 9, 'line_abyss', {});
+t('产出族满档 12 级：白名单楼全级价 ≤ storage40 上限（v3.4.5 重算，≈6.3e7）', () => {
+  setCapState(20, 40, 3, 0, 0, 0, 9, 'line_abyss', {});
   const cap = epStorageCap();
   for (const id of OUTPUT_FAMILY_IDS) {
     const b = V21_BUILDINGS.find(x => x.id === id);

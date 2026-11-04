@@ -37,9 +37,18 @@ export function petExpNeed(level) {
   return Math.floor(1200 * Math.pow(level, 2.8));
 }
 
+// v3.4.5 反馈④：异兽分档（tier 1~6，融合兽按 6）——档位越高，升级饼干与维持消耗越贵
+export function petTierOf(id, p) {
+  if (p && p.tier) return p.tier;
+  const def = PETS.find(x => x.id === id);
+  if (def) return def.tier || 1;
+  return 6; // 融合异兽（无静态定义）
+}
+
 // v3.0.3 第二批⑤：宠物升级消耗异兽饼干（PT）——成本陡峭（20 起步 ×1.55/级），升级依赖饼干
-export function petPtNeed(level) {
-  return Math.floor(20 * Math.pow(1.55, level));
+// v3.4.5 反馈④：30 起步 ×1.60/级，且按档位再乘 (1+0.12×(tier-1))——高级异兽练级显著更贵
+export function petPtNeed(level, tier = 1) {
+  return Math.floor(30 * Math.pow(1.60, level) * (1 + (tier - 1) * 0.12));
 }
 
 export function gainPetExp(dt) {
@@ -65,7 +74,7 @@ export function levelUpPet(id) {
   const p = S.pets[id];
   if (!p || p.level >= 100) return { ok: false, reason: '已满级' };
   if (p.exp < petExpNeed(p.level)) return { ok: false, reason: '经验未满' };
-  const ptNeed = petPtNeed(p.level);
+  const ptNeed = petPtNeed(p.level, petTierOf(id, p));
   if ((S.pt || 0) < ptNeed) return { ok: false, reason: `PT 不足（需 ${fmt(ptNeed)}）` };
   S.pt = Math.max(0, (S.pt || 0) - ptNeed);
   p.exp = Math.max(0, p.exp - petExpNeed(p.level));
@@ -75,13 +84,20 @@ export function levelUpPet(id) {
 }
 
 // v3.2.1 反馈⑨：异兽存活维持——出战异兽每秒消耗 PT（随等级增长），PT 不足自动休战，恢复缓冲 PT ≥ 1 后重新出战
-const PET_UPKEEP_BASE = 0.02; // Lv.1 每只 0.02 PT/s
-export function petUpkeepPerSec(p) {
-  return PET_UPKEEP_BASE * (p ? p.level : 1) * (1 + ((p && p.gen ? p.gen : 1) - 1) * 0.25);
+// v3.4.5 反馈④：维持消耗大幅上调——基数 0.02→0.04、等级指数 1→1.10、按档位再乘（tier 1/1.2/1.5/2/2.6/3.2）、
+//   世代加成 25%→30%/代。Lv.15 三只基础兽 ≈ 2.2 PT/s（原 ≈0.9），深渊龙/深潜者约为其 2~2.6 倍。
+const PET_UPKEEP_BASE = 0.04;
+const PET_TIER_UPKEEP = [1, 1, 1.2, 1.5, 2, 2.6, 3.2]; // 下标 = tier（0 位占位）
+export function petUpkeepPerSec(p, id) {
+  const lv = p ? p.level : 1;
+  const gen = (p && p.gen) ? p.gen : 1;
+  const tier = petTierOf(id, p);
+  const tierMult = PET_TIER_UPKEEP[Math.min(PET_TIER_UPKEEP.length - 1, Math.max(1, tier))];
+  return PET_UPKEEP_BASE * Math.pow(lv, 1.10) * tierMult * (1 + (gen - 1) * 0.30);
 }
 export function petUpkeepTotalPerSec() {
   let sum = 0;
-  for (const id of activePetIds()) { const p = S.pets[id]; if (p) sum += petUpkeepPerSec(p); }
+  for (const id of activePetIds()) { const p = S.pets[id]; if (p) sum += petUpkeepPerSec(p, id); }
   return sum;
 }
 export function petStarving() {
@@ -91,7 +107,7 @@ export function petStarving() {
 export function buyPet(petDef) {
   if ((S.pt || 0) < petDef.price) return false;
   S.pt -= petDef.price;
-  S.pets[petDef.id] = { icon: petDef.icon, name: petDef.name, level: 1, exp: 0, gen: 1 };
+  S.pets[petDef.id] = { icon: petDef.icon, name: petDef.name, level: 1, exp: 0, gen: 1, tier: petDef.tier || 1 };
   if (S.activePets.length < 3) S.activePets.push(petDef.id);
   return true;
 }
@@ -124,7 +140,7 @@ export function fusePets(aId, bId) {
   const names = ['星噬', '暗裔', '深渊眷属', '虚空织者', '苍穹守望', '碧潭行者', '饕餮', '福瑞', '外神之影', '不可名状'];
   S.pets[newId] = {
     icon: '✨', name: names[Math.floor(Math.random() * names.length)] + ` G${gen}`,
-    level: 1, exp: 0, gen, mixed, fused: true, parentA: aId, parentB: bId
+    level: 1, exp: 0, gen, tier: 6, mixed, fused: true, parentA: aId, parentB: bId
   };
   delete S.pets[aId]; delete S.pets[bId];
   S.activePets = S.activePets.filter(x => x !== aId && x !== bId);
@@ -194,16 +210,16 @@ function petCardHtml(id, p, actives, starving) {
   const isActive = actives.includes(id);
   const def = PETS.find(x => x.id === id);
   const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
-  const upk = petUpkeepPerSec(p);
+  const upk = petUpkeepPerSec(p, id);
   const upkLine = isActive
     ? `<div class="lv" style="color:${starving ? 'var(--text-3)' : 'var(--warn)'};font-size:10px">${starving ? '已回家 · 停扣' : `维持 -${upk.toFixed(2)} PT/s`}</div>`
     : `<div class="lv" style="color:var(--text-3);font-size:10px">未出战 · 不消耗</div>`;
   const xpNeed = petExpNeed(p.level);
   const xpReady = isActive && !starving && p.level < 100 && p.exp >= xpNeed;
   const xpTitle = p.level >= 100 ? '已满级'
-    : `经验 ${Math.floor(Math.min(p.exp, xpNeed))} / ${Math.floor(xpNeed)} · 还需陪伴 ${fmtPetDur(petXpRemainSec(p))}${xpReady ? ` · 点击「升级」消耗 ${fmt(petPtNeed(p.level))} PT` : ''}`;
+    : `经验 ${Math.floor(Math.min(p.exp, xpNeed))} / ${Math.floor(xpNeed)} · 还需陪伴 ${fmtPetDur(petXpRemainSec(p))}${xpReady ? ` · 点击「升级」消耗 ${fmt(petPtNeed(p.level, petTierOf(id, p)))} PT` : ''}`;
   const upBtn = xpReady
-    ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level))} PT</button>`
+    ? `<button class="btn pet-up-btn${(S.pt || 0) >= petPtNeed(p.level, petTierOf(id, p)) ? '' : ' disabled'}" data-pet-up="${id}" style="margin-top:4px;padding:3px 10px;font-size:11px;width:100%">升级 -${fmt(petPtNeed(p.level, petTierOf(id, p)))} PT</button>`
     : '';
   return `<div class="pet-card${isActive ? ' on' : ''}${isActive && starving ? ' starving' : ''}" data-pet-card="${id}">${genTag}
       <div class="icon">${def ? def.icon : p.icon}</div>
@@ -230,7 +246,7 @@ function refreshPetGridLive(container) {
     if (eta) eta.textContent = p.level >= 100 ? '已满级' : p.exp >= xpNeed ? '可升级' : `升级 ${fmtPetDur(petXpRemainSec(p))}`;
     const btn = el.querySelector('[data-pet-up]');
     if (btn) {
-      const can = actives.includes(id) && !starving && (S.pt || 0) >= petPtNeed(p.level) && p.exp >= xpNeed;
+      const can = actives.includes(id) && !starving && (S.pt || 0) >= petPtNeed(p.level, petTierOf(id, p)) && p.exp >= xpNeed;
       btn.classList.toggle('disabled', !can);
       btn.disabled = !can;
     }
@@ -380,7 +396,7 @@ export function refreshPetsAffordability() {
   for (const btn of upBtns) {
     const p = S.pets[btn.dataset.petUp];
     if (!p) continue;
-    const can = (S.pt || 0) >= petPtNeed(p.level) && p.exp >= petExpNeed(p.level);
+    const can = (S.pt || 0) >= petPtNeed(p.level, petTierOf(btn.dataset.petUp, p)) && p.exp >= petExpNeed(p.level);
     btn.classList.toggle('disabled', !can);
     btn.disabled = !can;
   }

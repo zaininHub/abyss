@@ -418,18 +418,18 @@ t('D1：轨道飞行器封印 Lv2 裂隙 DM = 2+1 = 3；无载具回归一致（
 t('D2：采集按数值确定性产出（v2.4：不再概率掷骰，显示与到账同口径）', () => {
   S.upgrades = { scooter: 10, parallel: 20 }; // v2.8.30：epPerDm 2500→6000 后净流收紧，补基础产出使净流 >0 且余额可支付
   S.ep = 1e6;
-  assert.ok(Math.abs(vehicleDmPerMin() - 0.5) < 1e-9, '10 辆摩托队速率 = 10×0.05 = 0.5 DM/min');
-  assert.ok(Math.abs(collectVehicleDm() - 0.5) < 1e-9, '确定性到账 = 速率（每 60s 一次）');
-  // 多效果上限建筑加成：深渊蓄能池 Lv.2 → DM 采集效率 +30%
-  S.buildings = S.buildings || {}; S.buildings.abyss_reservoir = 2;
-  assert.ok(Math.abs(vehicleDmPerMin() - 0.65) < 1e-9, '0.5 × (1+2×0.15) = 0.65 DM/min');
-  delete S.buildings.abyss_reservoir;
-  // tick：不足 60s 不到账；满 60s 确定性到账并返回 true
-  S.dm = 0; S.vehCollectTimer = 0;
-  assert.equal(tickVehicleCollect(59.9), false);
-  const got = tickVehicleCollect(0.2);
-  assert.equal(got, true, '满 60s 应触发到账');
-  assert.ok(Math.abs(S.dm - 0.5) < 1e-9, '到账 DM = 0.5（确定性，无随机方差）');
+  // v3.4.0 起 dmRates 改成每辆每分钟（[0.2,0.4,1,2]），断言从配置读，避免再写死 0.05
+  const perMin = BALANCE.vehicles.dmRates[0];
+  const base = 10 * perMin;
+  assert.ok(Math.abs(vehicleDmPerMin() - base) < 1e-9, `10 辆摩托队速率 = 10×${perMin} = ${base} DM/min`);
+  assert.ok(Math.abs(collectVehicleDm() - base) < 1e-9, '确定性到账 = 速率（每 60s 一次）');
+  // v3.4.5：多效果上限建筑（深渊蓄能池等）随「存储与续航」整组删除，DM 采集效率不再有建筑加成
+  S.buildings = {};
+  // tick：v3.3.8 起按秒连续结算（不再是 60s 一次 roll）——30s 到账 = 速率的一半
+  S.dm = 0; S.vehCollectTimer = 0; S.ep = 1e9;
+  const got = tickVehicleCollect(30);
+  assert.equal(got, true, '有速率即应到账');
+  assert.ok(Math.abs(S.dm - base / 2) < 1e-9, `30s 到账 ${base / 2} DM（确定性，无随机方差）`);
   S.upgrades = {};
   S.dm = 0; S.vehCollectTimer = 0;
   assert.equal(tickVehicleCollect(10), false, '无载具不计时');

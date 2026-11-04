@@ -53,11 +53,12 @@ t('超封迁移：transcend 7 级超 cap → 落 cap、差额记 buildingOverflo
   assert.equal(S.buildings.transcend_temple, cap);
   assert.equal(S.buildingOverflow.transcend_temple, 7 - cap);
 });
-t('钥匙科技 offline1 迁移获赠 beacon_1 1 级（旧档不等新档差）', () => {
-  assert.equal(S.buildings.beacon_1, 1);
+t('v3.4.5：offline1 不再迁移到已删的断线信号塔（离线续航走离线升级）', () => {
+  assert.equal(S.buildings.beacon_1, undefined);
+  assert.equal(V21_BUILDINGS.some(b => b.id === 'beacon_1'), false, '信号塔应已从建筑表移除');
 });
 t('迁移建筑自动解锁（免二次 RP）', () => {
-  for (const bid of ['warmup_node', 'eff_tower', 'double_workshop', 'transcend_temple', 'beacon_1']) {
+  for (const bid of ['warmup_node', 'eff_tower', 'double_workshop', 'transcend_temple']) {
     assert.equal(S.unlockedBuildings[bid], true, bid + ' 应自动解锁');
   }
 });

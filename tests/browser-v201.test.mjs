@@ -179,8 +179,8 @@ console.log('\n[B] file:// 真实点击试玩（招募/升级/AI/裂隙/建筑�
 console.log('\n[C] 三故事线分叉（第5章岔路口三选一立誓）');
 {
   const { page, errs } = await openPage({
-    ep: 400000, cultists: [], upgrades: {}, tech: {},
-    buildings: { quantum_pool: 8 }, // EP 存储上限 +400k（3e5 立誓价可负担；空档会被 tickCorruption 截断到基础上限）
+    ep: 400000, cultists: [], upgrades: { storage: 40 }, tech: {},
+    buildings: {}, // v3.4.5：量子缓存池删除，EP 上限改由 upgrades.storage 40 级提供
     chapter: '5', storyline: 'default', lastSeen: Date.now(),
   });
   await new Promise(r => setTimeout(r, 2000)); // 等游戏循环 tick 推进岔路口状态机（inactive→open）

@@ -105,12 +105,12 @@ for (const L of LINES) {
       sessionStorage.setItem('__saveInjectedOnce', '1');
       localStorage.setItem('abyss_idle_v2', s);
     }
-  // v2.2 购买钩子路径 fixture：立誓需 3e5 EP，须先给足 EP 存储上限（quantum_pool 8 级 capAdd +400k，
+  // v2.2 购买钩子路径 fixture：立誓需 3e5 EP，须先给足 EP 存储上限（v3.4.5：量子缓存池删除，改用存储节点 40 级，
   // 否则 tickCorruption 每帧把 EP 截断到基础上限 2000，购买因「EP 不足」静默失败）
   // v2.3.1 ② 断言适配（组长裁定 7698654240398511409）：设施分区门控 = anyBuilt ∨ milesDone[1e4]。
-  // 注入档的 quantum_pool 是 v21 效能建筑（非 v1.3 设施），不满足 anyBuilt——本 E2E 断言
+  // 注入档没有 v1.3 设施，不满足 anyBuilt——本 E2E 断言
   // 目的是缺陷 A（线内容持久化）而非门控测试，fixture 补 1e4 里程碑打开分区（已标记不触发补发）。
-  }, JSON.stringify(baseSave({ chapter: '5', ep: 400000, runEarned: 400000, allTimeEp: 400000, expeditionsDone: 3, buildings: { quantum_pool: 8 }, milesDone: { '10000': 1 } })));
+  }, JSON.stringify(baseSave({ chapter: '5', ep: 400000, runEarned: 400000, allTimeEp: 400000, expeditionsDone: 3, upgrades: { storage: 40 }, buildings: { warmup_node: 1, quantum_pool: 8 }, milesDone: { '10000': 1 } })));
   await page.goto(url, { waitUntil: 'load' });
   await new Promise(r => setTimeout(r, 1300));
   await page.click('#btn-storyline'); // v2.7.5：岔路口分区随故事线 tab（原 shop tab 已移除）

@@ -12,7 +12,6 @@ export const BALANCE = {
   // 即：PT 产出 -33%，单位 PT 的 EP 成本 ×4.5；线程加成同时乘「消耗」与「产出」，EP/PT 恒定。
   hatch: { epPerSec: 15000, epPerPt: 150000 },
   oracle: { base: 5e11, rate: 2 },
-  dataForge: { name: '数据熔炉', base: 1e8, cps: 0, desc: '研究点已改由灵感蒸馏塔与任务获取' }, // v3.0.3 第四批④：移除直产 RP
   thread: {
     firstCost: 360, baseOutput: 1.0, baseOutputJitter: 1.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.27：线程成本 ×3、基础产出 ×0.5（首轮 7-10 天） // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
@@ -103,22 +102,20 @@ export const BALANCE = {
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
     // v3.4.2 反馈①：折价类同样重标价（成本 ×0.98/级 的复利极强，原 3 万起、5 万即可买到永久降本）
-    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e5, growth: 1.40, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98' },
-    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.6e6, growth: 1.45, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96' },
-    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 4.2e6, growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95' },
-    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 1.4e7, growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92' },
-    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 3e7,  growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88' },
-    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5.5e5, growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75' },
-    // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
-    // v2.4 KG 模式改造：扩容类全部无限升级（unlimited），成本指数递增 + 30% 钳制 → 后期性价比自然递减；
-    // 新增 3 座「多效果上限建筑」（EP 上限 + DM 采集效率 / 全局产出），先开放者后期性价比递减（数据见 PM v2.4）
-    { id: 'quantum_pool',   name: '量子缓存池', cat: 'D', unlimited: true, base: 8e4, growth: 1.25, unlockTech: 'quantum2',  fx: { key: 'capAdd', value: 50000 },   desc: 'EP 存储上限 +50,000/级' },
-    { id: 'dim_compressor', name: '维度压缩仓', cat: 'D', unlimited: true, base: 2e5, growth: 1.30, unlockTech: 'transcend', fx: { key: 'capAdd', value: 5e6 },     desc: 'EP 存储上限 +5,000,000/级' },
-    { id: 'overlimit_store',name: '超限储存器', cat: 'D', unlimited: true, base: 5e5, growth: 1.35, unlockTech: 'true_end',  fx: { key: 'capAdd', value: 5e9 },     desc: 'EP 存储上限 +5,000,000,000/级' },
-    // v2.4 新增多效果上限建筑（unlimited；多键效果经 effectEngine fx 数组聚合，DM 采集效率加成作用于载具采集）
-    { id: 'abyss_reservoir', name: '深渊蓄能池', cat: 'D', unlimited: true, base: 2e6, growth: 1.28, unlockTech: 'quantum2',  fx: [{ key: 'capAdd', value: 1e6 }, { key: 'dmRateAdd', value: 0.15 }], desc: 'EP 存储上限 +1,000,000/级，DM 采集效率 +15%/级' },
-    { id: 'resonance_chamber', name: '共鸣回廊', cat: 'D', unlimited: true, base: 1.2e7, growth: 1.30, unlockTech: 'singular', fx: [{ key: 'capAdd', value: 1e8 }, { key: 'globalAdd', value: 0.03 }], desc: 'EP 存储上限 +100,000,000/级，全局产出 +3%/级' },
-    { id: 'dm_condenser',  name: '深渊凝析塔', cat: 'D', unlimited: true, base: 8e7, growth: 1.32, unlockTech: 'true_end',  fx: [{ key: 'capAdd', value: 1e10 }, { key: 'dmRateAdd', value: 0.30 }], desc: 'EP 存储上限 +10,000,000,000/级，DM 采集效率 +30%/级' },
+    // v3.4.5 反馈①：降本类再大幅涨价 + 加成削弱——折价是「对所有后续消费永久生效」的复利，
+    //   旧口径满档累计 ×0.511（全部成本几乎对半砍）而总投入不到 5,000 万，明显过强。
+    //   新口径：单价 ×5~12、每级折价幅度收窄一档 → 满档累计 ×0.742（约 26% 折扣），总投入 ≈6.3 亿 EP。
+    //   minMile：按原档位显式锁定，避免涨价后一律被 unlockMilestoneV21 顶到 m7。
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e6, growth: 1.45, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.99 },  minMile: 5, desc: '每级所有成本 ×0.99' },
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.2e7, growth: 1.48, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.98 },  minMile: 6, desc: '每级所有成本 ×0.98' },
+    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 5e7,   growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.975 }, minMile: 7, desc: '每级所有成本 ×0.975' },
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 8e7,   growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.97 },  minMile: 7, desc: '每级所有成本 ×0.97' },
+    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 2e8,   growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.95 },  minMile: 7, desc: '所有成本 ×0.95' },
+    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 3e6,   growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.88 }, minMile: 5, desc: '专注成本 ×0.88' },
+    // ---- 组 D · 上限扩容 / 组 G · 离线效率（v3.4.5 反馈③：整组从效能建筑删除）----
+    // 删除原因：EP 上限已由升级商店的「存储节点 / 备用粮仓 / 深井仓储」+ 三仓库（矩阵存储库/饵料仓库/星尘金库）
+    // 承担，离线效率/上限改由「远程协作」科技基线 + 离线升级（off_eff1~3 / off_cap1~2）+ 天赋/遗物/研究提供，
+    // 效能建筑里这一组长期只剩「一组一卡」的碎标题与重复入口。旧档已购等级保留在存档中（不再产生效果）。
     // ---- 组 E · 线程产出（5 座）----
     // v3.3.9 反馈② / v3.4.1 反馈⑤ / v3.4.2 反馈①：三轮涨价；本轮 base 再抬 2.5~6 倍、growth 陡化。
     // 红线保留：产出族（coop_hall/eco_battery/eco_battery_2）满档扩展级 ≤ m=9 期上限 4.0e7。
@@ -135,12 +132,6 @@ export const BALANCE = {
     { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.50, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
-    // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加；v3.4.2 反馈①：×2.5）----
-    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 2500,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%' },
-    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 2.5e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%' },
-    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 3e5, growth: 1.30, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%' },
-    { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 2.5e5,  growth: 1.28, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时' },
-    { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 3.2e5,growth: 1.30, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时' },
     // ---- 组 H · 事件/项目（6 座；v3.4.2 反馈①：base ×3、growth 陡化）----
     { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 6e5,  growth: 1.45, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
     { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 1.8e6, growth: 1.45, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
@@ -151,15 +142,8 @@ export const BALANCE = {
     // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径；v3.4.2 反馈①：×3）----
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
-    // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
-    // v3.4.4：镜像价的 base/growth 必须与 upgrades.js 同 id 条目一致（实际售价读 upgrades.js；
-    // v3.4.1 只改了这里的镜像价，售价未变——本轮按 upgrades.js 同步，避免再次「改了不生效」）
-    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 12000, growth: 1.45, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: 'EP 存储上限递增（逐级 ×1.18）' },
-    { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: 'EP 存储上限 +8,000/级' },
-    // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
-    // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 45000, growth: 1.20, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 12000 }, desc: 'EP 存储上限 +12,000/级' }, // v3.4.4 反馈②：前期存储节点、L11 后粮仓反超
-    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 1.8e6, growth: 1.22, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: 'EP 存储上限 +800,000/级' }, // v3.4.4：纠正 5e4 换 80 万的单位价异常
+    // v3.4.5 反馈③：原「既有升级体系镜像」四条（存储节点/缓存优化/备用粮仓/深井仓储，cat D via upgrade）
+    // 一并移除——它们本就在升级商店售卖，在效能建筑里是重复入口，也是「存储与续航」整组删掉后残留的空组来源。
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
@@ -178,7 +162,9 @@ export const BALANCE = {
   v21KeyTechs: ['click_up', 'offline1', 'focus_opt', 'entropy_reduce', 'deep_space', 'ai_core'],
   // v2.1：组 D 扩容建筑防死锁钳制（与 storageAntiDeadlockRatio 同口径）
   // v2.4：新增多效果上限建筑（abyss_reservoir/resonance_chamber/dm_condenser）同步纳入 30% 钳制
-  v21CapClampIds: ['quantum_pool', 'dim_compressor', 'overlimit_store', 'abyss_reservoir', 'resonance_chamber', 'dm_condenser'],
+  // v3.4.5 反馈③：原组 D 扩容建筑（量子缓存池/维度压缩仓/超限储存器/深渊蓄能池/共鸣回廊/深渊凝析塔）随
+  // 「存储与续航」整组删除，30% 防死锁钳制名单随之清空——现仅升级商店的 storage/cache 仍走 CAP_EXPANSION_IDS 钳制。
+  v21CapClampIds: [],
   // v2.2 岔路口重设计：三栋互斥定向建筑（PM §2——资产持有即走向；纯走向声明，无数值效果，
   // 不混入 buildingsV21 表以便族升级断言圈定范围；先例 abyss_fishbowl / compiler_temple 风味建筑）
   crossroadBuildings: [
@@ -286,8 +272,8 @@ export const BALANCE = {
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
       auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },
       auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）' },
-      // v3.4.2：凝视深渊彩蛋——一次性余烬升级，购后屏幕左下方裂开、触手尽头浮现异兽（见 main.js showAbyssGaze）
-      gaze: { name: '深渊凝视', cap: 1, desc: '凝视裂隙最深处——屏幕左下方裂开，触手尽头有东西在回望你（彩蛋）', egg: true },
+      // v3.4.5 反馈②：语音文案改为「???」，动画改为屏幕底部中央一只左右打量你的眼睛（见 modules/abyssGaze.js）
+      gaze: { name: '深渊凝视', cap: 1, desc: '???', egg: true },
     },
   },
   // 里程碑（v2.3 奖励校准，PM §5.1 两锚点）：

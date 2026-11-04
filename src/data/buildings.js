@@ -120,6 +120,7 @@ export function unlockRpV21(b) {
 // 里程碑解锁门控（终章 RESCALE §7，按价位档映射：m=5→低价档、m=6→中档、m=7→高档，防前期速通）
 // v3.4.2 反馈①：效能建筑全面涨价（base ×3~×8）后门槛随价位映射同步上移，保持各建筑原里程碑档位基本不变
 export function unlockMilestoneV21(b) {
+  if (typeof b.minMile === 'number') return b.minMile; // v3.4.5：显式档位（成本折扣组涨价后仍按原门槛）
   if (b.base >= 4e6) return 7;
   if (b.base >= 1.5e6) return 6;
   if (b.base >= 6e5) return 5;

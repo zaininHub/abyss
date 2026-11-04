@@ -9,6 +9,7 @@
 // ⑧ 备用粮仓 / 存储节点 EP 上限性价比不再倒挂
 import puppeteer from 'puppeteer-core';
 const { BALANCE } = await import('../src/data/balance.js'); // 价格/配置类断言直接读数据源（DOM 受链序窗口影响会漏项）
+const { UPGRADES } = await import('../src/data/upgrades.js'); // v3.4.5：备用粮仓售价源在 upgrades.js（效能建筑镜像已删除）
 const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -246,7 +247,7 @@ try {
   else bad('⑧ 存储节点未递增', `${caps.s1} → ${caps.s9}`);
 
   // 单价（EP/点）用配置直接算（v3.4.4 反馈②改口径：前期存储节点更划算、L11 起粮仓反超）
-  const rb = BALANCE.buildingsV21.find(b => b.id === 'reserve_bin') || {};
+  const rb = UPGRADES.find(u => u.id === 'reserve_bin') || {};
   const stB = BALANCE.storage;
   const epPerPtRes = (n) => rb.base * Math.pow(rb.growth, n - 1) / 12000;
   const epPerPtSto = (n) => stB.base * Math.pow(stB.growth, n - 1) / (stB.capPer * Math.pow(stB.capGrowth, n - 1));
