@@ -85,15 +85,17 @@ export function levelUpPet(id) {
 
 // v3.2.1 反馈⑨：异兽存活维持——出战异兽每秒消耗 PT（随等级增长），PT 不足自动休战，恢复缓冲 PT ≥ 1 后重新出战
 // v3.4.5 反馈④：维持消耗大幅上调——基数 0.02→0.04、等级指数 1→1.10、按档位再乘（tier 1/1.2/1.5/2/2.6/3.2）、
-//   世代加成 25%→30%/代。Lv.15 三只基础兽 ≈ 2.2 PT/s（原 ≈0.9），深渊龙/深潜者约为其 2~2.6 倍。
-const PET_UPKEEP_BASE = 0.04;
+//   世代加成 25%→30%/代。
+// v3.4.6 反馈⑪：继续增长——基数 0.04→0.05、等级指数 1.10→1.15：高级异兽（tier ≥3）10 级起维持 ≥1 PT/s
+//   （ghost Lv.10 ≈1.06 / dragon ≈1.41 / pixel ≈1.83 / 融合 ≈2.26；基础兽 Lv.10 ≈0.71 仍亲民）
+const PET_UPKEEP_BASE = 0.05;
 const PET_TIER_UPKEEP = [1, 1, 1.2, 1.5, 2, 2.6, 3.2]; // 下标 = tier（0 位占位）
 export function petUpkeepPerSec(p, id) {
   const lv = p ? p.level : 1;
   const gen = (p && p.gen) ? p.gen : 1;
   const tier = petTierOf(id, p);
   const tierMult = PET_TIER_UPKEEP[Math.min(PET_TIER_UPKEEP.length - 1, Math.max(1, tier))];
-  return PET_UPKEEP_BASE * Math.pow(lv, 1.10) * tierMult * (1 + (gen - 1) * 0.30);
+  return PET_UPKEEP_BASE * Math.pow(lv, 1.15) * tierMult * (1 + (gen - 1) * 0.30);
 }
 export function petUpkeepTotalPerSec() {
   let sum = 0;

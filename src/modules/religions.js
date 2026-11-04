@@ -23,10 +23,13 @@ function rlog(msg, cls) { if (logFn) logFn(`[宗教] ${msg}`, cls); }
 //   ③ RP 已觉醒（首次溢出过——已触及效能外溢，进入研究阶段）
 // v2.8.7：解锁前置条件保留（存储≥3 + RP 觉醒），但「唤醒信仰」需消耗 EP（当前上限的 20%），而非达标自动解锁
 export function canUnlockReligion() {
+  // v3.4.6 反馈⑫：存储节点曲线对调后改「备用粮仓 ≥3 级」（前期防死锁关键件，节奏不变）；
+  // 旧档按存储节点 ≥3 兼容
+  const granaryLv = S.upgrades.reserve_bin || 0;
   const storageLv = S.upgrades.storage || 0;
-  if (storageLv < 3) return false;
+  if (granaryLv < 3 && storageLv < 3) return false;
   if (!(S.resDiscovered && S.resDiscovered.rp)) return false;
-  return true; // v2.8.19：去除 EP 库存 ≥ 存储上限 80% 限制（解锁仅需存储节点≥3 + RP 觉醒；唤醒仍需消耗 EP）
+  return true; // v2.8.19：去除 EP 库存 ≥ 存储上限 80% 限制（解锁仅需粮仓≥3 + RP 觉醒；唤醒仍需消耗 EP）
 }
 
 export function religionWakeCost() {
@@ -288,15 +291,17 @@ export function renderReligionPanel(container) {
   if (!container) return;
   if (!religionUnlocked()) {
     const ok = canUnlockReligion();
+    // v3.4.6 反馈⑫：前置文案「存储节点」→「备用粮仓」（曲线对调后粮仓是前期关键件）
+    const granaryLv = Math.max(S.upgrades.reserve_bin || 0, S.upgrades.storage || 0);
     container.innerHTML = `
-      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……存储节点 ≥3 级且 RP 已觉醒后，需消耗大量 EP 唤醒。</div>
+      <div class="religion-desc">矩阵底层潜伏着更古老的信仰……备用粮仓 ≥3 级且 RP 已觉醒后，需消耗大量 EP 唤醒。</div>
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-        存储节点：${S.upgrades.storage || 0}/3 级 ${(S.upgrades.storage || 0) >= 3 ? '✓' : '（未达标）'}<br>
+        备用粮仓：${granaryLv}/3 级 ${granaryLv >= 3 ? '✓' : '（未达标）'}<br>
         RP 觉醒：${(S.resDiscovered && S.resDiscovered.rp) ? '✓' : '（未觉醒）'}<br>
         唤醒消耗：${fmt(religionWakeCost())} EP
       </div>
       <button class="btn ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'}" data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? '' : 'disabled'} title="${ok ? (S.ep || 0) >= religionWakeCost() ? '唤醒信仰（消耗大量 EP）' : 'EP 不足' : '前置未达标'}">唤醒信仰</button>
-      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：存储节点 ≥3 级、RP 已觉醒、EP ≥ 唤醒消耗。条件未达成时入口保持可见。</div>`;
+      <div style="font-size:11px;color:var(--text-2);margin-top:6px">唤醒前提：备用粮仓 ≥3 级、RP 已觉醒、EP ≥ 唤醒消耗。条件未达成时入口保持可见。</div>`;
     return;
   }
   const branch = branchOf();

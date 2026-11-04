@@ -46,7 +46,9 @@ export function riftLevelOf(cps) {
   return Math.max(1, Math.min(5, lv) + riftLevelTech());
 }
 export function riftLevelName(lv) {
-  if (lv > 5) return `虚空之隙 Lv.${lv}`;
+  // v3.4.6 反馈①：超 5 级只返回「虚空之隙」纯名——调用方各自追加 Lv.N，
+  // 修复裂隙卡「虚空之隙 Lv.10 Lv.10」重复显示（旧版本函数内嵌 Lv.N 与调用方叠加）
+  if (lv > 5) return '虚空之隙';
   return (BALANCE.rift.levelNames[lv - 1]) || `Lv.${lv}`;
 }
 // v3.3.9 反馈⑤：科技树购买裂隙等级（EP + DM 双消耗，无限升级）
@@ -71,7 +73,9 @@ function riftTechAfford(cost) {
   return (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
 }
 function riftTechTip(lv, cur) {
-  return `裂隙等级 Lv.${lv} → Lv.${lv + 1}（无限升级）\n每级：裂隙上限 +1，DM / RP / 余烬奖励同步提升\n当前裂隙 Lv.${cur}`;
+  // v3.4.6 反馈④：悬浮提示同样展示下一级具体数值
+  const next = lv + 1;
+  return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt((BALANCE.rift.delveEpPerSec || 3) * next)} EP/s · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${next} DM\n当前裂隙 Lv.${cur}`;
 }
 export function renderRiftLevelTech(container) {
   if (!container) return;
@@ -90,7 +94,7 @@ export function renderRiftLevelTech(container) {
     riftTechSig = sig;
     container.innerHTML = `<div class="tech" data-rift-level title="${riftTechTip(lv, cur)}">
       <div class="name"><span>裂隙等级</span><span class="count mono">Lv.${lv}</span></div>
-      <div class="desc">每级裂隙上限 +1<br>DM/RP/余烬同步提升</div>
+      <div class="desc">裂隙等级 +1<br>深入消耗 ${fmt((BALANCE.rift.delveEpPerSec || 3) * (lv + 1))} EP/s</div>
       <div class="cost mono" data-rift-level-cost>${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</div>
     </div>`;
     const el = container.querySelector('[data-rift-level]');

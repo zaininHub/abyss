@@ -2134,6 +2134,8 @@ function tick(now) {
   // v3.3.0：灵感工坊绑定开关（关闭→停止蒸馏、释放绑定→线程消耗恢复）
   const atriumOn = converterEnabled('atrium'); // v3.3.1：统一口径（班组/快捷开关/研究点任一处关闭都生效）
   // v3.3.9 反馈⑦：满仓即停——RP 达到上限时不产出也不消耗（开关保持开启，腾出空间自动恢复）
+  // v3.4.6 反馈⑦：满仓涓流——满仓后每 5s 一条批量转化（-50K EP → +0.01 RP），替代「完全断流」：
+  //   每秒不再烧 EP，涓流让上限提升后蒸馏管线始终有活水（批量直接入账，不受上限截断）
   const atriumRpFull = (S.rp || 0) >= rpCap();
   if (atriumN > 0 && atriumOn && S.ep > 0 && !atriumRpFull) {
     const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
@@ -2142,7 +2144,19 @@ function tick(now) {
     // v3.3.3 反馈③（根因修复）：原公式 used/epRate × rate × atriumN 隐含 ×N²（used 已含 N）——
     // 卡面宣称 +0.15×N RP/s 实际产出 0.15×N²，中期 RP 泛滥的元凶。改为严格线性：
     // RP = 实扣 EP × (rate/epRate) × 绑定加成 ÷ 效率递增系数
-    addRp(used * ((BALANCE.atrium.rate || 0.15) / (BALANCE.atrium.epRate || 150)) * converterThreadBoost('atrium') / rpEffScale());
+    // v3.4.6 反馈⑤：绑定加成封顶 ×2（rpProdPerSec 同口径——否则高绑定下汇率被压穿、RP 近乎免费）
+    addRp(used * ((BALANCE.atrium.rate || 0.15) / (BALANCE.atrium.epRate || 150)) * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale());
+  } else if (atriumN > 0 && atriumOn && atriumRpFull) {
+    // v3.4.6 反馈⑦：满仓涓流（每 5s：-50K EP → +0.01 RP；EP 不足 50K 时不扣）
+    S._atriumTrickle = (S._atriumTrickle || 0) + dt;
+    if (S._atriumTrickle >= 5) {
+      S._atriumTrickle = 0;
+      if ((S.ep || 0) >= 50000) {
+        S.ep -= 50000;
+        S.rp = (S.rp || 0) + 0.01; // 涓流直入账（微量溢出可接受，腾空间后恢复正常蒸馏）
+        log('满仓涓流蒸馏：-50K EP → +0.01 RP', '');
+      }
+    }
   }
 
   // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），
@@ -2210,6 +2224,29 @@ function tick(now) {
       S.ep -= take;
       // v3.3.3 反馈⑦：绑定线程参与孵化（饲育师匹配岗位加成更高）——与灵感工坊同范式
       S.pt = Math.min(ptCap(), (S.pt || 0) + take * rate);
+    } else {
+      // v3.4.6 反馈⑦：满仓涓流（每 5s：-50K EP → +0.01 PT）——满仓不烧 EP，涓流让异兽维持与孵化管线不断流
+      S._ptTrickle = (S._ptTrickle || 0) + dt;
+      if (S._ptTrickle >= 5) {
+        S._ptTrickle = 0;
+        if ((S.ep || 0) >= 50000) {
+          S.ep -= 50000;
+          S.pt = (S.pt || 0) + 0.01;
+          log('满仓涓流孵化：-50K EP → +0.01 PT', '');
+        }
+      }
+    }
+  }
+  // v3.4.6 反馈③：星际燃料燃烧——燃料模式开启时每秒消耗 2 CPS，全局产出 ×1.5（globalMult）；
+  // CPS 耗尽自动熄火（一次性提示，不刷屏）
+  if (S.fuelMode) {
+    const burn = 2 * dt;
+    if ((S.starCps || 0) >= burn) {
+      S.starCps -= burn;
+    } else {
+      S.starCps = 0;
+      S.fuelMode = false;
+      log('星际燃料耗尽：燃料模式已熄火（全局加成失效）', 'warn');
     }
   }
   // v3.2.1 反馈⑨：出战异兽存活维持——每秒消耗 PT（随等级/世代增长），PT 归零即休战（见 pets.petStarving）

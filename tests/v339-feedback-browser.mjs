@@ -141,33 +141,43 @@ try {
   });
   if (/裂隙等级/.test(rt.txt) && rt.after.lv === 1 && rt.after.ep < rt.before.ep && rt.after.dm < rt.before.dm) ok('⑤ 科技树裂隙等级：EP+DM 扣费并 +1 级', `${Math.round(rt.before.ep - rt.after.ep)} EP / ${rt.before.dm - rt.after.dm} DM`);
   else bad('⑤ 裂隙等级科技未生效', JSON.stringify(rt));
-  if (!rt.depth && rt.riftRows === 7) ok('⑤ 余烬探测井已移除（裂隙科技 7 项）', `rows=${rt.riftRows}`);
+  if (!rt.depth && rt.riftRows >= 7) ok('⑤ 余烬探测井已移除（裂隙科技 ≥7 项）', `rows=${rt.riftRows}`);
   else bad('⑤ 探测井仍在', JSON.stringify({ rows: rt.riftRows, depth: rt.depth }));
 
-  // ===== ⑦ 满仓停产停耗 =====
+  // ===== ⑦ 满仓涓流（v3.4.6：满仓不停产，改 -50K EP/5s → +0.01 批次）=====
   const cap = await page.evaluate(async () => {
-    window.S.upgrades = { ...(window.S.upgrades || {}), pt_vault: 5 }; // v3.4.4：上限改逐级扩容，统一走 __qa.ptCap()
+    // 清空干扰源：班组维护费、出战异兽 PT 维持、其他转化器——只留待测管线
+    window.S.cultists = []; window.S.pets = [];
+    window.S.converterOn = { atrium: false };
+    window.S.upgrades = { ...(window.S.upgrades || {}), pt_vault: 5, storage: 300, reserve_bin: 10 };
+    window.S._ptTrickle = 0; // 清残留累计，确保 6.5s 窗口内恰好一个批次
     window.S.pt = window.__qa.ptCap();
     window.S.ptAutoHatch = true; window.S.ptDistillOn = true;
-    window.S.upgrades = { ...(window.S.upgrades || {}), storage: 300 };
-    window.S.ep = 5e6;
-    await new Promise(r => setTimeout(r, 1500));
-    const ptCase = { ep: window.S.ep, pt: window.S.pt, cap: window.__qa.ptCap() };
+    // EP 置为上限的 80%（≤ 上限，规避 addEp 钳回伪差）
+    window.S.ep = Math.floor(window.__qa.epStorageCap() * 0.8);
+    const ep0 = window.S.ep, pt0 = window.S.pt;
+    await new Promise(r => setTimeout(r, 6500)); // 覆盖一个 5s 涓流批次
+    const ptCase = { ep0, ep: window.S.ep, epDelta: ep0 - window.S.ep, pt0, pt: window.S.pt, ptDelta: window.S.pt - pt0, cap: window.__qa.ptCap() };
     // RP 满仓
-    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, rp_vault: 10, storage: 300 };
+    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, rp_vault: 10, storage: 300, reserve_bin: 10 };
+    window.S.converterOn = { atrium: true };
+    window.S.ptAutoHatch = false; // 只测 RP 管线：关掉孵化涓流，避免双路各扣 50K
+    window.S._atriumTrickle = 0; window.S._ptTrickle = 0; // 清残留累计，确保 6.5s 窗口内恰好一个批次
     window.S.rp = window.__qa.rpCap();
-    window.S.ep = 5e6;
-    document.getElementById('btn-rp')?.click();
-    await new Promise(r => setTimeout(r, 1400));
-    const rpCase = { ep: window.S.ep, rp: window.S.rp, cap: window.__qa.rpCap() };
+    window.S.ep = Math.floor(window.__qa.epStorageCap() * 0.8);
+    const ep0b = window.S.ep, rp0 = window.S.rp;
+    await new Promise(r => setTimeout(r, 6500));
+    const rpCase = { ep0: ep0b, ep: window.S.ep, epDelta: ep0b - window.S.ep, rp0, rp: window.S.rp, rpDelta: window.S.rp - rp0, cap: window.__qa.rpCap() };
     return { ptCase, rpCase, hatchOn: window.S.ptDistillOn };
   });
-  if (cap.ptCase.pt <= cap.ptCase.cap + 1e-6) ok('⑦ PT 不超上限', `${Math.round(cap.ptCase.pt)} / ${cap.ptCase.cap}`);
-  else bad('⑦ PT 溢出上限', JSON.stringify(cap.ptCase));
-  if (cap.ptCase.ep >= 5e6 - 1) ok('⑦ PT 满仓时不再扣 EP', `ep=${Math.round(cap.ptCase.ep)}`);
-  else bad('⑦ PT 满仓仍扣 EP', JSON.stringify(cap.ptCase));
-  if (cap.rpCase.ep >= 5e6 - 1) ok('⑦ RP 满仓时工坊不再扣 EP', `ep=${Math.round(cap.rpCase.ep)}`);
-  else bad('⑦ RP 满仓仍扣 EP', JSON.stringify(cap.rpCase));
+  if (Math.abs(cap.ptCase.epDelta - 50000) < 15000) ok('⑦ PT 满仓涓流：一个 5s 批次 ≈-50K EP', `Δ=${Math.round(cap.ptCase.epDelta)} EP`);
+  else bad('⑦ PT 满仓涓流 EP 批次异常', JSON.stringify(cap.ptCase));
+  if (cap.ptCase.ptDelta > 0.005 && cap.ptCase.ptDelta < 0.05) ok('⑦ PT 满仓涓流入账 +0.01', `Δ=${cap.ptCase.ptDelta.toFixed(3)} PT`);
+  else bad('⑦ PT 涓流入账异常', JSON.stringify(cap.ptCase));
+  if (Math.abs(cap.rpCase.epDelta - 50000) < 15000) ok('⑦ RP 满仓涓流：一个 5s 批次 ≈-50K EP', `Δ=${Math.round(cap.rpCase.epDelta)} EP`);
+  else bad('⑦ RP 满仓涓流 EP 批次异常', JSON.stringify(cap.rpCase));
+  if (cap.rpCase.rpDelta > 0.005 && cap.rpCase.rpDelta < 0.05) ok('⑦ RP 满仓涓流入账 +0.01', `Δ=${cap.rpCase.rpDelta.toFixed(3)} RP`);
+  else bad('⑦ RP 涓流入账异常', JSON.stringify(cap.rpCase));
   if (cap.hatchOn === true) ok('⑦ 满仓不自动关闭开关');
 
   if (errs.length === 0) ok('全程无 JS 报错');

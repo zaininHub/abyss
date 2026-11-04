@@ -260,6 +260,8 @@ export function globalMult() {
   m *= policyMult('ep');
   m *= policyMult('global'); // v2.8.6 B2a：牺牲——全局 -10%
   m *= leaderGlobalMult(); // v3.3.0：领导者线程全局加成（每个 +5%，封顶 +25%）
+  // v3.4.6 反馈③：星际燃料模式——持续燃烧 CPS 加速全局产出（星图页开关，CPS 耗尽自动熄火）
+  if (S.fuelMode && (S.starCps || 0) > 0) m *= 1.5;
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
@@ -282,7 +284,9 @@ export function echoMult() {
 export function rpProdPerSec() {
   const n = (S.upgrades && S.upgrades.atrium) || 0;
   if (n < 1 || !converterEnabled('atrium')) return 0;
-  return (BALANCE.atrium.rate || 0.15) * n * converterThreadBoost('atrium');
+  // v3.4.6 反馈⑤：班组加成对蒸馏产出的放大封顶 ×2——绑定线程的等级/职业乘区曾无上限叠乘
+  // （十几条绑定线程 ×14 时实际汇率被压到 1/14，RP 获取过快且卡面显示 +0 RP/s），现钳制后口径自洽
+  return (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2);
 }
 export function rpEffScale() {
   const p = rpProdPerSec();
@@ -352,11 +356,11 @@ export function offlineRate() {
 
 export function offlineCap() {
   let h = 8;
-  h = Math.max(h, fxValue('offlineCap')); // v2.1 建筑驱动：延时缓存站 16h/24h 取最大
+  h = Math.max(h, fxValue('offlineCap')); // v2.1 建筑驱动：延时缓存站 16h/24h 取最大（v3.4.5 起建筑已删，旧档兜底）
   if (S.offUpgrades.off_cap1) h += 4;
-  if (S.offUpgrades.off_cap2) h += 12; // v3.4.5：延时缓存站删除后由离线升级补齐 24h 上限
+  if (S.offUpgrades.off_cap2) h += 12;
   h += elv('off2') * 4;
-  return h * 3600;
+  return Math.min(h, 10) * 3600; // v3.4.6 反馈⑧：离线上限硬封顶 10 小时
 }
 
 // v3.2.4 反馈⑤：离线效率统一口径 = 基础率（信号塔/天赋/离线升级/遗物等）× 离线协议研究（+12%/级）——
@@ -635,7 +639,7 @@ export function staffNetPerSec() {
 // ========== 升级成本 ==========
 // v2.0.2 防死锁硬约束：扩容项（storage/cache）价格 ≤ 当前 EP 上限 ×30%
 // （KG 谷仓模式：扩容永远只是存量的一小部分；非扩容项不受此约束）
-const CAP_EXPANSION_IDS = ['storage', 'cache'];  // v2.0.2 复验 P0 修复：导出供线程区接线
+const CAP_EXPANSION_IDS = ['reserve_bin', 'storage', 'cache'];  // v2.0.2 复验 P0 修复：导出供线程区接线 // v3.4.6 反馈⑫：备用粮仓并入防死锁钳制（前期关键件）
 export { CAP_EXPANSION_IDS };
 export function unitCost(u, n) {
   const owned = S.upgrades[u.id] || 0;
@@ -874,7 +878,13 @@ export function epStorageCap() {
   const cacheCount = S.upgrades['cache'] || 0;
   cap += cacheCount * 8000; // v2.8.2：5000→8000（中期上限宽松，EP 不易触顶）
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
-  cap += (S.upgrades['reserve_bin'] || 0) * 12000; // v2.8.30 ⑤：储存量随涨价增多（8000→12000） // v2.8.2：3000→8000
+  // v3.4.6 反馈⑫：曲线对调——备用粮仓改「+4,000/级 ×1.18 递增、20 级封顶」（前期防死锁关键件），
+  //   存储节点改「+12,000/级恒定、无限级」（走下方 B.storage 循环，capGrowth=1.0 即平价大宗）
+  {
+    const rbLv = S.upgrades['reserve_bin'] || 0;
+    const rbCfg = B.reserveBin || { capPer: 4000, capGrowth: 1.18, maxLevel: 20 };
+    for (let i = 1; i <= rbLv; i++) cap += rbCfg.capPer * Math.pow(rbCfg.capGrowth, i - 1);
+  }
   cap += (S.upgrades['deep_bin'] || 0) * 8e5; // v2.8.30 ⑤：储存量随涨价增多（500K→800K）
   cap *= researchMult('storage'); // v2.8.25 ②：存储协议（研究点）EP 上限 +8%/级
   // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）

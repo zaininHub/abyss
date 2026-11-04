@@ -15,7 +15,8 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 const { S } = await import('../src/state.js');
 const { BALANCE } = await import('../src/data/balance.js');
 const { getAllBuildings, V21_BUILDINGS, capOf, familyOfBuilding, OUTPUT_FAMILY_IDS } = await import('../src/data/buildings.js');
-const { epStorageCap, v21BuildingCost } = await import('../src/modules/economy.js');
+const { epStorageCap, v21BuildingCost, unitCost } = await import('../src/modules/economy.js');
+const { UPGRADES } = await import('../src/data/upgrades.js');
 
 let pass = 0, fail = 0, red = [];
 function t(name, fn) {
@@ -199,17 +200,27 @@ t('组D 三梯满档 35 级态：v21BuildingCost 仍受 30% 防死锁钳制（�
     }
   }
 });
-t('EP 上限曲线（v3.4.5 组D 删除后）：storage 20/30/40/50 → 2.98M / 12.6M / 63.0M / 326.9M，单调递增', () => {
+t('EP 上限曲线（v3.4.6 ⑫ 对调后）：粮仓 20 级封顶 588K，存储节点 20/40/80 → 242K/482K/962K 单调递增；深井大宗叠加', () => {
   setCapState(20, 20, 3, 0, 0, 0, 9, 'default', {});
   const cap20 = epStorageCap();
-  setCapState(20, 30, 3, 0, 0, 0, 9, 'default', {});
-  const cap30 = epStorageCap();
   setCapState(20, 40, 3, 0, 0, 0, 9, 'default', {});
   const cap40 = epStorageCap();
-  setCapState(20, 50, 3, 0, 0, 0, 9, 'default', {});
-  const cap50 = epStorageCap();
-  assert.ok(cap30 > cap20 && cap40 > cap30 && cap50 > cap40, `应单调上升：${cap20}/${cap30}/${cap40}/${cap50}`);
-  assert.ok(cap40 > 5e7, `storage40 上限应 >5e7（实际 ${cap40}）——否则中后期建筑买不起`);
+  setCapState(20, 80, 3, 0, 0, 0, 9, 'default', {});
+  const cap80 = epStorageCap();
+  assert.ok(cap40 > cap20 && cap80 > cap40, `应单调上升：${cap20}/${cap40}/${cap80}`);
+  // 存储节点无限级 + 30% 防死锁钳制 → 任意级数下一级始终买得起（自增长阶梯，中期购买力保障）
+  setCapState(20, 0, 3, 0, 0, 0, 9, 'default', {});
+  for (let lv = 0; lv <= 60; lv += 10) {
+    S.upgrades.storage = lv;
+    const cost = unitCost(UPGRADES.find(u => u.id === 'storage'), 0);
+    assert.ok(cost <= epStorageCap() * 0.3 + 1e-9, `storage Lv.${lv} 下一级价 ${cost} > 30%×cap`);
+  }
+  // 深井仓储大宗：10 级 +8M（后期上限量级）
+  setCapState(20, 40, 3, 0, 0, 0, 9, 'default', {});
+  S.upgrades.deep_bin = 10;
+  const capDeep = epStorageCap();
+  assert.ok(capDeep > 2e7, `storage40+deep10 上限应 >2e7（实际 ${capDeep}）`);
+  S.upgrades.deep_bin = 0;
 });
 t('产出族扩展级价格红线（PM §3.4 状态感知口径）：按该级实际可达时刻的上限判，全部 ≤ m=9 期上限', () => {
   // 产出族档位门控 m=9 → 扩展级存在前提是 9 里程碑已达成；PM 终稿重算锚点（base×growth^(L-1)）：
@@ -240,8 +251,9 @@ t('产出族扩展级价格红线（PM §3.4 状态感知口径）：按该级�
     }
   }
 });
-t('产出族满档 12 级：白名单楼全级价 ≤ storage40 上限（v3.4.5 重算，≈6.3e7）', () => {
+t('产出族满档 12 级：白名单楼全级价 ≤ storage40+deep10 上限（v3.4.6 ⑫ 对调后 ≈3.25e7）', () => {
   setCapState(20, 40, 3, 0, 0, 0, 9, 'line_abyss', {});
+  S.upgrades.deep_bin = 10; // 后期大宗补上限量级（存储节点改 +12K/级 恒定后）
   const cap = epStorageCap();
   for (const id of OUTPUT_FAMILY_IDS) {
     const b = V21_BUILDINGS.find(x => x.id === id);
@@ -251,6 +263,7 @@ t('产出族满档 12 级：白名单楼全级价 ≤ storage40 上限（v3.4.5 
       assert.ok(price <= cap, `${id} 第 ${n + 1} 级价 ${price.toExponential(3)} > 终局上限 ${cap}`);
     }
   }
+  S.upgrades.deep_bin = 0;
 });
 
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

@@ -20,6 +20,7 @@ const STATE_META = {
 };
 const PAGE_SIZE = 10; // v3.2.3 反馈①：班组档案卡一页 10 条，分页浏览（原 24 条上限折叠，改分页后全量可达）
 let crewPage = 0; // 会话级页码（不落盘）
+let crewFilter = ''; // v3.4.6 反馈⑥：岗位筛选（'' = 全部；'free' = 空闲；其余 = converter id）——会话级，不落盘
 
 // 班组流水：cap 40 滚动窗口，随存档持久化
 export function crewPush(msg, cls = '') {
@@ -46,15 +47,19 @@ function tenure(c) {
 export function renderCrewPanel(container) {
   if (!container) return;
   const meta = crewStateMeta();
-  const n = S.cultists.length;
+  // v3.4.6 反馈⑥：岗位筛选——先过滤再分页（'' 全部 / 'free' 空闲 / converter id）
+  const all = S.cultists;
+  const filtered = !crewFilter ? all : all.filter(c => crewFilter === 'free' ? !c.boundTo : c.boundTo === crewFilter);
+  const n = filtered.length;
+  const nTotal = all.length;
   // v3.2.3 反馈①：分页——一页 10 条；线程数变化后钳制页码
   const pageCount = Math.max(1, Math.ceil(n / PAGE_SIZE));
   if (!Number.isFinite(crewPage) || crewPage < 0) crewPage = 0;
   if (crewPage >= pageCount) crewPage = pageCount - 1;
   const start = crewPage * PAGE_SIZE;
-  const pageCultists = S.cultists.slice(start, start + PAGE_SIZE);
+  const pageCultists = filtered.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}`;
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -80,11 +85,11 @@ export function renderCrewPanel(container) {
       </div>
     </div>`;
   }
-  if (!cards) cards = '<div class="crew-card more">暂无线程——去商店招募第一条线程</div>';
+  if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
   const pager = pageCount > 1
     ? `<div class="crew-pager">
         <button data-crew-page="prev" ${crewPage <= 0 ? 'disabled' : ''}>‹ 上一页</button>
-        <span>第 ${crewPage + 1} / ${pageCount} 页 · 共 ${n} 条线程</span>
+        <span>第 ${crewPage + 1} / ${pageCount} 页 · 共 ${n} 条线程${crewFilter && n !== nTotal ? `（全班组 ${nTotal}）` : ''}</span>
         <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
       </div>`
     : '';
@@ -99,6 +104,11 @@ export function renderCrewPanel(container) {
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：对当前全部线程重新做一次岗位优化（已绑定的也会重排；无更优方案时不做改动）">智能分配（领导者决策）</button>
+      <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
+        <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
+        <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
+        ${CONVERTER_IDS.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
+      </span>
     </div>
     <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业无惩罚且加成更高：🔭勘探员→探采、⚗️蒸馏师→灵感工坊、🥚饲育师→异兽孵化、🕯️祭司→信仰圣所；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
     <div class="crew-grid">${cards}</div>
@@ -132,6 +142,14 @@ export function renderCrewPanel(container) {
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
         crewPush(k > 0 ? `领导者调度：重排 ${k} 条线程至更优岗位` : '领导者调度：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        renderCrewPanel(container);
+        return;
+      }
+      // v3.4.6 反馈⑥：岗位筛选按钮
+      const fb = ev.target.closest ? ev.target.closest('[data-crew-filter-btn]') : null;
+      if (fb) {
+        crewFilter = fb.dataset.crewFilterBtn || '';
+        crewPage = 0;
         renderCrewPanel(container);
         return;
       }

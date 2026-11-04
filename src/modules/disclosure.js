@@ -44,7 +44,8 @@ export function anchorDone(key, S) {
   switch (key) {
     case 'rp':    return (up.rp_vault || 0) >= 1 || (up.atrium || 0) >= 1; // v3.0.9 反馈②：研究点解锁唯一入口 = 购入「矩阵存储库」（旧档「灵感工坊购入」兼容保留）；EP 溢出仅开放仓库购买入口，不再直接解锁研究点（修复：未购仓库 RP 已解锁）
     case 'pt':    return (S && (S.pt || 0) > 0) || ((up.petland || 0) >= 1) || ((up.pt_vault || 0) >= 1); // v3.0.5 反馈①：PT 锚点 = 首次持有 PT；v3.1.1 反馈⑦：购入「饵料仓库」即开放 PT（与矩阵存储库→RP 同构：仓库是资源解锁入口，修复「买了饵料仓库顶栏/异兽仍不上」）
-    case 'faith': return (up.shrine  || 0) >= 1; // FA ← 路边神龛购入
+    // v3.4.6 反馈⑩：路边神龛删除——信仰锚点改判「宗教已解锁 / 持有 FP / 旧档已购神龛」任一完成
+    case 'faith': return !!(S.religion && S.religion.unlocked) || (S.faith || 0) > 0 || (up.shrine || 0) >= 1;
     case 'dm':    return (up.scooter || 0) >= 1 || (up.dm_vault || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入；v3.0.3 反馈⑪：星尘金库买入亦亮出
     case 'es':    return ((S && S.prestige) || 0) >= 1; // ES 与职级 ← 完成首次晋升
     default: return false;

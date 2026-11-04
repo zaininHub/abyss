@@ -11,7 +11,12 @@ export const UPGRADES = [
   // v2.1 R3-A：早期 EP 存储扩容项（破解「上限 1000 死锁」的关键道具）
   // v2.0.2 存储节点：20 级封顶级制（用户硬约束「建筑数量受控」）——
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
-  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:'EP 存储上限递增（逐级 ×1.18）'},
+  // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
+  // v3.4.6 反馈⑫：曲线整体对调——前期备用粮仓（12K 首购 +4,000/级 ×1.18、20 级封顶、先解锁），
+  //   后期存储节点（45K 首购 +12,000/级恒定、无限级）
+  //   单位价口径：粮仓 L1 3.00 EP/点（×1.229/级上探）→ 存储节点 L1 3.75 EP/点（×1.20/级）
+  {id:'reserve_bin',name:'备用粮仓',base:B.reserveBin.base,growth:B.reserveBin.growth,maxLevel:B.reserveBin.maxLevel,cps:0,cat:'D',desc:'EP 存储上限 +4,000/级（逐级 ×1.18，前期防死锁关键件，20 级封顶）'},
+  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:'EP 存储上限 +12,000/级（备用粮仓打基础后的大宗扩容，无限级）'},
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
   // v3.4.4 反馈①：上限改「逐级扩容」——首级 +400 起、逐级 ×1.15（economy.VAULT_CAP_GROWTH），买得越深单级增量越大
   {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:400},desc:'RP 上限逐级扩容（首级 +400，逐级 ×1.15）'},
@@ -58,8 +63,8 @@ export const UPGRADES = [
   {id:'beyond',name:'超越',base:3.6e+44,cps:4.2e+32,growth:1.55,desc:'基础产出+840No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:2.2,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP，升级在蒸馏开关处`}, // v3.0.3 第四批③：升级入口移至开关处
-  {id:'shrine',name:'路边神龛',base:300000000.0,cps:0.0,desc:'解锁信仰系统（信仰由此获得）'}, // v3.0.3 第三批④：移除直接资源产出
-  // v3.4.5 反馈③：删除「数据熔炉」——v3.0.3 起已无任何产出（研究点改由灵感蒸馏塔/任务获取），只剩一个空升级项
+  // v3.4.6 反馈⑩：删除「路边神龛」——v3.0.3 起已无任何产出（信仰解锁入口 = 宗教面板「唤醒信仰」，
+  // 信仰锚点同步改判：宗教解锁 / 持有 FP / 旧档已购神龛均算完成）
   {id:'garden',name:'伊甸花园',base:30000000000.0,cps:0.0,produces:{type:'pt',rate:0.15},desc:'每秒 +0.15 PT'}, // v3.4.0 反馈③：0.5→0.15 PT/s（PT 供给过快，孵化即满仓）
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:300000000000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
@@ -77,7 +82,7 @@ export const UPGRADES = [
   //   存储节点 3.00 EP/点（L1）· 每级单价 ×1.229（增量也涨）→ L20 150 EP/点
   //   备用粮仓 3.75 EP/点（L1）· 每级单价 ×1.20（增量恒定 12K）→ L11 起反超、L20 只要 120 EP/点
   //   深井仓储 2.25 EP/点（L1）· 每级单价 ×1.22 → 后期大宗扩容（原 5e4 换 +80 万 = 0.06 EP/点，比存储节点便宜 48 倍，本次一并纠正）
-  {id:'reserve_bin',name:'备用粮仓',base:45000,growth:1.20,cps:0,cat:'D',desc:'EP 存储上限 +12,000/级（前期靠存储节点，L11 后反超更划算）'},
+  // v3.4.6 反馈⑫：备用粮仓定义上移至存储节点之前（链序：粮仓先解锁先显示）；深井仓储仍为终局大宗
   {id:'deep_bin',name:'深井仓储',base:1.8e6,growth:1.22,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},

@@ -73,16 +73,16 @@ else bad('③ 存储与续航仍有残留', leftover.join(','));
 if (BALANCE.v21CapClampIds.length === 0) ok('③ 30% 钳制名单随组 D 清空', '');
 else bad('③ 钳制名单未清', BALANCE.v21CapClampIds.join(','));
 
-// 离线续航由离线升级接管：III 级效率 + 24h 上限
+// 离线续航由离线升级接管：III 级效率（v3.4.6 ⑧：off_cap2 删除、上限 10h 封顶，此处仅查效率）
 const offIds = OFF_UPGRADES.map(o => o.id);
-if (['off_eff3', 'off_cap2'].every(id => offIds.includes(id))) ok('③ 离线升级新增 III / 上限 II（补齐 110% 效率与 24h）', `共 ${OFF_UPGRADES.length} 项`);
+if (offIds.includes('off_eff3')) ok('③ 离线升级新增 III（补齐 110% 效率）', `共 ${OFF_UPGRADES.length} 项`);
 else bad('③ 离线升级未补齐', offIds.join(','));
 S.buildings = {}; S.upgrades = {}; S.milesDone = {}; S.tech = { offline1: true }; S.runTalent = null; S.storyline = 'default';
 S.religion = {}; S.delve = { up: {} }; S.prestigePoints = 0; S.offHistory = []; S.offUpgrades = {};
 const r0 = offlineRate(); const c0 = offlineCap();
-S.offUpgrades = { off_eff1: true, off_eff2: true, off_eff3: true, off_cap1: true, off_cap2: true };
+S.offUpgrades = { off_eff1: true, off_eff2: true, off_eff3: true, off_cap1: true };
 const r1 = offlineRate(); const c1 = offlineCap();
-if (r1 > 1 && Math.abs(r1 - 1.1) < 0.02 && c1 === 24 * 3600) ok('③ 离线效率可到 110%、上限 24h（不再依赖建筑）', `${(r0 * 100).toFixed(0)}%→${(r1 * 100).toFixed(0)}%，${c0 / 3600}h→${c1 / 3600}h`);
+if (r1 > 1 && Math.abs(r1 - 1.1) < 0.02) ok('③ 离线效率可到 110%（不再依赖建筑）', `${(r0 * 100).toFixed(0)}%→${(r1 * 100).toFixed(0)}%，上限 ${c0 / 3600}h`);
 else bad('③ 离线续航口径异常', `${r1} / ${c1}`);
 S.offUpgrades = {};
 

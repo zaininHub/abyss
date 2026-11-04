@@ -185,10 +185,11 @@ t('多建筑叠加：加法求和、乘算连乘', () => {
   assert.ok(Math.abs(fxValue('globalMul') - Math.pow(1.20, 3) * Math.pow(1.25, 3)) < 1e-9); // v2.8.3 收敛
   S.buildings = {};
 });
-t('离线续航改由离线升级承担（v3.4.5：信号塔/延时缓存站删除后 off_eff1~3 / off_cap1~2 接力）', () => {
+t('离线续航改由离线升级承担（v3.4.5 off_eff1~3 接力；v3.4.6 ⑧ 上限硬封顶 10h，off_cap2 已删）', () => {
   const { OFF_UPGRADES } = offMod;
   const ids = OFF_UPGRADES.map(o => o.id);
-  for (const id of ['off_eff1', 'off_eff2', 'off_eff3', 'off_cap1', 'off_cap2']) assert.ok(ids.includes(id), `离线升级应含 ${id}`);
+  for (const id of ['off_eff1', 'off_eff2', 'off_eff3', 'off_cap1']) assert.ok(ids.includes(id), `离线升级应含 ${id}`);
+  assert.ok(!ids.includes('off_cap2'), 'v3.4.6 ⑧：off_cap2 已删除（上限 10h 封顶后无意义）');
   S.buildings = {}; S.upgrades = {}; S.milesDone = {}; S.tech = {}; S.offUpgrades = {}; S.runTalent = null;
   S.storyline = 'default'; S.religion = {}; S.delve = { up: {} }; S.prestigePoints = 0; S.offHistory = [];
   const base = offlineRate();
@@ -196,8 +197,10 @@ t('离线续航改由离线升级承担（v3.4.5：信号塔/延时缓存站删�
   S.offUpgrades = { off_eff1: true, off_eff2: true }; const r2 = offlineRate();
   S.offUpgrades = { off_eff1: true, off_eff2: true, off_eff3: true }; const r3 = offlineRate();
   assert.ok(r1 > base && r2 > r1 && r3 > r2, `离线效率应逐级提升：${base}→${r1}→${r2}→${r3}`);
+  S.offUpgrades = { off_cap1: true };
+  assert.equal(offlineCap(), 10 * 3600, 'v3.4.6 ⑧：离线上限硬封顶 10h（基础 8 + I 的 4 = 12 → 钳制 10）');
   S.offUpgrades = { off_cap1: true, off_cap2: true };
-  assert.equal(offlineCap(), 24 * 3600, '离线上限 I+II 应达 24h');
+  assert.equal(offlineCap(), 10 * 3600, '旧档 off_cap2 存量同样被钳到 10h');
   S.offUpgrades = {};
 });
 t('v2.6.3 反馈①：B「点击与暴击」分区移除——暴击/点击乘数建筑不再存在于数据表', () => {
@@ -229,17 +232,23 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
   for (let i = 0; i < miles; i++) S.milesDone['m' + i] = true;
   S.storyline = storyline || 'line_abyss';
 }
-t('m=6 期锚点：cache12/storage20/DC2 → epStorageCap = 2,039,847（v3.4.5：组D 扩容梯删除后重算）', () => {
+t('m=6 期锚点：cache12/storage20/DC2 → epStorageCap = 1,043,625（v3.4.6 ⑫：存储节点改 +12,000/级恒定）', () => {
   setCapState(12, 20, 2, 0, 0, 0, 6);
-  assert.equal(epStorageCap(), 2039847, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 1043625, `实际 ${epStorageCap()}`);
 });
-t('storage/cache/DC3 满配 m=9 → epStorageCap = 2,984,438（60 级以前的老终局锚点作废）', () => {
+t('storage/cache/DC3 满配 m=9 → epStorageCap = 1,689,350（v3.4.6 ⑫ 曲线重算）', () => {
   setCapState(20, 20, 3, 0, 0, 0, 9);
-  assert.equal(epStorageCap(), 2984438, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 1689350, `实际 ${epStorageCap()}`);
 });
-t('开局锚点：storage1/其余 0 → 5,175（v2.8.30 capPer 2500×1.15 曲线）', () => {
+t('开局锚点：storage1/其余 0 → 16,100（v3.4.6 ⑫：存储节点首级 +12,000，line_abyss ×1.15）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
-  assert.equal(epStorageCap(), 6900); // v2.8.30 ⑤ capPer 4000 曲线
+  assert.equal(epStorageCap(), 16100); // (2000 + 12000) × 1.15
+});
+t('开局锚点：reserve_bin1/其余 0 → 6,900（v3.4.6 ⑫：粮仓首级 +4,000；钳制价 600 前期可负担）', () => {
+  setCapState(0, 0, 0, 0, 0, 0, 0);
+  S.upgrades.reserve_bin = 1;
+  assert.equal(epStorageCap(), 6900); // (2000 + 4000) × 1.15
+  S.upgrades.reserve_bin = 0;
 });
 
 console.log('[6] 防死锁 30% 钳制（组长硬性要求：组D 三梯任意阶段买得起）');

@@ -7,20 +7,23 @@ import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap } 
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
 
+// v3.4.6 反馈③：宇宙探索工程改消耗「星际燃料 CPS」（原巨量 EP）——CPS 由星图探索产出，
+// 呼应「CPS 用于升级星际探索的所有升级」。每项 baseCps 为 CPS 首价，growth 沿用；
+// 产出按固定 unit 换算（cost/unit 取整）。
 // epPerUnit：每 1 单位资源消耗的 EP（口径参考集市最优通道并放大 1.2~2 倍，保持「巨量 EP」感）
 export const COSMOS = {
-  asteroid: { id: 'asteroid', name: '小行星采矿', icon: '⛏️', res: 'pt',    ratio: 0.10, growth: 1.7, cap: 5, epPerUnit: 60000,
-    desc: '开采小行星带——巨量 EP 换 PT' },
-  collider: { id: 'collider', name: '暗物质对撞', icon: '🌀', res: 'dm',    ratio: 0.12, growth: 1.7, cap: 5, epPerUnit: 30000,
-    desc: '对撞真空提取暗物质——巨量 EP 换 DM' },
-  starwish: { id: 'starwish', name: '星辰祈愿',   icon: '🙏', res: 'faith', ratio: 0.10, growth: 1.8, cap: 5, epPerUnit: 50000,
-    desc: '向深空祈祷——巨量 EP 换 FP' },
-  cinder:   { id: 'cinder',   name: '灰烬回收',   icon: '🕯️', res: 'ember', ratio: 0.15, growth: 1.8, cap: 4, epPerUnit: 120000,
-    desc: '回收超新星残骸——巨量 EP 换裂隙余烬' },
-  beacon:   { id: 'beacon',   name: '虚空信标',   icon: '🌑', res: 'vs',    ratio: 0.20, growth: 1.9, cap: 4, epPerUnit: 300000,
-    desc: '向虚空投掷信标——巨量 EP 换虚空碎片（VS）' },
-  distill:  { id: 'distill',  name: '深空蒸馏',   icon: '🔬', res: 'rp',    ratio: 0.15, growth: 1.8, cap: 5, epPerUnit: 45000,
-    desc: '蒸馏星际尘埃——巨量 EP 换研究点（RP）' },
+  asteroid: { id: 'asteroid', name: '小行星采矿', icon: '⛏️', res: 'pt',    ratio: 0.10, growth: 1.7, cap: 5, baseCps: 60,  unit: 6,
+    desc: '开采小行星带——星际燃料换 PT' },
+  collider: { id: 'collider', name: '暗物质对撞', icon: '🌀', res: 'dm',    ratio: 0.12, growth: 1.7, cap: 5, baseCps: 80,  unit: 8,
+    desc: '对撞真空提取暗物质——星际燃料换 DM' },
+  starwish: { id: 'starwish', name: '星辰祈愿',   icon: '🙏', res: 'faith', ratio: 0.10, growth: 1.8, cap: 5, baseCps: 100, unit: 20,
+    desc: '向深空祈祷——星际燃料换 FP' },
+  cinder:   { id: 'cinder',   name: '灰烬回收',   icon: '🕯️', res: 'ember', ratio: 0.15, growth: 1.8, cap: 4, baseCps: 150, unit: 30,
+    desc: '回收超新星残骸——星际燃料换裂隙余烬' },
+  beacon:   { id: 'beacon',   name: '虚空信标',   icon: '🌑', res: 'vs',    ratio: 0.20, growth: 1.9, cap: 4, baseCps: 240, unit: 60,
+    desc: '向虚空投掷信标——星际燃料换虚空碎片（VS）' },
+  distill:  { id: 'distill',  name: '深空蒸馏',   icon: '🔬', res: 'rp',    ratio: 0.15, growth: 1.8, cap: 5, baseCps: 90,  unit: 6,
+    desc: '蒸馏星际尘埃——星际燃料换研究点（RP）' },
 };
 
 export const COSMOS_RES_LABEL = { pt: '🍪 PT', dm: '🌀 DM', faith: '🙏 FP', ember: '🕯️ 余烬', vs: '🌑 VS', rp: '🔬 RP' };
@@ -33,13 +36,13 @@ export function cosmosLv(id) {
   return (S.cosmos && S.cosmos.lv && S.cosmos.lv[id]) || 0;
 }
 
-// 成本 = 当前 EP 存储上限 × 比例 × growth^已购级（随进度自然缩放，永远「吃掉一大口存储」）
+// 成本 = CPS 首价 × growth^已购级（v3.4.6 反馈③：货币从 EP 改为星际燃料 CPS）
 export function cosmosCost(p, lv) {
-  return Math.round(epStorageCap() * p.ratio * Math.pow(p.growth, lv || 0));
+  return Math.round((p.baseCps || 60) * Math.pow(p.growth, lv || 0));
 }
 
 export function cosmosReward(p, cost) {
-  return Math.max(1, Math.floor(cost / p.epPerUnit));
+  return Math.max(1, Math.floor(cost / (p.unit || 6)));
 }
 
 // v3.3.9 反馈⑦：可存储资源满仓判定（余烬/VS 无上限，恒 false）
@@ -72,17 +75,17 @@ export function buyCosmos(id) {
   S.cosmos = S.cosmos || { lv: {} };
   S.cosmos.lv = S.cosmos.lv || {};
   const cost = cosmosCost(p, lv);
-  if ((S.ep || 0) < cost) return { ok: false, reason: `EP 不足（需 ${fmt(cost)}，当前 ${fmt(S.ep || 0)}）` };
+  if ((S.starCps || 0) < cost) return { ok: false, reason: `星际燃料 CPS 不足（需 ${fmt(cost)}，当前 ${fmt(S.starCps || 0)}）` };
   // v3.3.9 反馈⑦：目标资源满仓时不下单——满仓不生成，避免 EP 白烧
   const full = resFull(p.res);
   if (full) return { ok: false, reason: `${COSMOS_RES_LABEL[p.res]} 已满仓，先消耗再转化（满仓不生成、不消耗）` };
-  S.ep -= cost;
+  S.starCps -= cost;
   const gain = cosmosReward(p, cost);
   grantRes(p.res, gain);
   S.cosmos.lv[id] = lv + 1;
   save(S);
   dirty.expedition = true;
-  log(`宇宙探索「${p.name}」Lv.${lv + 1}：-${fmt(cost)} EP → +${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}`, 'good');
+  log(`宇宙探索「${p.name}」Lv.${lv + 1}：-${fmt(cost)} CPS → +${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}`, 'good');
   toast(`🌌 ${p.name}：+${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}`);
   return { ok: true, gain, cost };
 }
@@ -90,22 +93,20 @@ export function buyCosmos(id) {
 export function renderCosmosHtml() {
   if (!cosmosUnlocked()) {
     return `<div style="margin-top:12px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px;color:var(--text-3);font-size:11.5px">
-      🌌 宇宙探索未解锁——科技树研究「深空探测」（消耗研究点）后开放：以巨量 EP 一次性发展 PT/DM/信仰/余烬/VS/RP。</div>`;
+      🌌 宇宙探索未解锁——科技树研究「深空探测」（消耗研究点）后开放：以星际燃料 CPS 一次性转化 PT/DM/信仰/余烬/VS/RP。</div>`;
   }
-  const cap = epStorageCap();
   let html = `<div style="margin-top:14px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px">
     <div style="color:var(--purple);font-size:12px;font-weight:600;margin-bottom:4px">🌌 宇宙探索
-      <span style="color:var(--text-2);font-weight:400;font-size:11px">（深空探测解锁 · 每项工程消耗巨量 EP 一次性转化稀缺资源，成本随存储上限缩放）</span></div>`;
+      <span style="color:var(--text-2);font-weight:400;font-size:11px">（深空探测解锁 · 每项工程消耗星际燃料 CPS 一次性转化稀缺资源）</span></div>`;
   for (const p of Object.values(COSMOS)) {
     const lv = cosmosLv(p.id);
     const full = lv >= p.cap;
     const cost = cosmosCost(p, lv);
     const gain = cosmosReward(p, cost);
-    const pct = Math.round(p.ratio * 100);
-    html += `<div class="off-upg${!full && (S.ep || 0) < cost ? ' cant' : ''}" data-cosmos="${p.id}" style="${full ? 'opacity:.55' : ''}">
+    html += `<div class="off-upg${!full && (S.starCps || 0) < cost ? ' cant' : ''}" data-cosmos="${p.id}" style="${full ? 'opacity:.55' : ''}">
       <span>${p.icon} ${p.name} <span style="color:var(--text-3);font-size:10.5px">Lv.${lv}/${p.cap}</span><br>
-        <span style="color:var(--text-3);font-size:10.5px">${p.desc} · 消耗存储上限 ${pct}%（×${p.growth}/级）</span></span>
-      <span style="color:var(--cyan);text-align:right">${full ? '已满级' : `${fmt(cost)} EP<br><span style="font-size:10.5px;color:var(--green,#3fb950)">→ +${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}</span>`}</span></div>`;
+        <span style="color:var(--text-3);font-size:10.5px">${p.desc} · ×${p.growth}/级</span></span>
+      <span style="color:var(--cyan);text-align:right">${full ? '已满级' : `${fmt(cost)} CPS<br><span style="font-size:10.5px;color:var(--green,#3fb950)">→ +${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}</span>`}</span></div>`;
   }
   return html + `</div>`;
 }

@@ -28,14 +28,15 @@ const epPerPt = (base, growth, gain, n) => base * Math.pow(growth, n - 1) / gain
 const stPt = (n) => epPerPt(ST.base, ST.growth, ST.capPer * Math.pow(ST.capGrowth, n - 1), n);
 const rb = U('reserve_bin');
 const db = U('deep_bin');
-const rbPt = (n) => epPerPt(rb.base, rb.growth, 12000, n);
+const rbPt = (n) => epPerPt(rb.base, rb.growth, 4000 * Math.pow(1.18, Math.min(n, 20) - 1), n);
 const dbPt = (n) => epPerPt(db.base, db.growth, 8e5, n);
 
-if (rb.base > ST.base) ok('② 粮仓首购价高于存储节点（按价格先买存储节点）', `粮仓 ${rb.base} vs 存储 ${ST.base} EP`);
+// v3.4.6 反馈⑫：两曲线对调——备用粮仓为前期件（便宜、+4K×1.18、20 级封顶），存储节点为后期大宗（+12K 恒定、无限级）
+if (rb.base < ST.base) ok('② 粮仓首购价低于存储节点（前期先买粮仓）', `粮仓 ${rb.base} vs 存储 ${ST.base} EP`);
 else bad('② 首购价倒挂', `粮仓 ${rb.base} vs 存储 ${ST.base}`);
-if (stPt(1) < rbPt(1)) ok('② L1 存储节点单价更低（前期存储节点）', `存储 ${stPt(1).toFixed(2)} vs 粮仓 ${rbPt(1).toFixed(2)} EP/点`);
-else bad('② L1 单价倒挂', `存储 ${stPt(1).toFixed(2)} vs 粮仓 ${rbPt(1).toFixed(2)}`);
-if (rbPt(11) < stPt(11)) ok('② L11 粮仓单价反超（后期粮仓）', `粮仓 ${rbPt(11).toFixed(2)} vs 存储 ${stPt(11).toFixed(2)} EP/点`);
+if (rbPt(1) < stPt(1)) ok('② L1 粮仓单价更低（前期粮仓）', `粮仓 ${rbPt(1).toFixed(2)} vs 存储 ${stPt(1).toFixed(2)} EP/点`);
+else bad('② L1 单价倒挂', `粮仓 ${rbPt(1).toFixed(2)} vs 存储 ${stPt(1).toFixed(2)}`);
+if (rbPt(11) > stPt(11)) ok('② L11 粮仓单价反超（后期转存储节点）', `粮仓 ${rbPt(11).toFixed(2)} vs 存储 ${stPt(11).toFixed(2)} EP/点`);
 else bad('② L11 粮仓未反超', `粮仓 ${rbPt(11).toFixed(2)} vs 存储 ${stPt(11).toFixed(2)}`);
 if (stPt(6) > stPt(1) && rbPt(6) > rbPt(1)) ok('② 两条曲线单价均单调递增（无买得越多越便宜）', `存储 ${stPt(1).toFixed(1)}→${stPt(6).toFixed(1)} / 粮仓 ${rbPt(1).toFixed(1)}→${rbPt(6).toFixed(1)}`);
 else bad('② 单价非单调', `存储 ${stPt(1).toFixed(1)}→${stPt(6).toFixed(1)} / 粮仓 ${rbPt(1).toFixed(1)}→${rbPt(6).toFixed(1)}`);
@@ -54,10 +55,10 @@ else bad('③ 仍有增长指数过低项', lowGrow.map(id => `${id}:${R(id).gro
 const totalNew = NEW.reduce((s, id) => { const u = R(id); let t = 0; for (let i = 0; i < u.cap; i++) t += u.base * Math.pow(u.growth, i); return s + t; }, 0);
 if (totalNew >= 3e5) ok('③ 新增 10 项满级总投入 ≥30 万 RP', `≈${Math.round(totalNew / 1000)}K RP`);
 else bad('③ 满级总投入不足', `${Math.round(totalNew)} RP`);
-// 老项价格不动（对照：熵减研究 50 / 奇点推演 80 / 裂隙数学 120）
-const oldSame = R('rp_entropy').base === 50 && R('rp_singularity').base === 80 && R('rp_rift').base === 120;
-if (oldSame) ok('③ 原有 10 项研究价格不变（只涨近期新增）', '熵减 50 / 奇点 80 / 裂隙 120 RP');
-else bad('③ 老项价格被误改', `${R('rp_entropy').base}/${R('rp_singularity').base}/${R('rp_rift').base}`);
+// 老项价格不动（对照：熵减研究 50 / 奇点推演 80 / 薪酬协商 70；v3.4.6 反馈②只上调深渊终局 4 项，rp_rift 800 不再作对照）
+const oldSame = R('rp_entropy').base === 50 && R('rp_singularity').base === 80 && R('rp_wage').base === 70;
+if (oldSame) ok('③ 原有 10 项研究价格不变（只涨近期新增）', '熵减 50 / 奇点 80 / 薪酬 70 RP');
+else bad('③ 老项价格被误改', `${R('rp_entropy').base}/${R('rp_singularity').base}/${R('rp_wage').base}`);
 
 // ===== 浏览器：上限逐级扩容实跑 + 研究卡价格链路 =====
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });

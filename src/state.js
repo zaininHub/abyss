@@ -61,6 +61,7 @@ export function defaultState() {
     activeRift: null, riftsSealed: 0,
     riftEmber: 0, riftUpgrades: {}, riftExpedition: null,
     riftLevelTech: 0, // v3.3.9 反馈⑤：裂隙等级科技（EP+DM，科技树无限升级；跨转生保留）
+    starCps: 0, fuelMode: false, // v3.4.6 反馈③：星际燃料 CPS（星图探索产出 · 宇宙探索/殖民升级货币 · 燃料模式持续燃烧加速全局）
     _religionHintSeen: false,
     // v2.0 深渊潮汐
     tidePhase: 0,

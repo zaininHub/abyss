@@ -152,14 +152,14 @@ t('线程招募成本 360 × 1.25^n × 前3级折扣（v2.9.1：n=0/1/2 ×0.5/0.
   S.cultists.push({ output: 2.5, mood: '正常' });
   assert.equal(staffCost(), 704); // v2.9.1：360×1.25³ = 703.125 → ceil 704（第 4 个起全额曲线）
 });
-t('v2.0.2 EP 容量 = (基础2000 + 缓存×5000 + 存储级制累计 + DC加成) × (1 + 0.25×里程碑数)', () => {
+t('v2.0.2 EP 容量 = (基础2000 + 缓存×8000 + 粮仓/存储级制累计 + DC加成) × (1 + 0.25×里程碑数)（v3.4.6 曲线对调）', () => {
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   assert.equal(epStorageCap(), 2000);
   S.upgrades['cache'] = 1;          assert.equal(epStorageCap(), 10000);  // v2.8.2：2000 + 8000
-  S.upgrades['storage'] = 2;        assert.equal(epStorageCap(), 18720);  // v2.8.30 ⑤：cache 8000 + storage 4000+4720
-  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 28720);  // v2.8.30 ⑤：storage 18720 + DC 10000
+  S.upgrades['reserve_bin'] = 2;    assert.equal(epStorageCap(), 18720);  // v3.4.6 ⑫：粮仓 +4000+4720（原存储节点曲线）
+  S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 28720);  // 18720 + DC 10000
   S.milesDone = { m1: true, m2: true };
-  assert.equal(epStorageCap(), 43080); // v2.8.30 ⑤：28720 × 1.5（m1+m2 里程碑）
+  assert.equal(epStorageCap(), 43080); // 28720 × 1.5（m1+m2 里程碑）
   S.upgrades = {}; S.milesDone = {}; S.buildings = {};
 });
 t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
@@ -200,21 +200,25 @@ t('R1：线程裸产出不再叠加全局乘数（单线程基础 3 × 0.8 = 2.4
   assert.ok(Math.abs(staffOutputPerSec() - 2.4) < 1e-9, `线程产出 ${staffOutputPerSec()}`);
   S.prestigePoints = 0; S.cultists = [];
 });
-t('v2.4：存储节点无限升级配置（base 150 / growth 1.25 / 级起步 3000 / ×1.15 递增 / 无 maxLevel 封顶；v2.8.2）', () => {
+t('v3.4.6 ⑫：存储节点/备用粮仓曲线对调（粮仓 12K/+4000×1.18/20 级封顶；存储节点 45K/+12000/无限）', () => {
   const st = UPGRADES.find(u => u.id === 'storage');
-  assert.ok(st, 'UPGRADES 应含 storage 项');
-  assert.equal(st.base, 12000); // v2.8.30 ⑤：存储大幅涨价（3000→12000）
-  assert.equal(st.growth, 1.45);
-  assert.ok(!st.maxLevel, 'v2.4 KG 模式：storage 不再有 maxLevel 封顶（无限升级）');
-  assert.equal(BALANCE.storage.capPer, 4000); // v2.8.30 ⑤：储存量随涨价增多（2500→4000）
-  assert.equal(BALANCE.storage.capGrowth, 1.18); // v2.8.30 ⑤：储存量随涨价增多（1.15→1.18）
-  // maxLevel 字段保留仅供存档兼容参考，不再作为购买上限
-  assert.equal(BALANCE.storage.maxLevel, 20);
-  // 升级商店 storage 卡为无限购买：cost 公式可逐级推演（任意级数均可购买，受 30% 钳制）
-  S.upgrades = { storage: 0 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), 600, '首购价 3000 被 30% 防死锁钳制为 600（cap 2000）'); // v2.8.30
-  S.upgrades = { storage: 25 }; S.milesDone = {};
-  assert.equal(unitCost(st, 0), Math.min(Math.ceil(3000 * Math.pow(1.45, 25)), Math.floor(epStorageCap() * 0.3)), '25 级仍可购（无 20 级封顶）');
+  const rb = UPGRADES.find(u => u.id === 'reserve_bin');
+  assert.ok(st && rb, 'UPGRADES 应含 storage/reserve_bin 项');
+  assert.equal(st.base, 45000); // v3.4.6 ⑫：存储节点改后期大宗（原粮仓曲线）
+  assert.equal(st.growth, 1.20);
+  assert.ok(!st.maxLevel, '存储节点无限升级');
+  assert.equal(BALANCE.storage.capPer, 12000);
+  assert.equal(BALANCE.storage.capGrowth, 1.0);
+  assert.equal(rb.base, 12000); // v3.4.6 ⑫：粮仓改前期关键件（原存储节点曲线）
+  assert.equal(rb.growth, 1.45);
+  assert.equal(rb.maxLevel, 20);
+  assert.equal(BALANCE.reserveBin.capPer, 4000);
+  assert.equal(BALANCE.reserveBin.capGrowth, 1.18);
+  // 前期防死锁：粮仓首购被 30% 钳制为 600（cap 2000），前期可负担
+  S.upgrades = { reserve_bin: 0 }; S.milesDone = {};
+  assert.equal(unitCost(rb, 0), 600, '粮仓首购 12000 被 30% 防死锁钳制为 600（cap 2000）');
+  S.upgrades = { reserve_bin: 25 }; S.milesDone = {};
+  assert.equal(unitCost(rb, 0), Math.min(Math.ceil(12000 * Math.pow(1.45, 25)), Math.floor(epStorageCap() * 0.3)), '粮仓 25 级仍按钳制价可购（20 级封顶在购买入口拦截）');
   S.upgrades = {};
 });
 t('v2.0.2：防死锁——新档 storage 首购 ≤ 上限×30%', () => {
@@ -757,10 +761,10 @@ t('5.1：19 级时末级（第 20 级）价格/上限 ≤ 30%', () => {
   resetCapState();
 });
 
-t('5.1：20 级满级总上限 = 309,331（v2.8.2 曲线 capPer 3000×1.15^n）', () => {
+t('5.1：20 级满级总上限 = 588,512（v3.4.6 ⑫：备用粮仓 20 级封顶，capPer 4000×1.18^n）', () => {
   resetCapState();
-  S.upgrades['storage'] = 20;
-  assert.equal(epStorageCap(), 588512); // v2.8.30 ⑤ 曲线（2000 + 4000×1.18^n 累计，n=0..19）
+  S.upgrades['reserve_bin'] = 20;
+  assert.equal(epStorageCap(), 588512); // v3.4.6 ⑫ 曲线（2000 + 4000×1.18^n 累计，n=0..19）
   resetCapState();
 });
 
@@ -785,22 +789,22 @@ t('5.1：3 个里程碑时上限乘数 = 1.75（+25%×3）', () => {
   resetCapState();
 });
 
-t('5.1：旧档兼容——v2.0.1 实存 13 节点直接映射 13 级；v2.4 超 20 旧档全额计入不再截断', () => {
+t('5.1：旧档兼容——v2.0.1 实存 13 节点直接映射 13 级；v2.4 超 20 旧档全额计入不再截断（v3.4.6 ⑫：级制曲线 = 备用粮仓）', () => {
   resetCapState();
-  S.upgrades['storage'] = 13; // v2.0.1 最深推演 13 节点
-  const expected = Math.round(2000 + 4000 * (Math.pow(1.18, 13) - 1) / 0.18); // v2.8.30 ⑤ 曲线（基准 2000 + 存储累计）
+  S.upgrades['reserve_bin'] = 13; // v2.0.1 最深推演 13 节点
+  const expected = Math.round(2000 + 4000 * (Math.pow(1.18, 13) - 1) / 0.18); // v3.4.6 ⑫ 曲线（基准 2000 + 粮仓累计）
   assert.equal(epStorageCap(), expected);
   // v2.4 KG 模式：>20 的旧值按级制公式全额计入（不再截断到满级）
-  S.upgrades['storage'] = 25;
-  const expected25 = Math.round(2000 + 4000 * (Math.pow(1.18, 25) - 1) / 0.18); // v2.8.30 ⑤
+  S.upgrades['reserve_bin'] = 25;
+  const expected25 = Math.round(2000 + 4000 * (Math.pow(1.18, 25) - 1) / 0.18); // v3.4.6 ⑫
   assert.ok(Math.abs(epStorageCap() - expected25) <= 1, `v2.4 旧档 25 级全额计入（期望 ${expected25}，实际 ${epStorageCap()}）`);
   resetCapState();
 });
 
-t('v2.4：storage 无限升级配置——UPGRADES 无 maxLevel（KG 模式）', () => {
+t('v2.4：storage 无限升级配置——UPGRADES 无 maxLevel（KG 模式）；v3.4.6 ⑫ 级制封顶移至备用粮仓', () => {
   resetCapState();
   assert.ok(!stU().maxLevel, 'UPGRADES storage 不再有 maxLevel 封顶');
-  assert.equal(BALANCE.storage.maxLevel, 20, 'BALANCE maxLevel 字段保留仅供存档兼容参考');
+  assert.equal(BALANCE.reserveBin.maxLevel, 20, '备用粮仓 20 级封顶（购买入口拦截）');
   resetCapState();
 });
 

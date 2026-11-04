@@ -11,7 +11,7 @@ import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml,
 import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
-import { converterEnabled, setConverterEnabled } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径
+import { converterEnabled, setConverterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v3.4.6 反馈⑤：卡面产出与 tick 同口径（绑定加成封顶 ×2）
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
@@ -159,10 +159,9 @@ function vaultForced(u) {
 function shopUnlocked(u) {
   const owned = S.upgrades[u.id] || 0;
   if (owned > 0) return true;
-  // v3.0.7 反馈①：EP 存储节点是防死锁关键件——不参与「逐项揭示」链窗，始终可见。
-  // 原实现里它排在并行任务（10,800 EP）之后，而上限只有 2,000 → 并行任务永远买不起 →
-  // 存储节点永远揭示不出来 → 上限锁死 2K 的硬死锁（用户实测现象）
-  if (u.id === 'storage') return true;
+  // v3.0.7 反馈①：EP 扩容关键件是防死锁刚需——不参与「逐项揭示」链窗，始终可见。
+  // v3.4.6 反馈⑫：曲线对调后关键件 = 备用粮仓（12K 首购、门槛 3.6K EP）；存储节点（45K）走正常门槛揭示
+  if (u.id === 'reserve_bin') return true;
   if (VAULT_IDS.includes(u.id)) return vaultForced(u);
   return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
@@ -188,8 +187,9 @@ export function renderShop(container) {
   // v2.8.28 修复：资源仓库（矩阵存储库/星尘金库/饵料仓库）在对应资源解锁后强制可见（跳过链窗口）——
   // 资源解锁 = 购买对应仓库（EP 溢出后矩阵存储库即解锁），避免玩家已满足前置却因链窗口看不到可购仓库
   const split = chainSplit('shop', sorted, u => (S.upgrades[u.id] || 0) > 0 || vaultForced(u), S);
-  // v3.0.7 反馈①：EP 存储节点钉死在可购区（不占链位、不算已购前缀）——防死锁关键件必须一直可见
-  const storageItem = sorted.find(u => u.id === 'storage');
+  // v3.0.7 反馈①：EP 扩容关键件钉死在可购区（不占链位、不算已购前缀）——防死锁刚需必须一直可见
+  // v3.4.6 反馈⑫：关键件从存储节点换为备用粮仓（曲线对调）
+  const storageItem = sorted.find(u => u.id === 'reserve_bin');
   if (storageItem && !split.visible.includes(storageItem)) {
     split.visible = sorted.filter(u => split.visible.includes(u) || u === storageItem);
     split.hiddenCount = sorted.length - split.visible.length;
@@ -322,7 +322,7 @@ export function renderAtriumDistill(container) {
   const epRate = BALANCE.atrium.epRate || 150, rate = BALANCE.atrium.rate || 0.15;
   const cost = owned ? atriumUpgCost(n) : Math.ceil(base); // 已购：下一级升级成本；未购：首购价
   const afford = (S.ep || 0) >= cost;
-  const rpPerS = (rate * n / rpEffScale()); // v3.3.3 反馈③：实际产出含效率递增折减
+  const rpPerS = (rate * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale()); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2，与 tick/rpProdPerSec 同口径（修复「+0 RP/s」文案）
   const desc = owned
     ? `自动蒸馏：-${fmt(epRate * n)} EP/s → +${fmt(rpPerS)} RP/s`
     : `自动蒸馏：-${fmt(epRate)} EP/s → +${fmt(rate)} RP/s`;
@@ -378,7 +378,7 @@ export function renderAtriumSwitch(host) {
   host.style.display = '';
   const on = converterEnabled('atrium');
   const epS = (BALANCE.atrium.epRate || 150) * n;
-  const rpS = (BALANCE.atrium.rate || 0.15) * n / rpEffScale(); // v3.3.3 反馈③：实际产出含效率递增折减
+  const rpS = (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale(); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2 同口径
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
     <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>

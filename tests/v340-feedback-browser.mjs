@@ -96,7 +96,12 @@ try {
 
   // ===== ③ PT：产出下调、EP 成本上调 =====
   const pt = await page.evaluate(async () => {
-    window.S.ep = 1e9; window.S.upgrades = window.S.upgrades || {}; window.S.upgrades.storage = 400;
+    // v3.4.6 曲线对调后 storage=400 上限仅 ≈4.8M，直接置 1e9 会被 addEp 首帧钳回产生虚假消耗。
+    // 改为按当前上限的 60% 置 EP（cap 足够大且不会被钳回）。
+    window.__setEp = (v) => { window.S.ep = Math.min(v, Math.floor(window.__qa.epStorageCap() * 0.6)); };
+    window.__setEp(1e9);
+    window.S.upgrades = window.S.upgrades || {}; window.S.upgrades.storage = 400;
+    window.__setEp(1e9);
     window.S.ptAutoHatch = true; window.S.ptDistillOn = true; window.S.ptHatchLv = 1; window.S.pt = 0;
     window.S.cultists = []; // 无绑定线程（boost=1）
     const ep0 = window.S.ep, pt0 = window.S.pt, t0 = performance.now();
@@ -118,7 +123,7 @@ try {
       id: 'p' + i, name: 'P' + i, profession: 'keeper', level: 5, boundTo: 'hatch',
       mood: '正常', output: 5, hiredAt: Date.now(), moodTimer: 90, leader: false,
     }));
-    window.S.ep = 1e9; window.S.pt = 0;
+    window.__setEp(1e9); window.S.pt = 0;
     const ep0 = window.S.ep, pt0 = window.S.pt, t0 = performance.now();
     await sleep(3000);
     const dt = (performance.now() - t0) / 1000;
@@ -135,7 +140,7 @@ try {
     window.S.upgrades.scooter = 3; window.S.upgrades.convoy = 6; window.S.upgrades.orbital = 8; window.S.upgrades.submersible = 10;
     window.S.converterOn = { ...(window.S.converterOn || {}), vehicles: true };
     window.S._probeEnabled = true;
-    window.S.dm = 0; window.S.ep = 1e12; window.S.upgrades.dm_vault = 20;
+    window.S.dm = 0; window.__setEp(1e12); window.S.upgrades.dm_vault = 20;
     const dm0 = window.S.dm, ep0 = window.S.ep, t0 = performance.now();
     await sleep(4000);
     const dt = (performance.now() - t0) / 1000;

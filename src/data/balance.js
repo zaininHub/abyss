@@ -236,7 +236,12 @@ export const BALANCE = {
   // 存储节点级价 150×1.25^级（温和上涨），级增量 +2,000 起步、逐级 ×1.12 递增；
   // v2.4 KG 模式改造：maxLevel 封顶解除（无限升级），级价与级增量公式不变，成本递增自然形成后期性价比递减；
   // 20 级参考值总上限 ≈146K；maxLevel 字段保留仅供存档兼容截断与历史断言参考，不再作购买上限
-  storage: { base: 12000, growth: 1.45, capPer: 4000, capGrowth: 1.18, maxLevel: 20 }, // v2.8.30 ⑤：中期存储大幅涨价（3000→12000）、储存量随涨价增多（capPer 2500→4000）
+  // v3.4.6 反馈⑫：存储节点与备用粮仓曲线对调——「按照目前的数值，解锁应该先备用粮仓」：
+  //   备用粮仓 = 前期防死锁关键件（12K 首购、+4,000/级 ×1.18 递增、20 级封顶、门槛 3.6K EP 先解锁）
+  //   存储节点 = 粮仓打基础后的大宗扩容（45K 首购、+12,000/级恒定 ×1.20、无限级、后期单位价更优）
+  storage: { base: 45000, growth: 1.20, capPer: 12000, capGrowth: 1.0 },
+  // v3.4.6：备用粮仓升级曲线（原存储节点曲线整体平移过来）
+  reserveBin: { base: 12000, growth: 1.45, capPer: 4000, capGrowth: 1.18, maxLevel: 20 },
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],
@@ -330,8 +335,9 @@ export const BALANCE = {
     { id: 'rp_entropy',     name: '熵减研究',   cap: 10, base: 50, growth: 1.6,  fx: { key: 'ep',   v: 0.05 }, desc: '基础 EP 产出 +5%/级' },
     { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60, growth: 1.6,  fx: { key: 'thread', v: 0.05 }, desc: '线程产出 +5%/级' },
     { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80, growth: 1.65, fx: { key: 'global', v: 0.04 }, desc: '全局产出 ×1.04/级' },
-    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 100, growth: 1.7, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
-    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 120, growth: 1.7, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
+    // v3.4.6 反馈②：深渊终局组整组大幅涨价（此前 100~640 RP 满级总投入仅 ≈1.6 万，远低于其永久乘区强度）
+    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650, growth: 1.8, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
+    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800, growth: 1.8, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
     // v2.8.25 ②：研究点内容扩充（5→10 项）——消耗 RP、cap 5-10、成本指数涨；效果全接线
     { id: 'rp_wage',        name: '薪酬协商',   cap: 10, base: 70, growth: 1.6,  fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
     { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90, growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
@@ -345,11 +351,11 @@ export const BALANCE = {
     { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 320, growth: 1.70, fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
     { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 360, growth: 1.70, fx: { key: 'global',  v: 0.05 }, desc: '全局产出 ×1.05/级' },
     { id: 'rp_frugal',   name: '精益管理',   cap: 8, base: 300, growth: 1.70, fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
-    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 380, growth: 1.75, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
+    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 2000, growth: 1.85, fx: { key: 'storage', v: 0.15 }, desc: 'EP 存储上限 +15%/级' }, // v3.4.6 反馈⑬：大幅涨价（380→2000）且存储额增多（10%→15%/级）
     { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 440, growth: 1.75, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
     { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 560, growth: 1.80, fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
-    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 640, growth: 1.80, fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' },
-    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 520, growth: 1.80, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
+    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 4000, growth: 1.90, fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' }, // v3.4.6 反馈②：深渊终局组大幅涨价
+    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 3200, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
     { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 880, growth: 1.90, fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
