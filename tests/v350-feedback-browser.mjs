@@ -145,7 +145,8 @@ if (/PT 上限 \+/.test(ui.pt) && !/产出基座/.test(ui.pt)) ok('④ 文案不
 else bad('④ 仍显示内部术语', ui.pt || '(无)');
 if (!/产出基座/.test(ui.rp + ui.pt + ui.faith)) ok('④ 三张仓库卡均无内部术语', '');
 else bad('④ 仓库卡仍含「产出基座」', `${ui.rp} / ${ui.pt}`);
-if (/只产信仰/.test(rel) && /誓约圣龛/.test(rel) && !/FP 上限 \+50\/级/.test(rel)) ok('② 圣所卡改为「只产信仰」并指引圣龛', '');
+// v3.5.0 补：面板只陈述自身数据，不写「由升级商店…提升」这类跨面板指引
+if (/只产信仰/.test(rel) && !/誓约圣龛|升级商店|由.+提升/.test(rel) && !/FP 上限 \+50\/级/.test(rel)) ok('② 圣所卡只写「只产信仰」，无跨面板指引', '');
 else bad('② 圣所卡文案未更新', rel.slice(0, 160));
 if (clamp.faith === clamp.cap && !/99999/.test(rel)) ok('② 旧档 FP 越界自动钳回上限', `${clamp.faith} / ${clamp.cap}`);
 else bad('② 旧档 FP 越界未钳回', JSON.stringify(clamp));

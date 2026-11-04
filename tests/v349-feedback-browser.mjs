@@ -245,13 +245,13 @@ await sleep(1800);
     let bonus = 0;
     for (let i = 1; i <= fvLv; i++) bonus += 50 * Math.pow(1.15, i - 1);
     const expectCap = Math.round(100 + bonus + (rel.seal || 0) * 20);
-    return { top: top.trim(), expectCap, hasCapInPanel: /由升级商店「誓约圣龛」提升/.test(panel), panelTop: panel.slice(0, 120) };
+    return { top: top.trim(), expectCap, hasShopPointer: /升级商店|誓约圣龛|由.+提升/.test(panel), panelTop: panel.slice(0, 120) };
   });
   const cap = res.expectCap;
   if (res.top.includes('/') && res.top.includes(String(cap))) ok('⑧ 顶栏 FP 显示「当前 / 上限」', res.top);
   else bad('⑧ 顶栏 FP 上限缺失', JSON.stringify({ top: res.top, cap }));
-  if (res.hasCapInPanel) ok('⑧ 圣所卡注明上限来源（誓约圣龛）', '');
-  else bad('⑧ 圣所卡未注明上限来源', res.panelTop);
+  if (!res.hasShopPointer) ok('⑧ 面板不写「由升级商店…提升」这类指引', '');
+  else bad('⑧ 面板出现跨面板指引文案', res.panelTop);
 }
 
 if (errs.length === 0) ok('页面无 JS 报错');

@@ -374,7 +374,6 @@ export function renderReligionPanel(container) {
   container.innerHTML = `
     <div class="religion-desc">${r.icon} 已信奉 <b>${r.name}</b>：${r.effect}（+圣印全局产出）</div>
     <div class="off-stat"><span>FP 余额</span><b>${(S.faith || 0).toFixed(2)} / ${faithCap()}</b></div>
-    <div class="off-stat"><span>FP 上限</span><b style="color:var(--text-2)">${faithCap()} · 由升级商店「誓约圣龛」提升</b></div>
     <div class="off-stat"><span>FP 产出</span><b>+${templeFaithPerSec().toFixed(2)}/s（圣所）${fpStatusTag()}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 圣印（全局产出 +8%/级）</div>
     <div class="religion-seal-row">
