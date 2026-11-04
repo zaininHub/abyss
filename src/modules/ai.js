@@ -34,7 +34,7 @@ function ailog(msg, cls) { if (logFn) logFn(`[AI] ${msg}`, cls); }
 
 const VEHICLE_IDS = BALANCE.vehicles.ids;
 const DM_SKIP = ['dmsight', 'dmfeed', 'dmmind', 'dmprotocol'];
-const THREAD_IDS = ['subsist1', 'subsist2', 'subsist3', 'cpu', 'mem', 'gpu', 'cache'];
+const THREAD_IDS = ['cpu', 'gpu']; // v3.4.8 反馈⑦：消耗优化整组已删除，AI 只再买产出强化
 
 export function aiUnlocked() { return hasTech('ai_core'); }
 

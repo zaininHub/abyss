@@ -155,16 +155,19 @@ try {
 
   // ===== ⑥ 圣所 EP 消耗递增 =====
   const p6 = await page.evaluate(async () => {
-    // 隔离其他消耗源：孵化/圣所以外的消耗仅线程薪资
+    // 隔离其他消耗源：v3.4.8 后薪资保底 = 产出的 2/3（很重），会稀释比例 → 临时清空班组，只看圣所
+    const savedCultists = window.S.cultists;
+    window.S.cultists = [];
     window.S.religion = { unlocked: true, temple: 1, templeOff: false };
     const d1 = window.__qa.totalDrainPerSec();
     window.S.religion.temple = 5;
     const d5 = window.__qa.totalDrainPerSec();
     window.S.religion.temple = 1;
+    window.S.cultists = savedCultists;
     return { d1, d5, ratio: d5 / Math.max(1e-9, d1) };
   });
-  // 线性单价时 Lv1→Lv5 消耗比 ≈2.2（薪资混入）；递增单价 ×(1+0.2×(Lv-1)) → ≈3.35
-  if (p6.ratio >= 3) ok('⑥ 圣所消耗随等级超线性递增（Lv1→Lv5）', `×${p6.ratio.toFixed(2)}（线性仅 ≈2.2）`);
+  // 产出随等级线性（×5），单位 EP 单价再 ×(1+0.35×(Lv-1))（Lv5 → ×2.4）→ 合计 ≈12×
+  if (p6.ratio >= 8) ok('⑥ 圣所消耗随等级超线性递增（Lv1→Lv5，含单位 EP 递增）', `×${p6.ratio.toFixed(2)}（纯线性仅 ≈5）`);
   else bad('⑥ 圣所递增', JSON.stringify(p6));
 
   // ===== ⑦ 孵化/圣所线程绑定 =====

@@ -375,6 +375,16 @@ function renderTop() {
   const hDm = document.getElementById('h-dm');
   const hDev = document.getElementById('h-devotion');
   const devStat = document.getElementById('devotion-stat');
+  // v3.4.8 反馈③：顶部常显星图 CPS（星图解锁 / 有余额 / 燃料模式开启时亮出）
+  const hStarCps = document.getElementById('h-starcps');
+  const starCpsStat = document.getElementById('starcps-stat');
+  if (hStarCps && starCpsStat) {
+    const starOn = (S.starCps || 0) > 0 || !!S.fuelMode || (S.expeditionsDone || 0) > 0
+      || (S.expeditions || []).length > 0 || hasTech('deep_space');
+    starCpsStat.style.display = starOn ? '' : 'none';
+    hStarCps.textContent = fmt(S.starCps || 0);
+    hStarCps.style.color = S.fuelMode ? 'var(--good, #3fb950)' : '';
+  }
   if (hDev && devStat) { // v2.8.30 ③：虔诚顶部展示（>0 才显示）
     devStat.style.display = (S.devotion || 0) > 0 ? '' : 'none';
     hDev.textContent = S.devotion || 0;
@@ -2154,7 +2164,7 @@ function tick(now) {
       if ((S.ep || 0) >= 50000) {
         S.ep -= 50000;
         S.rp = (S.rp || 0) + 0.01; // 涓流直入账（微量溢出可接受，腾空间后恢复正常蒸馏）
-        log('满仓涓流蒸馏：-50K EP → +0.01 RP', '');
+        // v3.4.8 反馈④：不再写日志——每 5s 一条会把日志刷满，机制照常生效（可在资源数字上看到）
       }
     }
   }
@@ -2232,7 +2242,7 @@ function tick(now) {
         if ((S.ep || 0) >= 50000) {
           S.ep -= 50000;
           S.pt = (S.pt || 0) + 0.01;
-          log('满仓涓流孵化：-50K EP → +0.01 PT', '');
+          // v3.4.8 反馈④：满仓涓流不再写日志（与 RP 涓流同口径，避免日志被刷屏）
         }
       }
     }

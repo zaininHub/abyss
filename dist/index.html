@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.4.7</title>
+<title>深渊效能工作台 v3.4.8</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-BVpz7rV3.js"></script>
+  <script defer src="./assets/index-BvBZo_VZ.js"></script>
   <link rel="stylesheet" href="./assets/index-C5r-mJmh.css">
 </head>
 <body>
 <div id="app">
   <!-- 顶部栏（v2.1 P1：全部图标配文字标签 + hover 说明，hover 覆盖率 100%） -->
   <div class="topbar">
-    <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「存储节点/缓存优化」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
+    <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「备用粮仓/存储节点」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
     <div class="stat"><b>产出/s</b><span id="h-cps">0</span></div> <!-- v2.8.30 ⑤：移除原生 title（与自定义 CSS 气泡双弹窗） -->
     <div class="stat"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span></div> <!-- v2.8.30 ⑤：移除原生 title（双弹窗） -->
     <div class="stat" title="本局累计获得 EP：从上次晋升（转生）起计算，晋升收益按此结算；晋升后清零。"><b>本局</b><span id="h-run">0</span></div>
@@ -22,6 +22,7 @@
     <div class="stat" title="FP（信仰）：神龛/万神殿/圣所产出，用于开启宗教路线与宗教升级。"><b>🙏FP</b><span id="h-faith">0</span></div>
     <div class="stat" title="PT（异兽饼干）：异兽系统的喂养/升级资源。来源：异兽孵化（EP 转化）/ 伊甸花园 / 集市 / 宇宙探索；解锁：首次获得 PT 时亮出。"><b>🍪PT</b><span id="h-pt">0</span></div>
     <div class="stat" id="devotion-stat" style="display:none" title="虔诚：信仰满额后「赞颂」转化获得，永久保留；用于超验与深层升级。"><b>🙏虔诚</b><span id="h-devotion">0</span></div>
+    <div class="stat" id="starcps-stat" style="display:none" title="CPS（星际燃料）：星图探索带回，出战异兽每只 +10%；用于深空殖民/宇宙探索升级，或开启燃料模式（2 CPS/s → 全局产出 ×1.5）。"><b>🛰CPS</b><span id="h-starcps">0</span></div>
     <div class="stat" title="DM（深渊物质）：封印深渊裂隙获得，用于深渊商店的特殊升级。"><b>🌀DM</b><span id="h-dm">0</span></div>
     <div class="stat" id="ember-stat" style="display:none" title="裂隙余烬：封印/拥抱/深入积累，跨转生保留，用于裂隙科技。"><b>🔥余烬</b><span id="h-ember">0</span></div>
     <div class="stat" id="vs-stat" style="display:none" title="VS（虚空碎片）：深潜中产出，跨转生保留，用于深潜升级树。"><b>🌑VS</b><span id="h-vs">0</span></div>

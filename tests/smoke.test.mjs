@@ -351,7 +351,9 @@ t('C2（v2.8.1）：连续欠薪 60s → 强制休眠 ×0.3，保命成本 = 0.3
   assert.equal(wageOutputMult(), 0.3, '休眠产出 ×0.3（v2.5.3 温和产出）');
   const ep0 = S.ep;
   tickWages(1);
-  assert.ok(Math.abs((ep0 - S.ep) - salary * 0.3) < 1e-9, `保命成本应 = 0.3×薪资（${salary * 0.3}），实际扣 ${ep0 - S.ep}`);
+  // v3.4.8 反馈⑥：薪资保底改为「产出的 2/3」，随线程产出/情绪变化 → 用 tick 后的薪资口径比对
+  const salNow = staffSalaryPerSec();
+  assert.ok(Math.abs((ep0 - S.ep) - salNow * 0.3) < 1e-6, `保命成本应 = 0.3×当前薪资（${salNow * 0.3}），实际扣 ${ep0 - S.ep}`);
 });
 t('C3（v2.8.1）：休眠 1800s → 流失预警，每 60s roll 流失；维修坞免疫（数值）', () => {
   wageSetup(0);
@@ -459,11 +461,15 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   assert.ok(bought.length > 0, '应有购入记录');
   assert.ok(S.ep < before, 'EP 应扣减');
   // 3) 自动招募 net<0 停止
+  // v3.4.8 反馈⑥：薪资已改为「产出 × 2/3」→ 常态下净收益恒为正，只有怠工态（薪资 ×2.5）才会净亏；
+  //   这里用怠工标记构造 net<0 场景，验证守卫仍然生效
   S.upgrades = {}; S.ep = 1e9;
-  S.cultists = [{ id: 1, name: 't', output: 0.01, mood: '正常', moodTimer: 60 }]; // 净产出为负
+  S.cultists = [{ id: 1, name: 't', output: 0.01, mood: '正常', moodTimer: 60 }];
+  S.lazySince = Date.now() - 120000; // 怠工 ≥60s → lazyCostMult ×2.5 → 薪资 > 产出
   S.ai = { autoUpgrade: false, autoHire: true, autoClaim: false, reserve: 0.3, timer: 0 };
   tickAI(5);
   assert.equal(S.cultists.length, 1, 'net<0 不应招募');
+  S.lazySince = 0;
   // 4) 全关 → 无新动作
   S.ai = { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0 };
   S.ep = 1e9;
@@ -819,14 +825,15 @@ t('5.2：unitCost(storage, n) ≤ epStorageCap()×0.3（v2.4 任意级数无限�
   resetCapState();
 });
 
-t('5.2：unitCost(cache, n) ≤ epStorageCap()×0.3（任意数量）', () => {
+t('v3.4.8：旧档 cache 等级仍全额计入上限（缓存优化已删除，不可再买）', () => {
   resetCapState();
-  for (let n = 0; n < 15; n++) {
-    S.upgrades['cache'] = n;
-    const cap = epStorageCap();
-    const cost = unitCost(caU(), 0);
-    assert.ok(cost <= cap * 0.3, `cache×${n}：${cost} > ${Math.floor(cap * 0.3)}`);
-  }
+  S.upgrades['cache'] = 0;
+  const cap0 = epStorageCap();
+  S.upgrades['cache'] = 3;
+  let sum = 0;
+  for (let i = 0; i < 3; i++) sum += 8000 * Math.pow(1.15, i);
+  assert.equal(epStorageCap(), cap0 + sum, '旧档残留 cache 等级继续撑上限（不让老存档凭空掉容量）');
+  assert.ok(!UPGRADES.find(x => x.id === 'cache'), 'v3.4.8 反馈⑦：cache 已从升级列表删除');
   resetCapState();
 });
 
@@ -841,8 +848,13 @@ t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
 });
 
-t('5.2：cache 新价格 base=2e6（v3.4.7 反馈④：按回本期重标线程强化）', () => {
-  assert.equal(caU().base, 2e6);
+t('v3.4.8 反馈⑦：升级商店「消耗优化」整组已删除（5 项均不在 UPGRADES）', () => {
+  for (const id of ['subsist1', 'subsist2', 'subsist3', 'mem', 'cache']) {
+    assert.ok(!UPGRADES.find(x => x.id === id), `${id} 应已删除`);
+  }
+  // 产出强化保留（CPU/GPU）
+  assert.ok(UPGRADES.find(x => x.id === 'cpu'), 'CPU 超频应保留');
+  assert.ok(UPGRADES.find(x => x.id === 'gpu'), 'GPU 加速应保留');
 });
 
 t('5.4：三故事线变体上限加成（abyss ×1.15 / order ×1.10 / faith 无）', () => {
@@ -876,11 +888,9 @@ t('5.1：满级锁定 UI 源码断言（maxLevel 项满级锁定；无 maxLevel 
   assert.ok(shopSrc.includes('u.maxLevel || Infinity'), 'buyUpgrade 应按 maxLevel 截断（无封顶项恒可购）');
 });
 
-// ---- cache 限购（v3.4.7 反馈①：线程强化全部限购；加成逐级 ×1.15 递增） ----
-t('v3.4.7：cache 限购 5 级（B.cacheUpg.maxLevel）', () => {
-  const cache = caU();
-  assert.ok(cache, 'cache 条目应存在');
-  assert.equal(cache.maxLevel, 5, 'v3.4.7 反馈①：cache 限购 5 级');
+// ---- v3.4.8 反馈⑦：cache 条目删除（旧档等级仍计入上限，见上方案例） ----
+t('v3.4.8：cache 不再有限购配置断言（条目已整体删除）', () => {
+  assert.equal(caU(), undefined, 'cache 条目应已从 UPGRADES 删除');
 });
 
 t('v3.4.7：旧档 cache=25 全额计入（逐级 ×1.15）——2000 + 8000×Σ1.15^i（i=0..24）', () => {

@@ -14,6 +14,9 @@ export const BALANCE = {
   oracle: { base: 5e11, rate: 2 },
   thread: {
     firstCost: 360, baseOutput: 1.0, baseOutputJitter: 1.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.27：线程成本 ×3、基础产出 ×0.5（首轮 7-10 天） // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
+    // v3.4.8 反馈⑥：薪资保底改「产出:薪资 ≈ 1.5:1」——原保底仅 10%（产出 20.97K/s 时薪资才 452/s，比例 46:1）。
+    //   现在薪资下限 = 线程产出 × (1/1.5) ≈ 66.7%，班组面板恒为 1.5:1 左右（消耗成为主要 EP 去向）
+    salaryOutputRatio: 1 / 1.5,
     // v1.3 模块 C：线程薪资四态状态机（设计文档 §2 数值框架）
     wages: {
       // v2.8.1：状态转换节奏放缓（放置游戏真实时间尺度）——黄线 30s 薪资 / 欠薪 60s 才休眠 / 休眠 30min 才流失预警 / 恢复线 3min 薪资 / 缓冲 60s
@@ -265,6 +268,9 @@ export const BALANCE = {
     // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
     delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
     delveEpPerSec: 3.0,         // v2.8.14：深入探索期间消耗 EP（/秒/级，1 级 60s ≈ 180 EP）——EP 耗尽则停止获取奖励并失败
+    // v3.4.8 反馈①：深入消耗改指数陡增（原线性 ×lv，高裂隙等级几乎免费）——
+    //   消耗 = delveEpPerSec × delveEpGrowth^(Lv-1)：Lv1 3/s、Lv5 28/s、Lv10 232/s、Lv15 1.9K/s
+    delveEpGrowth: 1.75,
     delveCorruptPerLevel: 0.83,     // v2.8.21 ⑥：每秒腐化累积 %/级——60s 深入自然累积 ≈50%（不手动净化最多到 50% 附近，手动净化可压）
     delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
     delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）

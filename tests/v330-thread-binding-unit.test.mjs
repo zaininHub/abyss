@@ -170,11 +170,15 @@ test('经济接线：绑定不匹配线程后 自由EP产出↓、消耗↑（�
   S.cultists.push(a, b);
   const outBound = staffOutputPerSec();
   const salBound = staffSalaryPerSec();
+  const bindAvg = (threadBindSalaryFactor(a) + threadBindSalaryFactor(b)) / 2; // 绑定态下的平均加耗系数
   b.boundTo = null; // 解绑对比
   const outFree = staffOutputPerSec();
   const salFree = staffSalaryPerSec();
   assert.ok(outBound < outFree, '绑定后自由产出应下降');
-  assert.ok(salBound > salFree, '绑定后消耗应上升');
+  // v3.4.8 反馈⑥：薪资 = 产出 × (1/1.5) × 绑定平均系数——未绑定 1.5:1；绑定（不匹配 ×1.5）后薪资变贵、比例下降
+  assert.ok(Math.abs(salFree / outFree - 1 / 1.5) < 1e-6, `未绑定：薪资应为产出的 2/3（实际 ${(salFree / outFree).toFixed(3)}）`);
+  assert.ok(salBound > salFree, '绑定后薪资上升（加成本）');
+  assert.ok(Math.abs(salBound / outBound - (1 / 1.5) * bindAvg) < 1e-6, `绑定：薪资 = 产出 × 2/3 × 绑定系数(${bindAvg.toFixed(2)})`);
 });
 
 test('经济接线：tickThreads 累积 XP 并刷新等级', () => {

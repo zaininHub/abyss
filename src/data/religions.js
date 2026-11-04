@@ -40,8 +40,10 @@ export function sealUpgradeCost(level) {
   return Math.round(500 * Math.pow(2.9, level));
 }
 
-// 圣所（信仰产出建筑）：EP 购买，每级 +0.15 信仰/s，上限 10 级
-export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 5e5, growth: 1.35, cap: Infinity, faithPerSec: 0.05, faithEpPerUnit: 2000 }; // v2.8.30 ⑤：信仰建筑涨价（1e5→5e5、growth 1.35）// v3.4.7 反馈③：圣所不设等级上限（EP 消耗随等级 ×(1+0.2×(Lv-1)) 递增，天然限速）
+// 圣所（信仰产出建筑）：EP 购买，每级 +0.05 信仰/s，无等级上限
+// v3.4.8 反馈②：升级曲线大幅变陡（growth 1.35→1.70）——Lv1 85 万 / Lv5 710 万 / Lv10 1.0 亿 / Lv15 14 亿 EP，
+//   配合「单位 FP 的 EP 消耗随级递增」双管，避免无限连点堆等级（此前 1.35 每级只贵 35%，可买几十级）
+export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 5e5, growth: 1.70, cap: Infinity, faithPerSec: 0.05, faithEpPerUnit: 2000, epPerUnitGrowth: 0.35 };
 export function templeCost() {
   const lv = (S.religion && S.religion.temple) || 0;
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));

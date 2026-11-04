@@ -69,17 +69,12 @@ export const UPGRADES = [
   {id:'oracle',name:'神谕所',base:B.oracle.base,cps:0,produces:{type:'rp',rate:B.oracle.rate},desc:`每秒 +${B.oracle.rate} RP`},
   {id:'temple',name:'万神殿',base:300000000000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
-  // v2.8.23 ①：base 阶梯重排（门槛 base×0.3 拉开 5~10× 间隔——此前 cpu/mem/gpu/cache 门槛 3e5~1.5e7 挤在同一段，EP 一到同时解锁一串；价格整体上调，杜绝「几万 EP 买 +50% 无限叠」）
-  // v3.4.7 反馈①：全部限购——凡「减成本 / 加 EP 上限 / 加线程产出」的线程强化一律封顶，不再允许无限叠乘区
-  // v3.4.7 反馈④：按回本期重标价——此前 subsist2/3 卖到 3e10~1.5e12（-35%/-50% 薪资要挂机数天回本），
-  //   现统一按「参考薪资 ≈3.3K EP/s 下回本期 1~2 小时」定价：subsist1 3e6 / subsist2 4e6 / subsist3 6e6 / mem 8e5 / cache 2e6 / cpu 3e7 / gpu 6e7
-  {id:'subsist1',name:'能量合剂',base:3000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v3.4.7 ④：3e8 → 3e6（回本 ≈1h）
-  {id:'subsist2',name:'循环供氧',base:4000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v3.4.7 ④：3e10 → 4e6
-  {id:'subsist3',name:'生物打印餐',base:6000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v3.4.7 ④：1.5e12 → 6e6
+  // v3.4.8 反馈⑦：整组「消耗优化」删除（能量合剂 / 循环供氧 / 生物打印餐 / 内存扩容 / 缓存优化）——
+  //   与「班组消耗 ≈ 产出的 2/3」新口径冲突（减成本项会让消耗重新掉下去），且该组 5 项全部限购后
+  //   只剩一列无效按钮。旧档已购的减耗效果仍按字段生效（见 economy.staffSalaryPerSec 的兼容分支）。
+  // 保留「产出强化」两项：CPU 超频 / GPU 加速（限购，加成随级乘算）
   {id:'cpu',name:'CPU 超频',base:30000000.0,cps:0.0,maxLevel:3,cat:'thread',desc:'所有线程产出 +50%/级'}, // v3.4.7 ①：限购 3 级；④：6e7 → 3e7
-  {id:'mem',name:'内存扩容',base:800000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v3.4.7 ④：1.5e9 → 8e5
   {id:'gpu',name:'GPU 加速',base:60000000.0,cps:0.0,maxLevel:2,cat:'thread',desc:'所有线程产出 ×2/级'}, // v3.4.7 ①：限购 2 级；④：6e9 → 6e7
-  {id:'cache',name:'缓存优化',base:2000000.0,cps:0.0,maxLevel:B.cacheUpg.maxLevel,cat:'thread',desc:'线程消耗 -25% 起每级再 -3%，EP 存储上限 +8,000/级（逐级 ×1.15）'}, // v3.4.7 ①：限购 5 级；④：3e11 → 2e6
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
   // v3.4.4 反馈②：按价格重排「前期存储节点 → 后期备用粮仓」
   //   存储节点 3.00 EP/点（L1）· 每级单价 ×1.229（增量也涨）→ L20 150 EP/点

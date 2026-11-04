@@ -74,8 +74,9 @@ function riftTechAfford(cost) {
 }
 function riftTechTip(lv, cur) {
   // v3.4.6 反馈④：悬浮提示同样展示下一级具体数值
-  const next = lv + 1;
-  return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt((BALANCE.rift.delveEpPerSec || 3) * next)} EP/s · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${next} DM\n当前裂隙 Lv.${cur}`;
+  // v3.4.8 反馈①：深入消耗改指数曲线后，直接给「下一级裂隙」的每秒消耗与 60s 总消耗
+  const next = Math.min(riftMaxLevel(), cur + 1);
+  return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP） · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM\n当前裂隙 Lv.${cur}`;
 }
 export function renderRiftLevelTech(container) {
   if (!container) return;
@@ -92,9 +93,11 @@ export function renderRiftLevelTech(container) {
   const sig = `${lv}|${cur}`;
   if (sig !== riftTechSig) {
     riftTechSig = sig;
+    // v3.4.8 反馈①：展示「下一级裂隙」的深入消耗（指数曲线，60s 总量更直观）
+    const nextLv = Math.min(riftMaxLevel(), cur + 1);
     container.innerHTML = `<div class="tech" data-rift-level title="${riftTechTip(lv, cur)}">
       <div class="name"><span>裂隙等级</span><span class="count mono">Lv.${lv}</span></div>
-      <div class="desc">裂隙等级 +1<br>深入消耗 ${fmt((BALANCE.rift.delveEpPerSec || 3) * (lv + 1))} EP/s</div>
+      <div class="desc">裂隙等级 +1<br>深入消耗 ${fmt(riftDelveEpPerSec(nextLv))} EP/s</div>
       <div class="cost mono" data-rift-level-cost>${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</div>
     </div>`;
     const el = container.querySelector('[data-rift-level]');
@@ -128,6 +131,18 @@ export function refreshRiftLevelTechAfford() {
   const wantLv = `Lv.${lv}`;
   if (t && t.textContent !== wantLv) t.textContent = wantLv;
   el.title = riftTechTip(lv, cur);
+}
+
+// ---- v3.4.8 反馈①：深入消耗陡增（原线性 ×lv → 指数） ----
+// 消耗 = delveEpPerSec × delveEpGrowth^(Lv-1)；Lv1 3/s、Lv5 28/s、Lv10 232/s、Lv15 1.9K/s
+// tick 结算、卡片文案、悬浮提示三处统一走本函数（避免三份硬编码再次漂移）
+export function riftDelveEpPerSec(lv) {
+  const base = BALANCE.rift.delveEpPerSec || 3;
+  const g = BALANCE.rift.delveEpGrowth || 1.75;
+  return base * Math.pow(g, Math.max(0, (lv || 1) - 1));
+}
+export function riftDelveTotalEp(lv, sec) {
+  return riftDelveEpPerSec(lv) * (sec || BALANCE.rift.delveDurSec || 60);
 }
 
 // ---- v2.6.1 余烬升级树 ----
@@ -237,7 +252,8 @@ function settleRiftExpedition(dt) {
   if (!ex) return;
   const lv = ex.level;
   // v2.8.12：深入期间消耗 EP 换取 DM——EP 耗尽则探索立即失败（无奖励）
-  const epUse = BALANCE.rift.delveEpPerSec * lv * dt;
+  // v3.4.8 反馈①：深入消耗随裂隙等级指数陡增（原线性 ×lv）
+  const epUse = riftDelveEpPerSec(lv) * dt;
   const actualEp = Math.min(S.ep, epUse);
   S.ep -= actualEp;
   if (actualEp < epUse - 1e-9) {
@@ -465,7 +481,7 @@ export function renderRift(container) {
       当前 DM: <b id="rift-dm-balance">${(S.dm || 0).toFixed(2)}</b> → 奖励 <b style="color:var(--purple)">+<span id="rift-dm">${sealDmReward(r)}</span> DM</b><br>
       封印消耗 <b>${fmt(r.sealCost)} EP</b><br>
       拥抱 → <span id="rift-dur">${Math.round(embraceDurMs() / 1000)}</span> 秒 ×5 爆发，但损失 20% EP<br>
-      深入 → 60 秒探索（产出递增 · 腐化累积 · 超阈值损失）</div>
+      深入 → 60 秒探索（约 <b>${fmt(riftDelveTotalEp(r.level))} EP</b> · 腐化累积 · 超阈值损失）</div>
       <div style="display:flex;gap:6px">
         <button class="btn" id="seal-rift" style="flex:1;font-size:12px">封印</button>
         <button class="btn" id="embrace-rift" style="flex:1;font-size:12px;background:rgba(163,113,247,.15);border-color:var(--purple)">拥抱</button>

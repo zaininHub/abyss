@@ -31,7 +31,8 @@ let toastFn = null; // v2.1 R4：由 main.js 注入 toast，灰态点击时提�
 
 const VEHICLE_IDS = BALANCE.vehicles.ids;
 const DM_SKIP = ['dmsight', 'dmfeed', 'dmmind', 'dmprotocol'];
-const THREAD_IDS = ['subsist1', 'subsist2', 'subsist3', 'cpu', 'mem', 'gpu', 'cache'];
+// v3.4.8 反馈⑦：「消耗优化」整组（subsist1/2/3、mem、cache）已删除，线程强化只剩产出强化两项
+const THREAD_IDS = ['cpu', 'gpu'];
 
 export function setToastFn(fn) { toastFn = fn; }
 function shopToast(msg) { if (toastFn) toastFn(msg); }
@@ -612,11 +613,8 @@ export function renderThreadShop(container) {
   const sorted = threadMods.slice().sort((a, b) => a.base - b.base);
   // v2.3 渐进披露链：同升级商店口径（定义序即链序）
   const split = chainSplit('thread', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
-  // v2.3.1 ⑤（rev18 9.3 分组表）：消耗优化在前（链首能量合剂在此组）、产出强化在后
-  const COST_IDS = ['subsist1', 'subsist2', 'subsist3', 'mem', 'cache']; // 能量合剂/循环供氧/生物打印餐/内存扩容/缓存优化
-  // v2.7.2：subsist1/2/3/mem 一次性（maxLevel:1，效果按拥有判定，多购无效已封顶）；cache 无限（存储上限 +5000/级）消耗 -25% 一次性
+  // v3.4.8 反馈⑦：「消耗优化」组随 5 个条目一并删除（见 upgrades.js），线程强化只剩「产出强化」
   renderChainedGroups(container, split, [
-    { title: '消耗优化', test: u => COST_IDS.includes(u.id) },
     { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速
   ], makeThreadItem, (u, el) => threadItemEls.set(u.id, el), { verb: '升级' }); // v2.8.18 ③：已购终态收折叠
   bindDelegate(container, (id) => {

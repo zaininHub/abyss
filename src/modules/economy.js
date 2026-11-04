@@ -574,28 +574,27 @@ function staffCostBase() {
 
 export function staffSalaryPerSec() {
   let m = 1;
-  if (S.upgrades.subsist1) m *= (1 - B.subsist1);
-  if (S.upgrades.subsist2) m *= (1 - B.subsist2);
-  if (S.upgrades.subsist3) m *= 0.5;
-  if (S.upgrades.mem) m *= 0.85;
-  // v2.7.4 ④：缓存优化消耗按级递减——Lv1 -25%，每级再 -3%（下限 -35%），升级持续生效
-  if (S.upgrades.cache) m *= Math.max(0.65, 0.75 * Math.pow(0.97, (S.upgrades.cache || 0) - 1));
+  // v3.4.8 反馈⑦：能量合剂/循环供氧/生物打印餐/内存扩容/缓存优化（消耗优化整组）已删除——
+  //   旧档里残留的 upgrades.subsist*/mem/cache 字段不再产生减耗效果（模块整体下线，字段仅作存档兼容保留）
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
   m *= researchMult('wage'); // v2.8.25 ②：薪酬协商（研究点）线程消耗 -4%/级
   m *= echoWageMult(); // v2.9.0：回响·薪酬共鸣 ×0.94/级（跨轮回）
-  const base = BALANCE.thread.salaryBase;
-  const perCap = BALANCE.thread.salaryPerThreadCap || Infinity;
-  let total = 0;
-  for (let i = 0; i < S.cultists.length; i++) {
-    let s = Math.min(0.5 * Math.pow(base, i), perCap);
-    s *= threadBindSalaryFactor(S.cultists[i]); // v3.3.0：绑定到转化器后该线程消耗增多
-    total += s;
-  }
-  total *= tideMult('salary'); // 潮汐：涨潮薪资 +50% / 退潮 -20% / 乱流 +30%
-  // v3.0.3 反馈②：薪资跟随线程产出保底 10%（消除 100:1 产出比，收敛 ≤10:1）
+  // v3.4.8 反馈⑥：薪资 = 线程产出 × (1/1.5) —— 锁死「产出:薪资 ≈ 1.5:1」。
+  //   旧口径「单线程基数 min(0.5×1.12^i, 1.8)」在 CPU/GPU/专注放大产出后完全跟不上，
+  //   实际跑出 20.97K : 452（46:1），EP 只涨不跌。现在薪资随产出线性走：
+  //   潮汐相位不再单独改薪资（产出侧已有 epMult 修正，避免 1.5 比例被相位打乱）；
+  //   绑定转化器的加成本以「全员平均系数」乘回（绑定线程消耗增多仍成立）。
   const out = staffOutputPerSec();
-  return Math.max(total * m, out * 0.10 * m) * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
+  const ratio = BALANCE.thread.salaryOutputRatio != null ? BALANCE.thread.salaryOutputRatio : 1 / 1.5;
+  let bindAvg = 1;
+  const n = S.cultists.length;
+  if (n > 0) {
+    let sum = 0;
+    for (const c of S.cultists) sum += threadBindSalaryFactor(c);
+    bindAvg = sum / n;
+  }
+  return out * ratio * m * bindAvg * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }
 
 // v2.8.30：专注每级加成曲线——低等级加成少、逐段递增至上限 20%/级（达到上限后固定不变）
@@ -875,7 +874,8 @@ export function ptHatchEpPerSec() {
 // + 组D 扩容梯与新增多效果上限建筑 capAdd（无限）+ 里程碑乘算基座 + 故事线变体加成
 export function epStorageCap() {
   let cap = 2000;
-  // v3.4.7 反馈②：缓存优化加成也逐级递增（+8,000/级起 ×1.15，限购 5 级；旧档超 5 级数量仍全额计入）
+  // v3.4.8 反馈⑦：缓存优化已从商店删除——此处仅按旧档残留等级继续计入上限（不让老存档凭空掉容量），
+  //   新档永远为 0（字段不可再购买）
   {
     const cCfg = B.cacheUpg || { capPer: 8000, capGrowth: 1.15 };
     const cacheLv = S.upgrades['cache'] || 0;

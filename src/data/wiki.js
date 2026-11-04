@@ -52,7 +52,7 @@ export const WIKI_SECTIONS = [
       <tr><td>星图</td><td>🛰 CPS 星际燃料</td><td>星图（深空探测科技解锁）</td><td>星图探索（消耗 EP/RP/PT、携带出战异兽每只 +10%）</td><td>深空殖民 / 宇宙探索升级；燃料模式持续燃烧 → 全局 ×1.5</td></tr>
       <tr><td>终局</td><td>🌑 VS 虚空碎片</td><td>深潜解锁（ES≥3 + DM + 宗教）</td><td>深潜产出 / 裂隙深入</td><td>深潜升级树</td></tr>
     </table>
-    <p class="wiki-hint">EP 存储上限 = 2000 + 备用粮仓（前期关键件，+4,000/级 ×1.18 递增、20 级封顶）+ 存储节点（后期大宗，+12,000/级 ×1.15 递增）+ 深井仓储/缓存优化/效能建筑扩容 + 里程碑 +${D.storageMileBonus*100}%/个。商店文案均为「购买后本级变化量」。</p>
+    <p class="wiki-hint">EP 存储上限 = 2000 + 备用粮仓（前期关键件，+4,000/级 ×1.18 递增、20 级封顶）+ 存储节点（后期大宗，+12,000/级 ×1.15 递增）+ 深井仓储/效能建筑扩容 + 里程碑 +${D.storageMileBonus*100}%/个。商店文案均为「购买后本级变化量」。</p>
   ` },
   { id: 'thread', name: '线程与薪资', unlock: null, body: () => `
     <h4>线程四态薪资状态机</h4>
@@ -84,7 +84,7 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'rift', name: '裂隙与余烬', unlock: 'rift', body: () => `
     <h4>深渊裂隙（随机出现，基础 ${Math.round(D.rift.spawnSec/60)} 分钟）</h4>
-    <p>裂隙基础 5 级（${D.rift.levelNames.join(' / ')}），实际等级 = cps 潜力级 + <b>科技树「裂隙等级」</b>（消耗 EP + DM，可无限升级，每级奖励同步提升）。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显）。</p>
+    <p>裂隙基础 5 级（${D.rift.levelNames.join(' / ')}），实际等级 = cps 潜力级 + <b>科技树「裂隙等级」</b>（消耗 EP + DM，可无限升级，每级奖励同步提升）。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显；<b>深入消耗随裂隙等级指数增长</b>（×1.75/级，Lv1 3 EP/s → Lv10 232 EP/s））。</p>
     <h4>裂隙余烬（跨转生保留）</h4>
     <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。裂隙等级本身改由科技树「裂隙等级」升级（EP + DM，无限）。</p>
     <p class="wiki-hint">腐化满额/吞噬倒计时期间不触发新裂隙（走吞噬路径，避免机制叠加）。</p>
