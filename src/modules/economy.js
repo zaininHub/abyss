@@ -693,9 +693,12 @@ function prodCapFloor(ratio) {
   const epCap = epStorageCap();
   return Math.round(Math.max(0, epCap) * ratio);
 }
-export function rpCap() { return Math.max(vaultCap(2500, 400, S.upgrades && S.upgrades.rp_vault), prodCapFloor(0.25)); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
+// v3.5.0 反馈④：仓库扩容必须「叠在基座之上」——此前用 max() 取大，基座一旦大于仓库总量，
+//   买再多级增量为 0（卡面只能写「已由产出基座接管，扩容不再叠加」，玩家完全看不懂）。
+//   vaultCap(0, per, lv) 是纯增量（不含 base），与基座相加后每级都真实生效。
+export function rpCap() { return Math.round(2500 + vaultCap(0, 400, S.upgrades && S.upgrades.rp_vault) + prodCapFloor(0.25)); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
 export function dmCap() { return vaultCap(1000, 100, S.upgrades && S.upgrades.dm_vault); }
-export function ptCap() { return Math.max(vaultCap(1000, 200, S.upgrades && S.upgrades.pt_vault), prodCapFloor(0.18)); }
+export function ptCap() { return Math.round(1000 + vaultCap(0, 200, S.upgrades && S.upgrades.pt_vault) + prodCapFloor(0.18)); }
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
 export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }

@@ -143,7 +143,7 @@ export const BALANCE = {
     { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 1.4e6, growth: 1.45, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
     { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
     // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径；v3.4.2 反馈①：×3）----
-    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
+    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '晋升职级点 ×1.41/级（满 2 级共 ×2）' }, // v3.5.0 反馈③：原「×√2」看不懂，改写为数值倍率
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
     // v3.4.5 反馈③：原「既有升级体系镜像」四条（存储节点/缓存优化/备用粮仓/深井仓储，cat D via upgrade）
     // 一并移除——它们本就在升级商店售卖，在效能建筑里是重复入口，也是「存储与续航」整组删掉后残留的空组来源。
@@ -278,7 +278,12 @@ export const BALANCE = {
     // v3.4.8 反馈①：深入消耗改指数陡增（原线性 ×lv，高裂隙等级几乎免费）——
     //   消耗 = delveEpPerSec × delveEpGrowth^(Lv-1)：Lv1 3/s、Lv5 28/s、Lv10 232/s、Lv15 1.9K/s
     delveEpGrowth: 1.75,
-    delveCorruptPerLevel: 0.83,     // v2.8.21 ⑥：每秒腐化累积 %/级——60s 深入自然累积 ≈50%（不手动净化最多到 50% 附近，手动净化可压）
+    // v3.5.0 反馈①：腐化改「按次」定义——旧口径 0.83%/s ×Lv 在 Lv10 一次深入就爆到 100%，
+    //   玩家完全没有操作空间。现在：Lv1 每次 33%（3 次填满 0→100%），裂隙等级每 +1 级多 10%，
+    //   单次封顶 50%（升到高等级后 2 次填满）——节奏与「升级后 2 次」的口径一致。
+    delveCorruptPerRun: 33.3,       // 单次深入（60s）累计腐化 %（Lv1）
+    delveCorruptGrowth: 0.10,       // 裂隙每级 +10%（相对 Lv1）
+    delveCorruptRunCap: 50,         // 单次深入腐化上限 %（2 次填满）
     delveFailCorrupt: 50,           // 结算时腐化阈值：>50% 触发损失
     delveFailLoss: 0.3,             // 损失 = 封印成本 ×0.3（EP）
     delveBonusDm: 3,                // 完成额外 DM ×级

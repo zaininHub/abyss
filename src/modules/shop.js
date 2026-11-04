@@ -1,6 +1,7 @@
 // v1.3 模块 E：全列表「可购买置前（成本升序，??? 最后）+ 已升级折叠」分区规范
 // 交互约束：容器级事件委托 + 购后原地更新（×N/成本/灰态），严禁整列表 DOM 重建
 import { S, save } from '../state.js';
+import { faithCap, religionUnlocked } from '../data/religions.js'; // v3.5.0 ②：FP 上限建筑（誓约圣龛）
 import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
@@ -141,10 +142,11 @@ function bindDelegate(container, onBuy) {
 // ========== 渲染：主商店（可叠加项：永留可购区，成本升序 + ??? 最后） ==========
 // v2.8.28 修复：资源仓库建筑按对应解锁链门控——EP 首次溢出前不显示「矩阵存储库」；
 // DM 解锁（首辆载具）前不显示「星尘金库」；宠物乐园购入前不显示「饵料仓库」；已购/已解锁不受影响。
-const VAULT_IDS = ['rp_vault', 'dm_vault', 'pt_vault'];
+const VAULT_IDS = ['rp_vault', 'dm_vault', 'pt_vault', 'faith_vault']; // v3.5.0 ②：FP 上限（誓约圣龛）同列
 function vaultAnchorReady(u) {
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
+  if (u.id === 'faith_vault') return religionUnlocked(); // v3.5.0 ②：宗教解锁后才需要 FP 上限
   if (u.id === 'pt_vault') return parseInt(S.chapter, 10) >= 3 || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构），P2 章节（第 3 章）后才开放；旧档标记兼容
   return false;
 }
@@ -520,17 +522,17 @@ function stripPct(desc) {
 // v3.0.8：存储类卡面统一口径 → v3.0.9 反馈④：改为「+变化量」（当前 1.05M 买下一级 +234K 就写 +234K，不写总量）
 const EP_STORAGE_IDS = ['storage', 'reserve_bin', 'deep_bin', 'cache'];
 // 资源仓库（RP/DM/PT 上限）同口径：{资源} 上限 +{本级增量}——v3.0.9 修正原「+购买后总量」误读（+2900 实为总量，真实增量 +400）
-const VAULT_RES = [['rp_vault', 'RP', () => rpCap()], ['dm_vault', 'DM', () => dmCap()], ['pt_vault', 'PT', () => ptCap()]];
+const VAULT_RES = [['rp_vault', 'RP', () => rpCap()], ['dm_vault', 'DM', () => dmCap()], ['pt_vault', 'PT', () => ptCap()], ['faith_vault', 'FP', () => faithCap()]];
 function vaultDesc(u) {
   const row = VAULT_RES.find(([id]) => id === u.id);
   if (!row) return null;
   const [, label, capFn] = row;
   const before = capFn();
   const after = withTempLv('upgrades', u.id, capFn);
-  // v3.4.9 反馈⑥：RP/PT 上限已跟随 EP 上限（产出基座），仓库扩容在基座之下时增量为 0——
-  //   此时如实写「已由产出基座接管」，避免「+0」看起来像没生效
-  if (after <= before) return `${label} 上限 ${fmt(before)}（已由产出基座接管，扩容不再叠加）`;
-  return `${label} 上限 +${fmt(after - before)}`;
+  // v3.5.0 反馈④：扩容已改为「叠在产出基座之上」，增量恒 >0——文案回到「+增量（当前总量）」，
+  //   不再出现「已由产出基座接管，扩容不再叠加」这种内部术语
+  if (after <= before) return `${label} 上限 ${fmt(before)}（本级已达上限）`;
+  return `${label} 上限 +${fmt(after - before)}（当前 ${fmt(before)}）`;
 }
 // 线程强化变化量：cpu/gpu → 线程产出差值；subsist1-3/mem → 线程消耗差值；cache → 存储差值 + 消耗差值
 function threadEffectDesc(u) {

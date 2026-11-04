@@ -2713,6 +2713,7 @@ if (typeof window !== 'undefined') {
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
   window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
+    faithCap, // v3.5.0 ②：FP 上限（已从圣所搬到誓约圣龛）测试钩子
     rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
     riftEtaSec, riftNextSec, // v3.3.5 反馈③：裂隙倒计时/下次间隔（测试钩子）
     vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, vehicleDmPerMin, // v3.3.6：探采汇率/乘区/结算口径（测试钩子）

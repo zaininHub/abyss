@@ -151,6 +151,17 @@ export function riftRewardMult(lv) {
   const g = BALANCE.rift.delveRewardGrowth != null ? BALANCE.rift.delveRewardGrowth : 0.15;
   return 1 + g * Math.max(0, (lv || 1) - 1);
 }
+// ---- v3.5.0 反馈①：单次深入的腐化量（按次定义，不再按秒 ×等级） ----
+// Lv1 33.3%（3 次填满）→ 每级 +10% → 单次封顶 50%（2 次填满）。
+export function riftDelveCorruptPerRun(lv) {
+  const base = BALANCE.rift.delveCorruptPerRun != null ? BALANCE.rift.delveCorruptPerRun : 33.3;
+  const g = BALANCE.rift.delveCorruptGrowth != null ? BALANCE.rift.delveCorruptGrowth : 0.10;
+  const cap = BALANCE.rift.delveCorruptRunCap != null ? BALANCE.rift.delveCorruptRunCap : 50;
+  return Math.min(cap, base * (1 + g * Math.max(0, (lv || 1) - 1)));
+}
+export function riftDelveCorruptPerSec(lv) {
+  return riftDelveCorruptPerRun(lv) / (BALANCE.rift.delveDurSec || 60);
+}
 // 主动净化 EP 成本倍率 = 1 + 0.30×(当前裂隙 Lv-1)：等级越高净化越贵（Lv10 ×3.7）
 export function riftPurgeCostMult() {
   const lv = Math.max(1, Math.min(riftMaxLevel(), riftLevelOf(computeCps())));
@@ -288,8 +299,8 @@ function settleRiftExpedition(dt) {
   const rewardMul = riftRewardMult(lv);
   ex.gainedDm += BALANCE.rift.delveDmPerLevel * rewardMul * dt;
   if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * rewardMul * dt;
-  // 腐化仍按 ×lv 累积：等级越高越需要频繁净化（净化 EP 成本同步抬升 = 裂隙升级的主要代价）
-  S.corruption = Math.min(100, (S.corruption || 0) + BALANCE.rift.delveCorruptPerLevel * lv * dt);
+  // v3.5.0 反馈①：腐化按「单次深入 = 33%~50%」摊到每秒，等级越高单次腐化越多（净化成本同步抬升）
+  S.corruption = Math.min(100, (S.corruption || 0) + riftDelveCorruptPerSec(lv) * dt);
   if (Date.now() >= ex.until) {
     // 终局：腐化 > 阈值 → 损失；否则结算奖励
     const fail = S.corruption > BALANCE.rift.delveFailCorrupt;
@@ -509,7 +520,7 @@ export function renderRift(container) {
       当前 DM: <b id="rift-dm-balance">${(S.dm || 0).toFixed(2)}</b> → 奖励 <b style="color:var(--purple)">+<span id="rift-dm">${sealDmReward(r)}</span> DM</b><br>
       封印消耗 <b>${fmt(r.sealCost)} EP</b><br>
       拥抱 → <span id="rift-dur">${Math.round(embraceDurMs() / 1000)}</span> 秒 ×5 爆发，但损失 20% EP<br>
-      深入 → 60 秒探索（约 <b>${fmt(riftDelveTotalEp(r.level))} EP</b> · 腐化累积 · 超阈值损失）</div>
+      深入 → 60 秒探索（约 <b>${fmt(riftDelveTotalEp(r.level))} EP</b> · 腐化 <b>+${riftDelveCorruptPerRun(r.level).toFixed(0)}%</b> · 超 ${BALANCE.rift.delveFailCorrupt}% 结算损失）</div>
       <div style="display:flex;gap:6px">
         <button class="btn" id="seal-rift" style="flex:1;font-size:12px">封印</button>
         <button class="btn" id="embrace-rift" style="flex:1;font-size:12px;background:rgba(163,113,247,.15);border-color:var(--purple)">拥抱</button>

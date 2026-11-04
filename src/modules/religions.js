@@ -10,6 +10,7 @@ import {
   praiseRate, faithCap, devotionMult, transcendCost,
 } from '../data/religions.js';
 import { policyMult } from '../data/policies.js';
+import { dirty } from '../core/runtime.js'; // v3.5.0：FP 越界钳回后需要立刻重渲染面板
 
 let logFn = null;
 let toastFn = null;
@@ -222,6 +223,13 @@ export function faithDrainPerSec() {
 // v3.0.2：自动暂停统一口径（与探采同）——EP 不足持续 AUTO_PAUSE_GRACE 秒才暂停；暂停后不自动恢复（需手动重启）
 const AUTO_PAUSE_GRACE = 5; // 秒
 export function tickReligion(dt) {
+  // v3.5.0 ②：FP 上限搬到「誓约圣龛」后，旧档（上限曾随圣所涨）可能超过新上限——
+  //   钳回放在暂停/解锁判定之前，保证任何状态下「余额 ≤ 上限」这个不变量都成立
+  const capNow = faithCap();
+  if ((S.faith || 0) > capNow) {
+    S.faith = capNow;
+    dirty.top = true; dirty.religion = true; // 面板/顶栏必须跟着刷新，否则会停在旧的越界数值上
+  }
   if (S.paused) return; // v2.6.5 ④：暂停（模拟离线）期间信仰不产出，恢复结算时按同口径离线结算
   if (!religionUnlocked()) return;
   const r = templeFaithPerSec();
@@ -366,6 +374,7 @@ export function renderReligionPanel(container) {
   container.innerHTML = `
     <div class="religion-desc">${r.icon} 已信奉 <b>${r.name}</b>：${r.effect}（+圣印全局产出）</div>
     <div class="off-stat"><span>FP 余额</span><b>${(S.faith || 0).toFixed(2)} / ${faithCap()}</b></div>
+    <div class="off-stat"><span>FP 上限</span><b style="color:var(--text-2)">${faithCap()} · 由升级商店「誓约圣龛」提升</b></div>
     <div class="off-stat"><span>FP 产出</span><b>+${templeFaithPerSec().toFixed(2)}/s（圣所）${fpStatusTag()}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 圣印（全局产出 +8%/级）</div>
     <div class="religion-seal-row">
@@ -373,7 +382,7 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗 FP 升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} FP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s · FP 上限 +50/级 · 单位 FP ${fmt(templeEpPerUnit())} EP · 本级 -${fmt(templeEpPerUnit() * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / Math.max(1, templeEpPerUnit())).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 本级 -${fmt(templeEpPerUnit() * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / Math.max(1, templeEpPerUnit())).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}（无上限）</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"

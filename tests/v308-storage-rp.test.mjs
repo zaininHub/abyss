@@ -42,8 +42,13 @@ test('epCapAfterBuy：备用粮仓/缓存/数据中心同样给出总量（乘�
 test('rpCap / addRp：基础 2,500、矩阵存储库逐级扩容（首级 +400，逐级 ×1.15），且超出即截断', () => {
   baseState({ upgrades: { rp_vault: 3 } });
   // v3.4.4 反馈①：上限增量不再是恒定 400 —— 各级增量 400/460/529，累计 +1,389
-  assert.equal(eco.rpCap(), 2500 + Math.round(400 * (Math.pow(1.15, 3) - 1) / 0.15), 'RP 上限 = 2500 + 逐级递增增量');
+  // v3.5.0 ④：仓库增量「叠在产出基座之上」——期望值 = 2500 + 逐级增量 + EP 上限 ×25%（基座）
+  const vault = Math.round(400 * (Math.pow(1.15, 3) - 1) / 0.15);
+  const floor = Math.round(eco.epStorageCap() * 0.25);
+  assert.equal(eco.rpCap(), 2500 + vault + floor, 'RP 上限 = 2500 + 逐级递增增量 + 产出基座');
+  const noBase = { ...S, _rpOverflowSeen: false };
   assert.ok(eco.rpCap() > 2500 + 3 * 400, '逐级扩容后 3 级总量必须高于旧线性口径');
+  void noBase;
   eco.addRp(1e9);
   assert.equal(S.rp, eco.rpCap(), 'addRp 必须钳到上限（原蒸馏直写 S.rp 会越界）');
 });

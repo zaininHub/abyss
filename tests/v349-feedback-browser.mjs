@@ -240,13 +240,17 @@ await sleep(1800);
     const top = document.getElementById('h-faith')?.textContent || '';
     const panel = document.querySelector('#religion-panel')?.textContent || '';
     const rel = window.S.religion || {};
-    const expectCap = 100 + (rel.temple || 0) * 50 + (rel.seal || 0) * 20;
-    return { top: top.trim(), expectCap, hasCapInPanel: /FP 上限 \+50\/级/.test(panel), panelTop: panel.slice(0, 90) };
+    // v3.5.0 ②：FP 上限改由「誓约圣龛」提供，圣所不再叠加——上限 = 100 + 圣印×20 + 圣龛增量
+    const fvLv = (window.S.upgrades && window.S.upgrades.faith_vault) || 0;
+    let bonus = 0;
+    for (let i = 1; i <= fvLv; i++) bonus += 50 * Math.pow(1.15, i - 1);
+    const expectCap = Math.round(100 + bonus + (rel.seal || 0) * 20);
+    return { top: top.trim(), expectCap, hasCapInPanel: /由升级商店「誓约圣龛」提升/.test(panel), panelTop: panel.slice(0, 120) };
   });
   const cap = res.expectCap;
   if (res.top.includes('/') && res.top.includes(String(cap))) ok('⑧ 顶栏 FP 显示「当前 / 上限」', res.top);
   else bad('⑧ 顶栏 FP 上限缺失', JSON.stringify({ top: res.top, cap }));
-  if (res.hasCapInPanel) ok('⑧ 圣所卡注明「FP 上限 +50/级」', '');
+  if (res.hasCapInPanel) ok('⑧ 圣所卡注明上限来源（誓约圣龛）', '');
   else bad('⑧ 圣所卡未注明上限来源', res.panelTop);
 }
 

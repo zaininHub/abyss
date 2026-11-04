@@ -22,6 +22,9 @@ export const UPGRADES = [
   {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:400},desc:'RP 上限逐级扩容（首级 +400，逐级 ×1.15）'},
   {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'EP 购买 · DM 上限逐级扩容（首级 +100，逐级 ×1.15）'},
   {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'EP 购买 · PT 上限逐级扩容（首级 +200，逐级 ×1.15）'},
+  // v3.5.0 反馈②：FP 上限独立成建筑（原挂在圣所等级上，圣所既产 FP 又给上限，语义混乱）。
+  //   圣所改为「只产信仰」；上限入口统一到这里，价格高于星尘金库（6e5）与饵料仓库（3e5）。
+  {id:'faith_vault',name:'誓约圣龛',cat:'D',unlimited:true,base:1.2e6,growth:1.5,cps:0,fx:{key:'faithCapAdd',value:50},desc:'EP 购买 · FP 上限逐级扩容（首级 +50，逐级 ×1.15）'},
   {id:'intern',name:'实习生',base:600000.0,cps:20,growth:1.55,desc:'基础产出+20/s'}, // v2.8.3：base×4/cps 降
   {id:'team',name:'小组协作',base:6000000.0,cps:110,growth:1.55,desc:'基础产出+110/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:60000000.0,cps:600,growth:1.55,desc:'基础产出+600/s'}, // v2.8.3：base×4/cps 降

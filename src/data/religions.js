@@ -109,8 +109,16 @@ export function praiseRate() {
   return PRAISE.rateBase + PRAISE.ratePerTranscend * t * t;
 }
 // 信仰存储上限：基础 100 + 圣所×50 + 圣印×20，虚空祭坛 ×(1+0.5/座)
+// v3.5.0 反馈②：FP 上限拆成独立建筑「誓约圣龛」（升级商店，EP 购买）——
+//   圣所只负责产出信仰，不再顺带给上限；圣印仍按每级 +20 提供少量上限。
+export function faithVaultBonus() {
+  const lv = (S.upgrades && S.upgrades.faith_vault) || 0;
+  let sum = 0;
+  for (let i = 1; i <= lv; i++) sum += 50 * Math.pow(1.15, i - 1); // 与其它仓库同口径（VAULT_CAP_GROWTH）
+  return sum;
+}
 export function faithCap() {
-  let cap = 100 + ((S.religion && S.religion.temple) || 0) * 50 + (sealLevel()) * 20;
+  let cap = 100 + faithVaultBonus() + sealLevel() * 20;
   const va = secretSanctumLv('void_altar');
   if (va > 0) cap *= (1 + 0.5 * va);
   return Math.round(cap);

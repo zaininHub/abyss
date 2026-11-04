@@ -86,15 +86,17 @@ try {
   });
   for (const [key, label, base, per] of [['rp', 'RP', 2500, 400], ['dm', 'DM', 1000, 100], ['pt', 'PT', 1000, 200]]) {
     const got = cap[key];
-    const want = [0, 1, 2, 3].map(lv => expCap(base, per, lv));
+    // v3.5.0 ④：上限 = 基础 + 逐级增量 + 产出基座（EP 上限 ×25%/18%）——基座是常数，故比较「相对 0 级的增量」
+    const want = [0, 1, 2, 3].map(lv => expCap(base, per, lv) - base);
+    const rel = got.map(v => v - got[0]);
     const d1 = got[1] - got[0], d2 = got[2] - got[1], d3 = got[3] - got[2];
-    if (JSON.stringify(got) === JSON.stringify(want)) ok(`① ${label} 上限逐级扩容（+${d1}/+${d2}/+${d3}）`, `${got.join(' → ')}`);
-    else bad(`① ${label} 上限口径`, `实得 ${got.join('/')} 期望 ${want.join('/')}`);
+    if (JSON.stringify(rel) === JSON.stringify(want)) ok(`① ${label} 上限逐级扩容（+${d1}/+${d2}/+${d3}）`, `${got.join(' → ')}`);
+    else bad(`① ${label} 上限口径`, `实得增量 ${rel.join('/')} 期望 ${want.join('/')}`);
     if (d3 > d1) ok(`① ${label} 单级增量随级数递增（不是恒定 +${per}）`, `${d1} → ${d3}`);
     else bad(`① ${label} 增量未递增`, `${d1} → ${d3}`);
   }
-  if (cap.rp[3] !== 2500 + 3 * 400) ok('① 3 级总量高于旧线性口径（旧 3,700 → 新 ' + cap.rp[3] + '）');
-  else bad('① 与旧线性口径无差异', String(cap.rp[3]));
+  if (cap.rp[3] - cap.rp[0] > 3 * 400) ok('① 3 级增量高于旧线性口径（旧 1,200 → 新 ' + (cap.rp[3] - cap.rp[0]) + '）');
+  else bad('① 与旧线性口径无差异', String(cap.rp[3] - cap.rp[0]));
 
   // 研究卡：新增项首级 280 RP、老项仍 50 RP；买一级后次价 = ceil(280×1.7)=476
   const res = await page.evaluate(async () => {
