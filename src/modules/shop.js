@@ -1277,14 +1277,15 @@ function updateV21Item(b) {
 
 function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); } // 镜像项走升级商店；v3.1.1 反馈⑧：组 D 六座扩容建筑接回「存储与扩容」分区（v2.8.27 移除后一直无购买入口）
 
-// v2.3.1 ⑤（rev18 9.3）：效能建筑 cat A-X 分组显示名（研发命名，回填设计文档 9.3 表）。
-// 组序 = 字母序（A→I，X 岔路镜像实际渲染于岔路口分区不进本列表）；「其他」为兜底组，未命中组谓词的条目归入、组内可见 0 项整组不渲染。
-const V21_GROUP_NAMES = {
-  // v2.6.3 反馈①：B「点击与暴击」分区移除（弱化主动点击）
-  A: '全局产出强化', C: '成本与效率优化', D: '存储与扩容',
-  E: '线程与薪资', F: '研究点强化', G: '离线续航', H: '事件与项目',
-  I: '职级强化', X: '命运誓言',
-};
+// v2.3.1 ⑤（rev18 9.3）：效能建筑 cat 分组显示名（研发命名，回填设计文档 9.3 表）。
+// v3.4.2 反馈②「分类太细没必要」：原 A/C/D/E/F/G/H/I 八组（链序窗口内常出现一组一卡的碎标题）
+// 合并为三大组 + 命运誓言 + 兜底「其他」；组序 = 大组声明序。
+const V21_GROUPS = [
+  { title: '产出与效率', cats: ['A', 'C', 'E', 'I'] }, // 全局乘数 / 成本折扣 / 线程与薪资 / 职级强化
+  { title: '存储与续航', cats: ['D', 'G'] },           // 上限扩容 / 离线续航
+  { title: '研究与事件', cats: ['F', 'H'] },           // RP 加成 / 事件与项目
+  { title: '命运誓言', cats: ['X'] },
+];
 
 export function renderV21Buildings(container) {
   if (!container) return;
@@ -1319,8 +1320,7 @@ export function renderV21Buildings(container) {
   const chainList = [...open, ...locked];
   const split = chainSplit('v21', chainList, b => v21UnlockedMark(b), S);
   const groups = [
-    ...Object.entries(V21_GROUP_NAMES).map(([letter, title]) =>
-      ({ title, test: b => (b.cat || '') === letter })), // v2.8.10：组标题去「字母 · 」前缀
+    ...V21_GROUPS.map(g => ({ title: g.title, test: b => g.cats.includes(b.cat || '') })),
     { title: '其他', test: () => true }, // 兜底组：未命中 cat 谓词的条目归入，条目永不丢
   ];
   renderChainedGroups(container, split, groups, makeV21Item, (b, el) => v21ItemEls.set(b.id, el));

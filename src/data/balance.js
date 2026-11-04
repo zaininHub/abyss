@@ -98,15 +98,15 @@ export const BALANCE = {
     { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3.2e6, growth: 1.48, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
     { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 3.8e6, growth: 1.50, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
     { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.6e6, growth: 1.50, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22' },
-    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5.4e6, growth: 1.52, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5.4e6, growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
     // ---- 组 B · 点击乘数（7 座）----
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----
     // v3.4.2 反馈①：折价类同样重标价（成本 ×0.98/级 的复利极强，原 3 万起、5 万即可买到永久降本）
     { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e5, growth: 1.40, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.98 },   desc: '每级所有成本 ×0.98' },
-    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.3e6, growth: 1.45, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96' },
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.6e6, growth: 1.45, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.96 },   desc: '每级所有成本 ×0.96' },
     { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 4.2e6, growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.95 },   desc: '每级所有成本 ×0.95' },
-    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 1.4e7, growth: 1.55, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92' },
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 1.4e7, growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.92 },   desc: '每级所有成本 ×0.92' },
     { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 3e7,  growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.88 },   desc: '所有成本 ×0.88' },
     { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 5.5e5, growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.75 },  desc: '专注成本 ×0.75' },
     // ---- 组 D · 上限扩容（均受 30% 防死锁钳制；storage/cache 为既有升级体系镜像）----
@@ -131,26 +131,26 @@ export const BALANCE = {
     { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 6.6e5, rpCost: 300, growth: 1.45, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
     { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.75e6,rpCost: 600, growth: 1.45, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
     { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 5.6e6, rpCost: 1000, growth: 1.50, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
-    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 8e6,   rpCost: 1800, growth: 1.52, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.55, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 8e6,   rpCost: 1800, growth: 1.50, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.50, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
-    // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加）----
-    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 1000,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%' },
-    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 1e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%' },
-    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 1.2e5,growth: 1.28, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%' },
-    { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 1e5,  growth: 1.25, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时' },
-    { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 1.3e5,growth: 1.27, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时' },
-    // ---- 组 H · 事件/项目（6 座）----
-    { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 2e5,  growth: 1.40, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
-    { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 6e5,growth: 1.30, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
-    { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 1.2e6,  growth: 1.30, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%' },
-    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 1.6e6,  growth: 1.28, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2' },
-    { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 4.8e5,growth: 1.35, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
-    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 1.6e6,  growth: 1.28, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
-    // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径）----
-    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 3e5,  growth: 1.30, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
-    { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 5e5,  growth: 1.35, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
+    // ---- 组 G · 离线效率（5 座，三段式取最大档，不叠加；v3.4.2 反馈①：×2.5）----
+    { id: 'beacon_1',       name: '断线信号塔·初',cat:'G', cap: 1, base: 2500,growth: 1.15, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.4 }, desc: '离线效率 → 40%' },
+    { id: 'beacon_2',       name: '断线信号塔·中',cat:'G', cap: 1, base: 2.5e4, growth: 1.20, unlockTech: 'offline1',  fx: { key: 'offlineRate', value: 0.6 }, desc: '离线效率 → 60%' },
+    { id: 'beacon_3',       name: '断线信号塔·永',cat:'G', cap: 1, base: 3e5, growth: 1.30, unlockTech: 'grand_off', fx: { key: 'offlineRate', value: 1.0 }, desc: '离线效率 → 100%' },
+    { id: 'delay_cache',    name: '延时缓存站', cat: 'G', cap: 1, base: 2.5e5,  growth: 1.28, unlockTech: 'offline1',  fx: { key: 'offlineCap', value: 16 },   desc: '离线收益上限 → 16 小时' },
+    { id: 'delay_cache_2',  name: '延时缓存站·折',cat:'G',cap: 1, base: 3.2e5,growth: 1.30, unlockTech: 'offline24',  fx: { key: 'offlineCap', value: 24 },   desc: '离线收益上限 → 24 小时' },
+    // ---- 组 H · 事件/项目（6 座；v3.4.2 反馈①：base ×3、growth 陡化）----
+    { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 6e5,  growth: 1.45, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
+    { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 1.8e6, growth: 1.45, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
+    { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 3.6e6,  growth: 1.45, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%' },
+    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2' },
+    { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 1.4e6, growth: 1.45, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
+    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
+    // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径；v3.4.2 反馈①：×3）----
+    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
+    { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
     { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: 'EP 存储上限递增（逐级 ×1.18）' },
     { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: 'EP 存储上限 +8,000/级' },

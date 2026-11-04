@@ -117,11 +117,12 @@ export function unlockRpV21(b) {
   return Math.ceil(rp * BALANCE.buildingUnlockRatio);
 }
 
-// 里程碑解锁门控（终章 RESCALE §7：m=5→2e5 档；m=6→3e5 档；m=7→4~5e5 档，防前期速通）
+// 里程碑解锁门控（终章 RESCALE §7，按价位档映射：m=5→低价档、m=6→中档、m=7→高档，防前期速通）
+// v3.4.2 反馈①：效能建筑全面涨价（base ×3~×8）后门槛随价位映射同步上移，保持各建筑原里程碑档位基本不变
 export function unlockMilestoneV21(b) {
-  if (b.base >= 4e5) return 7;
-  if (b.base >= 3e5) return 6;
-  if (b.base >= 2e5) return 5;
+  if (b.base >= 4e6) return 7;
+  if (b.base >= 1.5e6) return 6;
+  if (b.base >= 6e5) return 5;
   return 0;
 }
 

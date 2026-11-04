@@ -85,27 +85,27 @@ t('legacyTechRp 覆盖全部 46 个删除科技 + 6 钥匙', () => {
 });
 
 console.log('[3] RESCALE 价梯（终章 §7 唯一数值基准）');
-t('组A 锚链 6 栋：基价 2e5~5e5、growth ×1.30~1.50、3 级封顶', () => {
+t('组A 锚链 6 栋：基价 2e6~5.5e6、growth ×1.45~1.50、3 级封顶（v3.4.2 反馈① 效能建筑涨价）', () => {
   const anchor = ['quantum_stacker', 'singularity_core', 'transcend_temple', 'ascend_spire', 'eternity_hall', 'end_shrine'];
   for (const id of anchor) {
     const b = V21_BUILDINGS.find(x => x.id === id);
-    assert.ok(b.base >= 2e5 && b.base <= 5e5, `${id} 基价 ${b.base} 越界`);
-    assert.ok(b.growth >= 1.30 && b.growth <= 1.50, `${id} growth 越界`);
+    assert.ok(b.base >= 2e6 && b.base <= 5.5e6, `${id} 基价 ${b.base} 越界`);
+    assert.ok(b.growth >= 1.45 && b.growth <= 1.50, `${id} growth 越界`);
     assert.equal(b.cap, 3);
   }
 });
-t('锚链末级价 ≤ 1.2e6（≤ m=6 期上限 1,814,427）', () => {
+t('锚链末级价 ≤ 1.5e7（≤ 终局档上限量级，v3.4.2 反馈① 后重标）', () => {
   const anchor = ['quantum_stacker', 'singularity_core', 'transcend_temple', 'ascend_spire', 'eternity_hall', 'end_shrine'];
   for (const id of anchor) {
     const b = V21_BUILDINGS.find(x => x.id === id);
     const last = b.base * Math.pow(b.growth, b.cap - 1);
-    assert.ok(last <= 1.2e6, `${id} 末级价 ${last} > 1.2e6`);
+    assert.ok(last <= 1.5e7, `${id} 末级价 ${last} > 1.5e7`);
   }
 });
-t('调度中枢：1e5 × 1.25、9 级封顶、末级 ≈ 6e5', () => {
+t('调度中枢：1.2e6 × 1.40、9 级封顶、末级 ≈ 1.77e7（v3.4.2 反馈① 重标）', () => {
   const b = V21_BUILDINGS.find(x => x.id === 'dispatch_hub');
-  assert.equal(b.base, 1e5); assert.equal(b.growth, 1.25); assert.equal(b.cap, 9);
-  assert.ok(Math.abs(b.base * Math.pow(b.growth, 8) - 596046) < 1, '末级应 ≈596,046');
+  assert.equal(b.base, 1.2e6); assert.equal(b.growth, 1.40); assert.equal(b.cap, 9);
+  assert.ok(Math.abs(b.base * Math.pow(b.growth, 8) - 1.2e6 * Math.pow(1.4, 8)) < 1, '末级应 ≈1.77e7');
 });
 t('组D 扩容梯：量子缓存池 8e4×1.25(+50K/级)、维度压缩仓 2e5×1.30(+5e6/级)、超限储存器 5e5×1.35(+5e9/级)，v2.4 均无限升级', () => {
   const pool = V21_BUILDINGS.find(x => x.id === 'quantum_pool');
@@ -128,44 +128,44 @@ t('v2.4 新增多效果上限建筑：三座均 unlimited + 双效果键 + 30% �
   const keys = [...r.fx, ...rc.fx, ...dc.fx].map(f => f.key);
   assert.ok(keys.every(k => FX_KEYS.includes(k)), `新增建筑效果键 ${keys} 应全注册`);
 });
-t('组I 晋升双楼：轮回圣殿 3e5×1.30（2 级 ×√2/级）、传奇职级殿 5e5×1.35（1 级 ×3），满级 ppMult=×6', () => {
+t('组I 晋升双楼：轮回圣殿 9e5×1.45（2 级 ×√2/级）、传奇职级殿 1.5e6×1.45（1 级 ×3），满级 ppMult=×6（v3.4.2 反馈① 重标）', () => {
   const c = V21_BUILDINGS.find(x => x.id === 'cycle_temple');
   const l = V21_BUILDINGS.find(x => x.id === 'legend_rank_hall');
-  assert.equal(c.base, 3e5); assert.equal(c.growth, 1.30); assert.equal(c.cap, 2);
+  assert.deepEqual([c.base, c.growth, c.cap], [9e5, 1.45, 2]);
   assert.ok(Math.abs(c.fx.value - Math.SQRT2) < 1e-12);
-  assert.deepEqual([l.base, l.growth, l.cap, l.fx.value], [5e5, 1.35, 1, 3]);
+  assert.deepEqual([l.base, l.growth, l.cap, l.fx.value], [1.5e6, 1.45, 1, 3]);
   // fxValue 满级验证
   S.buildings = { cycle_temple: 2, legend_rank_hall: 1 };
   assert.ok(Math.abs(fxValue('ppMul') - 6) < 1e-9, `满级 ppMul 应 ×6，实际 ${fxValue('ppMul')}`);
   S.buildings = {};
 });
-t('各组高端楼（C/E/F/G/H）基价统一 ≤1.5e5、growth ×1.24~1.28、末级 ≤1.2e6（v2.6.3 反馈①：B 分区已移除；RP 计价项除外）', () => {
+t('各组高端楼（C/E/F/G/H）基价 ≤3.5e7、growth ×1.28~1.50、末级 ≤3.5e7（v3.4.2 反馈① 涨价后口径）', () => {
   const high = ['purchase_office_3', 'super_team', 'legend_institute', 'beacon_3', 'delay_cache_2', 'event_tide_lab', 'proj_parallel'];
   for (const id of high) {
     const b = V21_BUILDINGS.find(x => x.id === id);
-    if (b.rpCost) continue; // v3.0.3 后续：RP 加成组按 RP 计价（growth 1.28~1.42），不受 EP 阶梯约束
-    assert.ok(b.base <= 1.5e5, `${id} 基价 ${b.base} > 1.5e5`);
-    assert.ok(b.growth >= 1.24 && b.growth <= 1.28, `${id} growth=${b.growth} 越界`);
+    if (b.rpCost) continue; // RP 加成组按 RP 计价，不受 EP 阶梯约束
+    assert.ok(b.base <= 3.5e7, `${id} 基价 ${b.base} > 3.5e7`);
+    assert.ok(b.growth >= 1.28 && b.growth <= 1.50, `${id} growth=${b.growth} 越界`);
     const last = b.base * Math.pow(b.growth, b.cap - 1);
-    assert.ok(last <= 1.2e6, `${id} 末级价 ${last} > 1.2e6`);
+    assert.ok(last <= 3.5e7, `${id} 末级价 ${last} > 3.5e7`);
   }
 });
-t('非钳制建筑全量：任一级价格 ≤ 1e7（终局档 base 6e6 允许）', () => {
+t('非钳制建筑全量：任一级价格 ≤ 5e7（终局档 base 3e7 允许；v3.4.2 反馈① 后重标）', () => {
   const clamped = new Set([...BALANCE.v21CapClampIds, 'storage', 'cache']);
   for (const b of V21_BUILDINGS) {
     if (b.via === 'upgrade' || clamped.has(b.id)) continue;
     for (let n = 0; n < b.cap; n++) {
       const price = b.base * Math.pow(b.growth, n);
-      assert.ok(price <= 1e7, `${b.id} 第 ${n + 1} 级价 ${price} > 1e7（终局档 base 6e6 允许）`);
+      assert.ok(price <= 5e7, `${b.id} 第 ${n + 1} 级价 ${price} > 5e7（终局档 base 3e7 允许）`);
     }
   }
 });
-t('解锁门控档位：2e5→m5、3e5→m6、4~5e5→m7（终章 §7）', () => {
+t('解锁门控档位：6e5→m5、1.5e6→m6、4e6→m7（终章 §7 · v3.4.2 反馈① 价位映射同步上移）', () => {
   for (const b of V21_BUILDINGS) {
     const g = unlockMilestoneV21(b);
-    if (b.base >= 4e5) assert.equal(g, 7);
-    else if (b.base >= 3e5) assert.equal(g, 6);
-    else if (b.base >= 2e5) assert.equal(g, 5);
+    if (b.base >= 4e6) assert.equal(g, 7);
+    else if (b.base >= 1.5e6) assert.equal(g, 6);
+    else if (b.base >= 6e5) assert.equal(g, 5);
     else assert.equal(g, 0);
   }
 });
@@ -270,20 +270,20 @@ t('v21BuildingCost：组D 三梯价格 ≤ 当前 epStorageCap() × 30%（购买
 t('钳制只作用于组D 三梯 + storage/cache，非扩容建筑不受 30% 约束（§5.4）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);
   const b = V21_BUILDINGS.find(x => x.id === 'end_shrine');
-  // 末级价 1.125e6 远超开局 30%×4600，但非扩容项不钳制——按原价
+  // 首级价 5.4e6 远超开局 30%×4600，但非扩容项不钳制——按原价
   const cost = v21BuildingCost(b);
-  assert.equal(cost, Math.ceil(5e5 * Math.pow(1.5, 0)), '非扩容建筑价格不得被 30% 钳制');
+  assert.equal(cost, Math.ceil(5.4e6 * Math.pow(1.5, 0)), '非扩容建筑价格不得被 30% 钳制');
 });
 
 console.log('[7] 解锁链路');
 t('buildingUnlockedV21：RP 标记 + 里程碑门控 + 钥匙科技门控三重判定', () => {
   S.upgrades = {}; S.buildings = {}; S.milesDone = {}; S.unlockedBuildings = {}; S.tech = {};
-  const b = V21_BUILDINGS.find(x => x.id === 'quantum_stacker'); // base 2e5 → m5 门控
+  const b = V21_BUILDINGS.find(x => x.id === 'quantum_stacker'); // base 2e6 → m6 门控（v3.4.2 价位映射）
   assert.equal(buildingUnlockedV21(b, S), false, '未解锁 + 里程碑不足');
   S.unlockedBuildings = { quantum_stacker: true };
-  assert.equal(buildingUnlockedV21(b, S), false, 'RP 已解锁但 m<5 不可购');
-  for (let i = 0; i < 5; i++) S.milesDone['m' + i] = true;
-  assert.equal(buildingUnlockedV21(b, S), true, 'm≥5 + RP 解锁 → 可购');
+  assert.equal(buildingUnlockedV21(b, S), false, 'RP 已解锁但 m<6 不可购');
+  for (let i = 0; i < 6; i++) S.milesDone['m' + i] = true;
+  assert.equal(buildingUnlockedV21(b, S), true, 'm≥6 + RP 解锁 → 可购');
   // 钥匙科技门控：focus_core（focus_opt 族，v2.6.3 后以非点击系钥匙为样本）
   const fc = V21_BUILDINGS.find(x => x.id === 'focus_core');
   S.unlockedBuildings = { focus_core: true };
@@ -297,7 +297,7 @@ t('v21Level / v21Maxed / buildingCostV21 基础读侧', () => {
   const b = V21_BUILDINGS.find(x => x.id === 'warmup_node');
   assert.equal(v21Level('warmup_node', S), 3);
   assert.equal(v21Maxed(b, S), false);
-  assert.equal(buildingCostV21(b, S, 1), Math.ceil(20000 * Math.pow(1.30, 3))); // v2.8.7 warmup base 2e4/growth 1.30
+  assert.equal(buildingCostV21(b, S, 1), Math.ceil(2.5e5 * Math.pow(1.35, 3))); // v3.4.2 反馈① warmup base 2.5e5/growth 1.35
   S.buildings = { warmup_node: 5 };
   assert.equal(v21Maxed(b, S), true);
   S.buildings = {};
