@@ -53,8 +53,8 @@ const floors = [
 const under = floors.filter(([, id, fb, fg]) => !(B(id).base >= fb && B(id).growth >= fg));
 if (under.length === 0) ok('① 效能建筑 39 项 base/growth 全部 ≥ 新底价', `效能尖塔 ${B('eff_tower').base.toExponential(0)}×${B('eff_tower').growth} / 专注心核 ${B('focus_core').base.toExponential(0)} / 协作大厅 ${B('coop_hall').base.toExponential(0)}`);
 else bad('① 仍有未达标项', under.map(([n]) => n).join('，'));
-// 组 D（存储）维持 v3.4.1 口径不受本轮影响
-if (B('quantum_pool').base === 8e4 && B('reserve_bin').base === 26000) ok('① 组 D 存储项保持不动（不与产出强化混涨）', `量子缓存池 ${B('quantum_pool').base}`);
+// 组 D（存储）在 v3.4.3 未随产出强化混涨；v3.4.4 才按「前期存储节点→后期粮仓」单独重标价（见 v344）
+if (B('quantum_pool').base === 8e4 && B('reserve_bin').base === 45000) ok('① 组 D 与产出强化隔离（缓存池不动、粮仓仅按 v3.4.4 存储口径调价）', `量子缓存池 ${B('quantum_pool').base} / 粮仓 ${B('reserve_bin').base}`);
 else bad('① 组 D 被误改', `quantum_pool ${B('quantum_pool').base} / reserve_bin ${B('reserve_bin').base}`);
 
 // ===== ② 满级总投入抬升 =====

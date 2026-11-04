@@ -911,7 +911,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500，矩阵存储库每级 +400（EP 购买），达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500，矩阵存储库首级 +400、之后每级 ×1.15 递增（EP 购买），达到上限后停止积累。', () => {});
   });
 }
 
@@ -2196,7 +2196,9 @@ function tick(now) {
     const hatchLv = (S.ptHatchLv || 1); // v3.0.3 第四批③：孵化升级——每级消耗/产量 ×级数
     const hatchCfg = BALANCE.hatch || { epPerSec: 15000, epPerPt: 150000 };
     const ptRoom = Math.max(0, ptCap() - (S.pt || 0));
-    if (ptRoom > 1e-9) {
+    // v3.4.4：门槛从 1e-9 抬到 1 PT——满仓后出战异兽每秒扣掉 0.02 PT 会让「剩余容量」始终留一线，
+    // 旧实现随即每帧补那一线，EP 按 15 万/PT 被持续烧掉（满仓状态形同虚设）。留 1 PT 余量即视为满仓。
+    if (ptRoom >= 1) {
       // v3.4.0 反馈③：EP 消耗与 PT 汇率统一走 BALANCE.hatch（15000 EP/s/级 ÷ 15 万 EP/PT = 0.10 PT/s/级）
       // 线程加成同时作用于「消耗」与「产出」——否则人越多单位 PT 越便宜（旧口径 5000 EP/s 固定，PT/s 却 ×boost）
       const boost = converterThreadBoost('hatch'); // v3.3.3 反馈⑦：绑定线程参与孵化（只放大 EP 消耗，PT 按汇率等比例产出）
@@ -2607,6 +2609,7 @@ if (typeof window !== 'undefined') {
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
   window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
+    rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
     rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
     riftEtaSec, riftNextSec, // v3.3.5 反馈③：裂隙倒计时/下次间隔（测试钩子）
     vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, vehicleDmPerMin, // v3.3.6：探采汇率/乘区/结算口径（测试钩子）

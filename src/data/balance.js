@@ -152,12 +152,14 @@ export const BALANCE = {
     { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '每级晋升职级点 ×√2' },
     { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
     // ---- 既有升级体系镜像（购买入口仍在升级商店，此处仅为 55 栋统一注册/断言）----
-    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 150, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: 'EP 存储上限递增（逐级 ×1.18）' },
+    // v3.4.4：镜像价的 base/growth 必须与 upgrades.js 同 id 条目一致（实际售价读 upgrades.js；
+    // v3.4.1 只改了这里的镜像价，售价未变——本轮按 upgrades.js 同步，避免再次「改了不生效」）
+    { id: 'storage',        name: '存储节点',   cat: 'D', unlimited: true, cap: 20, base: 12000, growth: 1.45, unlockTech: null, via: 'upgrade', fx: { key: 'capStorage' }, desc: 'EP 存储上限递增（逐级 ×1.18）' },
     { id: 'cache',          name: '缓存优化',   cat: 'D', unlimited: true, cap: 20, base: 1e6, growth: 1.5, unlockTech: null, via: 'upgrade', fx: { key: 'capCache' },   desc: 'EP 存储上限 +8,000/级' },
     // v2.7.4 ⑥：新增阶段仓库——前期「备用粮仓」、后期「深井仓储」（cat D via upgrade，capAdd 并入上限，
     // 与组 D 扩容建筑同口径；成本曲线陡，上限增速按阶段拉开）
-    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 26000, growth: 1.40, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 12000 }, desc: 'EP 存储上限 +12,000/级' }, // v2.8.30 ⑤：大幅涨价（20K→80K）、储存量随涨（4000→8000）
-    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 2e5, growth: 1.5, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: 'EP 存储上限 +800,000/级' }, // v2.8.30 ⑤：涨价（50K→200K）、储存量随涨（500K→800K）
+    { id: 'reserve_bin',    name: '备用粮仓',   cat: 'D', unlimited: true, cap: 20, base: 45000, growth: 1.20, unlockTech: null, via: 'upgrade', fx: { key: 'capAdd', value: 12000 }, desc: 'EP 存储上限 +12,000/级' }, // v3.4.4 反馈②：前期存储节点、L11 后粮仓反超
+    { id: 'deep_bin',       name: '深井仓储',   cat: 'D', unlimited: true, cap: 20, base: 1.8e6, growth: 1.22, unlockTech: 'storage3', via: 'upgrade', fx: { key: 'capAdd', value: 8e5 }, desc: 'EP 存储上限 +800,000/级' }, // v3.4.4：纠正 5e4 换 80 万的单位价异常
   ],
   // v2.1：删除科技的解锁 RP 定价（原 RP × 比例），供 buildingsV21 解锁定价与存档迁移使用
   buildingUnlockRatio: 1.5,
@@ -351,16 +353,18 @@ export const BALANCE = {
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: 'FP 产出 +10%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
     // v3.4.2：研究点菜单扩充（10→20 项）——覆盖产出/消耗/资源/深渊/星空多轴，成本指数涨、cap 6~8
-    { id: 'rp_quantum',  name: '量子推演',   cap: 8, base: 70,  growth: 1.6,  fx: { key: 'ep',      v: 0.06 }, desc: '基础 EP 产出 +6%/级' },
-    { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 80,  growth: 1.6,  fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
-    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 90,  growth: 1.6,  fx: { key: 'global',  v: 0.05 }, desc: '全局产出 ×1.05/级' },
-    { id: 'rp_frugal',   name: '精益管理',   cap: 8, base: 75,  growth: 1.6,  fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
-    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 95,  growth: 1.65, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
-    { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 110, growth: 1.65, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
-    { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 140, growth: 1.7,  fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
-    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 160, growth: 1.7,  fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' },
-    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 130, growth: 1.7,  fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
-    { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 220, growth: 1.8,  fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
+    // v3.4.4 反馈③：本轮新增 10 项一律「基础价 ×4 + 增长指数 +0.10」——效果本就强于同轴老项（+6% vs +5% 等），
+    // 原价几乎与老项同档，等于用同样的 RP 买到更强的永久乘区；涨价后成为「后期才买得起的高阶研究」
+    { id: 'rp_quantum',  name: '量子推演',   cap: 8, base: 280, growth: 1.70, fx: { key: 'ep',      v: 0.06 }, desc: '基础 EP 产出 +6%/级' },
+    { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 320, growth: 1.70, fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
+    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 360, growth: 1.70, fx: { key: 'global',  v: 0.05 }, desc: '全局产出 ×1.05/级' },
+    { id: 'rp_frugal',   name: '精益管理',   cap: 8, base: 300, growth: 1.70, fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
+    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 380, growth: 1.75, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
+    { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 440, growth: 1.75, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
+    { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 560, growth: 1.80, fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
+    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 640, growth: 1.80, fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' },
+    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 520, growth: 1.80, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
+    { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 880, growth: 1.90, fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

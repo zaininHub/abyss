@@ -13,9 +13,10 @@ export const UPGRADES = [
   // 重复购买即升级：第 i 级增量 +2000×1.12^(i-1)，满 20 级购买入口锁定
   {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:'EP 存储上限递增（逐级 ×1.18）'},
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
-  {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:400},desc:'每级 RP 上限 +400'},
-  {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'EP 购买 · 每级 DM 上限 +100'},
-  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'EP 购买 · 每级 PT 上限 +200'},
+  // v3.4.4 反馈①：上限改「逐级扩容」——首级 +400 起、逐级 ×1.15（economy.VAULT_CAP_GROWTH），买得越深单级增量越大
+  {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:400},desc:'RP 上限逐级扩容（首级 +400，逐级 ×1.15）'},
+  {id:'dm_vault',name:'星尘金库',cat:'D',unlimited:true,base:6e5,growth:1.5,cps:0,fx:{key:'dmCapAdd',value:100},desc:'EP 购买 · DM 上限逐级扩容（首级 +100，逐级 ×1.15）'},
+  {id:'pt_vault',name:'饵料仓库',cat:'D',unlimited:true,base:3e5,growth:1.5,cps:0,fx:{key:'ptCapAdd',value:200},desc:'EP 购买 · PT 上限逐级扩容（首级 +200，逐级 ×1.15）'},
   {id:'intern',name:'实习生',base:600000.0,cps:20,growth:1.55,desc:'基础产出+20/s'}, // v2.8.3：base×4/cps 降
   {id:'team',name:'小组协作',base:6000000.0,cps:110,growth:1.55,desc:'基础产出+110/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:60000000.0,cps:600,growth:1.55,desc:'基础产出+600/s'}, // v2.8.3：base×4/cps 降
@@ -72,8 +73,12 @@ export const UPGRADES = [
   {id:'gpu',name:'GPU 加速',base:6000000000.0,cps:0.0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.23：门槛 6e8
   {id:'cache',name:'缓存优化',base:300000000000.0,cps:0.0,cat:'thread',desc:'线程消耗 -25% 起每级再 -3%，EP 存储上限 +8,000/级'}, // v2.8.23：门槛 3e10
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
-  {id:'reserve_bin',name:'备用粮仓',base:20000,growth:1.50,cps:0,cat:'D',desc:'EP 存储上限 +12,000/级'}, // v3.0.3 第五批：去「每级」；修正为与 economy.js 实际 12000/级一致（原 +4,000 文案错误）
-  {id:'deep_bin',name:'深井仓储',base:5e4,growth:1.5,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级'},
+  // v3.4.4 反馈②：按价格重排「前期存储节点 → 后期备用粮仓」
+  //   存储节点 3.00 EP/点（L1）· 每级单价 ×1.229（增量也涨）→ L20 150 EP/点
+  //   备用粮仓 3.75 EP/点（L1）· 每级单价 ×1.20（增量恒定 12K）→ L11 起反超、L20 只要 120 EP/点
+  //   深井仓储 2.25 EP/点（L1）· 每级单价 ×1.22 → 后期大宗扩容（原 5e4 换 +80 万 = 0.06 EP/点，比存储节点便宜 48 倍，本次一并纠正）
+  {id:'reserve_bin',name:'备用粮仓',base:45000,growth:1.20,cps:0,cat:'D',desc:'EP 存储上限 +12,000/级（前期靠存储节点，L11 后反超更划算）'},
+  {id:'deep_bin',name:'深井仓储',base:1.8e6,growth:1.22,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:150000.0,cps:25,desc:'重装地面采集'},

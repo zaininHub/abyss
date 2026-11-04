@@ -245,15 +245,15 @@ try {
   if (caps.s9 > caps.s1) ok('⑧ 存储节点逐级递增（capGrowth ×1.18）', `L1 +${caps.s1} → L9 +${caps.s9}`);
   else bad('⑧ 存储节点未递增', `${caps.s1} → ${caps.s9}`);
 
-  // 单价（EP/点）用配置直接算：粮仓 L1 便宜、L10 更贵 → 前期粮仓 / 后期存储节点，不再被单侧压制
+  // 单价（EP/点）用配置直接算（v3.4.4 反馈②改口径：前期存储节点更划算、L11 起粮仓反超）
   const rb = BALANCE.buildingsV21.find(b => b.id === 'reserve_bin') || {};
   const stB = BALANCE.storage;
   const epPerPtRes = (n) => rb.base * Math.pow(rb.growth, n - 1) / 12000;
   const epPerPtSto = (n) => stB.base * Math.pow(stB.growth, n - 1) / (stB.capPer * Math.pow(stB.capGrowth, n - 1));
-  if (epPerPtRes(1) < epPerPtSto(1)) ok('⑧ L1 备用粮仓单价更低（不再全程被存储节点压制）', `粮仓 ${epPerPtRes(1).toFixed(2)} vs 存储 ${epPerPtSto(1).toFixed(2)} EP/点`);
-  else bad('⑧ L1 单价仍倒挂', `粮仓 ${epPerPtRes(1).toFixed(2)} vs 存储 ${epPerPtSto(1).toFixed(2)}`);
-  if (epPerPtSto(10) < epPerPtRes(10)) ok('⑧ L10 存储节点单价反超（长线仍靠存储节点）', `粮仓 ${epPerPtRes(10).toFixed(1)} vs 存储 ${epPerPtSto(10).toFixed(1)} EP/点`);
-  else bad('⑧ L10 单价关系异常', `粮仓 ${epPerPtRes(10).toFixed(1)} vs 存储 ${epPerPtSto(10).toFixed(1)}`);
+  if (epPerPtSto(1) < epPerPtRes(1)) ok('⑧ L1 存储节点单价更低（前期买存储节点）', `存储 ${epPerPtSto(1).toFixed(2)} vs 粮仓 ${epPerPtRes(1).toFixed(2)} EP/点`);
+  else bad('⑧ L1 单价倒挂（前期应是存储节点更便宜）', `存储 ${epPerPtSto(1).toFixed(2)} vs 粮仓 ${epPerPtRes(1).toFixed(2)}`);
+  if (epPerPtRes(16) < epPerPtSto(16)) ok('⑧ L16 备用粮仓单价反超（后期转粮仓）', `粮仓 ${epPerPtRes(16).toFixed(1)} vs 存储 ${epPerPtSto(16).toFixed(1)} EP/点`);
+  else bad('⑧ L16 单价关系异常（后期应粮仓更便宜）', `粮仓 ${epPerPtRes(16).toFixed(1)} vs 存储 ${epPerPtSto(16).toFixed(1)}`);
 
   if (errs.length === 0) ok('无 JS 运行时报错');
   else bad('页面报错', errs.join(' | '));

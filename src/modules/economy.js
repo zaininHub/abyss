@@ -672,9 +672,17 @@ export function focusCost() {
 
 // ========== 晋升需求 ==========
 // v2.8.27 ②：全资源存储上限（建筑扩容，EP 购买）——基础上限 + 建筑每级增量
-export function rpCap() { return 2500 + ((S.upgrades && S.upgrades.rp_vault) || 0) * 400; } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
-export function dmCap() { return 1000 + ((S.upgrades && S.upgrades.dm_vault) || 0) * 100; }
-export function ptCap() { return 1000 + ((S.upgrades && S.upgrades.pt_vault) || 0) * 200; }
+// v3.4.4 反馈①：三仓库（矩阵存储库/饵料仓库/星尘金库）改「逐级扩容」——与 EP 存储节点同口径
+// （增量 = capPer × capGrowth^(i-1)，逐级递增；原为 +400/+200/+100 恒定线性，买多少级都是同一口增量）
+const VAULT_CAP_GROWTH = 1.15;
+function vaultCap(base, per, lv) {
+  const n = Math.max(0, Number(lv) || 0);
+  if (n === 0) return base;
+  return Math.round(base + per * (Math.pow(VAULT_CAP_GROWTH, n) - 1) / (VAULT_CAP_GROWTH - 1));
+}
+export function rpCap() { return vaultCap(2500, 400, S.upgrades && S.upgrades.rp_vault); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
+export function dmCap() { return vaultCap(1000, 100, S.upgrades && S.upgrades.dm_vault); }
+export function ptCap() { return vaultCap(1000, 200, S.upgrades && S.upgrades.pt_vault); }
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
 export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }

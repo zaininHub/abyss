@@ -146,20 +146,20 @@ try {
 
   // ===== ⑦ 满仓停产停耗 =====
   const cap = await page.evaluate(async () => {
-    window.S.pt_vault = 5; // PT 上限 2000
-    window.S.pt = 1000 + 5 * 200;
+    window.S.upgrades = { ...(window.S.upgrades || {}), pt_vault: 5 }; // v3.4.4：上限改逐级扩容，统一走 __qa.ptCap()
+    window.S.pt = window.__qa.ptCap();
     window.S.ptAutoHatch = true; window.S.ptDistillOn = true;
     window.S.upgrades = { ...(window.S.upgrades || {}), storage: 300 };
     window.S.ep = 5e6;
     await new Promise(r => setTimeout(r, 1500));
-    const ptCase = { ep: window.S.ep, pt: window.S.pt, cap: 1000 + 5 * 200 };
+    const ptCase = { ep: window.S.ep, pt: window.S.pt, cap: window.__qa.ptCap() };
     // RP 满仓
     window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, rp_vault: 10, storage: 300 };
-    window.S.rp = 2500 + 10 * 400;
+    window.S.rp = window.__qa.rpCap();
     window.S.ep = 5e6;
     document.getElementById('btn-rp')?.click();
     await new Promise(r => setTimeout(r, 1400));
-    const rpCase = { ep: window.S.ep, rp: window.S.rp };
+    const rpCase = { ep: window.S.ep, rp: window.S.rp, cap: window.__qa.rpCap() };
     return { ptCase, rpCase, hatchOn: window.S.ptDistillOn };
   });
   if (cap.ptCase.pt <= cap.ptCase.cap + 1e-6) ok('⑦ PT 不超上限', `${Math.round(cap.ptCase.pt)} / ${cap.ptCase.cap}`);

@@ -39,9 +39,11 @@ test('epCapAfterBuy：备用粮仓/缓存/数据中心同样给出总量（乘�
   assert.equal(S.buildings.datacenter, 1, '建筑试算必须还原等级');
 });
 
-test('rpCap / addRp：基础 2,500、矩阵存储库每级 +400，且超出即截断', () => {
+test('rpCap / addRp：基础 2,500、矩阵存储库逐级扩容（首级 +400，逐级 ×1.15），且超出即截断', () => {
   baseState({ upgrades: { rp_vault: 3 } });
-  assert.equal(eco.rpCap(), 2500 + 3 * 400, 'RP 上限 = 2500 + 400×级');
+  // v3.4.4 反馈①：上限增量不再是恒定 400 —— 各级增量 400/460/529，累计 +1,389
+  assert.equal(eco.rpCap(), 2500 + Math.round(400 * (Math.pow(1.15, 3) - 1) / 0.15), 'RP 上限 = 2500 + 逐级递增增量');
+  assert.ok(eco.rpCap() > 2500 + 3 * 400, '逐级扩容后 3 级总量必须高于旧线性口径');
   eco.addRp(1e9);
   assert.equal(S.rp, eco.rpCap(), 'addRp 必须钳到上限（原蒸馏直写 S.rp 会越界）');
 });
