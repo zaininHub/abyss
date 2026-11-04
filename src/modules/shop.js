@@ -603,6 +603,10 @@ export function renderThreadShop(container) {
   container.innerHTML = '';
   threadItemEls.clear();
   const threadMods = UPGRADES.filter(u => THREAD_IDS.includes(u.id));
+  // v3.4.7 反馈⑥：线程强化 7 件全部限购（maxLevel）后整组并入「设施」区尾部；
+  // 「线程强化」标题仅当区内存在可无限购买的项时显示（当前恒隐藏）
+  const threadTitle = document.getElementById('thread-title');
+  if (threadTitle) threadTitle.hidden = !threadMods.some(u => !u.maxLevel);
   // v2.8.23 ①：线程强化链序按解锁门槛（base 升序）——原定义序（subsist1→subsist2→subsist3→cpu…）与门槛错位：
   // CPU（门槛 6e6）排在消耗三项之后，用户「该解锁的没解锁、不该同时解锁的一串弹」；base 为静态值（不随购买上浮），按 base 排序稳定
   const sorted = threadMods.slice().sort((a, b) => a.base - b.base);
@@ -1237,8 +1241,10 @@ function makeV21Item(b) {
     const m = unlockMilestoneV21(b);
     if (m && Object.keys(S.milesDone || {}).length < m) gate += `需里程碑 ${m} · `;
     if (gate) div.classList.add('locked');
+    const lockCap = capOf(b, S); // v3.4.7 反馈⑤：锁卡也亮出级制上限，杜绝「以为能无限买」
+    const capTag = isFinite(lockCap) ? ` · 限 ${lockCap} 级` : '';
     div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${fmt(cost)} EP</span></div>
-      <div class="desc">${v21Desc(b)}</div>
+      <div class="desc">${v21Desc(b)}${capTag}</div>
       <div class="cost mono">${gate}${fmt(cost)} EP</div>`;
   } else {
     const lv = v21Level(b.id, S);
@@ -1291,7 +1297,8 @@ export function renderV21Buildings(container) {
   // v2.5：效能建筑分区保持 RP 锚点（EP 首次溢出解锁 RP 后开放；需求①只改探采平台/深渊商店 → 裂隙门控）
   const v21Shown = anchorShown('rp', S);
   const v21Title = document.getElementById('v21-title');
-  if (v21Title) v21Title.style.display = v21Shown ? '' : 'none';
+  // v3.4.7 反馈⑥：效能建筑全部族内封顶后整组并入「设施」区尾部；标题仅当存在可无限购买的项时显示（当前恒隐藏）
+  if (v21Title) v21Title.style.display = (v21Shown && v21RealList().some(b => b.unlimited)) ? '' : 'none';
   if (!v21Shown) { container.innerHTML = ''; v21ItemEls.clear(); return; }
   container.innerHTML = '';
   v21ItemEls.clear();

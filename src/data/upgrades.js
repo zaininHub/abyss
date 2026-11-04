@@ -16,7 +16,7 @@ export const UPGRADES = [
   //   后期存储节点（45K 首购 +12,000/级恒定、无限级）
   //   单位价口径：粮仓 L1 3.00 EP/点（×1.229/级上探）→ 存储节点 L1 3.75 EP/点（×1.20/级）
   {id:'reserve_bin',name:'备用粮仓',base:B.reserveBin.base,growth:B.reserveBin.growth,maxLevel:B.reserveBin.maxLevel,cps:0,cat:'D',desc:'EP 存储上限 +4,000/级（逐级 ×1.18，前期防死锁关键件，20 级封顶）'},
-  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:'EP 存储上限 +12,000/级（备用粮仓打基础后的大宗扩容，无限级）'},
+  {id:'storage',name:'存储节点',base:B.storage.base,growth:B.storage.growth,cps:0,desc:'EP 存储上限 +12,000/级（逐级 ×1.15，无限级）'},
   // v2.8.27 ②：全资源存储上限建筑（EP 购买，主商店「存储与资源建筑」统一入口）
   // v3.4.4 反馈①：上限改「逐级扩容」——首级 +400 起、逐级 ×1.15（economy.VAULT_CAP_GROWTH），买得越深单级增量越大
   {id:'rp_vault',name:'矩阵存储库',cat:'D',unlimited:true,base:1.5e5,growth:1.5,cps:0,fx:{key:'rpCapAdd',value:400},desc:'RP 上限逐级扩容（首级 +400，逐级 ×1.15）'},
@@ -70,20 +70,23 @@ export const UPGRADES = [
   {id:'temple',name:'万神殿',base:300000000000000.0,cps:0.0,produces:{type:'fa_chance',rate:0.005},desc:'每秒 0.5% 概率 +1 信仰'},
   // 线程强化（v2.0：补贴比例由 balance.js 配置）
   // v2.8.23 ①：base 阶梯重排（门槛 base×0.3 拉开 5~10× 间隔——此前 cpu/mem/gpu/cache 门槛 3e5~1.5e7 挤在同一段，EP 一到同时解锁一串；价格整体上调，杜绝「几万 EP 买 +50% 无限叠」）
-  {id:'subsist1',name:'能量合剂',base:300000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v2.8.23：门槛 3e7
-  {id:'subsist2',name:'循环供氧',base:30000000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v2.8.23：门槛 3e9
-  {id:'subsist3',name:'生物打印餐',base:1500000000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v2.8.23：门槛 1.5e11
-  {id:'cpu',name:'CPU 超频',base:60000000.0,cps:0.0,cat:'thread',desc:'所有线程产出 +50%'}, // v2.8.23：门槛 6e6
-  {id:'mem',name:'内存扩容',base:1500000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v2.8.23：门槛 1.5e8
-  {id:'gpu',name:'GPU 加速',base:6000000000.0,cps:0.0,cat:'thread',desc:'所有线程产出 ×2'}, // v2.8.23：门槛 6e8
-  {id:'cache',name:'缓存优化',base:300000000000.0,cps:0.0,cat:'thread',desc:'线程消耗 -25% 起每级再 -3%，EP 存储上限 +8,000/级'}, // v2.8.23：门槛 3e10
+  // v3.4.7 反馈①：全部限购——凡「减成本 / 加 EP 上限 / 加线程产出」的线程强化一律封顶，不再允许无限叠乘区
+  // v3.4.7 反馈④：按回本期重标价——此前 subsist2/3 卖到 3e10~1.5e12（-35%/-50% 薪资要挂机数天回本），
+  //   现统一按「参考薪资 ≈3.3K EP/s 下回本期 1~2 小时」定价：subsist1 3e6 / subsist2 4e6 / subsist3 6e6 / mem 8e5 / cache 2e6 / cpu 3e7 / gpu 6e7
+  {id:'subsist1',name:'能量合剂',base:3000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist1*100)}%`}, // v3.4.7 ④：3e8 → 3e6（回本 ≈1h）
+  {id:'subsist2',name:'循环供氧',base:4000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:`线程消耗 -${Math.round(B.subsist2*100)}%`}, // v3.4.7 ④：3e10 → 4e6
+  {id:'subsist3',name:'生物打印餐',base:6000000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'线程消耗 -50%'}, // v3.4.7 ④：1.5e12 → 6e6
+  {id:'cpu',name:'CPU 超频',base:30000000.0,cps:0.0,maxLevel:3,cat:'thread',desc:'所有线程产出 +50%/级'}, // v3.4.7 ①：限购 3 级；④：6e7 → 3e7
+  {id:'mem',name:'内存扩容',base:800000.0,cps:0.0,maxLevel:1,cat:'thread',desc:'所有线程消耗 -15%'}, // v3.4.7 ④：1.5e9 → 8e5
+  {id:'gpu',name:'GPU 加速',base:60000000.0,cps:0.0,maxLevel:2,cat:'thread',desc:'所有线程产出 ×2/级'}, // v3.4.7 ①：限购 2 级；④：6e9 → 6e7
+  {id:'cache',name:'缓存优化',base:2000000.0,cps:0.0,maxLevel:B.cacheUpg.maxLevel,cat:'thread',desc:'线程消耗 -25% 起每级再 -3%，EP 存储上限 +8,000/级（逐级 ×1.15）'}, // v3.4.7 ①：限购 5 级；④：3e11 → 2e6
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读并入上限；链序披露天然分阶段——前期备用粮仓、后期深井仓储）
   // v3.4.4 反馈②：按价格重排「前期存储节点 → 后期备用粮仓」
   //   存储节点 3.00 EP/点（L1）· 每级单价 ×1.229（增量也涨）→ L20 150 EP/点
   //   备用粮仓 3.75 EP/点（L1）· 每级单价 ×1.20（增量恒定 12K）→ L11 起反超、L20 只要 120 EP/点
   //   深井仓储 2.25 EP/点（L1）· 每级单价 ×1.22 → 后期大宗扩容（原 5e4 换 +80 万 = 0.06 EP/点，比存储节点便宜 48 倍，本次一并纠正）
   // v3.4.6 反馈⑫：备用粮仓定义上移至存储节点之前（链序：粮仓先解锁先显示）；深井仓储仍为终局大宗
-  {id:'deep_bin',name:'深井仓储',base:1.8e6,growth:1.22,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级'},
+  {id:'deep_bin',name:'深井仓储',base:B.deepBin.base,growth:B.deepBin.growth,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级（逐级 ×1.15）'},
   // 探采平台
   {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},
   {id:'convoy',name:'装甲车队',base:150000.0,cps:25,desc:'重装地面采集'},

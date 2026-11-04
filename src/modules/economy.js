@@ -618,8 +618,9 @@ export function staffOutputPerSec() {
   // v2.8.30：专注每级加成从少到多（8%/12%/20% 分段递增），达到上限后固定 20%/级
   outMult *= (1 + focusTotalBonus(S.focusLevel));
   outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
-  if (S.upgrades.cpu) outMult *= 1.5;
-  if (S.upgrades.gpu) outMult *= 2;
+  // v3.4.7 反馈①：CPU/GPU 限购（cpu 3 级 / gpu 2 级），加成随级数乘算叠加（+50%/级、×2/级）
+  if (S.upgrades.cpu) outMult *= Math.pow(1.5, S.upgrades.cpu || 0);
+  if (S.upgrades.gpu) outMult *= Math.pow(2, S.upgrades.gpu || 0);
   let total = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
@@ -874,20 +875,28 @@ export function ptHatchEpPerSec() {
 // + 组D 扩容梯与新增多效果上限建筑 capAdd（无限）+ 里程碑乘算基座 + 故事线变体加成
 export function epStorageCap() {
   let cap = 2000;
-  // v2.4：cache 无限购买（原 v2.0.2 20 级封顶解除，旧档超 20 级数量仍全额计入）
-  const cacheCount = S.upgrades['cache'] || 0;
-  cap += cacheCount * 8000; // v2.8.2：5000→8000（中期上限宽松，EP 不易触顶）
+  // v3.4.7 反馈②：缓存优化加成也逐级递增（+8,000/级起 ×1.15，限购 5 级；旧档超 5 级数量仍全额计入）
+  {
+    const cCfg = B.cacheUpg || { capPer: 8000, capGrowth: 1.15 };
+    const cacheLv = S.upgrades['cache'] || 0;
+    for (let i = 1; i <= cacheLv; i++) cap += cCfg.capPer * Math.pow(cCfg.capGrowth, i - 1);
+  }
   // v2.7.4 ⑥：新增阶段仓库（via upgrade 直读，与 storage/cache 同口径——upgrade 类不进效果引擎）
   // v3.4.6 反馈⑫：曲线对调——备用粮仓改「+4,000/级 ×1.18 递增、20 级封顶」（前期防死锁关键件），
-  //   存储节点改「+12,000/级恒定、无限级」（走下方 B.storage 循环，capGrowth=1.0 即平价大宗）
+  //   存储节点改「+12,000/级起 ×1.15 递增、无限级」（走下方 B.storage 循环；v3.4.7 反馈②加成递增）
   {
     const rbLv = S.upgrades['reserve_bin'] || 0;
     const rbCfg = B.reserveBin || { capPer: 4000, capGrowth: 1.18, maxLevel: 20 };
     for (let i = 1; i <= rbLv; i++) cap += rbCfg.capPer * Math.pow(rbCfg.capGrowth, i - 1);
   }
-  cap += (S.upgrades['deep_bin'] || 0) * 8e5; // v2.8.30 ⑤：储存量随涨价增多（500K→800K）
+  // v3.4.7 反馈②：深井仓储加成逐级递增（+800,000/级起 ×1.15，终局大宗）
+  {
+    const dCfg = B.deepBin || { capPer: 8e5, capGrowth: 1.15 };
+    const dbLv = S.upgrades['deep_bin'] || 0;
+    for (let i = 1; i <= dbLv; i++) cap += dCfg.capPer * Math.pow(dCfg.capGrowth, i - 1);
+  }
   cap *= researchMult('storage'); // v2.8.25 ②：存储协议（研究点）EP 上限 +8%/级
-  // v2.4：存储节点无限升级（原 maxLevel 截断移除；级增量 +2,000 起步、逐级 ×1.12 持续递增）
+  // v2.4：存储节点无限升级（v3.4.7 反馈②：级增量 +12,000 起步、逐级 ×1.15 持续递增）
   const storageLv = S.upgrades['storage'] || 0;
   for (let i = 1; i <= storageLv; i++) cap += B.storage.capPer * Math.pow(B.storage.capGrowth, i - 1);
   // v2.0.2：数据中心每级额外加上限（映射现有 1/2/3 级制建筑）

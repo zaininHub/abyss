@@ -85,7 +85,7 @@ try {
   else bad('② 高度不一致', `${card.box?.h} vs ${card.sibBox?.h}`);
   if (/Lv\.0/.test(card.count || '')) ok('② 等级走 .name .count（与 item 卡同位置）', card.count);
   else bad('② 等级显示', card.count);
-  if (/每级裂隙上限 \+1/.test(card.desc) && card.descH <= 34) ok('② 描述两行内收口', `${card.desc}（${Math.round(card.descH)}px）`);
+  if (/裂隙等级 \+1/.test(card.desc) && /深入消耗/.test(card.desc) && card.descH <= 34) ok('② 描述两行内收口（v3.4.6 ④ 下一级数值口径）', `${card.desc}（${Math.round(card.descH)}px）`);
   else bad('② 描述换行过多', `${card.desc}（${Math.round(card.descH)}px）`);
   if (/EP \+ .* DM/.test(card.cost || '')) ok('② 成本行「EP + DM」', card.cost);
   else bad('② 成本行', card.cost);
@@ -241,20 +241,23 @@ try {
     };
     return { s1: snap('storage', 0), s9: snap('storage', 8), r1: snap('reserve_bin', 0), r9: snap('reserve_bin', 8) };
   });
-  if (caps.r1 > caps.s1) ok('⑧ 备用粮仓单级上限高于存储节点（12K vs 4K 基座）', `粮仓 +${caps.r1} / 存储 +${caps.s1}`);
-  else bad('⑧ 上限增量仍倒挂', `粮仓 +${caps.r1} / 存储 +${caps.s1}`);
-  if (caps.s9 > caps.s1) ok('⑧ 存储节点逐级递增（capGrowth ×1.18）', `L1 +${caps.s1} → L9 +${caps.s9}`);
+  // v3.4.6 ⑫ 对调 + v3.4.7 ② 加成递增后的口径：粮仓=前期件（4K/级 ×1.18），存储=后期大宗（12K/级 ×1.15）
+  if (caps.r1 < caps.s1) ok('⑧ 对调后存储节点单级上限高于粮仓（12K vs 4K 基座）', `粮仓 +${caps.r1} / 存储 +${caps.s1}`);
+  else bad('⑧ 上限增量异常', `粮仓 +${caps.r1} / 存储 +${caps.s1}`);
+  if (caps.s9 > caps.s1) ok('⑧ 存储节点逐级递增（capGrowth ×1.15）', `L1 +${caps.s1} → L9 +${caps.s9}`);
   else bad('⑧ 存储节点未递增', `${caps.s1} → ${caps.s9}`);
+  if (caps.r9 > caps.r1) ok('⑧ 备用粮仓逐级递增（capGrowth ×1.18）', `L1 +${caps.r1} → L9 +${caps.r9}`);
+  else bad('⑧ 备用粮仓未递增', `${caps.r1} → ${caps.r9}`);
 
-  // 单价（EP/点）用配置直接算（v3.4.4 反馈②改口径：前期存储节点更划算、L11 起粮仓反超）
+  // 单价（EP/点）用配置直接算（v3.4.6 ⑫ 对调口径：前期粮仓更划算、后期存储节点大宗更优）
   const rb = UPGRADES.find(u => u.id === 'reserve_bin') || {};
   const stB = BALANCE.storage;
-  const epPerPtRes = (n) => rb.base * Math.pow(rb.growth, n - 1) / 12000;
+  const epPerPtRes = (n) => rb.base * Math.pow(rb.growth, n - 1) / (4000 * Math.pow(1.18, n - 1));
   const epPerPtSto = (n) => stB.base * Math.pow(stB.growth, n - 1) / (stB.capPer * Math.pow(stB.capGrowth, n - 1));
-  if (epPerPtSto(1) < epPerPtRes(1)) ok('⑧ L1 存储节点单价更低（前期买存储节点）', `存储 ${epPerPtSto(1).toFixed(2)} vs 粮仓 ${epPerPtRes(1).toFixed(2)} EP/点`);
-  else bad('⑧ L1 单价倒挂（前期应是存储节点更便宜）', `存储 ${epPerPtSto(1).toFixed(2)} vs 粮仓 ${epPerPtRes(1).toFixed(2)}`);
-  if (epPerPtRes(16) < epPerPtSto(16)) ok('⑧ L16 备用粮仓单价反超（后期转粮仓）', `粮仓 ${epPerPtRes(16).toFixed(1)} vs 存储 ${epPerPtSto(16).toFixed(1)} EP/点`);
-  else bad('⑧ L16 单价关系异常（后期应粮仓更便宜）', `粮仓 ${epPerPtRes(16).toFixed(1)} vs 存储 ${epPerPtSto(16).toFixed(1)}`);
+  if (epPerPtRes(1) < epPerPtSto(1)) ok('⑧ L1 备用粮仓单价更低（前期买粮仓）', `粮仓 ${epPerPtRes(1).toFixed(2)} vs 存储 ${epPerPtSto(1).toFixed(2)} EP/点`);
+  else bad('⑧ L1 单价异常（前期应是粮仓更便宜）', `粮仓 ${epPerPtRes(1).toFixed(2)} vs 存储 ${epPerPtSto(1).toFixed(2)}`);
+  if (epPerPtSto(16) < epPerPtRes(16)) ok('⑧ L16 存储节点单价反超（后期转存储大宗）', `存储 ${epPerPtSto(16).toFixed(1)} vs 粮仓 ${epPerPtRes(16).toFixed(1)} EP/点`);
+  else bad('⑧ L16 单价关系异常（后期应存储更便宜）', `存储 ${epPerPtSto(16).toFixed(1)} vs 粮仓 ${epPerPtRes(16).toFixed(1)}`);
 
   if (errs.length === 0) ok('无 JS 运行时报错');
   else bad('页面报错', errs.join(' | '));

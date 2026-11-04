@@ -84,7 +84,7 @@ export function upgradeSeal() {
 export function buyTemple() {
   if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
   const lv = (S.religion && S.religion.temple) || 0;
-  if (lv >= TEMPLE.cap) return { ok: false, reason: '圣所已满级' };
+  // v3.4.7 反馈③：圣所不设等级上限（cost ×1.35/级 + 单位 EP 消耗随级递增，天然限速）
   const cost = templeCost();
   if (S.ep < cost) return { ok: false, reason: `EP 不足（需 ${fmt(cost)}）` };
   S.ep -= cost;
@@ -268,9 +268,9 @@ export function refreshReligionAffordability() {
   const b1 = document.querySelector('[data-religion-seal]');
   if (b1) setD(b1, sealCost === null || (S.faith || 0) < sealCost);
   const templeLv = (S.religion && S.religion.temple) || 0;
-  const tCost = templeLv >= TEMPLE.cap ? null : templeCost();
+  const tCost = templeCost(); // v3.4.7 反馈③：圣所无上限，永远可买（EP 不足自动禁用）
   const b2 = document.querySelector('[data-religion-temple]');
-  if (b2) setD(b2, tCost === null || S.ep < tCost);
+  if (b2) setD(b2, S.ep < tCost);
   const b3 = document.querySelector('[data-religion-praise]');
   if (b3) setD(b3, (S.faith || 0) < faithCap() * PRAISE.thresholdRatio);
   const b4 = document.querySelector('[data-religion-transcend]');
@@ -346,7 +346,7 @@ export function renderReligionPanel(container) {
   const sealMax = sealMaxLevel();
   const cost = seal >= sealMax ? null : sealUpgradeCost(seal);
   const templeLv = (S.religion && S.religion.temple) || 0;
-  const tCost = templeLv >= TEMPLE.cap ? null : templeCost();
+  const tCost = templeCost(); // v3.4.7 反馈③：圣所无上限
   container.innerHTML = `
     <div class="religion-desc">${r.icon} 已信奉 <b>${r.name}</b>：${r.effect}（+圣印全局产出）</div>
     <div class="off-stat"><span>FP 余额</span><b>${(S.faith || 0).toFixed(2)}</b></div>
@@ -359,9 +359,9 @@ export function renderReligionPanel(container) {
     </div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s -${fmt(TEMPLE.faithEpPerUnit * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / TEMPLE.faithEpPerUnit).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
-      <span>Lv.${templeLv}/${TEMPLE.cap}</span>
-      <button class="btn ${tCost === null || S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
-        title="EP 购买，持续产出信仰">${tCost === null ? '已满级' : `建造 / 升级（${fmt(tCost)} EP）`}</button>
+      <span>Lv.${templeLv}（无上限）</span>
+      <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
+        title="EP 购买，持续产出信仰；等级不设上限，消耗随等级递增">${`建造 / 升级（${fmt(tCost)} EP）`}</button>
       ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
         title="${(S.religion && S.religion.templeOff) ? '重启：恢复 FP 产出（无代价）' : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
         style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}

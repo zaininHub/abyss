@@ -232,13 +232,13 @@ function setCapState(cache, storage, dc, pool, dim, over, miles, storyline) {
   for (let i = 0; i < miles; i++) S.milesDone['m' + i] = true;
   S.storyline = storyline || 'line_abyss';
 }
-t('m=6 期锚点：cache12/storage20/DC2 → epStorageCap = 1,043,625（v3.4.6 ⑫：存储节点改 +12,000/级恒定）', () => {
+t('m=6 期锚点：cache12/storage20/DC2 → epStorageCap = 4,278,967（v3.4.7 ②：存储/缓存加成逐级 ×1.15）', () => {
   setCapState(12, 20, 2, 0, 0, 0, 6);
-  assert.equal(epStorageCap(), 1043625, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 4278967, `实际 ${epStorageCap()}`);
 });
-t('storage/cache/DC3 满配 m=9 → epStorageCap = 1,689,350（v3.4.6 ⑫ 曲线重算）', () => {
+t('storage/cache/DC3 满配 m=9 → epStorageCap = 7,852,008（v3.4.7 ② 曲线重算）', () => {
   setCapState(20, 20, 3, 0, 0, 0, 9);
-  assert.equal(epStorageCap(), 1689350, `实际 ${epStorageCap()}`);
+  assert.equal(epStorageCap(), 7852008, `实际 ${epStorageCap()}`);
 });
 t('开局锚点：storage1/其余 0 → 16,100（v3.4.6 ⑫：存储节点首级 +12,000，line_abyss ×1.15）', () => {
   setCapState(0, 1, 0, 0, 0, 0, 0);

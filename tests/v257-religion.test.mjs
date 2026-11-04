@@ -105,11 +105,12 @@ function mkState(extra = {}) {
   rec('V4 tickReligion(10s) 产出 +1 信仰（v2.6.4 ③ 减缓口径）', Math.abs(S.faith - (f0 + 1)) < 1e-9, `faith ${f0}→${S.faith}`);
   const cost1 = templeCost();
   const t1 = relMod.buyTemple();
-  rec('V4 圣所购买升 3 级（EP 扣减，含信仰生产 10s 耗 2000 EP）', t1.ok === true && S.religion.temple === 3 && S.ep === 1e9 - 2000 - cost1, t1.reason || '');
-  // 满级禁购
-  Object.assign(S, mkState({ ep: 1e9, upgrades: { storage: 1 }, religion: { unlocked: true, branch: 'sun', sun: true, temple: TEMPLE.cap } }));
+  // v3.3.3 反馈⑥：圣所单位 EP 随等级递增（Lv.2 ×1.2 → 240 EP/s ×10s = 2400）
+  rec('V4 圣所购买升 3 级（EP 扣减，含信仰生产 10s 耗 2400 EP）', t1.ok === true && S.religion.temple === 3 && S.ep === 1e9 - 2400 - cost1, t1.reason || '');
+  // v3.4.7 反馈③：圣所无上限——原「满级禁购」改为高价仍可买
+  Object.assign(S, mkState({ ep: 1e12, upgrades: { storage: 20 }, religion: { unlocked: true, branch: 'sun', sun: true, temple: 15 } }));
   const t2 = relMod.buyTemple();
-  rec('V4 圣所满级禁购', t2.ok === false, t2.reason || '');
+  rec('V4 圣所无上限：Lv.15 仍可升 16 级', t2.ok === true && S.religion.temple === 16, t2.reason || '');
 }
 
 // ========== V5 既有钩子联动（economy 分支倍率生效） ==========

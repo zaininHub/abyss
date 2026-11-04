@@ -208,7 +208,7 @@ t('v3.4.6 ⑫：存储节点/备用粮仓曲线对调（粮仓 12K/+4000×1.18/2
   assert.equal(st.growth, 1.20);
   assert.ok(!st.maxLevel, '存储节点无限升级');
   assert.equal(BALANCE.storage.capPer, 12000);
-  assert.equal(BALANCE.storage.capGrowth, 1.0);
+  assert.equal(BALANCE.storage.capGrowth, 1.15); // v3.4.7 反馈②：存储节点加成也逐级 ×1.15 递增
   assert.equal(rb.base, 12000); // v3.4.6 ⑫：粮仓改前期关键件（原存储节点曲线）
   assert.equal(rb.growth, 1.45);
   assert.equal(rb.maxLevel, 20);
@@ -841,8 +841,8 @@ t('5.2：非扩容项（intern）不受 30% 约束', () => {
   resetCapState();
 });
 
-t('5.2：cache 新价格 base=1e11（v2.8.23 线程强化门槛重排）', () => {
-  assert.equal(caU().base, 3e11); // v2.8.27 base ×3
+t('5.2：cache 新价格 base=2e6（v3.4.7 反馈④：按回本期重标线程强化）', () => {
+  assert.equal(caU().base, 2e6);
 });
 
 t('5.4：三故事线变体上限加成（abyss ×1.15 / order ×1.10 / faith 无）', () => {
@@ -876,17 +876,19 @@ t('5.1：满级锁定 UI 源码断言（maxLevel 项满级锁定；无 maxLevel 
   assert.ok(shopSrc.includes('u.maxLevel || Infinity'), 'buyUpgrade 应按 maxLevel 截断（无封顶项恒可购）');
 });
 
-// ---- v2.4 cache 无限购买（KG 模式：建筑数量红线对扩容类解除） ----
-t('v2.4：cache 无限购买配置——UPGRADES 无 maxLevel', () => {
+// ---- cache 限购（v3.4.7 反馈①：线程强化全部限购；加成逐级 ×1.15 递增） ----
+t('v3.4.7：cache 限购 5 级（B.cacheUpg.maxLevel）', () => {
   const cache = caU();
   assert.ok(cache, 'cache 条目应存在');
-  assert.ok(!cache.maxLevel, 'v2.4 KG 模式：cache 不再有 maxLevel 封顶');
+  assert.equal(cache.maxLevel, 5, 'v3.4.7 反馈①：cache 限购 5 级');
 });
 
-t('v2.4：旧档 cache 超买全额计入——cache=25 上限按 25 级计 202,000（v2.8.2 8000/级）', () => {
+t('v3.4.7：旧档 cache=25 全额计入（逐级 ×1.15）——2000 + 8000×Σ1.15^i（i=0..24）', () => {
   resetCapState();
-  S.upgrades['cache'] = 25; // 旧档超买值，v2.4 全额计入（不再截断到 20 级）
-  assert.equal(epStorageCap(), 2000 + 25 * 8000, 'v2.4 cache=25 全额计入：2000+200000=202000');
+  S.upgrades['cache'] = 25; // 旧档超买值，仍全额计入（不截断），只是购买入口限 5 级
+  let sum = 0;
+  for (let i = 0; i < 25; i++) sum += 8000 * Math.pow(1.15, i);
+  assert.equal(epStorageCap(), Math.round(2000 + sum), `期望 ${Math.round(2000 + sum)}`);
 });
 
 t('v2.4：buyThreadUpgrade 无限购买守卫（maxLevel || Infinity，无封顶项恒可购）', () => {

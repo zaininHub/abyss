@@ -149,22 +149,22 @@ try {
     // 清空干扰源：班组维护费、出战异兽 PT 维持、其他转化器——只留待测管线
     window.S.cultists = []; window.S.pets = [];
     window.S.converterOn = { atrium: false };
-    window.S.upgrades = { ...(window.S.upgrades || {}), pt_vault: 5, storage: 300, reserve_bin: 10 };
+    window.S.upgrades = { ...(window.S.upgrades || {}), pt_vault: 5, storage: 40, reserve_bin: 10 }; // v3.4.7 ②：storage ×1.15 递增后 300 级 cap≈1e23，浮点精度吞掉 -50K → 降为 40 级
     window.S._ptTrickle = 0; // 清残留累计，确保 6.5s 窗口内恰好一个批次
     window.S.pt = window.__qa.ptCap();
     window.S.ptAutoHatch = true; window.S.ptDistillOn = true;
-    // EP 置为上限的 80%（≤ 上限，规避 addEp 钳回伪差）
-    window.S.ep = Math.floor(window.__qa.epStorageCap() * 0.8);
+    // EP 置为上限的 80%（≤ 上限，规避 addEp 钳回伪差）；上限足够大，涓流 -50K 不会触发浮点精度损失
+    window.S.ep = Math.min(Math.floor(window.__qa.epStorageCap() * 0.8), 8e6);
     const ep0 = window.S.ep, pt0 = window.S.pt;
     await new Promise(r => setTimeout(r, 6500)); // 覆盖一个 5s 涓流批次
     const ptCase = { ep0, ep: window.S.ep, epDelta: ep0 - window.S.ep, pt0, pt: window.S.pt, ptDelta: window.S.pt - pt0, cap: window.__qa.ptCap() };
     // RP 满仓
-    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, rp_vault: 10, storage: 300, reserve_bin: 10 };
+    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, rp_vault: 10, storage: 40, reserve_bin: 10 };
     window.S.converterOn = { atrium: true };
     window.S.ptAutoHatch = false; // 只测 RP 管线：关掉孵化涓流，避免双路各扣 50K
     window.S._atriumTrickle = 0; window.S._ptTrickle = 0; // 清残留累计，确保 6.5s 窗口内恰好一个批次
     window.S.rp = window.__qa.rpCap();
-    window.S.ep = Math.floor(window.__qa.epStorageCap() * 0.8);
+    window.S.ep = Math.min(Math.floor(window.__qa.epStorageCap() * 0.8), 8e6);
     const ep0b = window.S.ep, rp0 = window.S.rp;
     await new Promise(r => setTimeout(r, 6500));
     const rpCase = { ep0: ep0b, ep: window.S.ep, epDelta: ep0b - window.S.ep, rp0, rp: window.S.rp, rpDelta: window.S.rp - rp0, cap: window.__qa.rpCap() };

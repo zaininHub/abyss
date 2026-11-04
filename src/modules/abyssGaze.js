@@ -63,9 +63,10 @@ function buildOverlay() {
   wrap.id = 'abyss-gaze-crack'; // 沿用旧 id：存档/测试/ensureAbyssGaze 均以此为锚点
   wrap.setAttribute('aria-hidden', 'true');
   // v3.4.6 反馈⑨：缩小并压到最底层——不遮挡任何 UI（z-index 1、pointer-events:none），
-  // 位置贴底（bottom 4px），尺寸从 min(28vw,260px) 缩到 min(16vw,150px)
-  wrap.style.cssText = 'position:fixed;left:50%;bottom:4px;transform:translateX(-50%);' +
-    'width:min(16vw,150px);height:min(9.6vw,88px);pointer-events:none;z-index:1;' +
+  // 位置贴底与宠物浮标齐平（v3.4.7 反馈④：宠物中心 ≈ bottom 12px + 15px = 27px；
+  // 眼睛改 bottom:0 + 高 56px → 视觉中心 28px，与宠物图标水平对齐）
+  wrap.style.cssText = 'position:fixed;left:50%;bottom:0;transform:translateX(-50%);' +
+    'width:min(9.7vw,97px);height:min(5.6vw,56px);pointer-events:none;z-index:1;' +
     'opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
   const isDark = !document.documentElement.classList.contains('light');

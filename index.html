@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.4.6</title>
+<title>深渊效能工作台 v3.4.7</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -155,13 +155,15 @@
         <div class="tab-pane on" id="tab-shop">
           <!-- v2.3.1 ⑥（rev18 9.4）：bulk-bar 倍率条整节移除，购买固定 ×1 -->
           <div id="shop-list" class="shop-grid"></div>
-          <h3 style="margin-top:12px">线程强化</h3>
-          <div id="thread-shop" class="shop-grid"></div>
-          <h3 style="margin-top:12px" id="v21-title">效能建筑</h3>
-          <div id="v21-building-list" class="shop-grid"></div>
           <!-- v3.3.1 反馈①②：灵感工坊 / 异兽孵化升级并入「设施」区（卡内只有购买与升级；开关分别在研究点/异兽页） -->
+          <!-- v3.4.7 反馈⑥：升级商店中所有不能无限购买的（线程强化 7 件全部限购、效能建筑全部族内封顶）整体并入「设施」区——
+               两个原标题仅当区内存在可无限购买的项时才显示（当前均为空 → 恒隐藏），有限项在设施区尾部继续按原分组渲染 -->
           <h3 style="margin-top:12px" id="bld-title">设施</h3>
           <div id="building-list" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="thread-title" hidden>线程强化</h3>
+          <div id="thread-shop" class="shop-grid"></div>
+          <h3 style="margin-top:12px" id="v21-title" hidden>效能建筑</h3>
+          <div id="v21-building-list" class="shop-grid"></div>
         </div>
 
         <!-- 科技树 -->

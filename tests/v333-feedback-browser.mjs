@@ -241,14 +241,18 @@ try {
   // ===== ⑪ 涨价曲线 =====
   await page.click('#btn-shop');
   await sleep(500);
-  const p11a = await page.evaluate(() => {
-    // 线程强化：cpu 卡购买一次前后成本比 ≈1.55
-    const el = [...document.querySelectorAll('#thread-shop .item')].find(e => e.textContent.includes('CPU') || e.querySelector('[data-buy="cpu"]'));
-    const card = document.querySelector('#thread-shop [data-buy="cpu"]');
-    if (!card) return { found: false };
-    const c0 = parseFloat(card.querySelector('.cost')?.textContent.replace(/[^0-9.]/g, '') || '0');
-    return { found: true, c0 };
+  const p11pre = await page.evaluate(() => {
+    // v3.4.7 ①④：线程 7 件全部限购 + 价格重排（base 升序 mem→cache→subsist1-3→cpu→gpu）。
+    // 链窗只亮已购前缀+1，CPU 在第 6 位——补齐前缀让 CPU 卡进入窗口
+    const S = window.S;
+    S.upgrades = { ...(S.upgrades || {}), mem: 1, cache: 1, subsist1: 1, subsist2: 1, subsist3: 1 };
+    S.allTimeEp = Math.max(S.allTimeEp || 0, 1e12);
+    S.ep = 1e12;
+    window.__gameDirty = window.__gameDirty || {}; window.__gameDirty.shop = true;
+    window.dispatchEvent(new Event('resize'));
+    return true;
   });
+  await sleep(800);
   // 用源码口径断言更稳：直接读两张卡的显示成本并比对公式
   const p11 = await page.evaluate(() => {
     const card = document.querySelector('#thread-shop [data-buy="cpu"]');
