@@ -85,7 +85,8 @@ try {
     await sleep(1300);
     const still = [...document.querySelectorAll('#rift-tab-panel [data-rift-upg]')].map(r => {
       const b = r.querySelector('button');
-      return { id: r.dataset.riftUpg, cost: parseInt(b?.textContent || ''), disabled: !!b?.disabled };
+      // v3.4.9：未解锁行（如未购「无限深入」时的自动净化仪）没有购买按钮，同属「不可购」
+      return { id: r.dataset.riftUpg, cost: parseInt(b?.textContent || ''), disabled: !b || !!b.disabled };
     });
     return { before, after: afterBuy, lv, still };
   });

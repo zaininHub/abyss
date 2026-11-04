@@ -686,9 +686,16 @@ function vaultCap(base, per, lv) {
   if (n === 0) return base;
   return Math.round(base + per * (Math.pow(VAULT_CAP_GROWTH, n) - 1) / (VAULT_CAP_GROWTH - 1));
 }
-export function rpCap() { return vaultCap(2500, 400, S.upgrades && S.upgrades.rp_vault); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
+// v3.4.9 反馈⑥：RP/PT 仓容跟随 EP 上限（「产出基座」）——星图探索把 RP/TP 消耗抬到与 EP 同量级后，
+//   三仓库那点线性扩容（RP 满级约 4.3 万）根本装不下一次远征的 RP 报价，必须以 EP 上限为基座同步放大。
+//   取「仓库值」与「EP 上限 × 比例」中的较大者：老档不会掉容量，新档随产出自动抬高。
+function prodCapFloor(ratio) {
+  const epCap = epStorageCap();
+  return Math.round(Math.max(0, epCap) * ratio);
+}
+export function rpCap() { return Math.max(vaultCap(2500, 400, S.upgrades && S.upgrades.rp_vault), prodCapFloor(0.25)); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
 export function dmCap() { return vaultCap(1000, 100, S.upgrades && S.upgrades.dm_vault); }
-export function ptCap() { return vaultCap(1000, 200, S.upgrades && S.upgrades.pt_vault); }
+export function ptCap() { return Math.max(vaultCap(1000, 200, S.upgrades && S.upgrades.pt_vault), prodCapFloor(0.18)); }
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
 export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }
@@ -872,6 +879,7 @@ export function ptHatchEpPerSec() {
 // v2.4 KG 模式改造：基础上限 2000 + 存储节点无限升级（第 i 级 +capPer×capGrowth^(i-1)，无封顶）
 // + 缓存优化 +5000/个（无限）+ 数据中心每级上限加成 [0,10K,25K,50K]
 // + 组D 扩容梯与新增多效果上限建筑 capAdd（无限）+ 里程碑乘算基座 + 故事线变体加成
+let capFloorBusy = false; // v3.4.9 ⑤：防 epStorageCap ← computeCps ← epStorageCap 递归
 export function epStorageCap() {
   let cap = 2000;
   // v3.4.8 反馈⑦：缓存优化已从商店删除——此处仅按旧档残留等级继续计入上限（不让老存档凭空掉容量），
@@ -914,6 +922,21 @@ export function epStorageCap() {
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
   cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
   cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）
+  // v3.4.9 反馈⑤：EP 上限「时间基座」——首次溢出之后，上限至少容得下 capHoursFloor 小时的当前产出。
+  //   用户口径：溢出过一次就进入长期挂机阶段，希望「存满一次」≈ 1~3 小时（取中位 2h）；
+  //   此前上限只靠扩容件线性累加，产出指数化后几分钟就满仓，扩容买完立刻又溢出，扩容毫无体感。
+  //   ⚠️ 必须「叠加」而非「取 max」：floor 常比结构性上限大几个量级，取 max 会把所有扩容件的增量
+  //   全部吞掉（买扩容上限不涨、存满时长也不变），玩家体感等于扩容失效。
+  //   computeCps() 内部可能反向调用本函数（AI 预留等），用 busy 旗标防递归：内层只算结构性值。
+  if (!capFloorBusy && S._rpOverflowSeen) {
+    const baseCap = cap;
+    capFloorBusy = true;
+    let cps = 0;
+    try { cps = computeCps(); } catch { cps = 0; } finally { capFloorBusy = false; }
+    const hours = B.capHoursFloor != null ? B.capHoursFloor : 2;
+    const floor = cps * 3600 * hours;
+    if (isFinite(floor) && floor > 0) cap = floor + baseCap;
+  }
   return Math.round(cap);
 }
 

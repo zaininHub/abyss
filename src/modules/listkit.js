@@ -80,8 +80,10 @@ export function scheduleMoveToOwned(el, box, onMove) {
 }
 
 // 已升级区灰阶 + ✓ 的统一展示（模块 E 一致性规范）
-export function ownedItemHtml(name, desc, extra) {
-  return `<div class="name"><span>${name}</span><span class="count">✓</span></div>
+// v3.4.9 反馈③：数量受限项（轮回圣殿 2 级、传奇职级殿 1 级…）的「当前/上限」统一写进
+//   count 位（与设施可购卡同口径，如「Lv.1/2 满」），不再只有一枚 ✓——玩家一眼能看出还剩几级。
+export function ownedItemHtml(name, desc, extra, countText) {
+  return `<div class="name"><span>${name}</span><span class="count mono">${countText || '✓'}</span></div>
     <div class="desc">${desc || ''}</div>
     <div class="cost mono" style="color:var(--good)">${extra || '已完成'}</div>`;
 }

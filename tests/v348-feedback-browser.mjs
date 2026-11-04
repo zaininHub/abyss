@@ -3,10 +3,10 @@
 // ② 圣所升级/消耗曲线变陡（growth 1.35→1.70、单位 EP 增速 0.2→0.35）
 // ③ 顶部常显星图 CPS
 // ④ 删除「满仓涓流」日志（机制保留）
-// ⑤ 星图出发消耗 ×100（EP/RP/PT）
+// ⑤ 星图出发消耗（EP ×100 保持；v3.4.9 ⑥ 起 RP/PT 抬到 EP 量级）
 // ⑥ 班组产出:薪资 ≈ 1.5:1
 // ⑦ 删除升级商店「消耗优化」整组（subsist1/2/3、mem、cache）
-// ⑧ 圣所 EP 不足时按可用 EP 折算产出（不再彻底停产/卡死）
+// ⑧ 圣所 EP 不足时暂停产出（v3.4.9 已回退 v3.4.8 的折算口径）
 import puppeteer from 'puppeteer-core';
 import { readFileSync } from 'fs';
 const { BALANCE } = await import('../src/data/balance.js');
@@ -64,16 +64,23 @@ const bad = (n, d = '') => { fail++; console.log(`  ✗ ${n}${d ? ' — ' + d : 
 // ===== ⑤ 星图出发消耗 ×100 =====
 {
   const g = (id) => GALAXIES.find(x => x.id === id);
+  // v3.4.9 ⑥：EP 消耗保持 v3.4.8 的 ×100 档，RP/PT 抬到 EP 同一数量级（EP/10、EP/12）
   const expect = [
-    ['moon', 5e5, 0, 0], ['mars', 5e6, 200, 0], ['jupiter', 5e7, 800, 500],
-    ['centauri', 5e8, 2500, 2000], ['edge', 3e9, 6000, 5000], ['andromeda', 1e10, 15000, 12000],
+    ['moon', 5e5, 5e4, 4e4], ['mars', 5e6, 5e5, 4e5], ['jupiter', 5e7, 5e6, 4e6],
+    ['centauri', 5e8, 5e7, 4e7], ['edge', 3e9, 3e8, 2.5e8], ['andromeda', 1e10, 1e9, 8e8],
   ];
   const wrong = expect.filter(([id, ep, rp, pt]) => {
     const x = g(id);
     return !x || x.cost.ep !== ep || x.cost.rp !== rp || x.cost.pt !== pt;
   });
-  if (wrong.length === 0) ok('⑤ 6 个星系 EP/RP/PT 消耗全部 ×100', `月球 5e5 EP → 仙女座 1e10 EP`);
+  if (wrong.length === 0) ok('⑤ 6 个星系 EP 消耗维持 ×100、RP/PT 抬到 EP 量级', `月球 5e5 EP → 仙女座 1e10 EP + 1e9 RP`);
   else bad('⑤ 星系消耗不符', wrong.map(w => w[0]).join('，'));
+  const orderOk = GALAXIES.every(x => {
+    const r = x.cost.rp / x.cost.ep, p = x.cost.pt / x.cost.ep;
+    return r > 0.05 && r < 0.2 && p > 0.05 && p < 0.2;
+  });
+  if (orderOk) ok('⑤ RP/PT 与 EP 同量级（各为 EP 的 8%~12%）', '');
+  else bad('⑤ RP/PT 与 EP 仍差量级', GALAXIES.map(x => `${x.id}:${x.cost.rp / x.cost.ep}`).join(' '));
   if (g('moon').cps === 2 && g('andromeda').cps === 3000) ok('⑤ CPS 奖励未同步上调（只放大消耗）', '');
   else bad('⑤ CPS 奖励被误改', '');
 }
@@ -163,8 +170,10 @@ try {
     const high = { faith: window.S.faith - f0 };
     return { low, high };
   });
-  if (fp.low.faith > 0) ok('⑧ EP 不足时仍产出 FP（按可用 EP 折算）', `2.5s 内 +${fp.low.faith.toFixed(3)} FP`);
-  else bad('⑧ EP 不足时完全不产 FP（卡死）', JSON.stringify(fp.low));
+  // v3.4.9 ⑧：折算产出已回退——EP 不足 = 暂停（不消耗也不产出），EP 回升自动满产
+  // 只断言「圣所停摆」——EP 本身会被薪资/转化器继续消耗，不能拿 EP 残值当圣所扣费依据
+  if (fp.low.faith === 0 && fp.low.ep >= 0) ok('⑧ EP 不足时圣所暂停产出（不扣 EP 也不产 FP）', `faith ${fp.low.faith} / ep ${fp.low.ep}`);
+  else bad('⑧ EP 不足口径异常（应停摆）', JSON.stringify(fp.low));
   if (fp.high.faith > 0.15) ok('⑧ EP 充足时恢复满产', `2s +${fp.high.faith.toFixed(3)} FP`);
   else bad('⑧ EP 充足产出偏低', JSON.stringify(fp.high));
 

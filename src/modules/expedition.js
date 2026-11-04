@@ -10,12 +10,14 @@ import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cos
 export const GALAXIES = [
   // v3.4.8 反馈⑤：出发消耗全面 ×100（EP/RP/PT 三种资源同步扩大，CPS 奖励不变）——
   //   此前月球 5K EP 就能换 2 CPS，探索几乎零成本；现在星图是真正的资源出口
-  { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    cost: { ep: 5e5,   rp: 0,     pt: 0     }, cps: 2,    desc: '短平快探索' },
-  { id: 'mars',     name: '火星前哨',   dur: 120,   cpsReq: 100,  cost: { ep: 5e6,   rp: 200,   pt: 0     }, cps: 10,   desc: '稳定收益' },
-  { id: 'jupiter',  name: '木星轨道',   dur: 600,   cpsReq: 1e3,  cost: { ep: 5e7,   rp: 800,   pt: 500   }, cps: 40,   desc: '外行星采样' },
-  { id: 'centauri', name: '半人马座',   dur: 3600,  cpsReq: 1e5,  cost: { ep: 5e8,   rp: 2500,  pt: 2000  }, cps: 200,  desc: '恒星际远航' },
-  { id: 'edge',     name: '银河边缘',   dur: 14400, cpsReq: 1e6,  cost: { ep: 3e9,   rp: 6000,  pt: 5000  }, cps: 800,  es: 2,  desc: '银河边缘 · 额外 ES' },  // v2.8.19：后期设施奖励保留
-  { id: 'andromeda', name: '仙女座',    dur: 28800, cpsReq: 1e8,  cost: { ep: 1e10,  rp: 15000, pt: 12000 }, cps: 3000, es: 10, desc: '河外远征 · 丰厚 ES' },
+  // v3.4.9 反馈⑥：RP/TP 消耗抬到与 EP 同一数量级（EP/10、EP/12）——原「1e10 EP + 1.5万 RP」
+  //   三种资源差四个量级，RP/PT 看起来像零头；同步把 RP/PT 仓容改为跟随 EP 上限（economy.prodCapFloor）才付得起
+  { id: 'moon',     name: '月球基地',   dur: 30,    cpsReq: 0,    cost: { ep: 5e5,   rp: 5e4,   pt: 4e4   }, cps: 2,    desc: '短平快探索' },
+  { id: 'mars',     name: '火星前哨',   dur: 120,   cpsReq: 100,  cost: { ep: 5e6,   rp: 5e5,   pt: 4e5   }, cps: 10,   desc: '稳定收益' },
+  { id: 'jupiter',  name: '木星轨道',   dur: 600,   cpsReq: 1e3,  cost: { ep: 5e7,   rp: 5e6,   pt: 4e6   }, cps: 40,   desc: '外行星采样' },
+  { id: 'centauri', name: '半人马座',   dur: 3600,  cpsReq: 1e5,  cost: { ep: 5e8,   rp: 5e7,   pt: 4e7   }, cps: 200,  desc: '恒星际远航' },
+  { id: 'edge',     name: '银河边缘',   dur: 14400, cpsReq: 1e6,  cost: { ep: 3e9,   rp: 3e8,   pt: 2.5e8 }, cps: 800,  es: 2,  desc: '银河边缘 · 额外 ES' },  // v2.8.19：后期设施奖励保留
+  { id: 'andromeda', name: '仙女座',    dur: 28800, cpsReq: 1e8,  cost: { ep: 1e10,  rp: 1e9,   pt: 8e8   }, cps: 3000, es: 10, desc: '河外远征 · 丰厚 ES' },
 ];
 
 export const FUEL_BURN_PER_SEC = 2;   // 燃料模式：每秒燃烧 CPS

@@ -527,6 +527,9 @@ function vaultDesc(u) {
   const [, label, capFn] = row;
   const before = capFn();
   const after = withTempLv('upgrades', u.id, capFn);
+  // v3.4.9 反馈⑥：RP/PT 上限已跟随 EP 上限（产出基座），仓库扩容在基座之下时增量为 0——
+  //   此时如实写「已由产出基座接管」，避免「+0」看起来像没生效
+  if (after <= before) return `${label} 上限 ${fmt(before)}（已由产出基座接管，扩容不再叠加）`;
   return `${label} 上限 +${fmt(after - before)}`;
 }
 // 线程强化变化量：cpu/gpu → 线程产出差值；subsist1-3/mem → 线程消耗差值；cache → 存储差值 + 消耗差值
@@ -1001,7 +1004,7 @@ export function renderBuildings(container) {
   for (const b of owned) {
     const div = document.createElement('div');
     div.className = 'item owned-item';
-    div.innerHTML = ownedItemHtml(b.name, b.desc[b.levels - 1], `${b.levels}/${b.levels} 满`);
+    div.innerHTML = ownedItemHtml(b.name, b.desc[b.levels - 1], '已建成', `Lv.${b.levels}/${b.levels} 满`); // v3.4.9 ③：当前/上限写法统一
     bldSection.box.appendChild(div);
   }
   bldSection.updateCount(owned.length);
@@ -1023,7 +1026,7 @@ export function renderBuildings(container) {
         // 满级：1s 后移入「已建成」折叠区
         delete el.dataset.buy;
         el.className = 'item just-bought';
-        el.innerHTML = ownedItemHtml(b.name, b.desc[b.levels - 1], `${b.levels}/${b.levels} 满`);
+        el.innerHTML = ownedItemHtml(b.name, b.desc[b.levels - 1], '已建成', `Lv.${b.levels}/${b.levels} 满`); // v3.4.9 ③
         scheduleMoveToOwned(el, bldSection.box, () => bldSection.updateCount(getBuildings().filter(x => buildingMaxed(x, S)).length));
       } else {
         // 未满级：留在可购区原地更新等级/效果/成本
@@ -1240,9 +1243,11 @@ function makeV21Item(b) {
     if (m && Object.keys(S.milesDone || {}).length < m) gate += `需里程碑 ${m} · `;
     if (gate) div.classList.add('locked');
     const lockCap = capOf(b, S); // v3.4.7 反馈⑤：锁卡也亮出级制上限，杜绝「以为能无限买」
-    const capTag = isFinite(lockCap) ? ` · 限 ${lockCap} 级` : '';
-    div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${fmt(cost)} EP</span></div>
-      <div class="desc">${v21Desc(b)}${capTag}</div>
+    // v3.4.9 反馈③：锁卡也在 count 位写「当前/上限」（0/5），与可购卡/满级卡同口径，
+    //   原先 count 位放价格、上限靠 desc 里「限 5 级」补一句，三种状态三种写法，玩家读不出来还剩几级
+    const capText = isFinite(lockCap) ? `Lv.0/${lockCap}` : 'Lv.0';
+    div.innerHTML = `<div class="name"><span>${b.name}</span><span class="count mono">${capText}</span></div>
+      <div class="desc">${v21Desc(b)}</div>
       <div class="cost mono">${gate}${fmt(cost)} EP</div>`;
   } else {
     const lv = v21Level(b.id, S);
@@ -1308,7 +1313,7 @@ export function renderV21Buildings(container) {
     const div = document.createElement('div');
     div.className = 'item owned-item';
     div.title = '族内封顶：建筑数量受控，成长靠等级';
-    div.innerHTML = ownedItemHtml(b.name, v21Desc(b), `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
+    div.innerHTML = ownedItemHtml(b.name, v21Desc(b), '已满级', `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限 // v3.4.9 ③：数量受限项统一「当前/上限」
     v21Section.box.appendChild(div);
   }
   v21Section.updateCount(maxed.length);
@@ -1352,7 +1357,7 @@ function bindV21Delegate(container) {
         delete el.dataset.v21;
         el.className = 'item just-bought';
         el.title = '族内封顶：建筑数量受控，成长靠等级';
-        el.innerHTML = ownedItemHtml(b.name, v21Desc(b), `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限
+        el.innerHTML = ownedItemHtml(b.name, v21Desc(b), '已满级', `Lv.${capOf(b, S)}/${capOf(b, S)} 满`); // v2.2 动态上限 // v3.4.9 ③
         scheduleMoveToOwned(el, v21Section.box, () => v21Section.updateCount(v21RealList().filter(x => v21Maxed(x, S)).length));
       } else {
         updateV21Item(b);

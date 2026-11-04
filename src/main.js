@@ -23,7 +23,7 @@ import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } 
 import { policyOpenGroups } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
-import { religionUnlocked } from './data/religions.js';
+import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, setConverterEnabled } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径
@@ -45,7 +45,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率
 import { ensureAbyssGaze } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
@@ -438,7 +438,8 @@ function renderTop() {
   if (hRank) hRank.textContent = S.prestigePoints;
   if (hRp) hRp.textContent = fmt(S.rp) + ' / ' + fmt(rpCap()); // v2.8.27 ②：RP 存储上限（矩阵存储库扩容）
   if (hEs) hEs.textContent = fmt(S.es);
-  if (hFaith) hFaith.textContent = (S.faith || 0).toFixed(2); // v2.6.4 ③：信仰精确 2 位小数
+  // v3.4.9 反馈⑧：FP 有上限就必须显示上限（此前只有数值，玩家以为「卡住不涨」）
+  if (hFaith) hFaith.textContent = `${(S.faith || 0).toFixed(2)} / ${faithCap()}`; // v2.6.4 ③：信仰精确 2 位小数
   // v3.4.1 反馈④：PT/DM 两侧统一走 fmtRes（<1000 两位小数，≥1000 k/M）——不再出现「2000.00 / 2.00k」
   if (hPt) hPt.textContent = fmtRes(S.pt || 0) + ' / ' + fmtRes(ptCap()); // v2.8.27 ②：PT 存储上限（饵料仓库扩容）
   if (hDm) hDm.textContent = fmtRes(S.dm || 0) + ' / ' + fmtRes(dmCap()); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
@@ -480,10 +481,35 @@ function renderTide() {
 }
 
 // ========== v2.0 腐化条 ==========
+// v3.4.9 反馈⑨：深渊吞噬横幅独立同步——原实现挂在本函数末尾，
+//   而「贿赂深渊」会把腐化清零并触发上面的早退（c<=0.01 → return），
+//   横幅因此永远停在「请做出命运抉择」；抽成独立函数后两条分支都会刷新。
+function renderAbyssCollapseBanner() {
+  const bn = document.getElementById('abyss-collapse');
+  if (!bn) return;
+  if (S.collapsed || S._collapseChoicePending) {
+    bn.style.display = '';
+    bn.className = 'abyss-banner-danger';
+    bn.innerHTML = `🌑 <b>深渊吞噬</b>：深渊将你拖入矩阵之底——请做出命运抉择（转生不可脱离）。`;
+    return;
+  }
+  const remain = collapseRemainMs();
+  if (remain !== null) {
+    const mm = Math.floor(remain / 60000), ss = Math.floor((remain % 60000) / 1000);
+    bn.style.display = '';
+    bn.className = 'abyss-banner-warn';
+    bn.innerHTML = `⚠️ <b>深渊吞噬倒计时</b>：已被深渊腐化，崩溃倒计时 <b>${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>。<span style="opacity:.85">主动净化（消耗 EP）压至满额以下可自救；转生不可脱离深渊。</span>`;
+  } else {
+    bn.style.display = 'none';
+    bn.innerHTML = '';
+  }
+}
+
 function renderCorruption() {
   const el = document.getElementById('corruption-bar');
   if (!el) return;
   const c = Math.max(0, Math.min(100, S.corruption || 0));
+  renderAbyssCollapseBanner();
   if (c <= 0.01) {
     el.style.display = 'none';
     return;
@@ -496,25 +522,7 @@ function renderCorruption() {
   if (fill) fill.style.width = txt + '%';
   if (num) num.textContent = txt + '%';
   if (pen) pen.textContent = `-${Math.round((1 - corruptionPenalty()) * 100)}%`;
-  // v2.8.3：深渊吞噬横幅（v2.9.0：状态类统一 + 文案按需求定稿）
-  const bn = document.getElementById('abyss-collapse');
-  if (bn) {
-    if (S.collapsed || S._collapseChoicePending) {
-      bn.style.display = '';
-      bn.className = 'abyss-banner-danger';
-      bn.innerHTML = `🌑 <b>深渊吞噬</b>：深渊将你拖入矩阵之底——请做出命运抉择（转生不可脱离）。`;
-    } else {
-      const remain = collapseRemainMs();
-      if (remain !== null) {
-        const mm = Math.floor(remain / 60000), ss = Math.floor((remain % 60000) / 1000);
-        bn.style.display = '';
-        bn.className = 'abyss-banner-warn';
-        bn.innerHTML = `⚠️ <b>深渊吞噬倒计时</b>：已被深渊腐化，崩溃倒计时 <b>${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b>。<span style="opacity:.85">主动净化（消耗 EP）压至满额以下可自救；转生不可脱离深渊。</span>`;
-      } else {
-        bn.style.display = 'none';
-      }
-    }
-  }
+  // v2.8.3：深渊吞噬横幅（v3.4.9 ⑨：刷新逻辑已抽到 renderAbyssCollapseBanner，函数开头统一调用）
 }
 
 function renderHero() {
@@ -867,6 +875,22 @@ function renderQuickSwitches() {
   } else {
     items.push(`<button data-qs="-1" data-qs-lock="temple" style="${QS_STYLE_LOCK}" title="未解锁：信奉宗教后建造「信仰圣所」可用">圣所 未解锁</button>`);
   }
+  // v3.4.9 反馈①：无限深入开关从裂隙科技树移到此处（与其余自动转化开关同一入口）
+  const descentOk = riftUpgradeLevel('auto_descent') >= 1;
+  if (descentOk) {
+    const on = S.riftAuto === 'auto_descent';
+    items.push(`<button data-qs="descent" title="无限深入：裂隙出现时自动深入探索（消耗 EP，腐化超阈值会损失）与「自动封印/自动拥抱」互斥" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">深入 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="descent" style="${QS_STYLE_LOCK}" title="未解锁：裂隙科技树购入「无限深入」（200 余烬）后可用">深入 未解锁</button>`);
+  }
+  // v3.4.9 反馈②：自动净化（腐化每涨 5% 自动净化 5%，消耗 EP；需先买「无限深入」）
+  const purifyOk = riftUpgradeLevel('auto_purify') >= 1;
+  if (purifyOk) {
+    const on = !!S.autoPurify;
+    items.push(`<button data-qs="purify" title="自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">净化 ${on ? '开' : '关'}</button>`);
+  } else {
+    items.push(`<button data-qs="-1" data-qs-lock="purify" style="${QS_STYLE_LOCK}" title="未解锁：裂隙科技树购入「自动净化仪」（1200 余烬，需先有无限深入）后可用">净化 未解锁</button>`);
+  }
   panel.style.display = '';
   const sig = items.join('|');
   if (host._qsSig === sig) return;
@@ -883,7 +907,7 @@ function bindQuickSwitches() {
     const k = b.dataset.qs;
     if (k === '-1') { // 灰显态：给出解锁指引，不改变任何状态
       const lock = b.dataset.qsLock;
-      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊', temple: '圣所未解锁：信奉宗教后建造「信仰圣所」' };
+      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊', temple: '圣所未解锁：信奉宗教后建造「信仰圣所」', descent: '无限深入未解锁：裂隙科技树（余烬 200）', purify: '自动净化仪未解锁：裂隙科技树（余烬 1200，需先有无限深入）' };
       if (toast) toast(`🔒 ${hint[lock] || '尚未解锁'}`);
       return;
     }
@@ -891,9 +915,21 @@ function bindQuickSwitches() {
     else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
     else if (k === 'hatch') setConverterEnabled('hatch', !converterEnabled('hatch'));
     else if (k === 'temple') setConverterEnabled('temple', !converterEnabled('temple'));
+    // v3.4.9 反馈①：无限深入（与自动封印/自动拥抱互斥——同一 riftAuto 字段）
+    else if (k === 'descent') {
+      const on = S.riftAuto === 'auto_descent';
+      S.riftAuto = on ? null : 'auto_descent';
+      log(`快捷开关：无限深入${on ? '关闭' : '开启（裂隙出现即自动深入，消耗 EP 换 DM/余烬）'}`, on ? 'bad' : 'good');
+    }
+    // v3.4.9 反馈②：自动净化
+    else if (k === 'purify') {
+      S.autoPurify = !S.autoPurify;
+      log(`快捷开关：自动净化${S.autoPurify ? '开启（腐化每涨 5% 自动净化 5%，消耗 EP）' : '关闭'}`, S.autoPurify ? 'good' : 'bad');
+    }
     save(S); // 状态即时落盘（与原位置开关同口径）
-    dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; dirty.religion = true; // 原位置开关卡随渲染周期同步
+    dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; dirty.religion = true; dirty.rift = true; // 原位置开关卡随渲染周期同步
     renderQuickSwitches();
+    if (k === 'descent' || k === 'purify') return; // 上面已单独打日志（不走下方的转化器文案）
     const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化', temple: '圣所产出' };
     const nowOn = converterEnabled(k);
     log(`快捷开关：${labels[k]}${nowOn ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, nowOn ? 'good' : 'bad');
@@ -1464,7 +1500,7 @@ function bindEvents() {
     const cur = S.corruption || 0;
     if (cur <= 0) { toast('当前无腐化可净化'); return; }
     const cut = Math.min(cur, BALANCE.corruption.purge?.maxCut || 50);
-    const cost = purgeCostFor(cut);
+    const cost = Math.ceil(purgeCostFor(cut) * riftPurgeCostMult()); // v3.4.9 反馈④：净化 EP 成本随裂隙等级 ×(1+0.30/级)
     if ((S.ep || 0) < cost) { toast(`EP 不足：净化 ${cut.toFixed(1)}% 腐化需 ${fmt(cost)} EP`); return; }
     S.ep -= cost;
     S.corruption = Math.max(0, cur - cut);
@@ -2300,6 +2336,26 @@ function tick(now) {
   const hadRift = !!S.activeRift;
   tickRift(dt);
   if (!!S.activeRift !== hadRift || S.activeRift) dirty.rift = true;
+
+  // v3.4.9 反馈②：自动净化仪——腐化每涨 5% 自动净化 5%（EP 充足时；EP 不足则暂停等待，不报错刷屏）
+  if (S.autoPurify && riftUpgradeLevel('auto_purify') >= 1) {
+    const step = 5;
+    // 基准点 = 上一次净化后的腐化值；首帧从 0 起算（不能对齐到当前值，否则永远差 5% 才触发一次）
+    if (!(S._autoPurifyMark >= 0)) S._autoPurifyMark = 0;
+    // 腐化大幅回落（手动净化 / 贿赂清零）→ 基准跟着下来，避免旧基准把下一次触发推得很晚
+    if ((S.corruption || 0) < S._autoPurifyMark - 2) S._autoPurifyMark = Math.max(0, S.corruption || 0);
+    if ((S.corruption || 0) >= S._autoPurifyMark + step) {
+      const cost = Math.ceil(purgeCostFor(step) * riftPurgeCostMult());
+      if ((S.ep || 0) >= cost) {
+        S.ep -= cost;
+        S.corruption = Math.max(0, (S.corruption || 0) - step);
+        S._autoPurifyMark = Math.max(0, S.corruption || 0);
+        dirty.corruption = true; dirty.top = true;
+      } else {
+        S._autoPurifyMark = (S.corruption || 0) - step; // EP 不足：不反复重试，等 EP 回升/腐化再涨 5%
+      }
+    }
+  }
 
   // v1.3 模块 D：载具被动采集 DM（60s roll，到账走 [采集] 日志）
   // v2.9.0 Bug④：'transition' = 自动暂停↔恢复切换 → 同步刷新探采页头（EP 不足自动暂停提示）

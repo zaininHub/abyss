@@ -145,6 +145,19 @@ export function riftDelveTotalEp(lv, sec) {
   return riftDelveEpPerSec(lv) * (sec || BALANCE.rift.delveDurSec || 60);
 }
 
+// ---- v3.4.9 反馈④：裂隙等级「奖励只略微提升，代价落在净化」 ----
+// 奖励倍率 = 1 + 0.15×(Lv-1)：Lv1 ×1、Lv5 ×1.6、Lv10 ×2.35（原 ×lv：Lv10 是 10 倍，产出过快）
+export function riftRewardMult(lv) {
+  const g = BALANCE.rift.delveRewardGrowth != null ? BALANCE.rift.delveRewardGrowth : 0.15;
+  return 1 + g * Math.max(0, (lv || 1) - 1);
+}
+// 主动净化 EP 成本倍率 = 1 + 0.30×(当前裂隙 Lv-1)：等级越高净化越贵（Lv10 ×3.7）
+export function riftPurgeCostMult() {
+  const lv = Math.max(1, Math.min(riftMaxLevel(), riftLevelOf(computeCps())));
+  const g = BALANCE.rift.purgeCostPerLevel != null ? BALANCE.rift.purgeCostPerLevel : 0.30;
+  return 1 + g * (lv - 1);
+}
+
 // ---- v2.6.1 余烬升级树 ----
 export function riftUpgradeLevel(id) {
   return (S.riftUpgrades && S.riftUpgrades[id]) || 0;
@@ -152,8 +165,11 @@ export function riftUpgradeLevel(id) {
 export function riftUpgradeCost(id) {
   const u = BALANCE.rift.upgrades[id];
   // v2.8.30：自动动作升级消耗大量余烬（基础 ×10）
-  const base = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent')
-    ? BALANCE.rift.upgBase * 10 : BALANCE.rift.upgBase;
+  // v3.4.9 反馈②：自动净化仪为「昂贵」档——单独 emberBase（1200 起），高于自动动作
+  const base = u && u.emberBase
+    ? u.emberBase
+    : (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent')
+      ? BALANCE.rift.upgBase * 10 : BALANCE.rift.upgBase;
   return Math.round(base * Math.pow(BALANCE.rift.upgGrowth, riftUpgradeLevel(id)));
 }
 export function riftSpawnSecAt(lv) {
@@ -203,6 +219,10 @@ export function buyRiftUpgrade(id) {
   if (!u) return { ok: false, reason: '未知升级' };
   const lv = riftUpgradeLevel(id);
   if (lv >= u.cap) return { ok: false, reason: `「${u.name}」已满级` };
+  // v3.4.9 反馈②：自动净化仪的前置——必须先购入「无限深入」（只有持续深入才需要自动净化）
+  if (id === 'auto_purify' && riftUpgradeLevel('auto_descent') < 1) {
+    return { ok: false, reason: '需先购入「无限深入」（本树）' };
+  }
   const cost = riftUpgradeCost(id);
   if (Math.floor(S.riftEmber || 0) < cost) return { ok: false, reason: `裂隙余烬不足（需 ${cost}，当前 ${Math.floor(S.riftEmber || 0)}）` };
   S.riftEmber -= cost;
@@ -264,9 +284,11 @@ function settleRiftExpedition(dt) {
     save(S);
     return;
   }
-  // 产出（DM 恒定 + VS 深潜解锁后）
-  ex.gainedDm += BALANCE.rift.delveDmPerLevel * lv * dt;
-  if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * lv * dt;
+  // 产出（DM 恒定 + VS 深潜解锁后）——v3.4.9 反馈④：奖励随等级只 +15%/级（原 ×lv 过快）
+  const rewardMul = riftRewardMult(lv);
+  ex.gainedDm += BALANCE.rift.delveDmPerLevel * rewardMul * dt;
+  if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * rewardMul * dt;
+  // 腐化仍按 ×lv 累积：等级越高越需要频繁净化（净化 EP 成本同步抬升 = 裂隙升级的主要代价）
   S.corruption = Math.min(100, (S.corruption || 0) + BALANCE.rift.delveCorruptPerLevel * lv * dt);
   if (Date.now() >= ex.until) {
     // 终局：腐化 > 阈值 → 损失；否则结算奖励
@@ -277,12 +299,13 @@ function settleRiftExpedition(dt) {
       log(`[裂隙] 深入终局：腐化 ${S.corruption.toFixed(0)}% 吞噬了探索——损失 ${fmt(loss)} EP`, 'bad');
       if (toast) toast('🌊 腐化吞噬：深入探索失败，损失 EP');
     } else {
-      const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * lv;
+      const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * rewardMul;
       addDm(dmTotal); // v2.8.27 ②：DM 上限
       if (dmTotal > 0) discoverDm();
       if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
-      S.riftEmber = Math.round((S.riftEmber || 0) + BALANCE.rift.emberDelve * lv * emberMul()); // v3.3.8 反馈②：整数化
-      log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${BALANCE.rift.emberDelve * lv} 余烬`, 'good');
+      const emberGain = Math.round(BALANCE.rift.emberDelve * rewardMul * emberMul()); // v3.3.8 反馈②：整数化
+      S.riftEmber = Math.round((S.riftEmber || 0) + emberGain);
+      log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${emberGain} 余烬`, 'good');
       if (toast) toast('🌌 深入完成：裂隙深处之物已带回');
     }
     S.riftExpedition = null;
@@ -460,8 +483,13 @@ export function renderRift(container) {
       return;
     }
     if (riftSig !== 'eta') {
-      riftSig = 'eta';
-      container.innerHTML = `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>
+      // v3.4.9 反馈⑦：深渊吞噬期（倒计时/抉择/崩溃/腐化满额）裂隙不再刷新——挂卡不显示倒计时，
+      // 否则会出现「下一次裂隙 0 秒后出现」这种自相矛盾的文案
+      const abyssLocked = !!(S.collapsed || S._collapseAt || S._collapseChoicePending
+        || (S.corruption || 0) >= (BALANCE.corruption.max || 100));
+      riftSig = abyssLocked ? 'abyss' : 'eta';
+      container.innerHTML = abyssLocked ? ''
+        : `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>
         <div style="font-size:11px;color:var(--text-3);margin-top:2px">基础间隔 ${fmtSpawnMin(riftSpawnSec())} · 升级「裂隙哨站」可缩短</div>`;
     }
     const etaEl = container.querySelector('#rift-eta');
@@ -532,13 +560,17 @@ export function renderRiftPanel(container) {
   // v3.4.0 反馈①：裂隙已在场时不展示「下次裂隙 X 后出现」——此时 riftEtaSec() 恒为 0，
   // 显示「0 秒后出现」既无意义又误导（裂隙就在主界面浮卡上等你处理）；
   // 改为同一行的两种语义（标签+数值均由 1s 快刷原地更新，不重建面板）
+  // v3.4.9 反馈⑦：进入深渊（倒计时/抉择/崩溃/腐化满额）后裂隙停止刷新，整行隐藏——
+  // 此前仍显示「下一次裂隙 0 秒后出现」，与「不会再出裂隙」的事实矛盾
+  const abyssLocked = !!(S.collapsed || S._collapseAt || S._collapseChoicePending
+    || (S.corruption || 0) >= (BALANCE.corruption.max || 100));
   const etaLabel = S.activeRift ? '当前裂隙' : '下次裂隙';
   const etaText = S.activeRift
     ? `进行中 · 剩余 ${fmtEta(Math.max(0, Math.ceil((S.activeRift.expiresAt - Date.now()) / 1000)))}`
     : fmtEta(riftEtaSec());
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
-    <div class="off-stat"><span id="rift-eta-label">${etaLabel}</span><b id="rift-eta-tab" style="color:var(--purple)">${etaText}</b></div>
+    ${abyssLocked ? '' : `<div class="off-stat"><span id="rift-eta-label">${etaLabel}</span><b id="rift-eta-tab" style="color:var(--purple)">${etaText}</b></div>`}
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技 · 余烬购买</div>`;
   for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
     const lv = riftUpgradeLevel(id);
@@ -558,11 +590,24 @@ export function renderRiftPanel(container) {
       }
     }
     // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
-    const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
+    // v3.4.9 反馈①：无限深入的开关移到左侧「自动转化」面板（本树只保留购买，避免两处开关不同步）
+    const isAuto = (id === 'auto_seal' || id === 'auto_embrace');
     const autoOn = S.riftAuto === id;
     const autoToggle = isAuto && lv > 0
       ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
       : '';
+    // v3.4.9 反馈②：自动净化仪未满足前置时给出明确指引（卡片不隐藏，先让玩家知道有这件东西）
+    if (id === 'auto_purify' && lv === 0 && riftUpgradeLevel('auto_descent') < 1) {
+      html += `
+      <div class="rift-upg-row" data-rift-upg="${id}" style="opacity:.55">
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:11px">Lv.0/${u.cap}</span></div>
+          <div style="font-size:11px;color:var(--text-3)">🔒 需先购入「无限深入」 · 腐化每涨 5% 自动净化 5%（消耗 EP）</div>
+        </div>
+        <span style="flex-shrink:0;font-size:11px;color:var(--text-3)">未解锁</span>
+      </div>`;
+      continue;
+    }
     const maxed = cost === null;
     const afford = !maxed && (S.riftEmber || 0) >= cost;
     // v2.8.30 review：余烬升级价格 pill 化（灰满级/绿可购/红不足）——与回响商店卡统一

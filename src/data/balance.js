@@ -253,6 +253,9 @@ export const BALANCE = {
   deepBin: { base: 1.8e6, growth: 1.22, capPer: 8e5, capGrowth: 1.15 },
   cacheUpg: { capPer: 8000, capGrowth: 1.15, maxLevel: 5 },
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
+  // v3.4.9 反馈⑤：EP 上限「时间基座」——首次溢出之后，上限至少容得下当前产出 ×N 小时，
+  //   避免「刚买完扩容 1 秒又溢出」；2 小时取值落在用户要求的 1~3 小时区间中位（economy.epStorageCap 读取）
+  capHoursFloor: 2,
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],
   // v2.0.2：防死锁硬约束——扩容项价格 ≤ 当前 EP 上限 ×30%（KG 谷仓模式：扩容永远只是存量的一小部分）
@@ -267,6 +270,10 @@ export const BALANCE = {
     faithChance: 0.20,              // 封印/拥抱信仰概率（宗教解锁后）
     // 深入裂隙（第三选项）：持续探索 60s，产出递增、腐化累积，超阈值结算损失
     delveDurSec: 60, delveDmPerLevel: 0.5, delveVsPerLevel: 0.2,
+    // v3.4.9 反馈④：裂隙等级升级「主要提升净化消耗的 EP，速度只略微提升」——
+    //   奖励改 +15%/级（原 ×lv，Lv10 是 Lv1 的 10 倍 → 产出过快）；腐化增速维持 ×lv（等级越高越依赖净化）；
+    //   主动净化 EP 消耗改 ∫ 1+0.30×(Lv-1)（Lv10 ×3.7），让高裂隙等级的代价落在净化成本上
+    delveRewardGrowth: 0.15, purgeCostPerLevel: 0.30,
     delveEpPerSec: 3.0,         // v2.8.14：深入探索期间消耗 EP（/秒/级，1 级 60s ≈ 180 EP）——EP 耗尽则停止获取奖励并失败
     // v3.4.8 反馈①：深入消耗改指数陡增（原线性 ×lv，高裂隙等级几乎免费）——
     //   消耗 = delveEpPerSec × delveEpGrowth^(Lv-1)：Lv1 3/s、Lv5 28/s、Lv10 232/s、Lv15 1.9K/s
@@ -289,7 +296,9 @@ export const BALANCE = {
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
       auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },
-      auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）' },
+      auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）· 开关在左侧「自动转化」' },
+      // v3.4.9 反馈②：昂贵的余烬升级——腐化每涨 5% 自动净化 5%（EP 充足时），需先买「无限深入」
+      auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 5% 自动净化 5%（消耗 EP）· 开关在左侧「自动转化」' },
       // v3.4.5 反馈②：语音文案改为「???」，动画改为屏幕底部中央一只左右打量你的眼睛（见 modules/abyssGaze.js）
       gaze: { name: '深渊凝视', cap: 1, desc: '???', egg: true },
     },
