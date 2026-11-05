@@ -2,7 +2,7 @@ import { S } from '../state.js';
 import { UPGRADES } from '../data/upgrades.js';
 import { ETERNALS, esCost as _esCost } from '../data/eternals.js';
 import { PETS, petBaseMult } from '../data/pets.js';
-import { MOOD_MULT } from '../data/threads.js';
+import { MOOD_MULT, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水（吞噬吞没线程）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
@@ -588,7 +588,10 @@ export function staffSalaryPerSec() {
   //   实际跑出 20.97K : 452（46:1），EP 只涨不跌。现在薪资随产出线性走：
   //   潮汐相位不再单独改薪资（产出侧已有 epMult 修正，避免 1.5 比例被相位打乱）；
   //   绑定转化器的加成本以「全员平均系数」乘回（绑定线程消耗增多仍成立）。
-  const out = staffOutputPerSec();
+  // v3.6.3 ②：薪资基数取「未叠加超线程产出加成」的线程产出。
+  //   薪资本身随产出线性（产出:薪资 1.5:1），若直接用含 +10% 的产出做基数，
+  //   再乘一遍超线程消耗系数就会变成 +21%，与「产出/消耗各 +10%」不符。
+  const { salaryBase } = staffOutputParts();
   const ratio = BALANCE.thread.salaryOutputRatio != null ? BALANCE.thread.salaryOutputRatio : 1 / 1.5;
   let bindAvg = 1;
   const n = S.cultists.length;
@@ -597,7 +600,7 @@ export function staffSalaryPerSec() {
     for (const c of S.cultists) sum += threadBindSalaryFactor(c);
     bindAvg = sum / n;
   }
-  return out * ratio * m * bindAvg * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
+  return salaryBase * ratio * m * bindAvg * lazyCostMult(); // v2.7.1：懒惰态消耗 ×1.8（消耗 > 产出）
 }
 
 // v2.8.30：专注每级加成曲线——低等级加成少、逐段递增至上限 20%/级（达到上限后固定不变）
@@ -612,7 +615,9 @@ export function focusTotalBonus(lv) {
   return t;
 }
 
-export function staffOutputPerSec() {
+// v3.6.3 ②：一次算出「实际产出」与「薪资基数」两份，避免两处各自重算导致口径漂移。
+//   差异只在超线程岗位：它 +10% 产出，但该加成不进薪资基数（消耗侧由 bindAvg 单独 +10%）。
+function staffOutputParts() {
   // v2.1 R1 修复：这里只应用线程专属乘数（团队协作/CPU/GPU）。
   // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
   // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
@@ -623,13 +628,20 @@ export function staffOutputPerSec() {
   // v3.4.7 反馈①：CPU/GPU 限购（cpu 3 级 / gpu 2 级），加成随级数乘算叠加（+50%/级、×2/级）
   if (S.upgrades.cpu) outMult *= Math.pow(1.5, S.upgrades.cpu || 0);
   if (S.upgrades.gpu) outMult *= Math.pow(2, S.upgrades.gpu || 0);
-  let total = 0;
+  let total = 0, salaryBase = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
-    total += (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
+    const one = (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
+    const factor = threadBindOutputFactor(c);
+    total += one * factor;
+    salaryBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
   }
-  return total;
+  return { total, salaryBase };
+}
+
+export function staffOutputPerSec() {
+  return staffOutputParts().total;
 }
 
 export function staffNetPerSec() {
@@ -886,7 +898,8 @@ export function ptHatchEpPerSec() {
 // v2.4 KG 模式改造：基础上限 2000 + 存储节点无限升级（第 i 级 +capPer×capGrowth^(i-1)，无封顶）
 // + 缓存优化 +5000/个（无限）+ 数据中心每级上限加成 [0,10K,25K,50K]
 // + 组D 扩容梯与新增多效果上限建筑 capAdd（无限）+ 里程碑乘算基座 + 故事线变体加成
-let capFloorBusy = false; // v3.4.9 ⑤：防 epStorageCap ← computeCps ← epStorageCap 递归
+// v3.6.3 反馈①：上限口径不再读 computeCps()（见下方「结构性倍数」），
+//   因此不再需要防递归旗标；任何线程数量/状态变化都不会进入本函数。
 export function epStorageCap() {
   let cap = 2000;
   // v3.4.8 反馈⑦：缓存优化已从商店删除——此处仅按旧档残留等级继续计入上限（不让老存档凭空掉容量），
@@ -929,20 +942,15 @@ export function epStorageCap() {
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
   cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
   cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）
-  // v3.4.9 反馈⑤：EP 上限「时间基座」——首次溢出之后，上限至少容得下 capHoursFloor 小时的当前产出。
-  //   用户口径：溢出过一次就进入长期挂机阶段，希望「存满一次」≈ 1~3 小时（取中位 2h）；
-  //   此前上限只靠扩容件线性累加，产出指数化后几分钟就满仓，扩容买完立刻又溢出，扩容毫无体感。
-  //   ⚠️ 必须「叠加」而非「取 max」：floor 常比结构性上限大几个量级，取 max 会把所有扩容件的增量
-  //   全部吞掉（买扩容上限不涨、存满时长也不变），玩家体感等于扩容失效。
-  //   computeCps() 内部可能反向调用本函数（AI 预留等），用 busy 旗标防递归：内层只算结构性值。
-  if (!capFloorBusy && S._rpOverflowSeen) {
-    const baseCap = cap;
-    capFloorBusy = true;
-    let cps = 0;
-    try { cps = computeCps(); } catch { cps = 0; } finally { capFloorBusy = false; }
-    const hours = B.capHoursFloor != null ? B.capHoursFloor : 2;
-    const floor = cps * 3600 * hours;
-    if (isFinite(floor) && floor > 0) cap = floor + baseCap;
+  // v3.6.3 反馈①：首次溢出后按「结构性上限的倍数」叠加扩容。
+  //   旧口径用 computeCps()×2h 做时间基座，但 cps 里含 staffOutputPerSec / mood /
+  //   wageOutputMult / lazyProdMult / datacenterMult / leaderGlobalMult 等线程派生项，
+  //   线程被吞噬流失、心情切换、欠薪休眠时上限会跟着掉 —— 玩家看到的是「上限无故缩水」。
+  //   现在只认结构性投入（扩容件/建筑/研究/里程碑/故事线/遗存/回响），线程完全不参与。
+  //   ⚠️ 仍是「叠加」而非「取 max」：倍数作用于整个结构性值，扩容件的每一级增量都同步放大。
+  if (S._rpOverflowSeen) {
+    const mult = B.capOverflowMult != null ? B.capOverflowMult : 3;
+    if (isFinite(cap) && cap > 0) cap = cap * (1 + mult);
   }
   return Math.round(cap);
 }

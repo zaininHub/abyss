@@ -758,7 +758,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 20px;
-  max-width: 420px;
+  max-width: min(420px, calc(100vw - 24px)); /* v3.6.3 ⑤：小屏弹框不贴边/不出屏 */
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
@@ -783,6 +783,9 @@ body {
   top: 12px;
   right: 12px;
   display: flex;
+  flex-wrap: wrap; /* v3.6.3 反馈⑤：窄屏允许换行，绝不横向溢出视口 */
+  justify-content: flex-end;
+  max-width: calc(100vw - 24px);
   gap: 6px;
   z-index: 50;
 }
@@ -790,6 +793,17 @@ body {
 .sys-btns .btn {
   font-size: 11px;
   padding: 4px 10px;
+}
+
+/* v3.6.3 反馈⑤：小屏时按钮组固定顶栏上方，不再压住/漂出顶栏资源行 */
+@media (max-width: 899px) {
+  .topbar { padding-top: 44px; } /* 给顶部固定按钮组让出一整行 */
+  .sys-btns { top: 8px; right: 8px; max-width: calc(100vw - 16px); gap: 4px; }
+  .sys-btns .btn { font-size: 10px; padding: 3px 7px; }
+  .save-menu-pop { max-width: calc(100vw - 16px); }
+}
+@media (max-width: 480px) {
+  .sys-btns .btn { padding: 3px 5px; }
 }
 
 /* ========== 暂停状态 ========== */
@@ -1376,7 +1390,7 @@ body {
 /* v3.2.3 反馈④：wiki 弹框固定尺寸——弹框高度恒定（78vh，上限 720px），正文/nav 各自滚动 */
 .wiki-box {
   max-width: 780px;
-  width: 780px;
+  width: min(780px, calc(100vw - 24px)); /* v3.6.3 ⑤：窄屏留出左右边距，不贴到屏幕外 */
   height: 78vh;
   max-height: 720px;
   display: flex;

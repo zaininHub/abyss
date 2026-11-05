@@ -30,12 +30,18 @@ export const PROFESSION_BY_ID = Object.fromEntries(PROFESSIONS.map(p => [p.id, p
 export const LEADER_PROFESSION_ID = 'overseer';
 export const LAZY_PROFESSION_ID = 'slacker';
 
-// 可绑定线程的「EP 转化类」生产建筑（dirty 1 的「所有的 ep 转化都需要绑定线程」）。
-// v3.3.3 反馈⑦：实装全部四类——探采平台(vehicles)/灵感工坊(atrium)/异兽孵化(hatch)/信仰圣所(temple)。
+// 可绑定线程的岗位（dirty 1 的「所有的 ep 转化都需要绑定线程」）。
+// v3.3.3 反馈⑦：实装全部四类转化岗位——探采平台(vehicles)/灵感工坊(atrium)/异兽孵化(hatch)/信仰圣所(temple)。
+// v3.6.3 反馈②：新增「超线程」——不依赖任何模块解锁，未解锁其它岗位时也能分配；
+//   该线程产出 +10%、消耗 +10%（不产出转化资源，故不参与 converterThreadBoost / 自动分配）。
+export const HYPER_CONVERTER_ID = 'hyper';
 export const CONVERTERS = {
-  vehicles: { id: 'vehicles', name: '探采平台', res: 'DM' },
-  atrium:   { id: 'atrium',   name: '灵感工坊', res: 'RP' },
-  hatch:    { id: 'hatch',    name: '异兽孵化', res: 'PT' },
-  temple:   { id: 'temple',   name: '信仰圣所', res: 'FP' },
+  hyper:    { id: 'hyper',    name: '超线程',   res: null, icon: '⚙️', alwaysUnlocked: true, desc: '无需解锁：该线程产出 +10%、消耗 +10%' },
+  vehicles: { id: 'vehicles', name: '探采平台', res: 'DM', icon: '🔭' },
+  atrium:   { id: 'atrium',   name: '灵感工坊', res: 'RP', icon: '⚗️' },
+  hatch:    { id: 'hatch',    name: '异兽孵化', res: 'PT', icon: '🥚' },
+  temple:   { id: 'temple',   name: '信仰圣所', res: 'FP', icon: '🕯️' },
 };
 export const CONVERTER_IDS = Object.keys(CONVERTERS);
+// 真正产出转化资源的岗位（超线程不在此列）
+export const RESOURCE_CONVERTER_IDS = CONVERTER_IDS.filter(t => t !== HYPER_CONVERTER_ID);

@@ -3,7 +3,7 @@
 // ② 新增昂贵余烬升级「自动净化仪」（需先买无限深入；开关同在自动转化）
 // ③ 数量受限项统一「当前/上限」文案（轮回圣殿等，与设施其他建筑一致）
 // ④ 裂隙升级主要抬净化 EP 成本，深入速度只略微提升
-// ⑤ EP 上限（首次溢出后）≈ 2 小时产出
+// ⑤ EP 上限与线程解耦（v3.6.3 起：结构性溢出 ×4，旧 2 小时时间基座已移除）
 // ⑥ 星图 RP/TP 与 EP 同量级（RP/PT 仓容跟随 EP 上限）
 // ⑦ 进入深渊后不再显示「下一次裂隙 … 后出现」
 // ⑧ FP 显示「当前 / 上限」，圣所注明上限来源
@@ -68,7 +68,9 @@ const bad = (n, d = '') => { fail++; console.log(`  ✗ ${n}${d ? ' — ' + d : 
   else bad('④ 净化成本曲线未定义', `${BALANCE.rift.purgeCostPerLevel}`);
 }
 
-// ===== ⑤ EP 上限：首次溢出后 ≈ 2 小时产出 =====
+// ===== ⑤ EP 上限：与线程数量/状态彻底解耦 =====
+// v3.6.3 ①：旧「cps × 2 小时」时间基座已移除——cps 内含线程派生项，会让上限随
+//   线程流失/心情/薪资状态抖动。现改为「首次溢出后按结构性上限 ×4」，只认结构性投入。
 {
   S._rpOverflowSeen = true;
   S.upgrades = { ...(S.upgrades || {}), storage: 0, reserve_bin: 0, deep_bin: 0, cache: 0 };
@@ -78,20 +80,29 @@ const bad = (n, d = '') => { fail++; console.log(`  ✗ ${n}${d ? ' — ' + d : 
   S.religion = null;
   S.prestigePoints = 0;
   S.collapsed = false;
-  S.cultists = [{ id: 1, name: 'T', output: 1000, mood: '正常', moodTimer: 60 }]; // 单条可预测产出
+  const oneThread = [{ id: 1, name: 'T', output: 1000, mood: '正常', moodTimer: 60 }];
+  S.cultists = oneThread.slice();
   const cap = epStorageCap();
-  const cps = computeCps();
-  const hours = cap / Math.max(1e-9, cps) / 3600;
-  if (BALANCE.capHoursFloor === 2) ok('⑤ 时间基座 = 2 小时（用户区间 1~3h 中位）', '');
-  else bad('⑤ 时间基座未定义', `${BALANCE.capHoursFloor}`);
-  if (hours > 1.5 && hours < 2.5) ok('⑤ 空档存档：上限 ≈ 2 小时存满', `${hours.toFixed(2)}h（cap ${cap} / cps ${cps.toFixed(2)}）`);
-  else bad('⑤ 上限与产出不成 2 小时', `${hours.toFixed(2)}h`);
-  // 未溢出过 → 不启用基座（前期仍按扩容件走）
+  if (BALANCE.capOverflowMult === 3) ok('⑤ 结构性溢出倍数 = ×4（1 + capOverflowMult）', '');
+  else bad('⑤ 溢出倍数未定义', `${BALANCE.capOverflowMult}`);
+  S.cultists = Array.from({ length: 20 }, (_, i) => ({ id: 100 + i, name: 'X' + i, output: 9999, mood: '超频', moodTimer: 60 }));
+  const capMany = epStorageCap();
+  S.lazySince = Date.now() - 1e6;
+  S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 120, bufferSec: 0, loseTimer: 0, transition: 0 };
+  const capDormant = epStorageCap();
+  S.collapsed = true;
+  const capCollapsed = epStorageCap();
+  if (cap === capMany && cap === capDormant && cap === capCollapsed) ok('⑤ 线程数/懒惰/休眠/吞噬均不改上限', `cap=${cap}`);
+  else bad('⑤ 上限仍受线程影响', JSON.stringify({ cap, capMany, capDormant, capCollapsed }));
   S._rpOverflowSeen = false;
   const early = epStorageCap();
-  if (early < cap) ok('⑤ 首次溢出前不启用基座（前期上限仍由扩容件决定）', `${early}`);
-  else bad('⑤ 基座提前生效', `${early}`);
+  if (Math.abs(cap / early - 4) < 0.02) ok('⑤ 首次溢出前不启用倍数（前期仍由扩容件决定）', `${early} → ${cap}`);
+  else bad('⑤ 溢出倍数异常', `${early} → ${cap}`);
+  // 还原状态，避免污染后续 ⑥
   S._rpOverflowSeen = true;
+  S.collapsed = false; S.lazySince = null;
+  S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0, transition: 0 };
+  S.cultists = oneThread.slice();
 }
 
 // ===== ⑥ 星图 RP/TP 与 EP 同量级 =====

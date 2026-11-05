@@ -50,7 +50,9 @@ export function doReincarn() {
   // v2.8.4：深渊遗存——每次轮回按本局最强维度自动携带 1 座（克制：每轮回至多 +1、同种 cap 3、跨轮回保留）
   S.relicLegacy = S.relicLegacy || {};
   const legacyDefs = BALANCE.reincarn.legacy || [];
-  const colonyLv = (S.colonies || []).reduce((a, c) => a + (c.lv || 0), 0);
+  // v3.6.3 ⑥ bugfix：v3.6.0 起 colonies 是「星系 id → true」的对象，旧数组口径会抛
+  //   TypeError: reduce is not a function（轮回结算直接崩）。与 expedition.js 的殖民地计数同源。
+  const colonyLv = Object.values(S.colonies || {}).filter(Boolean).length;
   const vals = { delve: (S.delve && S.delve.depth) || 0, colony: colonyLv, rift: S.riftsSealed || 0 }; // v2.9.0：层深键修正（同 echoScore）
   const cands = legacyDefs
     .filter(L => (S.relicLegacy[L.id] || 0) < BALANCE.reincarn.legacyCap && vals[L.needKey] >= L.need)

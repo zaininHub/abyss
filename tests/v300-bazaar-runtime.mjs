@@ -54,12 +54,16 @@ try {
   await sleep(600);
   const capOk = await page.evaluate(() => S.ep > 2e5);
   if (capOk) ok('扩容后 EP 存量足以支付熔炉协议一批', `ep=${Math.round(await page.evaluate(() => S.ep))}`); else bad('扩容后 EP 存量', String(await page.evaluate(() => S.ep)));
-  const before = await page.evaluate(() => ({ ep: S.ep, rp: S.rp, trades: S.bazaar.trades }));
+  // v3.6.3 ⑥：集市成交已加二次确认（首次点击提示「再点一次确认购买」），旧脚本只点一次
+  // v3.6.3 ⑥：熔炉协议现行口径是 EP → DM（数据层 from:'ep' to:'dm'），老脚本按 EP → RP 断言
+  const before = await page.evaluate(() => ({ ep: S.ep, dm: S.dm, trades: S.bazaar.trades }));
+  await page.evaluate(() => document.querySelector('[data-bazaar-dealer="forge"]').click());
+  await sleep(150);
   await page.evaluate(() => document.querySelector('[data-bazaar-dealer="forge"]').click());
   await sleep(300);
-  const after = await page.evaluate(() => ({ ep: S.ep, rp: S.rp, trades: S.bazaar.trades, stock: S.bazaar.stock.forge }));
-  if (after.trades === before.trades + 1 && after.ep < before.ep && after.rp > before.rp) {
-    ok('点击成交：EP 扣款 / RP 到账 / 笔数 +1', `EP ${Math.round(before.ep)}→${Math.round(after.ep)}，RP ${before.rp}→${after.rp}`);
+  const after = await page.evaluate(() => ({ ep: S.ep, dm: S.dm, trades: S.bazaar.trades, stock: S.bazaar.stock.forge }));
+  if (after.trades === before.trades + 1 && after.ep < before.ep && after.dm > before.dm) {
+    ok('点击成交：EP 扣款 / DM 到账 / 笔数 +1', `EP ${Math.round(before.ep)}→${Math.round(after.ep)}，DM ${before.dm}→${after.dm}`);
   } else bad('点击成交', JSON.stringify({ before, after }));
 
   // 5. 刷新（EP）→ 库存补满
@@ -77,18 +81,24 @@ try {
   if (echo1 === echo0 - 1) ok('回响刷新：扣 1 回响', `${echo0}→${echo1}`); else bad('回响刷新', `${echo0}→${echo1}`);
 
   // 7. 深潜面板展示 EP 成本（v3.0.0 ①）
-  const delveTxt = await page.evaluate(() => {
+  // v3.6.3 ⑥：深潜面板按脏标记异步渲染，同步读 textContent 会拿到空串
+  await page.evaluate(() => {
     S.delve = { unlocked: true, active: false, depth: 0, up: {}, mileDone: {} };
     S.es = 3; S.dm = 1e6; S.resDiscovered.dm = true; S.religion = { unlocked: true };
     document.getElementById('btn-delve').style.display = '';
     document.getElementById('btn-delve').click();
-    return document.getElementById('delve-panel').textContent;
+    window.__gameDirty.delve = true;
   });
-  await sleep(300);
+  await sleep(700);
+  const delveTxt = await page.evaluate(() => document.getElementById('delve-panel').textContent);
   if (/E?P?\s*存量|EP/.test(delveTxt) && delveTxt.includes('下潜')) ok('深潜面板渲染（含 EP 成本口径）');
   else bad('深潜面板渲染', delveTxt.slice(0, 60));
 
   // 8. 深潜下潜真的扣 EP（v3.0.0 ① 核心修复，真实点击验证）
+  // v3.6.3 ⑥：下潜成本按「存储上限 ×4%」（本夹具约 918M），而前面几轮刷新已把 EP 消耗到 ~540M；
+  //   补足预算后再验证真实扣费，否则会因资源不足被拒（不是玩法回归）。
+  await page.evaluate(() => { S.ep = Math.min(window.__qa.epStorageCap() * 0.9, 2e9); });
+  await sleep(150);
   const dvBefore = await page.evaluate(() => ({ ep: S.ep, dm: S.dm, depth: S.delve.depth }));
   await page.evaluate(() => document.querySelector('#delve-panel [data-delve-toggle]').click());
   await sleep(300);

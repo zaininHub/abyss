@@ -23,6 +23,9 @@ const { epStorageCap, addEp, tickCorruption } = await import('../src/modules/eco
 // 基线态：无任何扩容建筑/里程碑 → cap = 2000（epStorageCap 基础值）
 // v3.0.9 反馈②：溢出转 RP 需已购「矩阵存储库」（RP 未解锁不转化）——本文件验证转换机制本身，统一授予仓库
 function resetBaseline() {
+  // v3.6.3 ①：首次溢出后上限按结构性值 ×4；本文件所有用例都以 CAP=2000 为基线，
+  //   必须复位溢出标记，否则上一用例的 tickCorruption 会让后续 cap 跳到 8000。
+  S._rpOverflowSeen = false;
   S.upgrades = { rp_vault: 1 }; S.buildings = {}; S.milesDone = {}; S.storyline = 'default';
   S.ep = 0; S.rp = 0; S.corruption = 0;
   S.epOverflowTotal = 0; S._overflowRpPool = 0;
@@ -73,7 +76,8 @@ t('多轮溢出持续累计（第二次 tick 再记一笔）', () => {
   resetBaseline();
   S.ep = CAP + 1000;
   tickCorruption(0.1);
-  S.ep = CAP + 2000; // 模拟再次超 cap（如离线注入）
+  // v3.6.3 ①：第一次溢出会把上限抬到结构性 ×4，第二次注入需按「当前上限」构造
+  S.ep = epStorageCap() + 2000; // 模拟再次超 cap（如离线注入）
   tickCorruption(0.1);
   assert.strictEqual(S.epOverflowTotal, 3000);
 });

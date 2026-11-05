@@ -3,6 +3,7 @@
 // 各资源/特殊建筑/功能点写明解锁条件；版本机制变更后同步更新本文件
 import { S } from '../state.js';
 import { BALANCE } from './balance.js';
+import { MOOD_MULT } from './threads.js'; // v3.6.3 ⑥：心情倍率文案改读数据源，消除硬编码漂移
 import { PRAISE, SECRET_SANCTUMS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
 import { POLICY_GROUPS } from './policies.js';
 import { BAZAAR, RES_LABEL } from './bazaar.js'; // v3.0.0：深渊集市
@@ -52,7 +53,7 @@ export const WIKI_SECTIONS = [
       <tr><td>星图</td><td>🛰 CPS 星际燃料</td><td>星图（深空探测科技解锁）</td><td>星图探索（消耗 EP/RP/PT、携带出战异兽每只 +10%）</td><td>深空殖民 / 宇宙探索升级；燃料模式持续燃烧 → 全局 ×1.5</td></tr>
       <tr><td>终局</td><td>🌑 VS 虚空碎片</td><td>深潜解锁（ES≥3 + DM + 宗教）</td><td>深潜产出 / 裂隙深入</td><td>深潜升级树</td></tr>
     </table>
-    <p class="wiki-hint">EP 存储上限 = 2000 + 备用粮仓（前期关键件，+4,000/级 ×1.18 递增、20 级封顶）+ 存储节点（后期大宗，+12,000/级 ×1.15 递增）+ 深井仓储/效能建筑扩容 + 里程碑 +${D.storageMileBonus*100}%/个。商店文案均为「购买后本级变化量」。</p>
+    <p class="wiki-hint">EP 存储上限 = 2000 + 备用粮仓（前期关键件，+4,000/级 ×1.18 递增、20 级封顶）+ 存储节点（后期大宗，+12,000/级 ×1.15 递增）+ 深井仓储/效能建筑扩容 + 里程碑 +${D.storageMileBonus*100}%/个；首次溢出后整体 ×${1 + D.capOverflowMult}。上限只随结构性投入变化，与线程数量、心情、薪资状态无关。商店文案均为「购买后本级变化量」。</p>
   ` },
   { id: 'thread', name: '线程与薪资', unlock: null, body: () => `
     <h4>线程四态薪资状态机</h4>
@@ -63,9 +64,11 @@ export const WIKI_SECTIONS = [
       <tr><td>🔴 流失预警</td><td>休眠 ${D.thread.wages.loseAfterSec/60|0} 分钟</td><td>每 60s ${Math.round(D.thread.wages.loseChancePerMin*100)}% 流失 1 线程（维修坞 -50%）</td></tr>
     </table>
     <h4>线程心情（与薪资正交叠加）</h4>
-    <p>超频 ×2.0 / 优化 ×1.5 / 高效 ×1.2 / 正常 ×1.0 / 阻塞 ×0.5 / 死锁 ×0.1</p>
-    <h4>班组面板（v3.1.0 拟人化 · ${D.thread.crewUnlockThreads} 条线程解锁）</h4>
-    <p>商店页顶部「🧵 班组」：每条线程一张个人档案卡——状态灯（跟随薪资四态）、心情乘数、个人产出、累计贡献 EP（按实际入账份额逐 tick 分摊）、工龄；下方「班组事件流水」记录招募/状态切换/流失/吞没/晋升解散（随存档持久化 40 条）。</p>
+    <p>${Object.entries(MOOD_MULT).map(([m, v]) => `${m} ×${v}`).join(' / ')}</p>
+    <h4>班组面板（${D.thread.crewUnlockThreads} 条线程解锁）</h4>
+    <p>每张档案卡显示状态灯（跟随薪资四态）、心情乘数、个人产出、工龄；图标表示线程擅长的岗位（悬浮可读名称），当前岗位由卡内下拉框切换，卡面不再重复展示岗位与贡献累计。下拉只列出已解锁的岗位，未解锁的岗位不会出现。</p>
+    <h4>超线程岗位</h4>
+    <p>⚙️ 超线程不依赖任何模块解锁，开局即可分配：该线程自由 EP 产出 ×${D.thread.binding.hyperOutputMult}、消耗 ×${D.thread.binding.hyperSalaryMult}。它不产出转化资源，也不参与「智能分配」的自动重排（手动分配会保留）。</p>
     <h4>懒惰态（EP 满上限惩罚）</h4>
     <p>EP 持续满上限 ${D.lazy.afterSec}s → 线程怠工：产出 ×${D.lazy.prodMult}、消耗 ×${D.lazy.costMult}（消耗 > 产出，鼓励持续投入而非囤满挂机）；EP 跌到 0 或任意购买解除。</p>
   ` },
@@ -167,7 +170,7 @@ export const WIKI_SECTIONS = [
       <tr><td>星图 / 故事线 / 岔路口</td><td>第 5 章</td><td>星图探索（消耗 EP/RP/PT 换星际燃料 CPS）、三线立誓</td></tr>
       <tr><td>宇宙探索（星图内）</td><td>科技树「深空探测」</td><td>6 项大工程，消耗星际燃料 CPS 一次性换多资源；深空殖民同样烧 CPS</td></tr>
       <tr><td>效能建筑</td><td>购入「矩阵存储库」（RP 锚点）</td><td>商店页「效能建筑」分区，按大组分类（产出与效率 / 研究与事件）</td></tr>
-      <tr><td>EP 存储上限</td><td>升级商店「备用粮仓（前期）/ 存储节点（后期）/ 深井仓储」</td><td>粮仓 +4,000/级 ×1.18 递增、20 级封顶；存储节点 +12,000/级 ×1.15 递增、无限级（v3.4.6 曲线对调、v3.4.7 加成递增，粮仓先解锁）</td></tr>
+      <tr><td>EP 存储上限</td><td>升级商店「备用粮仓（前期）/ 存储节点（后期）/ 深井仓储」</td><td>粮仓 +4,000/级 ×1.18 递增、20 级封顶；存储节点 +12,000/级 ×1.15 递增、无限级（v3.4.6 曲线对调、v3.4.7 加成递增，粮仓先解锁）；首次溢出后整体 ×${1 + D.capOverflowMult}（v3.6.3 起与线程数量/状态无关）</td></tr>
       <tr><td>离线续航</td><td>科技「远程协作」基线 + 离线升级（离线效率 I~III / 离线上限 I）</td><td>最高 110% 效率、上限硬封顶 10 小时（v3.4.6）</td></tr>
       <tr><td>AI 助手</td><td>第 7 章</td><td>自动购买需全资源点解锁后激活</td></tr>
       <tr><td>永恒矩阵</td><td>第 8 章 ∧ 首次晋升获得 ES</td><td>科技树 tab 底部</td></tr>

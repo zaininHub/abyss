@@ -26,7 +26,7 @@ import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaar
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
-import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, setConverterEnabled } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled } from './modules/threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -851,11 +851,11 @@ function renderQuickSwitches() {
   if (!panel || !host) return;
   // v3.3.1 反馈④：常驻展示开关，未解锁的灰显（不再整块隐藏）
   // v3.3.3 反馈⑦：扩为四枚——蒸馏 / 探采 / 孵化 / 圣所（孵化、圣所接入线程绑定统一口径）
-  const atriumOk = (S.upgrades.atrium || 0) >= 1;
-  const vehCount = (BALANCE.vehicles.ids || []).reduce((a, id) => a + (S.upgrades[id] || 0), 0);
-  const probeOk = vehCount > 0;
-  const hatchOk = S.ptAutoHatch === true;
-  const templeOk = ((S.religion && S.religion.temple) || 0) >= 1;
+  // v3.6.3 ③：与班组岗位下拉共用「解锁」唯一判定源，避免两处口径漂移
+  const atriumOk = converterUnlocked('atrium');
+  const probeOk = converterUnlocked('vehicles');
+  const hatchOk = converterUnlocked('hatch');
+  const templeOk = converterUnlocked('temple');
   const items = [];
   if (atriumOk) {
     const on = converterEnabled('atrium');
@@ -2760,7 +2760,8 @@ if (typeof window !== 'undefined') {
     riftEtaSec, riftNextSec, // v3.3.5 反馈③：裂隙倒计时/下次间隔（测试钩子）
     vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, vehicleDmPerMin, // v3.3.6：探采汇率/乘区/结算口径（测试钩子）
     // v3.3.0 线程绑定系统 QA 钩子
-    threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads },
+    threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
+      converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor }, // v3.6.3 ②③：岗位解锁/超线程系数 QA 钩子
   };
 }
 

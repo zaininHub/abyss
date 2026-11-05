@@ -4,11 +4,12 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
-import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, CONVERTER_IDS, LAZY_PROFESSION_ID } from '../data/threads.js';
+import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel, leaderCount,
   autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
+  unlockedConverterIds,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
@@ -55,6 +56,9 @@ function tenure(c) {
 export function renderCrewPanel(container) {
   if (!container) return;
   const meta = crewStateMeta();
+  // v3.6.3 反馈③：只展示已解锁岗位（超线程恒解锁）；筛选目标若是已隐藏的旧岗位则回到「全部」
+  const visibleTypes = unlockedConverterIds();
+  if (crewFilter && crewFilter !== 'free' && !visibleTypes.includes(crewFilter)) crewFilter = '';
   // v3.4.6 反馈⑥：岗位筛选——先过滤再分页（'' 全部 / 'free' 空闲 / converter id）
   const all = S.cultists;
   const filtered = !crewFilter ? all : all.filter(c => crewFilter === 'free' ? !c.boundTo : c.boundTo === crewFilter);
@@ -67,27 +71,34 @@ export function renderCrewPanel(container) {
   const start = crewPage * PAGE_SIZE;
   const pageCultists = filtered.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}`;
+  // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
   for (const c of pageCultists) {
     const p = threadProfession(c);
-    const pTxt = p ? `${p.icon}${p.name}` : '无职业';
+    // v3.6.3 反馈④：卡内只留「擅长岗位图标」（悬浮可读名称），不写职业名、不写所处岗位、不写贡献累计
+    const affinityName = p && p.affinity && CONVERTERS[p.affinity] ? CONVERTERS[p.affinity].name : (p ? p.desc : '无擅长岗位');
+    const affinityIcon = p
+      ? `<span class="crew-affinity" title="${affinityName}" style="font-size:13px;cursor:help">${p.icon}</span>`
+      : '<span class="crew-affinity" title="无擅长岗位" style="font-size:13px">·</span>';
     const lvl = threadLevel(c);
-    const boundTxt = c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲';
     const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)">★领导</span>' : '';
     const lazyBadge = isLazyProfession(c) ? ' <span style="color:var(--warn,#c8a24a)">😪怠惰</span>' : '';
+    // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
+    const opts = visibleTypes.slice();
+    if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      CONVERTER_IDS.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t].name}</option>`)).join('');
+      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
     cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
       <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
       <div class="crew-info">
         <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}${lazyBadge}</div>
-        <div class="crew-stat">${pTxt} · Lv.${lvl} · 岗位：${boundTxt}</div>
-        <div class="crew-stat">产出 <b class="c-out">0</b>/s · 贡献 <b class="c-earned">—</b> EP</div>
+        <div class="crew-stat">${affinityIcon} · Lv.${lvl}</div>
+        <div class="crew-stat">产出 <b class="c-out">0</b>/s</div>
         <div class="crew-stat dim"><span class="c-tenure"></span></div>
         <div class="crew-stat"><select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>${leaderBtn}</div>
       </div>
@@ -104,6 +115,13 @@ export function renderCrewPanel(container) {
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
   const totOut = staffOutputPerSec();
   const totSal = staffSalaryPerSec();
+  // v3.6.3 ③/④：说明行只列已解锁岗位的图标对照，未解锁岗位在面板内完全不出现
+  const helpIcons = visibleTypes
+    .filter(t => t !== HYPER_CONVERTER_ID)
+    .map(t => {
+      const p = Object.values(PROFESSION_BY_ID).find(x => x.affinity === t);
+      return p ? `${p.icon}${CONVERTERS[t].name}` : '';
+    }).filter(Boolean).join('、');
   container.innerHTML = `
     <div class="crew-head">
       <span class="crew-state" style="color:${meta.color}">● ${meta.label}</span>
@@ -115,10 +133,10 @@ export function renderCrewPanel(container) {
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
-        ${CONVERTER_IDS.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
+        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">绑定后该线程自由 EP 产出略降、消耗增多（抽调去转化）。匹配职业无惩罚且加成更高：🔭勘探员→探采、⚗️蒸馏师→灵感工坊、🥚饲育师→异兽孵化、🕯️祭司→信仰圣所；🎖️领导者提供全局加成并可「智能分配」；😪怠惰线程为负面（极少出现）</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成并可「智能分配」；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。下拉框可切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
@@ -179,8 +197,9 @@ export function renderCrewPanel(container) {
   refreshCrewDyn(container, start, pageCultists);
 }
 
-// 每秒原地更新动态数值（个人产出/累计贡献/工龄），不重建 DOM（v2.6.7 防闪烁纪律）
+// 每秒原地更新动态数值（个人产出/工龄），不重建 DOM（v2.6.7 防闪烁纪律）
 // v3.2.3 反馈①：索引跟随当前分页切片（原全量前 24 条直读）
+// v3.6.3 反馈④：累计贡献已从卡面移除，动态刷新不再维护 c-earned
 function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0, PAGE_SIZE)) {
   // 班组概览（产出/薪资）每秒原地更新（不计入内容签名，避免每秒重建 DOM）
   const sumEls = container.querySelectorAll('.crew-sum b');
@@ -189,12 +208,10 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
     sumEls[1].textContent = fmt(staffSalaryPerSec());
   }
   const outEls = container.querySelectorAll('.c-out');
-  const earnEls = container.querySelectorAll('.c-earned');
   const tenEls = container.querySelectorAll('.c-tenure');
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
     outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c));
-    earnEls[i].textContent = c.earned ? fmt(c.earned) : '—';
     if (tenEls[i]) tenEls[i].textContent = `已共事 ${c.hiredAt ? tenure(c) : '—'}`;
   }
 }

@@ -103,9 +103,10 @@ try {
       styles: btns.map(b => b.getAttribute('style').slice(0, 60)),
     };
   });
-  if (qs.visible && qs.n === 4) ok('④ 自动转化面板常驻四枚开关（v3.3.3：+圣所）');
+  // v3.6.3 ⑥：v3.4.9 又加「深入 / 净化」两枚，面板由 4 → 6 枚；未解锁项由 2 → 4 枚
+  if (qs.visible && qs.n === 6) ok('④ 自动转化面板常驻六枚开关（蒸馏/探采/孵化/圣所/深入/净化）');
   else bad('④ 面板形态', JSON.stringify(qs));
-  if (qs.locked.length === 2 && qs.locked.includes('probe') && qs.locked.includes('temple')) ok('④ 未解锁开关灰显（探采/圣所未解锁）', qs.locked.join(','));
+  if (qs.locked.length === 4 && ['probe', 'temple', 'descent', 'purify'].every(k => qs.locked.includes(k))) ok('④ 未解锁开关灰显（探采/圣所/深入/净化）', qs.locked.join(','));
   else bad('④ 灰显判定', JSON.stringify(qs.locked));
 
   // ===== ⑤ 领导者唯一 =====
@@ -163,7 +164,9 @@ try {
     const total = window.__qa.totalDrainPerSec();
     return { sal, total, ratio: total / sal, state: window.S.wageState.state };
   });
-  if (drain.state === 'dormant' && drain.total < drain.sal * 0.05) ok('⑪ 休眠且 EP=0 时消耗/s 不再虚报全额薪资', `sal=${drain.sal.toFixed(1)} total=${drain.total.toFixed(1)}`);
+  // v3.6.3 ⑥：休眠期「保命成本」是既有设计（×0.3；有休眠舱时 ×0.15），
+  //   旧断言按「接近 0」写，属于编码了旧口径；现按真实倍率校验，仍确保不虚报全额薪资。
+  if (drain.state === 'dormant' && ((Math.abs(drain.ratio - 0.3) < 0.01) || (Math.abs(drain.ratio - 0.15) < 0.01))) ok('⑪ 休眠且 EP=0 时只扣保命成本（×0.3 / 休眠舱 ×0.15）', `sal=${drain.sal.toFixed(1)} total=${drain.total.toFixed(1)} ratio=${drain.ratio.toFixed(2)}`);
   else bad('⑪ 消耗口径', JSON.stringify(drain));
 
   // ===== ③ 预言系统生效（v3.3.3：广播间隔 30s→600s） =====

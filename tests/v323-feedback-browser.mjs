@@ -57,7 +57,11 @@ try {
   await page.evaluate(() => {
     window.S.ep = 60000; window.S.allTimeEp = 1e8;
     window.S.upgrades.storage = 300; // 抬高 EP 存储上限（否则 tick 把 ep 钳回 cap，50K 买不起）
-    window.S.cultists = Array.from({ length: 3 }, (_, i) => ({ name: '线程-' + i, mood: '高效', output: 500, earned: 0, hiredAt: Date.now() })); // 低薪资占用，保净产出 > 0
+    // v3.6.3 ⑥：v2.8 起懒惰态（lazySince）会让产出 ×0.4 / 消耗 ×1.8 → 触发「产出不足」防死锁拦截；
+    //   旧夹具未清该状态，导致首购点击被拒。这里显式恢复满薪态并给足净产出余量。
+    window.S.lazySince = null;
+    window.S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0, transition: 0 };
+    window.S.cultists = Array.from({ length: 3 }, (_, i) => ({ name: '线程-' + i, mood: '高效', output: 2000, earned: 0, hiredAt: Date.now() }));
     window.S.upgrades = { ...(window.S.upgrades || {}) }; delete window.S.upgrades.atrium;
     window.__gameDirty.shop = true;
   });

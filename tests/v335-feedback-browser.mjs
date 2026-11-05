@@ -1,7 +1,7 @@
 // v3.3.5 反馈回归（三项）
 // ① 智能分配：每次点击对「当前全部线程」做一次全局重排（已绑定但错位的线程也会被纠正），已最优时返回 0 不动
 // ② 神谕广播：文案连带事件效果（如「顿悟」——+80 RP），AI 面板同步展示
-// ③ 裂隙：首次 90 秒内必出（计时兜底）、封印后首列常驻倒计时、后台大跳按真实时间补偿、裂隙页签显示下次裂隙
+// ③ 裂隙：≥15 线程解锁、约 1 小时一遇 / 首次 Lv1 / 停留 10 分钟、封印后首列常驻倒计时、后台大跳补偿、页签倒计时
 import puppeteer from 'puppeteer-core';
 const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
@@ -24,7 +24,8 @@ try {
   // ===== ① 智能分配：全量重排 =====
   const a1 = await page.evaluate(() => {
     window.S.ep = 1e12;
-    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1 };
+    // v3.6.3 ③：智能分配只认「已解锁」岗位，探采平台需先有一辆载具（与班组下拉同口径）
+    window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 1, scooter: 1 };
     window.S.ptAutoHatch = true;            // 孵化开启
     window.S._probeEnabled = true;          // 探采开启
     window.S.converterOn = { vehicles: true, atrium: true, hatch: true, temple: true };
@@ -78,13 +79,23 @@ try {
   else bad('③ 锁定提示未写门槛', r0.title);
 
   // 3b 补足到 ≥15 线程：约 1 小时出现首次裂隙 Lv1 + 在场 10 分钟
+  // v3.6.3 ⑥：EP 上限改为结构性口径后，① 的 1e12 EP 被钳回，3a 的 11 小时推进会让线程
+  //   欠薪流失殆尽；本段只验证裂隙门槛/节奏，先恢复健康薪资态并补足 17 条线程。
   await page.evaluate(() => {
-    for (let i = 0; i < 12; i++) window.S.cultists.push({ id: 'x' + i, name: 'X' + i, profession: 'prospector', level: 1, boundTo: null, mood: '正常', output: 10, hiredAt: Date.now(), moodTimer: 90 });
+    const capNow = window.__qa.epStorageCap();
+    window.S.ep = capNow * 0.6;
+    window.S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0, transition: 0 };
+    window.S.lazySince = null;
+    while (window.S.cultists.length < 17) {
+      const i = window.S.cultists.length;
+      window.S.cultists.push({ id: 'x' + i, name: 'X' + i, profession: 'prospector', level: 1, boundTo: null, mood: '正常', output: 10, hiredAt: Date.now(), moodTimer: 90 });
+    }
     window.S._riftT = 0; window.S._riftNextSec = 0;
   });
   let cap = null;
   for (let i = 0; i < 70 && !cap; i++) {
-    await page.evaluate(() => window.__advance(120)); // 每步 2 分钟
+    // 每步先把余额补到安全线，避免 2 分钟推进中再度欠薪流失（与 v362 同口径）
+    await page.evaluate(() => { window.S.ep = window.__qa.epStorageCap() * 0.6; window.__advance(120); });
     const st = await page.evaluate(() => window.S.activeRift ? { lv: window.S.activeRift.level, stay: (window.S.activeRift.expiresAt - Date.now()) / 60000 } : null);
     if (st) cap = st;
   }

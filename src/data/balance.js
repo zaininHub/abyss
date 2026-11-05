@@ -39,6 +39,9 @@ export const BALANCE = {
       salaryFactor: 1.5,        // 绑定非擅长岗位：该线程消耗 ×1.5（线程消耗增多）
       lazyOutputFactor: 0.4,    // 懒惰线程绑定：自由产出 ×0.4
       lazySalaryFactor: 2.25,   // 懒惰线程绑定：消耗 ×2.25
+      // v3.6.3 反馈②：超线程岗位（无需解锁任何模块即可分配）
+      hyperOutputMult: 1.1,     // 该线程自由 EP 产出 ×1.1
+      hyperSalaryMult: 1.1,     // 该线程消耗 ×1.1
       matchLevelBonus: 0.04,    // 每级：匹配岗位转化加成 +4%/级（v3.3.1 反馈⑩：转化加成略微下调）
       mismatchLevelBonus: 0.01, // 每级：非匹配岗位转化加成 +1%/级
       matchProfBonus: 0.15,     // 匹配岗位额外转化加成 +15%（v3.3.1 反馈⑩：25%→15%，消耗增多的收益略微减少）
@@ -285,9 +288,12 @@ export const BALANCE = {
   deepBin: { base: 1.8e6, growth: 1.22, capPer: 8e5, capGrowth: 1.15 },
   cacheUpg: { capPer: 8000, capGrowth: 1.15, maxLevel: 5 },
   storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
-  // v3.4.9 反馈⑤：EP 上限「时间基座」——首次溢出之后，上限至少容得下当前产出 ×N 小时，
-  //   避免「刚买完扩容 1 秒又溢出」；2 小时取值落在用户要求的 1~3 小时区间中位（economy.epStorageCap 读取）
-  capHoursFloor: 2,
+  // v3.6.3 反馈①：EP 上限与线程数量/状态彻底解耦。
+  //   旧「时间基座」读 computeCps()，而 cps 内含线程产出、心情、薪资四态、懒惰、
+  //   领导者/数据中心等线程派生乘区 —— 线程流失或状态一变，上限就跟着抖。
+  //   改为「首次溢出后按结构性上限的倍数叠加」：上限只由扩容件/建筑/研究/里程碑/
+  //   故事线/遗存/回响决定，与 cultists 完全无关；扩容增量仍是叠加而非 max。
+  capOverflowMult: 3, // 首次溢出后额外 +3× 结构性上限（合计 4×）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],
   // v2.0.2：防死锁硬约束——扩容项价格 ≤ 当前 EP 上限 ×30%（KG 谷仓模式：扩容永远只是存量的一小部分）

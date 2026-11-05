@@ -31,6 +31,9 @@ const { EVENTS } = await import('../src/data/events.js');
 
 let pass = 0, fail = 0;
 function t(name, fn) {
+  // v3.6.3 ①：用例间复位「首次溢出」持久标记。旧 cps 时间基座下本夹具 cps=0、溢出不影响上限；
+  //   改为结构性 ×4 后，前一用例的 addEp 溢出会让后续 cap 整体翻 4 倍，破坏单测隔离。
+  S._rpOverflowSeen = false;
   try { fn(); pass++; console.log('  ✓ ' + name); }
   catch (e) { fail++; console.log('  ✗ ' + name + ' :: ' + e.message); }
 }
@@ -190,6 +193,9 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
     }
   }
   assert.ok(rpSeen > 0, '100 次生成应至少出现一次 rp 奖励');
+  // v3.6.3 ①：首次溢出后上限按结构性值 ×4；本用例把它置 true 后必须复位，
+  //   否则后续所有「基线 cap=2000」断言会读到 8000（旧时间基座下 cps=0 恰好无影响）。
+  S._rpOverflowSeen = false;
 });
 
 console.log('[6] v2.1 修复断言（R1 乘数 / R3 上限死锁 / D1 统一入口 / 口径拍板 / R2+R4 源码）');
@@ -238,6 +244,9 @@ t('D1：addEp 收敛上限且只按实际入账累计（runEarned/allTimeEp）',
   assert.equal(gained, 50, '实际入账只有 50');
   assert.equal((S.runEarned || 0) - re0, 50, '记账只加 50');
   assert.equal((S.allTimeEp || 0) - at0, 50, '总账只加 50');
+  // v3.6.3 ①：上面那 50 点溢出已把上限抬到结构性 ×4，本用例断言的是「满仓」语义，
+  //   复位溢出标记后再验证（新上限抬升行为由 v363 / v349 单独覆盖）。
+  S._rpOverflowSeen = false;
   assert.equal(addEp(50), 0, '已满时再入账为 0');
   assert.equal(S.ep, 2000, '满仓不溢出');
   S.ep = 50;

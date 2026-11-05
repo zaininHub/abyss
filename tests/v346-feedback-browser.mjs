@@ -259,10 +259,12 @@ try {
     const host = document.getElementById('crew-panel');
     if (!host) return null;
     const filterRow = host.querySelector('[data-crew-filter]');
-    return { hasFilter: !!filterRow, btns: filterRow ? filterRow.querySelectorAll('[data-crew-filter-btn]').length : 0 };
+    const ids = window.__qa.threadBind.unlockedConverterIds();
+    return { hasFilter: !!filterRow, btns: filterRow ? filterRow.querySelectorAll('[data-crew-filter-btn]').length : 0, ids };
   });
-  if (crew && crew.hasFilter && crew.btns >= 6) ok('⑥ 班组面板出现岗位筛选（全部/空闲 + 4 岗位）', `${crew.btns} 个筛选项`);
-  else bad('⑥ 岗位筛选缺失', JSON.stringify(crew));
+  // v3.6.3 ③：筛选按钮 = 全部/空闲 + 已解锁岗位（超线程恒解锁，未解锁模块对应岗位不展示）
+  if (crew && crew.hasFilter && crew.btns === 2 + crew.ids.length) ok('⑥ 岗位筛选只列已解锁岗位（全部/空闲 + 可见岗位）', `${crew.btns} 项，岗位=${crew.ids.join(',')}`);
+  else bad('⑥ 岗位筛选缺失或列出未解锁岗位', JSON.stringify(crew));
 
   // ⑤ 灵感工坊卡面产出非 0
   await page.evaluate(() => document.getElementById('btn-rp')?.click());

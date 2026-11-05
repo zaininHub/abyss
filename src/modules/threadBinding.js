@@ -8,7 +8,7 @@
 // 经济影响经 economy.js 的 staffOutputPerSec / staffSalaryPerSec / globalMult / vehicleDmPerMin 接入。
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { PROFESSION_BY_ID, LEADER_PROFESSION_ID, LAZY_PROFESSION_ID, CONVERTER_IDS, CONVERTERS } from '../data/threads.js';
+import { PROFESSION_BY_ID, LEADER_PROFESSION_ID, LAZY_PROFESSION_ID, CONVERTER_IDS, RESOURCE_CONVERTER_IDS, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 
 const B = () => BALANCE.thread.binding;
 
@@ -20,7 +20,28 @@ export function threadLevel(c) { return Math.max(1, Math.min(B().levelCap, c && 
 // ---- 绑定生效性（转化器开启且已分配）----
 // v3.3.1 反馈④：转化器开关统一口径——班组「转化器开关」/「自动转化」快捷开关/研究点蒸馏开关
 // 读写同一组状态（converterOn + atriumOn/_probeEnabled 镜像），避免两处开关互相打架
+// v3.6.3 反馈③：「岗位解锁」唯一判定源——班组下拉/筛选按钮与快捷开关灰显共用此处，
+//   避免同名双实现导致「班组看得到、开关却锁着」。口径与 v3.3.1 快捷开关一致。
+//   超线程恒解锁（反馈②：未解锁其它模块时也能分配）。
+export function converterUnlocked(type, S0 = S) {
+  if (type === HYPER_CONVERTER_ID) return true;
+  const up = (S0 && S0.upgrades) || {};
+  switch (type) {
+    case 'atrium':   return (up.atrium || 0) >= 1;
+    case 'vehicles': return (BALANCE.vehicles.ids || []).reduce((a, id) => a + (up[id] || 0), 0) > 0;
+    case 'hatch':    return S0.ptAutoHatch === true;
+    case 'temple':   return ((S0.religion && S0.religion.temple) || 0) >= 1;
+    default: return true;
+  }
+}
+
+// 当前可展示 / 可分配的岗位（含恒解锁的超线程）
+export function unlockedConverterIds() {
+  return CONVERTER_IDS.filter(t => converterUnlocked(t));
+}
+
 export function converterEnabled(type) {
+  if (type === HYPER_CONVERTER_ID) return true; // 超线程无开关，恒生效
   if (S.converterOn && S.converterOn[type] === false) return false;
   if (type === 'atrium') return S.atriumOn !== false;
   if (type === 'vehicles') return S._probeEnabled !== false;
@@ -57,6 +78,7 @@ export function isSuitable(c) {
 // ---- 方向①：绑定对「线程自由 EP 产出」的影响（×）----
 export function threadBindOutputFactor(c) {
   if (!bindingActive(c)) return 1;
+  if (c.boundTo === HYPER_CONVERTER_ID) return B().hyperOutputMult; // v3.6.3 ②：超线程产出 +10%
   if (affinityMatches(c, c.boundTo)) return 1;          // 擅长岗位：不减少 EP
   if (isLazyProfession(c)) return B().lazyOutputFactor;
   return B().outputFactor;
@@ -64,6 +86,7 @@ export function threadBindOutputFactor(c) {
 // ---- 方向①：绑定对「线程消耗」的影响（×）----
 export function threadBindSalaryFactor(c) {
   if (!bindingActive(c)) return 1;
+  if (c.boundTo === HYPER_CONVERTER_ID) return B().hyperSalaryMult; // v3.6.3 ②：超线程消耗 +10%
   if (affinityMatches(c, c.boundTo)) return 1;          // 擅长岗位：不增加消耗
   if (isLazyProfession(c)) return B().lazySalaryFactor;
   return B().salaryFactor;
@@ -102,6 +125,7 @@ export function leaderGlobalMult() {
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
 // 每个生效绑定的线程按等级/职业/领导叠加；转化器关闭或无绑定 → 1
 export function converterThreadBoost(type) {
+  if (type === HYPER_CONVERTER_ID) return 1; // 超线程不产出转化资源，无转化加成
   if (!converterEnabled(type)) return 1;
   let mult = 1;
   for (const c of (S.cultists || [])) {
@@ -134,16 +158,20 @@ export function unbindThread(c) { c.boundTo = null; }
 //      （转化加成是乘区，多一人即多一乘区，均衡即最优）
 //   3) 没有任何开启的转化器 → 全部释放绑定（消耗恢复）
 export function autoAssignThreads() {
-  const types = CONVERTER_IDS.filter(t => converterEnabled(t));
+  // v3.6.3 ③：只分配「已解锁」的资源岗位；超线程是玩家手动兜底岗位，不参与自动重排。
+  const types = RESOURCE_CONVERTER_IDS.filter(t => converterUnlocked(t) && converterEnabled(t));
   const cultists = (S.cultists || []);
+  const hyperBound = cultists.filter(c => c.boundTo === HYPER_CONVERTER_ID);
+  const movable = cultists.filter(c => c.boundTo !== HYPER_CONVERTER_ID);
   if (!types.length) {
     let released = 0;
-    for (const c of cultists) if (c.boundTo) { c.boundTo = null; released++; }
-    return released;
+    for (const c of movable) if (c.boundTo) { c.boundTo = null; released++; }
+    return released; // 手动超线程保留，不被智能分配清空
   }
   const plan = new Map();
+  for (const c of hyperBound) plan.set(c, HYPER_CONVERTER_ID);
   const rest = [];
-  for (const c of cultists) {
+  for (const c of movable) {
     const p = threadProfession(c);
     if (p && p.affinity && CONVERTERS[p.affinity] && types.includes(p.affinity)) plan.set(c, p.affinity);
     else rest.push(c);
@@ -180,7 +208,8 @@ export function leastLoadedConverter(types) {
 
 // ---- 方向⑤：AI 与线程职业联动 —— 招募时按需求建议职业 ----
 export function aiSuggestedProfession() {
-  const types = CONVERTER_IDS.filter(t => converterEnabled(t));
+  // v3.6.3 ③：招募建议只按已解锁的资源岗位，避免建议一个玩家拿不到的职业
+  const types = RESOURCE_CONVERTER_IDS.filter(t => converterUnlocked(t) && converterEnabled(t));
   let best = 'prospector', bestN = Infinity;
   for (const t of types) {
     const n = (S.cultists || []).filter(c => c.boundTo === t && bindingActive(c)).length;
