@@ -64,10 +64,10 @@ const bad = (n, d = '') => { fail++; console.log(`  ✗ ${n}${d ? ' — ' + d : 
 // ===== ⑤ 星图出发消耗 ×100 =====
 {
   const g = (id) => GALAXIES.find(x => x.id === id);
-  // v3.4.9 ⑥：EP 消耗保持 v3.4.8 的 ×100 档，RP/PT 抬到 EP 同一数量级（EP/10、EP/12）
+  // v3.6.0 方向⑤：EP 消耗起步 M 量级、按数量级递增（1e6 → 1e11），RP/PT 抬到 EP 同一数量级（EP/10、EP/12.5）
   const expect = [
-    ['moon', 5e5, 5e4, 4e4], ['mars', 5e6, 5e5, 4e5], ['jupiter', 5e7, 5e6, 4e6],
-    ['centauri', 5e8, 5e7, 4e7], ['edge', 3e9, 3e8, 2.5e8], ['andromeda', 1e10, 1e9, 8e8],
+    ['moon', 1e6, 1e5, 8e4], ['mars', 1e7, 1e6, 8e5], ['jupiter', 1e8, 1e7, 8e6],
+    ['centauri', 1e9, 1e8, 8e7], ['edge', 1e10, 1e9, 8e8], ['andromeda', 1e11, 1e10, 8e9],
   ];
   const wrong = expect.filter(([id, ep, rp, pt]) => {
     const x = g(id);

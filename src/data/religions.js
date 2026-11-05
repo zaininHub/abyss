@@ -22,6 +22,9 @@ export const RELIGIONS = [
     hook: (s) => (s.religion && s.religion.immortal) ? 2 : 1 },
   { id: 'omnipot',  name: '全知教团',   icon: '🔱', desc: '全局产出 ×10',         effect: '全局产出 ×10',         gate: () => (S.es || 0) >= 1,
     hook: (s) => (s.religion && s.religion.omnipot) ? 10 : 1 },
+  // v3.6.0 方向④：宗教↔裂隙联动分支
+  { id: 'abyss',    name: '深渊崇拜',   icon: '🌑', desc: '裂隙余烬产出 ×2',      effect: '裂隙余烬产出 ×2',      gate: () => !!(S.resDiscovered && S.resDiscovered.dm),
+    hook: (s) => (s.religion && s.religion.abyss) ? 2 : 1 },
 ];
 
 // 圣印（升级点）：随进度解锁等级上限——基础 3 / RP 后 5 / DM 后 8 / ES 后 10

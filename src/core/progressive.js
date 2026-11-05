@@ -8,17 +8,23 @@ function chapterNum(ch) {
   return isNaN(n) ? 0 : n;
 }
 
+// v3.6.0 方向⑦：模块解锁改为按「游玩天数」推进（约 2 大块/天），
+// 与章节叙事（3~7 天/章）解耦——旧档无 startedAt 时回退为 999 天（全解锁，迁移安全）。
+export function daysPlayed(S) {
+  return S.startedAt ? (Date.now() - S.startedAt) / 86400000 : 999;
+}
+
 export const PROGRESSIVE_STAGES = [
   { id: 'P0', name: '入职', desc: '基础产出与升级', unlockCond: (S) => true },
-  { id: 'P1', name: '觉醒', desc: '科技树入口开放（第1列科技可买）', unlockCond: (S) => chapterNum(S.chapter) >= 1 },
-  { id: 'P2', name: '矩阵', desc: '宠物系统开放', unlockCond: (S) => chapterNum(S.chapter) >= 3 },
-  { id: 'P3', name: '永恒', desc: '晋升/转生入口开放', unlockCond: (S) => chapterNum(S.chapter) >= 4 },
-  { id: 'P4', name: '星际', desc: '星际探索开放；命运的岔路口建筑分区开放', unlockCond: (S) => chapterNum(S.chapter) >= 5 },
+  { id: 'P1', name: '觉醒', desc: '科技树入口开放（第1列科技可买）', unlockCond: (S) => daysPlayed(S) >= 0 },
+  { id: 'P2', name: '矩阵', desc: '宠物系统开放', unlockCond: (S) => daysPlayed(S) >= 0.5 },
+  { id: 'P3', name: '永恒', desc: '晋升/转生入口开放', unlockCond: (S) => daysPlayed(S) >= 1.0 },
+  { id: 'P4', name: '星际', desc: '星际探索开放；命运的岔路口建筑分区开放', unlockCond: (S) => daysPlayed(S) >= 1.5 },
   { id: 'P5', name: '分叉后', desc: '线专属标签页/模块出现；裂隙系统开放', unlockCond: (S) => S.storyline !== 'default' },
-  { id: 'P6', name: '神格/低语/协议', desc: '建筑模块开放；线专属建筑可购买', unlockCond: (S) => chapterNum(S.chapter) >= 6 },
-  { id: 'P7', name: '深渊/叛乱/触须', desc: 'AI 助手解锁条件出现', unlockCond: (S) => chapterNum(S.chapter) >= 7 },
-  { id: 'P8', name: '飞升/凝视/共生', desc: '永恒矩阵入口开放', unlockCond: (S) => chapterNum(S.chapter) >= 8 },
-  { id: 'P9', name: '全面', desc: '离线升级扩展区开放；全部系统常驻', unlockCond: (S) => chapterNum(S.chapter) >= 9 },
+  { id: 'P6', name: '神格/低语/协议', desc: '建筑模块开放；线专属建筑可购买', unlockCond: (S) => daysPlayed(S) >= 2.5 },
+  { id: 'P7', name: '深渊/叛乱/触须', desc: 'AI 助手解锁条件出现', unlockCond: (S) => daysPlayed(S) >= 3.0 },
+  { id: 'P8', name: '飞升/凝视/共生', desc: '永恒矩阵入口开放', unlockCond: (S) => daysPlayed(S) >= 3.5 },
+  { id: 'P9', name: '全面', desc: '离线升级扩展区开放；全部系统常驻', unlockCond: (S) => daysPlayed(S) >= 4.5 },
 ];
 
 export function isStageUnlocked(stageId, S) {

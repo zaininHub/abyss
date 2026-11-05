@@ -220,6 +220,7 @@ export function renderShop(container) {
       for (const [sid, sel] of shopItemEls) { const su = UPGRADES.find(x => x.id === sid); if (su && sel) updateShopItem(su); }
       // v2.8.22 ①：购买后全相关面板置脏——线程/科技/遗物/腐化即时重算灰显（资源变化跨面板同步）
       dirty.tech = true; dirty.relics = true; dirty.corruption = true; dirty.hero = true;
+      if (u.id === 'ai_assist') dirty.ai = true; // v3.6.0 方向⑨：商店买编队后 AI 面板槽位即时刷新
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {
@@ -1572,13 +1573,16 @@ export function buyResearchUpgrade(id) {
   return { ok: true };
 }
 // v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
-// 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局（累计 4 级）
-const RP_GROUPS = [
+// 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局 / 星际与拟我（并列，累计 4 级）
+export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部有归属分组」
   // v3.0.3：许愿池 wish_well 已从研究升级移入通用设施（BALANCE.buildings）——不再在研究点 tab 渲染
   // v3.4.2：研究菜单扩充——各批次新增条目（ep/thread/global/offline 等）并入对应轴
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay'], unlock: null },
-  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple'], unlock: { prev: 'prod', need: 4 } },
-  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe'],                                                      unlock: { prev: 'res', need: 4 } },
+  // v3.6.0 方向①：研究菜单由 3 组 20 项扩到 4 组 30 项——新增「星际与拟我」整组，
+  // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2'], unlock: null },
+  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy'], unlock: { prev: 'prod', need: 4 } },
+  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2'],                                                    unlock: { prev: 'res', need: 4 } },
+  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai'],                                                             unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 

@@ -3,7 +3,7 @@
 // 一次性把 EP 转化为稀缺资源（PT/DM/信仰/余烬/VS/RP），跨资源发展通道（与集市互补、成本口径随存储上限缩放）。
 // 克制：每项等级上限 4~5、成本 ×1.7~1.9/级陡峭增长、转化率劣于最优通道（集市/深潜）但不占库存不占队列。
 import { S, save } from '../state.js';
-import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult } from './economy.js';
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
 
@@ -80,7 +80,7 @@ export function buyCosmos(id) {
   const full = resFull(p.res);
   if (full) return { ok: false, reason: `${COSMOS_RES_LABEL[p.res]} 已满仓，先消耗再转化（满仓不生成、不消耗）` };
   S.starCps -= cost;
-  const gain = cosmosReward(p, cost);
+  const gain = Math.round(cosmosReward(p, cost) * researchMult('cosmos')); // v3.6.0 方向⑧：rp_cosmos2（宇宙工程）提升星际工程星力 +8%/级
   grantRes(p.res, gain);
   S.cosmos.lv[id] = lv + 1;
   save(S);

@@ -8,7 +8,7 @@
 import { S, save } from '../state.js';
 import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv } from './economy.js';
 // v2.7.3 ⑤：回响·裂隙共鸣（余烬 ×2/级）
-function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift'); } // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
+function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift') * (1 + 0.12 * riftUpgradeLevel('wellspring')) * ((S.religion && S.religion.abyss) ? 2 : 1); } // v3.6.0：余烬井喷 + 深渊崇拜分支 // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { researchMult, addDm, addRp } from './economy.js'; // v3.0.8：RP 上限统一入口
@@ -223,7 +223,7 @@ export function riftSealCostMult() {
   return Math.max(0.5, 1 - 0.1 * riftUpgradeLevel('charm'));
 }
 export function riftVsMult() {
-  return 1 + 0.5 * riftUpgradeLevel('echo');
+  return 1 + 0.5 * riftUpgradeLevel('echo') + 0.3 * riftUpgradeLevel('voidheart'); // v3.6.0：虚空之心
 }
 export function buyRiftUpgrade(id) {
   const u = BALANCE.rift.upgrades[id];

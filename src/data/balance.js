@@ -219,7 +219,19 @@ export const BALANCE = {
 
   // v1.3 模块 A：AI 助手
   ai: {
-    interval: 5,                    // 决策周期（秒）
+    interval: 5,
+    assistants: {
+      baseSlots: 0,            // 初始可用助手槽（无升级时为 0）
+      maxSlots: 8,            // 升级「AI 助手」可解锁的硬上限
+      upgradeId: 'ai_assist',  // 升级商店项 id（Task15 在 shop 接入）
+      upgradeBase: 5e6,        // 第 1 个助手解锁价（EP）
+      upgradeGrowth: 6,        // 后续每个助手 ×6
+      allocTypes: ['upgrade','building','colony','cosmos','tech','policy','rift','religion'],
+      typeLabels: {
+        upgrade: '升级商店', building: '效能建筑', colony: '星系殖民', cosmos: '宇宙工程',
+        tech: '科技研究', policy: '政策颁行', rift: '裂隙升级', religion: '宗教圣所',
+      },
+    },                    // 决策周期（秒）
     reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
     defaultReserve: 0.3,
     // v2.5.5：AI 自动购建（全部资源点解锁后可激活）
@@ -230,6 +242,25 @@ export const BALANCE = {
       minRate: 5,                   // 硬下限：即使改存档也不低于 5s（严格限速）
       perTickMax: 1,                // 每个决策周期至多购买 1 栋（严格防竞争）
     },
+  },
+  // v3.6.0 星际探索：按星系分组的专属资源 + 跃迁（相对论）配置
+  starRes: {
+    labels: { stardust: '星尘', voidmite: '星髓', dmite: '暗物质晶', plasma: '等离子', exo: '异星遗物' },
+    groups: [
+      { id: 'g1', name: '猎户臂',       res: ['stardust', 'voidmite'] },
+      { id: 'g2', name: '英仙臂',       res: ['dmite', 'plasma'] },
+      { id: 'g3', name: '矩尺臂',       res: ['exo', 'stardust'] },
+      { id: 'g4', name: '盾牌-半人马臂', res: ['voidmite', 'dmite'] },
+      { id: 'g5', name: '船底-外缘臂',   res: ['plasma', 'exo'] },
+      { id: 'g6', name: '本地泡',       res: ['stardust', 'exo'] },
+    ],
+  },
+  jump: {
+    c: 299792.458,          // 真空光速（km/s）——相对论跃迁硬约束
+    baseSpeed: 0.6,         // 基础巡航速度 β = 0.6c
+    speedPerLevel: 0.05,    // 每级「跃迁理论」+0.05c（β 硬顶 0.99c）
+    colonizeDiscount: 0.1,   // 殖民后探索成本 ×0.1（降一数量级）
+    colonizeTimeDiv: 24,     // 殖民后时间从「天」转「小时」：÷24
   },
   subsist1: 0.25,
   subsist2: 0.35,
@@ -306,6 +337,9 @@ export const BALANCE = {
       auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 5% 自动净化 5%（消耗 EP）· 开关在左侧「自动转化」' },
       // v3.4.5 反馈②：语音文案改为「???」，动画改为屏幕底部中央一只左右打量你的眼睛（见 modules/abyssGaze.js）
       gaze: { name: '深渊凝视', cap: 1, desc: '???', egg: true },
+      // v3.6.0 方向④：裂隙余烬升级树扩充
+      wellspring: { name: '余烬井喷', cap: 8, desc: '裂隙余烬产出 +12%/级' },
+      voidheart:  { name: '虚空之心', cap: 5, desc: '虚空碎片(VS)奖励 +30%/级' },
     },
   },
   // 里程碑（v2.3 奖励校准，PM §5.1 两锚点）：
@@ -350,11 +384,12 @@ export const BALANCE = {
     { id: 'colony3', name: '环恒星城',   base: 2e10, growth: 1.7, cap: 3,  rpRate: 2,    desc: '每级 +2 RP/s' },
   ],
   colonyExploreBonus: 0.10, // 每殖民等级 深空探索收益 +10%
-  // v2.8.5：星际里程碑——殖民总级数门槛一次性奖励（EP/RP），长线引导深空殖民
+  // v2.8.5：星际里程碑——殖民星系数门槛一次性奖励（EP/RP），长线引导深空殖民
+  // v3.6.0 方向⑤⑧：殖民模型改为「按星系建立殖民地」（至多 6 个），门槛改为 1/3/6
   starMilestones: [
-    { need: 3,  rp: 10,  ep: 5e5,  name: '星系立足' },
-    { need: 6,  rp: 40,  ep: 5e7,  name: '星海殖民' },
-    { need: 10, rp: 150, ep: 5e9,  name: '星际联邦' },
+    { need: 1,  rp: 10,  ep: 5e5,  name: '星系立足' },
+    { need: 3,  rp: 40,  ep: 5e7,  name: '星海殖民' },
+    { need: 6,  rp: 150, ep: 5e9,  name: '星际联邦' },
   ],
 
   // v2.8.4：研究点专属升级（RP 购买，研究点 tab 渲染；长线消耗 RP，克制——cap 8-10 + 成本指数涨）
@@ -384,6 +419,17 @@ export const BALANCE = {
     { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 4000, growth: 1.90, fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' }, // v3.4.6 反馈②：深渊终局组大幅涨价
     { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 3200, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
     { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 880, growth: 1.90, fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
+    // v3.6.0 研究点菜单再扩充（20→30 项）：覆盖星际/政策/AI/殖民/宇宙等长线轴；新键需在对应模块 researchMult 接线
+    { id: 'rp_jump',     name: '跃迁理论',   cap: 8, base: 600,  growth: 1.70, fx: { key: 'jump',    v: 0.06 }, desc: '星际跃迁效率 +6%/级' },
+    { id: 'rp_starres',  name: '星蕴提纯',   cap: 8, base: 700,  growth: 1.70, fx: { key: 'starres', v: 0.06 }, desc: '星际专属资源产出 +6%/级' },
+    { id: 'rp_policy',   name: '律令演绎',   cap: 8, base: 520,  growth: 1.70, fx: { key: 'policy',  v: 0.06 }, desc: '政策效果 +6%/级' },
+    { id: 'rp_religion2',name: '神性共振',   cap: 8, base: 1200, growth: 1.80, fx: { key: 'faith',   v: 0.10 }, desc: 'FP 产出 +10%/级（叠加信徒训导）' },
+    { id: 'rp_ai',      name: '拟我协议',   cap: 8, base: 900,  growth: 1.75, fx: { key: 'ai',      v: 0.08 }, desc: 'AI 助手效率 +8%/级' },
+    { id: 'rp_colony2', name: '星殖民拓',   cap: 8, base: 800,  growth: 1.75, fx: { key: 'colony',  v: 0.08 }, desc: '星殖民产出 +8%/级' },
+    { id: 'rp_cosmos2', name: '宇宙工程',   cap: 8, base: 1100, growth: 1.80, fx: { key: 'cosmos',  v: 0.08 }, desc: '宇宙工程星力 +8%/级' },
+    { id: 'rp_rift2',   name: '裂隙拓扑',   cap: 6, base: 5000, growth: 1.90, fx: { key: 'rift',    v: 0.18 }, desc: '裂隙余烬 +18%/级（叠加虚空凝视）' },
+    { id: 'rp_delve2',  name: '深潜超算',   cap: 8, base: 3600, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级（叠加深渊观测·改）' },
+    { id: 'rp_ep2',     name: '熵流增幅',   cap: 8, base: 400,  growth: 1.68, fx: { key: 'ep',      v: 0.08 }, desc: '基础 EP 产出 +8%/级（叠加量子推演）' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

@@ -36,6 +36,23 @@ export const POLICY_GROUPS = [
       { id: 'monopoly', name: '垄断协议', effect: { bazaarRefresh: -0.40, bazaarGain: -0.20 }, desc: '刷新成本 -40%，成交所得 -20%' },
     ],
   },
+  // v3.6.0 方向④：新增两组周期政策（宗教/裂隙/星际联动），效果均落于已被消费的 policyMult 键
+  {
+    id: 'star', name: '星际律令', unlock: (S) => !!(S.tech && S.tech.deep_space), hint: '需科技「深空探测」',
+    policies: [
+      { id: 'star_trade',    name: '星际贸易',   effect: { ep: 0.15, global: 0.05 },              desc: 'EP 产出 +15%，全局 +5%' },
+      { id: 'star_pioneer', name: '星海拓荒',   effect: { delve: 0.20, ember: 0.10 },             desc: '深潜产出 +20%，余烬产出 +10%' },
+      { id: 'star_unity',   name: '星联邦',     effect: { collab: 0.20, recruit: 0.15 },          desc: '协作 +20%，招募 +15%' },
+    ],
+  },
+  {
+    id: 'rift_law', name: '裂隙律令', unlock: (S) => (S.riftsSealed || 0) >= 1, hint: '需封印至少 1 道裂隙',
+    policies: [
+      { id: 'rift_awe',    name: '余烬敬畏',   effect: { ember: 0.20, faith: 0.10 },             desc: '余烬产出 +20%，信仰 +10%' },
+      { id: 'rift_devour', name: '深渊吞噬',   effect: { delve: 0.25, global: -0.08 },             desc: '深潜 +25%，全局 -8%' },
+      { id: 'rift_seal',   name: '封印之誓',   effect: { global: 0.10, ep: -0.10 },                 desc: '全局 +10%，EP -10%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }
@@ -71,12 +88,27 @@ export function policyMult(key) {
     const p = g.policies.find(x => x.id === pid);
     if (p && p.effect[key] !== undefined) sum += p.effect[key];
   }
-  let base = 1 + sum;
+  let base = (1 + sum) * (1 + 0.06 * ((S.rpTheories && S.rpTheories.rp_policy) || 0)); // v3.6.0：律令演绎研究放大政策幅度
   if (S.vowPolicyBoost && sum > 0) base += 0.05; // 立誓：本局政策幅度 +5%（仅正向）
   return base;
 }
 
 export function groupHasChoice(groupId) { return !!groupPolicyId(groupId); }
+
+// v3.6.0 方向⑨：AI 助手自动采纳每组最优政策（仅当该组尚未选择时）
+export function autoAdoptBestPolicy() {
+  let acted = false;
+  for (const g of policyOpenGroups()) {
+    if (groupPolicyId(g.id)) continue;
+    let best = null, bestSum = -Infinity;
+    for (const p of g.policies) {
+      const sum = Object.values(p.effect || {}).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
+      if (sum > bestSum) { bestSum = sum; best = p; }
+    }
+    if (best && selectPolicy(g.id, best.id).ok) acted = true;
+  }
+  return acted;
+}
 export function policyOpenGroups() {
   return POLICY_GROUPS.filter(g => { try { return !!g.unlock(S); } catch { return false; } });
 }

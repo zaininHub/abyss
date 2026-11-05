@@ -9,6 +9,7 @@ export function defaultState() {
   return {
     // 基础资源
     ep: BALANCE.initialEp, rp: 0, es: 0, fa: 0, pt: 0, dm: 0,
+    startedAt: Date.now(), // v3.6.0 方向⑦：模块解锁按游玩天数推进的基准
     // 统计
     totalClicks: 0, totalBuys: 0,
     runEarned: 0, allTimeEp: 0,
@@ -56,12 +57,16 @@ export function defaultState() {
     achievements: {},
     // 剧情
     chapter: '1',
+    chapterEnteredAt: Date.now(), // v3.6.0 方向⑥：章节最短驻留天数计时基准
     // 深渊
     abyssLevel: 0, abyssUnlocked: false,
     activeRift: null, riftsSealed: 0,
     riftEmber: 0, riftUpgrades: {}, riftExpedition: null,
     riftLevelTech: 0, // v3.3.9 反馈⑤：裂隙等级科技（EP+DM，科技树无限升级；跨转生保留）
     starCps: 0, fuelMode: false, // v3.4.6 反馈③：星际燃料 CPS（星图探索产出 · 宇宙探索/殖民升级货币 · 燃料模式持续燃烧加速全局）
+    starRes: {}, // v3.6.0 方向⑧：按星系分组的星际专属资源（stardust/voidmite/dmite/plasma/exo）
+    colonies: {}, // v3.6.0 方向⑤⑧：已建立的星系殖民地（键=星系 id，值=true → 该星系探索消耗 ×0.1、时间 ÷24）
+    jumpUses: 0, // v3.6.0 方向⑧：跃迁累计次数（跃迁燃料成本随次数递增）
     _religionHintSeen: false,
     // v2.0 深渊潮汐
     tidePhase: 0,
@@ -83,7 +88,7 @@ export function defaultState() {
     // v1.3 模块 A：AI 助手（解锁后生效；默认全关，预留线默认 30%）
     ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: BALANCE.ai.defaultReserve, timer: 0,
         autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0,
-        autoTech: false }, // v2.8.21 ③：自动研究开关默认字段（此前缺失 → `key in S.ai` 判定失败 → 开关点击无效「无法打开」）
+        autoTech: false, alloc: {} }, // v2.8.21 ③：自动研究开关默认字段；v3.6.0 增加 alloc（AI 助手按类型分配）
     // v1.3 模块 E：一次性条目购入顺序（已升级区按此倒序展示）
     boughtOrder: [],
     // v2.0 故事线

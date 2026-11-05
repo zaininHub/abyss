@@ -626,13 +626,15 @@ t('Gates：registerGate + checkGate 门控生效', () => {
   assert.equal(checkGate('unregistered'), true, '未注册门 = 默认可见');
 });
 
-t('Progressive：P0 始终解锁，P9 需第9章完成', () => {
+// v3.6.0 方向⑦：模块解锁与章节解耦，改按「游玩天数」推进（约 2 大块/天，4.5 天全开）
+t('Progressive：P0 始终解锁，P9 需游玩 4.5 天（按天数而非章节）', () => {
+  const saved = S.startedAt;
   assert.equal(isStageUnlocked('P0', S), true, 'P0 始终解锁');
-  S.chapter = 8;
-  assert.equal(isStageUnlocked('P9', S), false, '第8章时 P9 未解锁');
-  S.chapter = 9;
-  assert.equal(isStageUnlocked('P9', S), true, '第9章时 P9 解锁');
-  S.chapter = 1;
+  S.startedAt = Date.now() - 4.4 * 86400000;
+  assert.equal(isStageUnlocked('P9', S), false, '4.4 天时 P9 未解锁');
+  S.startedAt = Date.now() - 4.6 * 86400000;
+  assert.equal(isStageUnlocked('P9', S), true, '4.6 天时 P9 解锁');
+  S.startedAt = saved;
 });
 
 t('Special Tasks：定义含 6 个任务（3通用+3线专属）', () => {

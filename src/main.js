@@ -1994,6 +1994,37 @@ const ACHIEVEMENTS = [
   { id: 'bazaar_t5', name: '星际巨贾', icon: '🛰️', desc: '在深渊集市累计完成 500 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 500 },
   { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' },
   { id: 'gaze_abyss', name: '同归于尽', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' },
+  // v3.6.0 成就扩充（方向②）：覆盖星际/宗教/政策/裂隙/AI/剧情/长线
+  { id: 'exped1',    name: '初次远征',   icon: '🛰️', desc: '完成首次星际探索，星图在眼前展开', test: s => (s.expeditionsDone || 0) >= 1 },
+  { id: 'exped10',   name: '星海旅人',   icon: '🛰️', desc: '累计完成 10 次星际探索', test: s => (s.expeditionsDone || 0) >= 10 },
+  { id: 'exped50',   name: '深空常客',   icon: '🛰️', desc: '累计完成 50 次星际探索', test: s => (s.expeditionsDone || 0) >= 50 },
+  { id: 'cps1k',     name: '燃料点火',   icon: '🔥', desc: '星际燃料 CPS 达到 1K', test: s => (s.starCps || 0) >= 1e3 },
+  { id: 'cps100k',   name: '星炬燎原',   icon: '🔥', desc: '星际燃料 CPS 达到 100K', test: s => (s.starCps || 0) >= 1e5 },
+  { id: 'cosmos1',   name: '宇宙工坊',   icon: '🌌', desc: '启动首个宇宙探索工程', test: s => Object.values(s.cosmos?.lv || {}).filter(v => v >= 1).length >= 1 },
+  { id: 'cosmos5',   name: '群星匠人',   icon: '🌌', desc: '五类宇宙工程各至少 1 级', test: s => { const v = s.cosmos?.lv || {}; return ['asteroid','collider','starwish','cinder','beacon','distill'].filter(k => (v[k] || 0) >= 1).length >= 5; } },
+  { id: 'faith5k',   name: '信徒如云',   icon: '🙏', desc: '持有 5K 信仰', test: s => (s.faith || 0) >= 5000 },
+  { id: 'faith100k', name: '神国降临',   icon: '🙏', desc: '持有 100K 信仰', test: s => (s.faith || 0) >= 1e5 },
+  { id: 'temple5',   name: '圣殿巍峨',   icon: '⛩️', desc: '神殿等级达到 Lv.5', test: s => (s.religion?.temple || 0) >= 5 },
+  { id: 'relbranch', name: '分道扬镳',   icon: '⛪', desc: '选择一条宗教分支（深渊/秩序/混沌）', test: s => !!s.religion?.branch },
+  { id: 'oracle3',   name: '神谕低语',   icon: '🔮', desc: '神谕等级达到 Lv.3', test: s => (s.religion?.oracle || 0) >= 3 },
+  { id: 'seal3',     name: '誓约封印',   icon: '📜', desc: '宗教封印等级达到 Lv.3', test: s => (s.religion?.seal || 0) >= 3 },
+  { id: 'policy3',   name: '律令初成',   icon: '⚖️', desc: '同时采用 3 项周期政策', test: s => Object.keys(s.policies || {}).length >= 3 },
+  { id: 'policy6',   name: '纲纪井然',   icon: '⚖️', desc: '同时采用 6 项周期政策', test: s => Object.keys(s.policies || {}).length >= 6 },
+  { id: 'policyruns3', name: '岁月更迭', icon: '🔁', desc: '经历 3 轮政策周期', test: s => (s.policyRuns || []).length >= 3 },
+  { id: 'rift5',     name: '裂隙牧者',   icon: '🌀', desc: '累计封印 5 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 5 },
+  { id: 'rift20',    name: '裂隙之主',   icon: '🌀', desc: '累计封印 20 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 20 },
+  { id: 'ember10k',  name: '余烬成山',   icon: '🕯️', desc: '持有 10K 裂隙余烬', test: s => (s.riftEmber || 0) >= 1e4 },
+  { id: 'delve200',  name: '无尽下潜',   icon: '🌑', desc: '深潜达到 200 层', test: s => (s.delve?.depth || 0) >= 200 },
+  { id: 'ai_unlock', name: '机械之心',   icon: '🤖', desc: '解锁 AI 助手（科技「AI 管理核心」）', test: s => !!s.tech?.ai_core },
+  { id: 'ai_autobuild', name: '自治协议', icon: '🤖', desc: '激活 AI 自动购建', test: s => !!(s.ai && s.ai.autoBuildUnlocked) },
+  { id: 'ai_assist', name: '助手编队',   icon: '🤖', desc: '解锁并分配首位 AI 助手', test: s => (s.upgrades?.ai_assist || 0) >= 1 && Object.values(s.ai?.alloc || {}).some(v => v > 0) },
+  { id: 'chapter5',  name: '星图展开',   icon: '📖', desc: '剧情推进至第 5 章', test: s => parseInt(s.chapter || '1', 10) >= 5 },
+  { id: 'chapter9',  name: '命运分岔',   icon: '📖', desc: '剧情推进至第 9 章', test: s => parseInt(s.chapter || '1', 10) >= 9 },
+  { id: 'chapter18', name: '终末序曲',   icon: '📖', desc: '剧情推进至第 18 章', test: s => parseInt(s.chapter || '1', 10) >= 18 },
+  { id: 'es10k',     name: '永恒长城',   icon: '💎', desc: '持有 10K ES', test: s => (s.es || 0) >= 1e4 },
+  { id: 'reincarn20', name: '二十重劫', icon: '♻️', desc: '完成 20 次轮回', test: s => (s.reincarned || 0) >= 20 },
+  { id: 'pt1m',      name: '契约帝国',   icon: '🍪', desc: '持有 1M PT', test: s => (s.pt || 0) >= 1e6 },
+  { id: 'dm10m',     name: '深渊富矿',   icon: '🜏', desc: '持有 10M DM', test: s => (s.dm || 0) >= 1e7 },
 ];
 
 function checkAch() {
@@ -2389,6 +2420,7 @@ function tick(now) {
   const sChapterStr = String(S.chapter || '1');
   if (parseInt(chNowStr, 10) > parseInt(sChapterStr, 10)) {
     S.chapter = chNowStr;
+    S.chapterEnteredAt = Date.now(); // v3.6.0 方向⑥：重置章节驻留计时
     dirty.story = true;
     // v2.8.5 A3：章节解锁持久化写入图鉴（进入即记录，跨周期保留——图鉴不再依赖即时状态推断）
     S.chaptersUnlocked = S.chaptersUnlocked || {};

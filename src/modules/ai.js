@@ -12,9 +12,10 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   hasTech, computeCps, globalMult, epStorageCap, staffCost, staffNetPerSec,
-  fmt, unitCost, costMult, addEp, techCostOf, // v2.8.22 ②：自动研究按多资源成本购买（此前未 import → ReferenceError → 自动研究永不买，真根因）
+  fmt, unitCost, costMult, addEp, techCostOf, researchMult, // v2.8.22 ②：自动研究按多资源成本购买（此前未 import → ReferenceError → 自动研究永不买，真根因）；v3.6.0 方向⑨：rp_ai 接入
 } from './economy.js';
 import { claimProject } from './projects.js';
+import { dirty } from '../core/runtime.js'; // v3.6.0 方向⑨：面板买编队后同步刷新主商店卡
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
 import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { policyMult } from '../data/policies.js';
@@ -23,6 +24,13 @@ import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI
 import { rollProfession, aiSuggestedProfession } from './threadBinding.js'; // v3.3.0 ⑤：AI 招募与线程职业联动
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
 import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已购顺序登记）
+// v3.6.0 方向⑨：AI 助手按类型自动购买（编队 + 分配）
+import { COSMOS, cosmosLv, cosmosCost, buyCosmos } from './cosmos.js';
+import { buyRiftUpgrade, riftUpgradeLevel, riftUpgradeCost } from './rift.js';
+import { religionUnlocked, templeCost } from '../data/religions.js';
+import { buyTemple } from './religions.js';
+import { autoAdoptBestPolicy } from '../data/policies.js';
+import { aiBuyCheapestColony } from './expedition.js';
 
 let logFn = null;
 let uiRefreshFn = null;
@@ -37,6 +45,12 @@ const DM_SKIP = ['dmsight', 'dmfeed', 'dmmind', 'dmprotocol'];
 const THREAD_IDS = ['cpu', 'gpu']; // v3.4.8 反馈⑦：消耗优化整组已删除，AI 只再买产出强化
 
 export function aiUnlocked() { return hasTech('ai_core'); }
+
+// v3.6.0 方向⑨：rp_ai（跃迁理论同族研究「拟我协议」）提升助手行动强度——每类型每周期动作数 = (1+分配数) ×(1+8%/级)
+function aiAssistStrength(type) {
+  const base = 1 + ((S.ai.alloc && S.ai.alloc[type]) || 0);
+  return Math.max(1, Math.floor(base * researchMult('ai')));
+}
 
 // v2.5.5：全部资源点解锁判定（resDiscovered 十个锚点全 true）
 const ALL_RES_KEYS = ['ep', 'cps', 'run', 'tide', 'rank', 'rp', 'es', 'faith', 'pt', 'dm'];
@@ -128,7 +142,8 @@ export function tickAI(dt) {
   }
   const ai = S.ai;
   hiredFlag = false; // v2.7.2：每 tick 重置招募标志（main 消费后判定线程区刷新）
-  if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild && !ai.autoTech)) return false; // v2.8.22 ②：只开自动研究时也要进入决策（此前前置 return 吞掉 autoTech 分支 → 「自动研究开了没效果」真因）
+  const allocAny = Object.values(ai.alloc || {}).some(v => (v || 0) > 0); // v3.6.0 方向⑨：助手按类型分配后，即使总开关全关也独立执行自动购买
+  if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild && !ai.autoTech && !allocAny)) return false; // v2.8.22 ②：只开自动研究时也要进入决策（此前前置 return 吞掉 autoTech 分支 → 「自动研究开了没效果」真因）
   ai.timer = (ai.timer || 0) + dt;
   // v2.6.0 深潜：拟态矩阵——决策间隔 -20%/级（下限 40% 原间隔）
   const matLv = (S.delve && S.delve.up && S.delve.up.matrix) || 0;
@@ -223,6 +238,16 @@ export function tickAI(dt) {
       break; // 每周期至多 1 个
     }
   }
+  // v3.6.0 方向⑨：助手按类型自动购买（strength = (1+分配数) × rp_ai 倍率）
+  const alloc = S.ai.alloc || {};
+  if ((alloc['upgrade'] || 0) > 0 && aiAssistUpgrade(aiAssistStrength('upgrade'))) acted = true;
+  if ((alloc['building'] || 0) > 0 && aiAssistBuilding(aiAssistStrength('building'))) acted = true;
+  if ((alloc['colony'] || 0) > 0 && aiAssistColony(aiAssistStrength('colony'))) acted = true;
+  if ((alloc['cosmos'] || 0) > 0 && aiAssistCosmos(aiAssistStrength('cosmos'))) acted = true;
+  if ((alloc['tech'] || 0) > 0 && aiAssistTech(aiAssistStrength('tech'))) acted = true;
+  if ((alloc['policy'] || 0) > 0 && autoAdoptBestPolicy()) acted = true;
+  if ((alloc['rift'] || 0) > 0 && aiAssistRift(aiAssistStrength('rift'))) acted = true;
+  if ((alloc['religion'] || 0) > 0 && aiAssistReligion(aiAssistStrength('religion'))) acted = true;
   return acted;
 }
 
@@ -264,6 +289,140 @@ function chaosIntuitionTick(dt) {
   S.totalBuys = (S.totalBuys || 0) + 1;
   save(S);
   return true;
+}
+
+// v3.6.0 方向⑨：AI 助手按类型自动购买（每种类型 strength = 1 + 分配助手数）
+function aiAssistUpgrade(strength) {
+  let acted = false; const line = reserveLine();
+  for (let i = 0; i < strength; i++) {
+    const pick = bestPaybackItem();
+    if (!pick || S.ep - pick.cost < line) break;
+    S.ep -= pick.cost;
+    S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
+    S.totalBuys++;
+    aiUiRefresh({ kind: 'upgrade', u: pick.u });
+    ailog(`助手·升级：${pick.u.name}（-${fmt(pick.cost)} EP）`, 'good');
+    acted = true;
+  }
+  return acted;
+}
+function aiAssistBuilding(strength) {
+  let acted = false; const line = reserveLine();
+  for (let i = 0; i < strength; i++) {
+    const cands = V21_BUILDINGS.filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S)).map(b => ({ b, cost: v21BuildingCost(b) })).sort((a, c2) => a.cost - c2.cost);
+    let bought = false;
+    for (const { b, cost } of cands) {
+      if (S.ep < cost || S.ep - cost < line) continue;
+      S.ep -= cost; S.buildings[b.id] = v21Level(b.id, S) + 1; S.totalBuys = (S.totalBuys || 0) + 1;
+      const cap = capOf(b, S); aiUiRefresh({ kind: 'building', b });
+      ailog(`助手·建造：${b.name} Lv.${v21Level(b.id, S)}（-${fmt(cost)} EP）`, 'good');
+      acted = true; bought = true; break;
+    }
+    if (!bought) break;
+  }
+  return acted;
+}
+function aiAssistTech(strength) {
+  let acted = false;
+  for (let i = 0; i < strength; i++) {
+    const cands = (getTechs() || []).filter(t => t.autoTech && !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r)))).map(t => ({ t, cost: techCostOf(t) })).sort((a2, b2) => a2.cost.rp - b2.cost.rp);
+    let bought = false;
+    for (const { t, cost } of cands) {
+      if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
+      S.rp -= cost.rp; S.ep -= cost.ep || 0; S.tech[t.id] = true; pushBoughtOrder(S, t.id);
+      ailog(`助手·研究：${t.name}（-${fmt(cost.rp)} RP）`, 'good');
+      acted = true; bought = true; break;
+    }
+    if (!bought) break;
+  }
+  return acted;
+}
+function aiAssistColony(strength) {
+  let acted = false;
+  for (let i = 0; i < strength; i++) { if (aiBuyCheapestColony()) acted = true; else break; }
+  return acted;
+}
+function aiAssistCosmos(strength) {
+  let acted = false;
+  for (let i = 0; i < strength; i++) {
+    const best = Object.values(COSMOS).filter(p => cosmosLv(p.id) < p.cap).sort((a, b) => cosmosCost(a, cosmosLv(a.id)) - cosmosCost(b, cosmosLv(b.id)))[0];
+    if (!best) break;
+    const cost = cosmosCost(best, cosmosLv(best.id));
+    if ((S.starCps || 0) < cost) break;
+    if (!buyCosmos(best.id).ok) break;
+    acted = true;
+  }
+  return acted;
+}
+function aiAssistRift(strength) {
+  let acted = false;
+  const ups = BALANCE.rift.upgrades;
+  for (let i = 0; i < strength; i++) {
+    let best = null, bestCost = Infinity;
+    for (const id in ups) {
+      const u = ups[id]; const lv = riftUpgradeLevel(id);
+      if (lv >= u.cap) continue;
+      const cost = riftUpgradeCost(id);
+      if ((S.riftEmber || 0) >= cost && cost < bestCost) { best = id; bestCost = cost; }
+    }
+    if (!best) break;
+    if (!buyRiftUpgrade(best).ok) break;
+    acted = true;
+  }
+  return acted;
+}
+function aiAssistReligion(strength) {
+  let acted = false;
+  if (!religionUnlocked()) return false;
+  const line = reserveLine();
+  for (let i = 0; i < strength; i++) {
+    const lv = (S.religion && S.religion.temple) || 0;
+    const cost = templeCost();
+    if (S.ep - cost < line) break;
+    if (!buyTemple().ok) break;
+    acted = true;
+  }
+  return acted;
+}
+
+// v3.6.0 方向⑨：助手编队购买与分配辅助
+function assistantInc(type) {
+  const alloc = S.ai.alloc = S.ai.alloc || {};
+  const total = Math.min(BALANCE.ai.assistants.maxSlots, S.upgrades['ai_assist'] || 0);
+  const used = BALANCE.ai.assistants.allocTypes.reduce((s, t) => s + (alloc[t] || 0), 0);
+  if (total - used <= 0) return;
+  alloc[type] = (alloc[type] || 0) + 1; save(S);
+}
+function assistantDec(type) {
+  const alloc = S.ai.alloc = S.ai.alloc || {};
+  if ((alloc[type] || 0) <= 0) return;
+  alloc[type] -= 1; if (alloc[type] <= 0) delete alloc[type]; save(S);
+}
+function renderAssistantSection() {
+  const total = Math.min(BALANCE.ai.assistants.maxSlots, S.upgrades['ai_assist'] || 0);
+  const alloc = (S.ai && S.ai.alloc) || {};
+  const used = BALANCE.ai.assistants.allocTypes.reduce((s, t) => s + (alloc[t] || 0), 0);
+  const free = Math.max(0, total - used);
+  const u = UPGRADES.find(x => x.id === 'ai_assist');
+  // v3.6.0：与商店 buyUpgrade 同口径（bulkCostCalc(u,1) === unitCost(u,0)），避免两条购买路径价差
+  const cost = unitCost(u, 0);
+  const atCap = (S.upgrades['ai_assist'] || 0) >= (u.maxLevel || 8);
+  let html = `<div class="ai-desc" style="margin-top:10px">🤖 AI 助手编队：<b>${total}</b>/${BALANCE.ai.assistants.maxSlots} 槽（空闲 ${free}）`;
+  if (aiUnlocked()) {
+    html += ` <button class="btn ${atCap ? 'disabled' : ''}" data-assist-buy ${atCap ? 'disabled' : ''}>${atCap ? '已满编' : '购买编队（' + fmt(cost) + ' EP）'}</button>`;
+  }
+  html += `</div>`;
+  const labels = BALANCE.ai.assistants.typeLabels || {};
+  for (const type of BALANCE.ai.assistants.allocTypes) {
+    const n = alloc[type] || 0;
+    html += `<div class="ai-build-box" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <span style="flex:1;font-size:12px">${labels[type] || type} · 自动购买</span>
+      <button class="btn ai-rate-btn" data-assist-dec="${type}" ${n <= 0 ? 'disabled' : ''}>−</button>
+      <b style="min-width:18px;text-align:center">${n}</b>
+      <button class="btn ai-rate-btn" data-assist-inc="${type}" ${free <= 0 ? 'disabled' : ''}>+</button>
+    </div>`;
+  }
+  return html;
 }
 
 // ========== 面板 ==========
@@ -329,6 +488,7 @@ export function renderAiPanel(container) {
     ${sw('autoHire', '自动招募', '线程净产出为正且 EP ≥ 2×招募成本时自动招募；净产出为负自动停止')}
     ${sw('autoClaim', '自动领取', '任务完成进入待领取状态立即自动领取')}
     ${buildHtml}
+    ${renderAssistantSection()}
     <div class="ai-reserve-row">
       <span>预留线</span>${reserveOpts}
       <button class="btn" data-ai-alloff="1" title="关闭全部自动化开关">一键全关</button>
@@ -379,6 +539,21 @@ export function renderAiPanel(container) {
         save(S);
         renderAiPanel(container);
       }
+      const assistBuy = e.target.closest('[data-assist-buy]');
+      if (assistBuy) {
+        const u = UPGRADES.find(x => x.id === 'ai_assist');
+        const cost = unitCost(u, 0); // 与主商店 bulkCostCalc(u,1) 同口径
+        if (S.ep >= cost && (S.upgrades['ai_assist'] || 0) < (u.maxLevel || 8)) {
+          S.ep -= cost; S.upgrades['ai_assist'] = (S.upgrades['ai_assist'] || 0) + 1;
+          S.totalBuys = (S.totalBuys || 0) + 1; ailog('助手编队 +1', 'good');
+          dirty.shop = true; // 主商店卡同步刷新（等级/成本/灰态）
+        } else ailog('助手编队购买失败：EP 不足或已满编', 'bad');
+        save(S); renderAiPanel(container); return;
+      }
+      const incEl = e.target.closest('[data-assist-inc]');
+      if (incEl) { assistantInc(incEl.dataset.assistInc); renderAiPanel(container); return; }
+      const decEl = e.target.closest('[data-assist-dec]');
+      if (decEl) { assistantDec(decEl.dataset.assistDec); renderAiPanel(container); return; }
     });
   }
 }

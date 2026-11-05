@@ -48,11 +48,14 @@ console.log('[P0-1] 章节推进验证：字符串 chapter 与 storyline 章节�
     assert.equal(ch.id, 1);
   });
 
-  // 模拟推进章节（v2.8.3：ch2 门槛 prestige≥2）
+  // v3.6.0 方向⑥：章节由「条件满足 + 最短驻留 3~7 天」共同推进，不再一天连跳多章
   S.prestige = 2;
+  S.chapterEnteredAt = Date.now();
+  t('晋升条件满足但驻留 0 天：章节不推进（3-7 天/章）', () => assert.equal(currentChapter(S).id, 1));
+  S.chapterEnteredAt = Date.now() - 4 * 86400000;
   let ch = currentChapter(S);
   if (ch.id > S.chapter) S.chapter = String(ch.id);
-  t('晋升后 chapter 变为字符串 "2"', () => assert.equal(S.chapter, '2'));
+  t('驻留 4 天且条件满足：章节向前推进', () => assert.ok(Number(S.chapter) >= 2));
 
   // 注册并切换到秩序线
   _resetStorylineManager();
@@ -98,10 +101,15 @@ console.log('[P0-1] 章节推进验证：字符串 chapter 与 storyline 章节�
     assert.equal(S.chapter, '7A');
   });
 
-  t('渐进开放 P6 在 6A 后解锁', () => {
-    assert.equal(isStageUnlocked('P6', S), true, 'P6 应解锁');
-    assert.equal(isStageUnlocked('P7', S), true, 'P7 应解锁（7A 对应数值 7）');
-    assert.equal(isStageUnlocked('P8', S), false, 'P8 应仍锁定');
+  // v3.6.0 方向⑦：模块解锁与章节解耦，改按游玩天数推进（约 2 大块/天）
+  t('渐进开放按游玩天数推进（P6 需 2.5 天，P7 需 3 天）', () => {
+    const saved = S.startedAt;
+    S.startedAt = Date.now() - 2.6 * 86400000;
+    assert.equal(isStageUnlocked('P6', S), true, '2.6 天：P6 解锁');
+    assert.equal(isStageUnlocked('P7', S), false, '2.6 天：P7（3 天）仍锁定');
+    S.startedAt = Date.now() - 3.1 * 86400000;
+    assert.equal(isStageUnlocked('P7', S), true, '3.1 天：P7 解锁');
+    S.startedAt = saved;
   });
 
   // 深渊线验证
@@ -151,6 +159,7 @@ console.log('[P0-2] 特殊任务触发验证');
     S._specialTasksDone = {};
     S.buildings = {};
     S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 10, bufferSec: 0, loseTimer: 0 };
+    S._farewellBought = true; // 达成条件含「已购买离职礼盒」（1 EP），此前测试漏设 → 恒失败
     checkSpecialTasks(S, null, null);
     assert.ok(S._specialTasksDone['sp3_farewell'], '应触发 sp3');
   });
