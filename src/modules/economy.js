@@ -9,6 +9,9 @@ import { policyMult } from '../data/policies.js';
 import { devotionMult } from '../data/religions.js';
 import { faithDrainPerSec } from './religions.js'; // v2.8.30 ③：信仰生产 EP 消耗（悬浮/禁购）
 import { fxValue, fxBest } from '../core/effectEngine.js';
+import {
+  geomCostBase, geomCostRaw, bulkGeomCost, powerScale, compoundBuff, geomSeriesSum,
+} from '../core/pricing.js'; // 纯价格内核：几何单价/批量/幂律/复利/等比级数和
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
@@ -162,8 +165,7 @@ export function researchMult(key) {
   for (const u of T) {
     const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
     if (lv <= 0 || !u.fx || u.fx.key !== key) continue;
-    if (key === 'global') m *= Math.pow(1 + u.fx.v, lv);
-    else m *= (1 + u.fx.v * lv);
+    m *= compoundBuff({ base: 1, perLevel: u.fx.v, levels: lv, mode: key === 'global' ? 'multiplicative' : 'linear' });
   }
   return m;
 }
@@ -535,7 +537,8 @@ export function collectVehicleDm() {
 export function vehicleEpPerDm() {
   let total = 0;
   BALANCE.vehicles.ids.forEach(id => { total += (S.upgrades[id] || 0); });
-  return BALANCE.vehicles.epPerDm * Math.pow(BALANCE.vehicles.epPerDmGrowth || 1, total);
+  // v3.6.1：几何单价（不取整）委托 pricing.js
+  return geomCostRaw({ base: BALANCE.vehicles.epPerDm, growth: BALANCE.vehicles.epPerDmGrowth || 1, owned: 0, qty: total, mult: 1 });
 }
 export function vehicleDmEpCostPerMin() {
   return vehicleDmPerMin() * vehicleEpPerDm();
@@ -565,11 +568,11 @@ export function staffCost() {
 }
 function staffCostBase() {
   const n = S.cultists.length;
-  const base = BALANCE.thread.firstCost * Math.pow(1.25, n);
   // v2.9.1：前 3 级线程降价（新手期加速起步）——招募第 1/2/3 个（n=0/1/2）分别 ×0.5/0.65/0.8
   // 第 4 个起恢复全额曲线，与既有薪资/成本断言兼容（n≥3 时系数 = 1）
   const earlyDiscount = n < 3 ? [0.5, 0.65, 0.8][n] : 1;
-  return base * earlyDiscount;
+  // v3.6.1：几何单价（不取整）委托 pricing.js——外部 staffCost 统一 ceil
+  return geomCostRaw({ base: BALANCE.thread.firstCost, growth: 1.25, owned: n, qty: 0, mult: earlyDiscount });
 }
 
 export function staffSalaryPerSec() {
@@ -646,9 +649,8 @@ export function unitCost(u, n) {
   // v2.1 R3-A：支持单项自定义增长率（存储节点 ×1.25 等）
   // v2.8.2：默认增长率 1.15 → 1.30（成本曲线陡峭化——避免一个建筑买几十几百个，减缓前期发展）
   const growth = u.growth || 1.30;
-  let cost = Math.ceil(u.base * Math.pow(growth, owned + n) * costMult());
-  // v3.0.3 第六批①：NaN 防御——base 缺失/非法时返回 Infinity（成本检查必然拦截），杜绝 NaN 成本穿透（EP 无限升级）
-  if (!Number.isFinite(cost)) return Infinity;
+  // v3.6.1：几何单价统一走 pricing.js（geomCostBase 已含 ceil 与 Infinity 防御），避免散落重复公式
+  let cost = geomCostBase({ base: u.base, growth, owned, qty: n, mult: costMult() });
   if (CAP_EXPANSION_IDS.includes(u.id)) {
     cost = Math.min(cost, Math.floor(epStorageCap() * (B.storageAntiDeadlockRatio || 0.3)));
   }
@@ -665,15 +667,14 @@ export function v21BuildingCost(b) {
 }
 
 export function bulkCostCalc(u, n) {
-  let t = 0;
-  for (let i = 0; i < n; i++) t += unitCost(u, i);
-  return t;
+  // v3.6.1：逐单 ceil 求和（与 unitCost 循环口径一致），委托 pricing.js
+  return bulkGeomCost({ base: u.base, growth: u.growth || 1.30, owned: S.upgrades[u.id] || 0, qty: n, mult: costMult() });
 }
 
 // ========== 专注成本 ==========
 export function focusCost() {
   // v2.1 D5 拍板：30 × 1.6^n（配置进 BALANCE.focus 统一管理）
-  return Math.ceil(B.focus.base * Math.pow(B.focus.growth, S.focusLevel) * focusCostMult());
+  return geomCostBase({ base: B.focus.base, growth: B.focus.growth, owned: S.focusLevel, qty: 0, mult: focusCostMult() });
 }
 
 // ========== 晋升需求 ==========
@@ -684,7 +685,8 @@ const VAULT_CAP_GROWTH = 1.15;
 function vaultCap(base, per, lv) {
   const n = Math.max(0, Number(lv) || 0);
   if (n === 0) return base;
-  return Math.round(base + per * (Math.pow(VAULT_CAP_GROWTH, n) - 1) / (VAULT_CAP_GROWTH - 1));
+  // v3.6.1：逐级递增增量 = 等比级数前 n 项和（委托 pricing.js）
+  return Math.round(base + geomSeriesSum({ first: per, growth: VAULT_CAP_GROWTH, n }));
 }
 // v3.4.9 反馈⑥：RP/PT 仓容跟随 EP 上限（「产出基座」）——星图探索把 RP/TP 消耗抬到与 EP 同量级后，
 //   三仓库那点线性扩容（RP 满级约 4.3 万）根本装不下一次远征的 RP 报价，必须以 EP 上限为基座同步放大。
@@ -704,7 +706,9 @@ export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }
 
 export function prestigeNeed() {
-  return Math.floor(3e9 * Math.pow(S.prestige + 1, 1.5)); // v2.8.27：首升 1.5e8→3e9、增长指数 3.2→1.5——首轮 7-10 天转生、后续 3-5 天（模拟：cps×0.5+cost×3 下 13.5 模拟天）
+  // v2.8.27：首升 1.5e8→3e9、增长指数 3.2→1.5——首轮 7-10 天转生、后续 3-5 天（模拟：cps×0.5+cost×3 下 13.5 模拟天）
+  // v3.6.1：幂律规模委托 pricing.js
+  return Math.floor(powerScale({ base: 3e9, exponent: 1.5, index: S.prestige }));
 }
 
 export function prestigeGain() {
@@ -1002,28 +1006,6 @@ export function addEp(amount) {
   return gained;
 }
 
-// ========== 格式化 ==========
-export function fmt(n) {
-  if (!isFinite(n)) return '∞';
-  if (n < 1000) return n < 10 ? (Math.round(n * 10) / 10).toString() : Math.floor(n).toString();
-  const units = ['K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd'];
-  let u = -1;
-  while (n >= 1000 && u < units.length - 1) { n /= 1000; u++; }
-  return n.toFixed(2) + units[u];
-}
-
-// v3.4.1 反馈④：资源数值统一口径——两侧同函数，低于 1000 保 2 位小数、≥1000 走 k/M 缩写。
-// 旧实现 DM 用 toFixed(2)、上限用 fmt → 顶部出现「2000.00 / 2.00k」的混排。
-export function fmtRes(n) {
-  const v = Number(n) || 0;
-  if (Math.abs(v) < 1000) return v.toFixed(2);
-  return fmt(v);
-}
-
-export function fmtTime(sec) {
-  sec = Math.floor(sec);
-  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-  const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
-  if (h > 0) return `${h}:${mm}:${ss}`;
-  return `${mm}:${ss}`;
-}
+// ========== 格式化（v3.6.1 抽至 src/core/format.js，此处 import 供内部使用 + 再导出保持兼容） ==========
+import { fmt, fmtRes, fmtTime } from '../core/format.js';
+export { fmt, fmtRes, fmtTime };

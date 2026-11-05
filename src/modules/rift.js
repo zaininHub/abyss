@@ -11,6 +11,7 @@ import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier,
 function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift') * (1 + 0.12 * riftUpgradeLevel('wellspring')) * ((S.religion && S.religion.abyss) ? 2 : 1); } // v3.6.0：余烬井喷 + 深渊崇拜分支 // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
+import { progressBar } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条）
 import { researchMult, addDm, addRp } from './economy.js'; // v3.0.8：RP 上限统一入口
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { showAbyssGaze } from './abyssGaze.js'; // v3.4.2：凝视深渊彩蛋视觉层（独立模块，避免环形引用）
@@ -557,7 +558,7 @@ export function renderRiftPanel(container) {
     const pct = Math.max(0, Math.min(100, (1 - (ex.until - Date.now()) / (total * 1000)) * 100));
     container.innerHTML = `
       <div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-2);margin-bottom:2px"><span>探索进度</span><span>剩余 ${left}s</span></div>
-      <div style="height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:${pct.toFixed(1)}%;background:linear-gradient(90deg,var(--cyan,#22d3ee),var(--accent,#a855f7));transition:width .5s"></div></div></div>
+      ${progressBar(pct, 'linear-gradient(90deg,var(--cyan,#22d3ee),var(--accent,#a855f7))')}</div>
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
       <div class="off-stat"><span>已获 VS（深潜联动）</span><b style="color:var(--cyan)">+${ex.gainedVs.toFixed(2)}</b></div>
       <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '安全'}</b></div>

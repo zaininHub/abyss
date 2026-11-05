@@ -3,6 +3,7 @@ import { BALANCE } from '../data/balance.js';
 import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost, researchMult } from './economy.js';
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
+import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
 
 // v3.6.0 方向⑤⑧：星际探索重构——
 //   出发消耗 EP 起步 M 量级、按数量级递增（1e6 → 1e11），时间按「天」计（1/2/4/7/14/30 天）；
@@ -236,15 +237,19 @@ export function renderExpeditions(container) {
       巡航速度 <b class="mono">${beta.toFixed(2)}c</b>（约 ${fmt(jumpSpeedKmS())} km/s，光速硬上限 ${fmt(BALANCE.jump.c)} km/s） · 洛伦兹因子 γ = <b class="mono">${gamma.toFixed(2)}</b> · 跃迁将在途剩余时间压缩至 <b class="mono">${Math.round(100 / gamma)}%</b><br>
       研究「跃迁理论」每级 +${Math.round((BALANCE.jump.speedPerLevel || 0.05) * 100)}%c（β 硬顶 0.99c，光速不可超越）；跃迁以目标星系群的专属资源为燃料，次数越多越贵。
     </div></div>`;
-  html += `<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text-2);margin-bottom:4px">🌌 星系分组 · 专属资源库存</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">`;
-  for (const grp of (BALANCE.starRes.groups || [])) {
-    const worlds = GALAXIES.filter(x => x.group === grp.id).map(x => x.icon + x.name).join('、') || '—';
-    const inv = grp.res.map(k => `${starResLabel(k)} ${fmt(starResAmount(k))}`).join(' / ');
-    html += `<div style="border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:10.5px;min-width:150px">
+  html += panelShell({
+    title: '🌌 星系分组 · 专属资源库存', cls: 'star-res',
+    body: (() => {
+      let rows = '';
+      for (const grp of (BALANCE.starRes.groups || [])) {
+        const worlds = GALAXIES.filter(x => x.group === grp.id).map(x => x.icon + x.name).join('、') || '—';
+        const inv = grp.res.map(k => `${starResLabel(k)} ${fmt(starResAmount(k))}`).join(' / ');
+        rows += `<div style="border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:10.5px;min-width:150px">
       <b style="color:var(--purple)">${grp.name}</b><br><span style="color:var(--text-3)">${worlds}</span><br><span style="color:var(--cyan)">${inv}</span></div>`;
-  }
-  html += `</div></div>`;
+      }
+      return `<div style="display:flex;flex-wrap:wrap;gap:6px">${rows}</div>`;
+    })(),
+  });
   // 当前进行中
   html += `<div style="font-size:11px;color:var(--text-2);margin:8px 0 4px">进行中（${S.expeditions.length}/${maxExpeditions()}）</div>`;
   if (S.expeditions.length === 0) {
@@ -259,7 +264,7 @@ export function renderExpeditions(container) {
       const canWarp = starResAmount(wkey) >= wc && left > 1;
       html += `<div class="proj">
         <div class="pn"><span>${g.icon || '🛰'} ${g.name}</span><span class="mono" style="color:var(--cyan)">${fmtLongDuration(left)}后返回</span></div>
-        <div class="pt"><div style="width:${pct}%;background:var(--cyan)"></div></div>
+        ${progressBar(pct, 'var(--cyan)')}
         <div style="margin-top:5px"><button class="btn-mini" data-warp="${idx}" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:10.5px;${canWarp ? 'color:var(--cyan)' : 'opacity:.45;color:var(--text-3)'}">⚡ 跃迁加速（${fmt(wc)} ${starResLabel(wkey)} · 剩余 ×${Math.round(100 / gamma)}%）</button></div>
       </div>`;
     }
