@@ -120,7 +120,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   if (/智能分配/.test(after.feed)) ok('③ 班组流水写明智能分配结果', after.feed);
   else bad('③ 流水文案未更新', after.feed);
 
-  // 解锁岗位后智能分配恢复正常岗位优化，且不覆盖手动超线程
+  // v3.6.5 ④：解锁岗位后按「设施容量」分配——两个模块各 1 条，其余转超线程；手动超线程保留
   const r2 = await page.evaluate(() => {
     window.S.upgrades.atrium = 1;
     window.S.upgrades.scooter = 1;
@@ -129,8 +129,11 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
     const changed = window.__qa.threadBind.autoAssignThreads();
     return { changed, hyperKept: window.S.cultists[0].boundTo, rest: window.S.cultists.slice(1).map(c => c.boundTo) };
   });
-  if (r2.hyperKept === 'hyper' && r2.rest.every(t => t && t !== 'hyper')) ok('③ 解锁岗位后按岗位重排，手动超线程保留', JSON.stringify(r2));
-  else bad('③ 解锁后重排异常', JSON.stringify(r2));
+  const inVeh = r2.rest.filter(t => t === 'vehicles').length;
+  const inAtr = r2.rest.filter(t => t === 'atrium').length;
+  const restHyper = r2.rest.filter(t => t === 'hyper').length;
+  if (r2.hyperKept === 'hyper' && inVeh === 1 && inAtr === 1 && restHyper === r2.rest.length - 2) ok('③ 解锁后按容量先保证每模块 1 条，满员后其余转超线程（手动超线程保留）', `veh=${inVeh} atr=${inAtr} hyper=${restHyper}`);
+  else bad('③ 解锁后分配异常', JSON.stringify(r2));
   await page.close();
 }
 

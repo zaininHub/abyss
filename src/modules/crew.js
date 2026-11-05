@@ -9,8 +9,8 @@ import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
-  unlockedConverterIds,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
+  unlockedConverterIds, converterCapacity, converterLoad,
+} from './threadBinding.js'; // v3.6.5 ①~③：岗位容量（设施数量）展示 // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
 const STATE_META = {
@@ -71,8 +71,11 @@ export function renderCrewPanel(container) {
   const start = crewPage * PAGE_SIZE;
   const pageCultists = filtered.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
+  // v3.6.5 ①~③：每个岗位的「在岗/容量」也是面板自身数据，纳入签名——买设施扩容后下拉即时刷新
+  const slotText = (t) => t === HYPER_CONVERTER_ID ? '' : ` ${converterLoad(t)}/${converterCapacity(t)}`;
+  const capSig = visibleTypes.map(t => `${t}:${converterLoad(t)}/${converterCapacity(t)}`).join(',');
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}|${capSig}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -90,7 +93,7 @@ export function renderCrewPanel(container) {
     const opts = visibleTypes.slice();
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
+      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? slotText(t) : '（未解锁）'}</option>`)).join('');
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
     cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
@@ -129,14 +132,14 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" title="对全部线程重排岗位（已绑定的也会重排）；有领导者时优先落位，尚未解锁任何模块时统一转入超线程">智能分配</button>
+      <button class="btn" data-autobind="1" title="按设施容量分配：先保证每个模块有人，都满员后其余线程转入超线程；优先安排空闲线程，再纠正错位岗位；手动超线程保留">智能分配</button>
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
-        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
+        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}${slotText(t)}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成并可「智能分配」；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。下拉框可切换岗位</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成并可「智能分配」；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先保证每个模块有人，都满员后其余线程转入超线程；分配时优先安排空闲线程、再纠正错位岗位，手动设定的超线程会保留；新招募的线程优先补空缺岗位。下拉框可自由切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
@@ -167,7 +170,7 @@ export function renderCrewPanel(container) {
       if (ab) {
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
-        crewPush(k > 0 ? `智能分配：重排 ${k} 条线程（${(unlockedConverterIds() || []).length <= 1 ? '转入超线程' : '岗位优化'}）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先补齐各模块空缺，满员后转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
         renderCrewPanel(container);
         return;
       }
