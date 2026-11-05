@@ -181,6 +181,8 @@ try {
     pets: { dragon: { icon: '🐲', name: '深渊龙', level: 20, exp: 0, gen: 1, tier: 4 } },
     activePets: ['dragon'], buildings: {}, upgrades: { atrium: 14, reserve_bin: 20, storage: 20, deep_bin: 5 }, tech: {}, milesDone: {}, offUpgrades: {},
     starCps: 3000,
+    // v3.6.2：班组面板 ≥10 线程解锁——补足 12 条以满足门槛（本测试聚焦岗位筛选，门槛由 v362 覆盖）
+    cultists: Array.from({ length: 12 }, (_, i) => ({ id: 't' + i, name: '线程' + i, profession: 'distiller', level: 3, mood: '正常', boundTo: 'atrium', leader: i === 0, hiredAt: Date.now() })),
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: true, faith: false, pt: true, dm: true },
     lastSeen: Date.now(), startTime: Date.now(),
   };

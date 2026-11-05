@@ -143,6 +143,7 @@ try {
   const p5 = await page.evaluate(() => {
     window.S.corruption = 0; window.S.collapsed = false; window.S._collapseAt = null; window.S._collapseChoicePending = null;
     window.S.activeRift = null; window.S._riftSeen = false;
+    window.S._riftThreadUnlocked = true; // v3.6.2：本测试聚焦触发/补偿机制，绕过「≥15 线程」门槛（门槛由 v362 覆盖）
     const origRandom = Math.random;
     Math.random = () => 0; // 强制命中
     window.S._riftCatchup = 10;

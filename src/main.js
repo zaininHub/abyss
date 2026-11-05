@@ -32,7 +32,7 @@ import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, 
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
 import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
-import { renderCrewPanel, crewPush } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化）
+import { renderCrewPanel, crewPush, crewShown } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
@@ -45,7 +45,7 @@ import { checkGate, getAllGates } from './core/gates.js';
 import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady } from './modules/rift.js'; // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
 import { ensureAbyssGaze } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
@@ -777,7 +777,7 @@ const TAB_LOCK_HINTS = {
   'btn-religion': '宗教未解锁：存储扩建 ≥3 级后可唤醒信仰',
   'btn-policy': '政策未解锁：达成对应政策开放条件后出现',
   'btn-delve': '深潜未解锁：ES≥3 + DM 已发现 + 宗教已信奉',
-  'btn-rift-tab': '裂隙未解锁：触发首次深渊裂隙后开放',
+  'btn-rift-tab': '裂隙未解锁：班组 ≥15 条线程后开放',
   'btn-bazaar': '集市未解锁：达成集市开启条件后开放',
 };
 function setTabLocked(btn, locked) {
@@ -821,8 +821,14 @@ function refreshTabVisibility() {
   const riftBtn = document.getElementById('btn-rift-tab');
   setTabLocked(riftBtn, !(S._riftSeen || (S.riftsSealed || 0) > 0));
   // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
+  // v3.6.2 反馈②：解锁门槛改为线程数——不足 15 条时提示门槛与当前进度，达标后才显示倒计时
   if (riftBtn && riftBtn.dataset.locked === '1') {
-    riftBtn.title = `🔒 裂隙未解锁：约 ${fmtEta(riftEtaSec())} 后首次出现（后台挂机同样计时）`;
+    if (!riftThreadsReady()) {
+      const n = (S.cultists || []).length, need = (BALANCE.rift && BALANCE.rift.threadUnlock) || 15;
+      riftBtn.title = `🔒 裂隙未解锁：班组需 ${need} 条线程（当前 ${n}）`;
+    } else {
+      riftBtn.title = `🔒 裂隙未解锁：约 ${fmtEta(riftEtaSec())} 后首次出现（后台挂机同样计时）`;
+    }
   }
   // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
   setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
@@ -2583,7 +2589,11 @@ function tick(now) {
   // 解锁数变化只增量揭示新卡（refreshShopChain），不整面板重建——保持「不每秒全重建」的防闪烁纪律
   if (now - lastShopCheck > 1000) {
     lastShopCheck = now;
-    renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
+    // v3.6.2 反馈①：班组面板 ≥10 条线程后才显示（达标即持久解锁，跨转生保留）——未解锁整卡隐藏、不渲染
+    const crewVisible = crewShown();
+    const crewCard = document.getElementById('crew-card');
+    if (crewCard && crewCard.style.display !== (crewVisible ? '' : 'none')) crewCard.style.display = crewVisible ? '' : 'none';
+    if (crewVisible) renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
     renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
     renderQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关（解锁态/开关态随周期同步，sig 去重）
     // v3.3.1 反馈①②：设施区（灵感工坊 / 异兽孵化工坊）卡的揭示随周期检测——

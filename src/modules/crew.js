@@ -29,6 +29,14 @@ export function crewPush(msg, cls = '') {
   if (S.crewFeed.length > 40) S.crewFeed.splice(0, S.crewFeed.length - 40);
 }
 
+// v3.6.2 反馈①：班组面板 ≥10 条线程后解锁。
+//   达标即置持久标记（跨转生保留）：线程后来流失也不收回面板；旧档（已有 ≥10 线程）加载即自动达标。
+export function crewShown() {
+  if (S._crewUnlocked) return true;
+  if ((S.cultists || []).length >= (BALANCE.thread.crewUnlockThreads || 10)) { S._crewUnlocked = true; return true; }
+  return false;
+}
+
 // 全局态元信息（状态灯颜色/文案）：待招募 → 懒惰 → 四态
 export function crewStateMeta() {
   if (!S.cultists.length) return { label: '待招募', color: 'var(--text-3,#6e7681)' };

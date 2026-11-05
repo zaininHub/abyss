@@ -64,7 +64,7 @@ export const WIKI_SECTIONS = [
     </table>
     <h4>线程心情（与薪资正交叠加）</h4>
     <p>超频 ×2.0 / 优化 ×1.5 / 高效 ×1.2 / 正常 ×1.0 / 阻塞 ×0.5 / 死锁 ×0.1</p>
-    <h4>班组面板（v3.1.0 拟人化）</h4>
+    <h4>班组面板（v3.1.0 拟人化 · ${D.thread.crewUnlockThreads} 条线程解锁）</h4>
     <p>商店页顶部「🧵 班组」：每条线程一张个人档案卡——状态灯（跟随薪资四态）、心情乘数、个人产出、累计贡献 EP（按实际入账份额逐 tick 分摊）、工龄；下方「班组事件流水」记录招募/状态切换/流失/吞没/晋升解散（随存档持久化 40 条）。</p>
     <h4>懒惰态（EP 满上限惩罚）</h4>
     <p>EP 持续满上限 ${D.lazy.afterSec}s → 线程怠工：产出 ×${D.lazy.prodMult}、消耗 ×${D.lazy.costMult}（消耗 > 产出，鼓励持续投入而非囤满挂机）；EP 跌到 0 或任意购买解除。</p>
@@ -83,7 +83,7 @@ export const WIKI_SECTIONS = [
     <p class="wiki-warn">⚠️ 倒计时终结抉择（不可关闭，二选一）：<br>💰 <b>贿赂深渊</b>：上缴 90% EP，成为深渊的朋友（本局继续，腐化清零）→ 成就「恶魔的朋友」<br>💥 <b>同归于尽</b>：立即触发崩溃杀死深渊（本局湮灭 + 强制转生，湮灭残片 +1）→ 成就「凝视深渊」</p>
   ` },
   { id: 'rift', name: '裂隙与余烬', unlock: 'rift', body: () => `
-    <h4>深渊裂隙（随机出现，基础 ${Math.round(D.rift.spawnSec/60)} 分钟）</h4>
+    <h4>深渊裂隙（班组 ${D.rift.threadUnlock} 条线程后解锁，基础 ${Math.round(D.rift.spawnSec/60)} 分钟一遇，在场 ${Math.round(D.rift.staySec/60)} 分钟）</h4>
     <p>裂隙基础 5 级（${D.rift.levelNames.join(' / ')}），实际等级 = cps 潜力级 + <b>科技树「裂隙等级」</b>（消耗 EP + DM，可无限升级，每级奖励同步提升）。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显；<b>深入消耗随裂隙等级指数增长</b>（×1.75/级，Lv1 3 EP/s → Lv10 232 EP/s））。</p>
     <h4>裂隙余烬（跨转生保留）</h4>
     <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。裂隙等级本身改由科技树「裂隙等级」升级（EP + DM，无限）。</p>

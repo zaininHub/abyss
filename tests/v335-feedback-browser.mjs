@@ -66,23 +66,34 @@ try {
   if (p1.line.includes('神谕广播') && p1.line.includes('——')) ok('② 日志文案含效果', p1.line.slice(0, 60));
   else bad('② 日志文案缺效果', p1.line);
 
-  // ===== ③ 裂隙触发 =====
-  // 3a 首见：90 秒计时兜底（新档 _riftSeen=false；若随机项让裂隙提前出现，同样视为通过）
-  const r0 = await page.evaluate(() => ({ seen: !!window.S._riftSeen, eta: window.__qa.riftEtaSec(), next: window.__qa.riftNextSec(), active: !!window.S.activeRift }));
-  if (r0.seen || r0.active) ok('③ 裂隙已提前出现（随机项生效）', `next=${r0.next}s`);
-  else if (r0.next <= 90) ok('③ 首次裂隙计时 ≤90s（新手首见）', `next=${r0.next}s eta=${r0.eta}s`);
-  else bad('③ 首次裂隙计时', JSON.stringify(r0));
-  await page.evaluate(() => window.__advance(95));
-  await sleep(400);
-  const r1 = await page.evaluate(() => ({
-    active: !!window.S.activeRift, seen: !!window.S._riftSeen,
-    card: getComputedStyle(document.getElementById('rift-card')).display,
-    hasSeal: !!document.getElementById('seal-rift'),
-  }));
-  if (r1.active && r1.seen && r1.card !== 'none' && r1.hasSeal) ok('③ 90s 内裂隙必然出现且卡片可见');
-  else bad('③ 裂隙未按时出现', JSON.stringify(r1));
+  // ===== ③ 裂隙触发（v3.6.2：班组 ≥15 线程后 1 小时一遇，首次 Lv1，停留 10 分钟；移除「首次 90 秒必出」）=====
+  // 3a 线程不足（当前 5 条）：长时间推进也不出裂隙 + 锁定提示写门槛
+  const r0 = await page.evaluate(() => {
+    window.__advance(4000); // 约 66 分钟
+    return { active: !!window.S.activeRift, seen: !!window.S._riftSeen, title: document.querySelector('[id^=btn-rift]')?.title || '' };
+  });
+  if (!r0.active && !r0.seen) ok('③ 线程不足（5 条）长时间推进也不出裂隙', '');
+  else bad('③ 线程不足仍出裂隙', JSON.stringify(r0));
+  if (/15 条线程/.test(r0.title)) ok('③ 锁定提示写明线程门槛', r0.title);
+  else bad('③ 锁定提示未写门槛', r0.title);
 
-  // 3b 封印后卡片常驻 + 倒计时
+  // 3b 补足到 ≥15 线程：约 1 小时出现首次裂隙 Lv1 + 在场 10 分钟
+  await page.evaluate(() => {
+    for (let i = 0; i < 12; i++) window.S.cultists.push({ id: 'x' + i, name: 'X' + i, profession: 'prospector', level: 1, boundTo: null, mood: '正常', output: 10, hiredAt: Date.now(), moodTimer: 90 });
+    window.S._riftT = 0; window.S._riftNextSec = 0;
+  });
+  let cap = null;
+  for (let i = 0; i < 70 && !cap; i++) {
+    await page.evaluate(() => window.__advance(120)); // 每步 2 分钟
+    const st = await page.evaluate(() => window.S.activeRift ? { lv: window.S.activeRift.level, stay: (window.S.activeRift.expiresAt - Date.now()) / 60000 } : null);
+    if (st) cap = st;
+  }
+  if (cap && cap.lv === 1) ok('③ ≥15 线程：首次裂隙 Lv1（移除 90s 兜底）', `lv=${cap.lv}`);
+  else bad('③ 首次裂隙未出现或等级非 1', JSON.stringify(cap));
+  if (cap && cap.stay >= 7.9 && cap.stay <= 10.5) ok('③ 裂隙在场停留 10 分钟', `${cap.stay.toFixed(1)} 分钟`);
+  else bad('③ 停留时长非 10 分钟', String(cap && cap.stay));
+
+  // 3c 封印后卡片常驻 + 倒计时（复用当前活动裂隙）
   await page.evaluate(() => { window.S.ep = 1e14; document.getElementById('seal-rift')?.click(); });
   await sleep(1200);
   const r2 = await page.evaluate(() => ({
@@ -94,7 +105,7 @@ try {
   if (!r2.active && r2.card !== 'none' && /(\d+\s*分|\d+\s*秒)/.test(r2.eta)) ok('③ 封印后首列常驻「下次裂隙」倒计时', r2.eta);
   else bad('③ 倒计时卡', JSON.stringify(r2));
 
-  // 3c 后台大跳补偿：跳过 40 分钟 → 计时必然到点
+  // 3d 后台大跳补偿：跳过 40 分钟 → 计时必然到点（≥15 线程已满足门槛）
   const r3 = await page.evaluate(() => {
     window.S.activeRift = null; window.S._riftT = 0; window.S._riftNextSec = 600;
     window.__tick(performance.now() + 40 * 60 * 1000);
@@ -103,7 +114,7 @@ try {
   if (r3.active) ok('③ 后台挂机 40 分钟返回即补出裂隙（_riftCatchup 上限 30 分钟）');
   else bad('③ 后台补偿失效', JSON.stringify(r3));
 
-  // 3d 裂隙页签「下次裂隙」行
+  // 3e 裂隙页签「下次裂隙」行
   const r4 = await page.evaluate(async () => {
     window.S.activeRift = null; window.S.riftExpedition = null;
     window.__gameDirty.riftTab = true;

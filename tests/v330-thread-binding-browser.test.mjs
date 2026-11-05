@@ -36,6 +36,14 @@ const mkSave = (extra = {}) => JSON.stringify(Object.assign({
     { id: 'c1', name: '勘探员A', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
     { id: 'c2', name: '蒸馏师B', profession: 'distiller', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
     { id: 'c3', name: '统御官C', profession: 'overseer', level: 1, xp: 0, leader: true, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    // v3.6.2：班组面板 ≥10 线程解锁——补足到 10 条以满足门槛（本测试聚焦绑定 UI，解锁门槛由 v362 覆盖）
+    { id: 'c4', name: '线程D', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c5', name: '线程E', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c6', name: '线程F', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c7', name: '线程G', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c8', name: '线程H', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c9', name: '线程I', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
+    { id: 'c10', name: '线程J', profession: 'prospector', level: 1, xp: 0, leader: false, boundTo: null, output: 3, mood: '正常', moodTimer: 999, hiredAt: Date.now() - 1000, earned: 0 },
   ],
   converterOn: { vehicles: true, atrium: true },
   religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
@@ -97,7 +105,7 @@ try {
   // 绑定下拉存在
   {
     const selCount = await page.evaluate(() => document.querySelectorAll('#crew-panel select[data-bind]').length);
-    rec('每张线程卡含绑定下拉 select[data-bind]', selCount === 3, `selCount=${selCount}`);
+    rec('每张线程卡含绑定下拉 select[data-bind]', selCount === 10, `selCount=${selCount}`);
     const convCount = await page.evaluate(() => document.querySelectorAll('#crew-panel [data-conv-toggle]').length);
     rec('班组不再含转化器开关按钮（v3.3.2）', convCount === 0, `convCount=${convCount}`);
   }

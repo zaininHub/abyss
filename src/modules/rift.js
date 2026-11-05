@@ -190,14 +190,23 @@ export function riftSpawnSecAt(lv) {
 export function riftSpawnSec() {
   return riftSpawnSecAt(riftUpgradeLevel('sentinel'));
 }
+// v3.6.2 反馈②：裂隙解锁门槛——班组 ≥15 条线程后才可能出现。
+//   达标即置持久标记（跨转生保留，与 _riftSeen 同风格）：线程后来流失也不收回裂隙。
+//   旧档兼容：v3.6.1 及以前已触发过裂隙（_riftSeen）的存档直接视为已达标。
+export function riftThreadsReady() {
+  if (S._riftThreadUnlocked) return true;
+  if (S._riftSeen) { S._riftThreadUnlocked = true; return true; } // 旧档迁移
+  if ((S.cultists || []).length >= (BALANCE.rift.threadUnlock || 15)) { S._riftThreadUnlocked = true; return true; }
+  return false;
+}
 // v3.3.5 反馈③：裂隙改「确定性计时 + 随机抖动」——
-// 旧实现每帧掷骰（p = dt/spawnSec），理论上均值 10 分钟，但方差大、后台 rAF 挂起时几乎不推进，
-// 玩家长期看不到裂隙（反馈两次「裂隙不会触发」）。现改为计时器到点必出（抖动 0.85~1.15），
-// 随机提前只作为额外机会；首次发现前 90 秒内必出（新手首见）。
+// 旧实现每帧掷骰（p = dt/spawnSec），理论上均值 = 间隔，但方差大、后台 rAF 挂起时几乎不推进，
+// 玩家长期看不到裂隙（反馈两次「裂隙不会触发」）。现改为计时器到点必出（±5% 抖动）。
+// v3.6.2 反馈②：删除「首次 90 秒必出」的新手加速——解锁节奏改由线程数门槛控制，首次同样 1 小时。
 export function riftNextSec() {
   if (!(S._riftNextSec > 0)) {
     const jitter = 0.95 + Math.random() * 0.1; // ±5%：体感随机但不偏离标称间隔
-    S._riftNextSec = S._riftSeen ? riftSpawnSec() * jitter : Math.min(90, riftSpawnSec() * jitter);
+    S._riftNextSec = riftSpawnSec() * jitter;
   }
   return S._riftNextSec;
 }
@@ -347,13 +356,17 @@ export function tickRift(dt) {
   const sdt = dt + (S._riftCatchup || 0);
   S._riftCatchup = 0;
   if (!S.activeRift && !abyssDevouring) {
+    // v3.6.2 反馈②：班组 <15 条线程时裂隙不出现（计时也不推进）——解锁后从 0 开始按 1 小时节奏计数
+    if (!riftThreadsReady()) { S._riftT = 0; }
+    else {
     S._riftT = (S._riftT || 0) + sdt;
     const need = riftNextSec();
     const lucky = Math.random() < Math.min(1, sdt / spawnSec);
     if (S._riftT >= need || lucky) {
       S._riftT = 0;
       S._riftNextSec = 0; // 下一轮重新掷抖动
-      const level = riftLevelOf(cps);
+      // v3.6.2 反馈②：首次裂隙固定 Lv.1（初始节奏），此后按 cps 潜力级 + 科技树成长
+      const level = S._riftSeen ? riftLevelOf(cps) : 1;
       // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
       const cap = epStorageCap();
       const ratio = BALANCE.rift.sealRatioMin +
@@ -363,7 +376,7 @@ export function tickRift(dt) {
         level: level,
         sealCost: Math.ceil(cap * ratio * riftSealCostMult()),
         dmReward: Math.ceil(1 * level),
-        expiresAt: Date.now() + 120000,
+        expiresAt: Date.now() + (BALANCE.rift.staySec || 600) * 1000, // v3.6.2 反馈②：在场 10 分钟（原 2 分钟）
       };
       if (S.activeRift && S.riftAuto) {
         // v2.8.30：裂隙自动动作（互斥单开——开关值即升级 id）
@@ -378,6 +391,7 @@ export function tickRift(dt) {
         log('裂隙开启：探采平台与深渊商店已解锁', 'good');
       }
       log(`深渊裂隙在代码底层裂开：${riftLevelName(level)}（Lv.${level}）`, 'bad');
+    }
     }
   }
   if (S.activeRift && Date.now() > S.activeRift.expiresAt) {
