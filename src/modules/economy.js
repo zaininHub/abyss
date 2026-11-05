@@ -680,7 +680,14 @@ export function v21BuildingCost(b) {
 
 export function bulkCostCalc(u, n) {
   // v3.6.1：逐单 ceil 求和（与 unitCost 循环口径一致），委托 pricing.js
-  return bulkGeomCost({ base: u.base, growth: u.growth || 1.30, owned: S.upgrades[u.id] || 0, qty: n, mult: costMult() });
+  let cost = bulkGeomCost({ base: u.base, growth: u.growth || 1.30, owned: S.upgrades[u.id] || 0, qty: n, mult: costMult() });
+  // v3.6.4 反馈④：主商店卡面与 buyUpgrade 都走本函数，此前却只有 unitCost 做了 30%
+  //   防死锁钳制 —— 粮仓显示/实付 12K EP，而初始 EP 上限只有 2K，玩家攒满也买不起。
+  //   两条购买路径必须同口径（项目纪律），故此处补齐钳制。
+  if (CAP_EXPANSION_IDS.includes(u.id)) {
+    cost = Math.min(cost, Math.floor(epStorageCap() * (B.storageAntiDeadlockRatio || 0.3)));
+  }
+  return cost;
 }
 
 // ========== 专注成本 ==========
@@ -898,8 +905,32 @@ export function ptHatchEpPerSec() {
 // v2.4 KG 模式改造：基础上限 2000 + 存储节点无限升级（第 i 级 +capPer×capGrowth^(i-1)，无封顶）
 // + 缓存优化 +5000/个（无限）+ 数据中心每级上限加成 [0,10K,25K,50K]
 // + 组D 扩容梯与新增多效果上限建筑 capAdd（无限）+ 里程碑乘算基座 + 故事线变体加成
-// v3.6.3 反馈①：上限口径不再读 computeCps()（见下方「结构性倍数」），
-//   因此不再需要防递归旗标；任何线程数量/状态变化都不会进入本函数。
+// v3.6.4 反馈②：时间基座读「结构性投入快照产能」，不读实时 cps。
+//   快照只在「结构性签名」变化时刷新，且单调不回落 —— 线程招募/流失、心情、
+//   薪资四态、懒惰、深渊吞噬都不会让上限抖动（v3.6.3 ① 的解耦继续成立），
+//   而每次买升级/建筑都会把当时的产能重新纳入，存满一次维持 ≈ capHoursFloor 小时。
+let capBasisBusy = false; // 防 epStorageCap ← computeCps ← epStorageCap 递归
+function capBasisSignature() {
+  let up = 0, bd = 0, tech = 0;
+  for (const k in (S.upgrades || {})) up += (S.upgrades[k] || 0);
+  for (const k in (S.buildings || {})) bd += (S.buildings[k] || 0);
+  for (const k in (S.tech || {})) tech += (S.tech[k] ? 1 : 0);
+  return `${up}|${bd}|${tech}|${Object.keys(S.milesDone || {}).length}|${S.storyline || 'default'}|${S.prestigePoints || 0}`;
+}
+// 返回快照产能（只在签名变化时重新取样）；busy 时直接返回已有值，避免递归
+function epCapBasisCps() {
+  const sig = capBasisSignature();
+  if (S._epCapBasisSig !== sig) {
+    S._epCapBasisSig = sig;
+    if (!capBasisBusy) {
+      capBasisBusy = true;
+      let cps = 0;
+      try { cps = computeCps(); } catch { cps = 0; } finally { capBasisBusy = false; }
+      if (isFinite(cps) && cps > (S._epCapBasisCps || 0)) S._epCapBasisCps = cps;
+    }
+  }
+  return S._epCapBasisCps || 0;
+}
 export function epStorageCap() {
   let cap = 2000;
   // v3.4.8 反馈⑦：缓存优化已从商店删除——此处仅按旧档残留等级继续计入上限（不让老存档凭空掉容量），
@@ -942,15 +973,18 @@ export function epStorageCap() {
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
   cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
   cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）
-  // v3.6.3 反馈①：首次溢出后按「结构性上限的倍数」叠加扩容。
-  //   旧口径用 computeCps()×2h 做时间基座，但 cps 里含 staffOutputPerSec / mood /
-  //   wageOutputMult / lazyProdMult / datacenterMult / leaderGlobalMult 等线程派生项，
-  //   线程被吞噬流失、心情切换、欠薪休眠时上限会跟着掉 —— 玩家看到的是「上限无故缩水」。
-  //   现在只认结构性投入（扩容件/建筑/研究/里程碑/故事线/遗存/回响），线程完全不参与。
-  //   ⚠️ 仍是「叠加」而非「取 max」：倍数作用于整个结构性值，扩容件的每一级增量都同步放大。
+  // v3.6.4 反馈②：首次溢出后叠加「时间基座」——按结构性投入快照产能 × capHoursFloor 小时。
+  //   与 v3.4.9 ⑤ 的直接 cps 口径不同：这里用 epCapBasisCps()（只在买升级/建筑时刷新、
+  //   单调不回落），所以线程数量/心情/薪资/懒惰/吞噬的实时波动不会让上限抖动；
+  //   玩家每次加大结构性投入后又会把产能重新纳入，存满一次仍 ≈ 1~3 小时。
+  //   ⚠️ 仍是「叠加」而非「取 max」：基座与结构性值相加，扩容件每一级都真实生效。
   if (S._rpOverflowSeen) {
+    const baseCap = cap;
+    const hours = B.capHoursFloor != null ? B.capHoursFloor : 2;
     const mult = B.capOverflowMult != null ? B.capOverflowMult : 3;
-    if (isFinite(cap) && cap > 0) cap = cap * (1 + mult);
+    const basis = epCapBasisCps();
+    const floor = Math.max(basis * 3600 * hours, baseCap * mult);
+    if (isFinite(floor) && floor > 0 && isFinite(cap) && cap > 0) cap = floor + baseCap;
   }
   return Math.round(cap);
 }
@@ -967,9 +1001,15 @@ export function epCapAfterBuy(id, kind = 'upgrade') {
   const bucket = S[bucketKey];
   const had = Object.prototype.hasOwnProperty.call(bucket, id);
   const cur = bucket[id] || 0;
+  // v3.6.4 ②：临时 +1 级会改变「结构性投入签名」，若不保护就会用假状态刷新产能快照
+  const savedSig = S._epCapBasisSig, savedCps = S._epCapBasisCps;
   bucket[id] = cur + 1;
   let cap;
-  try { cap = epStorageCap(); } finally { if (had) bucket[id] = cur; else delete bucket[id]; } // 还原：原不存在的键直接删除，不往存档里写 0
+  try { cap = epStorageCap(); }
+  finally {
+    if (had) bucket[id] = cur; else delete bucket[id]; // 还原：原不存在的键直接删除，不往存档里写 0
+    S._epCapBasisSig = savedSig; S._epCapBasisCps = savedCps;
+  }
   return cap;
 }
 

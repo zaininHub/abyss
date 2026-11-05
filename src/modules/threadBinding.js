@@ -156,17 +156,32 @@ export function unbindThread(c) { c.boundTo = null; }
 //   1) 职业与某个「已开启」转化器匹配 → 优先归位（匹配岗位零惩罚 + 更高加成，恒优于错配）
 //   2) 其余线程（含领导/懒散/职业岗位未开启）→ 均衡填充，人少的岗位优先
 //      （转化加成是乘区，多一人即多一乘区，均衡即最优）
-//   3) 没有任何开启的转化器 → 全部释放绑定（消耗恢复）
+//   3) 有已解锁岗位但开关全关 → 释放绑定（消耗恢复）；一个岗位都没解锁 → 统一转入超线程
+//      （v3.6.4 ③：避免开局点「智能分配」毫无反应）
 export function autoAssignThreads() {
   // v3.6.3 ③：只分配「已解锁」的资源岗位；超线程是玩家手动兜底岗位，不参与自动重排。
-  const types = RESOURCE_CONVERTER_IDS.filter(t => converterUnlocked(t) && converterEnabled(t));
+  const unlocked = RESOURCE_CONVERTER_IDS.filter(t => converterUnlocked(t));
+  const types = unlocked.filter(t => converterEnabled(t));
   const cultists = (S.cultists || []);
   const hyperBound = cultists.filter(c => c.boundTo === HYPER_CONVERTER_ID);
   const movable = cultists.filter(c => c.boundTo !== HYPER_CONVERTER_ID);
   if (!types.length) {
-    let released = 0;
-    for (const c of movable) if (c.boundTo) { c.boundTo = null; released++; }
-    return released; // 手动超线程保留，不被智能分配清空
+    if (unlocked.length) {
+      // 有已解锁岗位但开关全关 → 释放绑定（消耗恢复），手动超线程保留
+      let released = 0;
+      for (const c of movable) if (c.boundTo) { c.boundTo = null; released++; }
+      return released;
+    }
+    // v3.6.4 反馈③：一个模块都没解锁时，旧实现只清空绑定、点按钮「毫无反应」。
+    //   统一转入恒解锁的超线程岗位（该线程产出/消耗 +10%），让智能分配开局即可用。
+    let changed = 0;
+    for (const c of movable) {
+      if (c.boundTo === HYPER_CONVERTER_ID) continue;
+      c.boundTo = HYPER_CONVERTER_ID;
+      c.assignSince = Date.now();
+      changed++;
+    }
+    return changed;
   }
   const plan = new Map();
   for (const c of hyperBound) plan.set(c, HYPER_CONVERTER_ID);

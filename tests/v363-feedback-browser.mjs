@@ -127,14 +127,15 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   if (hyper.boostHyper === 1) ok('② 超线程不参与转化器产出加成');
   else bad('② 超线程错误地加成转化器', String(hyper.boostHyper));
 
-  // 智能分配不覆盖手动超线程，也不把线程塞进超线程
+  // v3.6.4 ③：一个模块都没解锁时，智能分配改为把空闲线程统一转入超线程（点击必有反馈）；
+  //   手动设置的超线程仍保留；解锁岗位后的重排由 v364 ③ 覆盖。
   const auto = await page.evaluate(() => {
     window.S.cultists.forEach(c => { c.boundTo = null; });
     window.S.cultists[0].boundTo = 'hyper';
     window.__qa.threadBind.autoAssignThreads();
     return { hyperKept: window.S.cultists[0].boundTo, autoHyper: window.S.cultists.slice(1).filter(c => c.boundTo === 'hyper').length };
   });
-  if (auto.hyperKept === 'hyper' && auto.autoHyper === 0) ok('② 智能分配尊重手动超线程且不自动塞入该岗位', JSON.stringify(auto));
+  if (auto.hyperKept === 'hyper' && auto.autoHyper === 9) ok('② 未解锁模块时智能分配统一转入超线程，手动超线程保留', JSON.stringify(auto));
   else bad('② 智能分配处理超线程异常', JSON.stringify(auto));
 
   // ③ 解锁全部模块后岗位全部出现

@@ -7,7 +7,7 @@ import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js'
 import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
-  threadProfession, isLeader, isLazyProfession, threadLevel, leaderCount,
+  threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
   unlockedConverterIds,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
@@ -129,7 +129,7 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" ${leaderCount() > 0 ? '' : 'disabled'} title="领导者决策：对当前全部线程重新做一次岗位优化（已绑定的也会重排；无更优方案时不做改动）">智能分配（领导者决策）</button>
+      <button class="btn" data-autobind="1" title="对全部线程重排岗位（已绑定的也会重排）；有领导者时优先落位，尚未解锁任何模块时统一转入超线程">智能分配</button>
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
@@ -167,7 +167,7 @@ export function renderCrewPanel(container) {
       if (ab) {
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
-        crewPush(k > 0 ? `领导者调度：重排 ${k} 条线程至更优岗位` : '领导者调度：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        crewPush(k > 0 ? `智能分配：重排 ${k} 条线程（${(unlockedConverterIds() || []).length <= 1 ? '转入超线程' : '岗位优化'}）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
         renderCrewPanel(container);
         return;
       }

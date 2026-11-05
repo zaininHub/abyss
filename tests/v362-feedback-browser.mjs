@@ -84,7 +84,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   else bad('② 停留时长不是 10 分钟', String(cap && cap.stay));
   if (cap && cap.seen) ok('② 首次出现即解锁探采平台/深渊商店标记', '');
 
-  // 后续裂隙等级恢复 cps 口径（_riftSeen 已置真）——同样分小步捕获，规避偶发闭合
+  // v3.6.4 ①：裂隙等级不再随 cps 自行升级，后续裂隙仍为 Lv.1（只有科技树能 +1）
   const g3 = await page2.evaluate(() => { window.S.activeRift = null; window.S._riftNextSec = 0; window.S._riftT = 0; return true; });
   void g3;
   let cap3 = null;
@@ -93,8 +93,8 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
     const st = await page2.evaluate(() => window.S.activeRift ? { lv: window.S.activeRift.level } : null);
     if (st) cap3 = st;
   }
-  if (cap3 && cap3.lv !== null && cap3.lv !== 1) ok('② 后续裂隙等级按 cps 口径（非强制 Lv1）', `lv=${cap3.lv}`);
-  else bad('② 后续裂隙未出现或仍为 Lv1', JSON.stringify(cap3));
+  if (cap3 && cap3.lv === 1) ok('② 后续裂隙仍为 Lv.1（不可自行升级，仅科技可提升）', `lv=${cap3.lv}`);
+  else bad('② 后续裂隙等级异常', JSON.stringify(cap3));
   await page2.close();
 }
 

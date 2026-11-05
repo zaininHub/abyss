@@ -26,8 +26,8 @@ let riftSig = null;      // v2.1 R2：当前已渲染裂隙签名，避免 100ms
 let delegateBound = false; // v2.1 R2：容器级事件委托只绑一次
 
 // ---- v2.6.1 裂隙等级 ----
-// v3.3.9 反馈⑤：等级 = cps 潜力级（1~5）+ 科技树「裂隙等级」无限升级（EP+DM）；
-// 余烬探测井的等级上限职能移除（科技等级即上限，可无限叠加）
+// v3.6.4 反馈①：等级不再随 cps 自动成长，恒 = 初始 1 级 + 科技树「裂隙等级」级数（EP+DM，可无限叠加）。
+// 余烬探测井的等级上限职能移除；玩家不做购买决策，等级不会自己涨。
 export function riftLevelTech() {
   return (S.riftLevelTech | 0);
 }
@@ -40,11 +40,14 @@ export function riftLevelTechCost() {
   };
 }
 export function riftMaxLevel() {
-  return 5 + riftLevelTech();
+  // v3.6.4 反馈①：等级不再随 cps 自动成长 → 上限 = 初始 1 级 + 玩家主动购买的科技级数
+  return 1 + riftLevelTech();
 }
-export function riftLevelOf(cps) {
-  const lv = 1 + Math.floor(Math.log10(Math.max(1, cps || 1)));
-  return Math.max(1, Math.min(5, lv) + riftLevelTech());
+export function riftLevelOf(_cps) {
+  // v3.6.4 反馈①：裂隙「不可自行升级」——旧口径 1 + floor(log10(cps))（1~5 级）会随产能
+  //   自动跳级，玩家没做任何决策等级就涨了。现在只认科技树「裂隙等级」（buyRiftLevelTech）。
+  //   保留 cps 形参只为兼容既有调用点（生成裂隙/科技卡/奖励倍率），不再参与计算。
+  return 1 + riftLevelTech();
 }
 export function riftLevelName(lv) {
   // v3.4.6 反馈①：超 5 级只返回「虚空之隙」纯名——调用方各自追加 Lv.N，
@@ -365,7 +368,7 @@ export function tickRift(dt) {
     if (S._riftT >= need || lucky) {
       S._riftT = 0;
       S._riftNextSec = 0; // 下一轮重新掷抖动
-      // v3.6.2 反馈②：首次裂隙固定 Lv.1（初始节奏），此后按 cps 潜力级 + 科技树成长
+      // v3.6.4 反馈①：首次与后续裂隙都只按「初始 1 级 + 玩家购入的科技级数」生成，不读 cps
       const level = S._riftSeen ? riftLevelOf(cps) : 1;
       // v2.1 R3-D：封印成本 = 当前 EP 存储上限 × 30%~50% × 护符折扣
       const cap = epStorageCap();

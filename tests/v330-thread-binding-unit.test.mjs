@@ -130,6 +130,8 @@ test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.
 
 test('方向③：智能分配把空闲线程分配到合适岗位（优先匹配职业）', () => {
   resetState();
+  // v3.6.4 ③：智能分配只认「已解锁」岗位，补上工坊/载具解锁（与 v335 浏览器夹具同口径）
+  S.upgrades.atrium = 1; S.upgrades.scooter = 1;
   // 一个领导者 + 一个勘探员 + 一个蒸馏师，均空闲
   S.cultists.push(mkCultist({ leader: true, profession: 'overseer' }));
   const p = mkCultist({ profession: 'prospector' });
@@ -143,6 +145,7 @@ test('方向③：智能分配把空闲线程分配到合适岗位（优先匹�
 
 test('方向⑤：招募建议职业偏向在岗最少的转化器', () => {
   resetState();
+  S.upgrades.atrium = 1; S.upgrades.scooter = 1; // v3.6.4 ③：建议只在已解锁岗位中挑
   // 探采已有 2 条绑定，灵感工坊 0 → 建议蒸馏师（atrium）
   S.cultists.push(mkCultist({ profession: 'prospector', boundTo: 'vehicles' }));
   S.cultists.push(mkCultist({ profession: 'prospector', boundTo: 'vehicles' }));
