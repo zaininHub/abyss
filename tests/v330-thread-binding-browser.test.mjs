@@ -102,10 +102,19 @@ try {
     rec('面板含绑定规则帮助文案（无协议标题）', txt.includes('匹配职业') && !txt.includes('班组调度协议'), '');
   }
 
-  // 绑定下拉存在
+  // 绑定下拉存在（v3.7.1 ①：领导者是全局加成位，卡面不再有岗位下拉）
   {
-    const selCount = await page.evaluate(() => document.querySelectorAll('#crew-panel select[data-bind]').length);
-    rec('每张线程卡含绑定下拉 select[data-bind]', selCount === 10, `selCount=${selCount}`);
+    const ui = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#crew-panel .crew-card')];
+      const leaderCard = cards.find(el => el.textContent.includes('★领导'));
+      return {
+        sel: document.querySelectorAll('#crew-panel select[data-bind]').length,
+        leaderHasSelect: !!leaderCard?.querySelector('select[data-bind]'),
+        leaderSlot: !!leaderCard?.textContent.includes('全局加成 · 不占岗位'),
+      };
+    });
+    rec('9 张普通线程卡含绑定下拉；领导卡改为全局加成位（v3.7.1 ①）',
+      ui.sel === 9 && !ui.leaderHasSelect && ui.leaderSlot, JSON.stringify(ui));
     const convCount = await page.evaluate(() => document.querySelectorAll('#crew-panel [data-conv-toggle]').length);
     rec('班组不再含转化器开关按钮（v3.3.2）', convCount === 0, `convCount=${convCount}`);
   }

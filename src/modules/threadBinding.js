@@ -15,6 +15,10 @@ const B = () => BALANCE.thread.binding;
 export function threadProfession(c) { return c && c.profession ? PROFESSION_BY_ID[c.profession] : null; }
 export function isLazyProfession(c) { return !!(c && c.profession === LAZY_PROFESSION_ID); }
 export function isLeader(c) { return !!(c && c.leader); }
+// v3.7.1 反馈①：领导者只提供全局加成（leaderGlobalMult），不占用任何岗位。
+// 这是「能否占岗位」的唯一判定源——绑定 / 智能分配 / 晋升 / 班组 UI 四处共用，
+// 避免又出现同一玩法两套口径（项目历史上的同名双实现陷阱）。
+export function canBind(c) { return !isLeader(c); }
 export function threadLevel(c) { return Math.max(1, Math.min(B().levelCap, c && c.level ? c.level : 1)); }
 
 // ---- 绑定生效性（转化器开启且已分配）----
@@ -95,7 +99,8 @@ export function affinityMatches(c, type) {
 }
 export function isSuitable(c) {
   if (!bindingActive(c)) return false;
-  if (isLeader(c)) return true;            // 领导者在岗即视为合适（指挥）
+  // v3.7.1：领导者恒不在岗，此分支仅为旧档残留绑定的兼容兜底（正常路径不可达）
+  if (isLeader(c)) return true;
   return affinityMatches(c, c.boundTo);
 }
 
@@ -158,6 +163,7 @@ export function converterThreadBoost(type) {
     const match = affinityMatches(c, type);
     const lvlBonus = (lvl - 1) * (match ? B().matchLevelBonus : B().mismatchLevelBonus);
     const profBonus = match ? B().matchProfBonus : B().mismatchProfBonus;
+    // v3.7.1：领导者恒不在岗，此加成仅为旧档残留绑定的兼容兜底（正常路径不可达）
     const lead = isLeader(c) ? B().leaderBonus : 0;
     mult *= (1 + lvlBonus + profBonus + lead);
   }
@@ -166,6 +172,8 @@ export function converterThreadBoost(type) {
 
 // ---- 绑定 / 解绑 / 晋升 ----
 export function bindThread(c, type) {
+  // v3.7.1 反馈①：领导者是全局加成位，任何岗位都不收；顺手纠正旧档残留绑定
+  if (!canBind(c)) { c.boundTo = null; return false; }
   if (!CONVERTERS[type]) return false;
   c.boundTo = type;
   c.assignSince = Date.now();
@@ -173,40 +181,32 @@ export function bindThread(c, type) {
 }
 export function unbindThread(c) { c.boundTo = null; }
 
-// ---- 方向③：智能分配（容量感知 · v3.6.5 重写）----
-// 规则（v3.6.5 反馈①~⑤）：
-//   1) 每个岗位容量 = 对应设施数量（converterCapacity），分配结果不会超容量
-//   2) 阶段 A：优先保证「每个已开启模块至少 1 条线程」（擅长职业优先归位）
-//   3) 阶段 B：按剩余槽位均衡填满（擅长岗位仍有空位时优先去擅长岗位）
-//   4) 阶段 C：所有模块满员后，剩余线程统一转入超线程（+10% 产出/消耗）
-//   5) 「优先空闲」：先安排空闲（未绑定）线程，再重排已在岗线程以纠正错位；
+// ---- 方向③：智能分配（容量感知 · v3.7.1 重写）----
+// 规则：
+//   0) 领导者是全局加成位，恒不占岗位（v3.7.1 反馈①）；全量重排顺带纠正旧档残留
+//   1) 每个资源岗位容量 = 对应设施数量（converterCapacity），分配结果不会超容量
+//   2) 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者），避免被「补空缺」抢走
+//   3) 阶段 A2：优先保证每个已开启模块至少 1 条（空闲不足时从手动超线程池抽调）
+//   4) 阶段 B：按剩余槽位均衡填满（擅长岗位优先，其次剩余槽位最多的岗位）
+//   5) 阶段 C：所有无法进入资源岗位的线程统一转入超线程（v3.7.1 反馈②）——
+//      覆盖「模块满员 / 未解锁 / 开关全关 / 容量为 0」四种情况，不再有「释放为空闲」旁路，
+//      全量与增量(only) 走同一条路径；超线程恒解锁、无容量上限，点击必有可见收益
+//   6) 「优先空闲」：先安排空闲（未绑定）线程，再重排已在岗线程以纠正错位；
 //      手动超线程保留，仅当可调配线程不足以保证每模块有人时才从超线程池抽调
 //   only：传入单条线程时做「增量安置」（招募新线程用），其余线程一律视为固定不动。
-//   无任何模块解锁 → 全部转超线程；已解锁但开关全关 → 释放绑定（v3.6.4 ③ 语义保留）。
 export function autoAssignThreads(only = null) {
   const cultists = (S.cultists || []);
   const before = new Map(cultists.map(c => [c, c.boundTo || null]));
-  const unlocked = RESOURCE_CONVERTER_IDS.filter(t => converterUnlocked(t));
-  const types = unlocked.filter(t => converterEnabled(t) && converterCapacity(t) > 0);
+  // 资源岗位：已解锁 + 开关开启 + 容量 > 0；超线程恒解锁，作为阶段 C 的统一兜底
+  const types = RESOURCE_CONVERTER_IDS.filter(t =>
+    converterUnlocked(t) && converterEnabled(t) && converterCapacity(t) > 0);
   const movable = only ? [only] : cultists;
   const movableSet = new Set(movable);
 
-  if (!types.length) {
-    if (unlocked.length && !only) {
-      // 有已解锁岗位但开关全关 → 释放绑定（消耗恢复），手动超线程保留
-      let released = 0;
-      for (const c of movable) if (c.boundTo && c.boundTo !== HYPER_CONVERTER_ID) { c.boundTo = null; released++; }
-      return released;
-    }
-    // 一个模块都没解锁（或新线程无处可去）→ 统一转入恒解锁的超线程岗位
-    let changed = 0;
-    for (const c of movable) {
-      if (c.boundTo === HYPER_CONVERTER_ID) continue;
-      c.boundTo = HYPER_CONVERTER_ID;
-      c.assignSince = Date.now();
-      changed++;
-    }
-    return changed;
+  // 反馈①：全局加成位不占岗位——任何一次分配都把旧档残留的领导绑定清空。
+  // 领导者在 UI 上没有岗位下拉，不存在「玩家手动设定」需要保留，故不违反增量安置纪律。
+  for (const c of cultists) {
+    if (isLeader(c) && c.boundTo) c.boundTo = null;
   }
 
   const cap = {}, load = {};
@@ -214,6 +214,7 @@ export function autoAssignThreads(only = null) {
   const free = [];   // 本次参与重排的线程（旧岗位先释放，统一重新规划）
   const spare = [];  // 手动超线程（保留，仅不足时抽调）
   for (const c of cultists) {
+    if (isLeader(c)) continue;           // 恒跳过：不参与重排、不占容量、不进超线程
     const b = c.boundTo;
     if (!movableSet.has(c)) {
       if (b && types.includes(b)) load[b] += 1; // 增量安置时：其余线程固定占坑
@@ -224,9 +225,8 @@ export function autoAssignThreads(only = null) {
     c.boundTo = null; // 含未解锁/已关闭的旧岗位：一律释放后重排
     free.push({ c, wasBound });
   }
-  // ⑤「优先空闲」：未绑定线程先落位，已在岗线程随后重排（纠正错位）；领导者优先
-  free.sort((a, b) => (a.wasBound ? 1 : 0) - (b.wasBound ? 1 : 0)
-    || (isLeader(b.c) ? 1 : 0) - (isLeader(a.c) ? 1 : 0));
+  // 「优先空闲」：未绑定线程先落位，已在岗线程随后重排（纠正错位）
+  free.sort((a, b) => (a.wasBound ? 1 : 0) - (b.wasBound ? 1 : 0));
   const idle = free.map(x => x.c);
   const place = (c, t) => { c.boundTo = t; c.assignSince = Date.now(); load[t] += 1; };
   const takeFor = (t) => {
@@ -238,7 +238,7 @@ export function autoAssignThreads(only = null) {
     return i >= 0 ? spare.splice(i, 1)[0] : null;
   };
 
-  // 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者），避免被「补空缺」抢走
+  // 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者）
   for (const t of types) {
     if (load[t] >= cap[t]) continue;
     const i = idle.findIndex(c => affinityMatches(c, t));
@@ -266,7 +266,7 @@ export function autoAssignThreads(only = null) {
     idle.splice(idle.indexOf(c), 1);
     place(c, t);
   }
-  // 阶段 C：模块都满了 → 剩余空闲线程转超线程；抽调剩余的超线程保持原状
+  // 阶段 C：所有无法进入资源岗位的线程统一转入超线程；抽调后剩余的超线程池保持原状
   for (const c of idle) { c.boundTo = HYPER_CONVERTER_ID; c.assignSince = Date.now(); }
   let changed = 0;
   for (const c of cultists) if ((c.boundTo || null) !== before.get(c)) changed++;

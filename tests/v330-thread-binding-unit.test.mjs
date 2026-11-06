@@ -128,19 +128,20 @@ test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.
   assert.equal(vehicleDmPerMin(), 0);
 });
 
-test('方向③：智能分配把空闲线程分配到合适岗位（优先匹配职业）', () => {
+test('方向③：智能分配把空闲线程分配到合适岗位；领导者恒不占岗位（v3.7.1 ①）', () => {
   resetState();
   // v3.6.4 ③：智能分配只认「已解锁」岗位，补上工坊/载具解锁（与 v335 浏览器夹具同口径）
   S.upgrades.atrium = 1; S.upgrades.scooter = 1;
-  // 一个领导者 + 一个勘探员 + 一个蒸馏师，均空闲
-  S.cultists.push(mkCultist({ leader: true, profession: 'overseer' }));
+  // 一个领导者（带旧档残留绑定）+ 一个勘探员 + 一个蒸馏师
+  const leader = mkCultist({ leader: true, profession: 'overseer', boundTo: 'vehicles' });
   const p = mkCultist({ profession: 'prospector' });
   const d = mkCultist({ profession: 'distiller' });
-  S.cultists.push(p, d);
+  S.cultists.push(leader, p, d);
   const n = autoAssignThreads();
-  assert.equal(n, 3); // 两条正常线程 + 领导者（均衡负载）均被分配
+  assert.equal(leader.boundTo, null, '领导者是全局加成位，不占任何岗位（旧档残留一并纠正）');
   assert.equal(p.boundTo, 'vehicles'); // 勘探员→探采
   assert.equal(d.boundTo, 'atrium');   // 蒸馏师→灵感工坊
+  assert.equal(n, 3); // 两条正常线程归位 + 一条领导解绑
 });
 
 test('方向⑤：招募建议职业偏向在岗最少的转化器', () => {

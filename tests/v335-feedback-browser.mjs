@@ -49,8 +49,15 @@ try {
   else bad('① 重排结果', JSON.stringify(a1));
   if (a1.changed2 === 0) ok('① 已是优解时再次点击不改动（返回 0）', `changed2=${a1.changed2}`);
   else bad('① 二次点击不应改动', JSON.stringify(a1.after2));
-  if (a1.after2.filter(Boolean).length === a1.after2.length) ok('① 重排后所有线程均已落位', `${a1.after2.join(',')}`);
-  else bad('① 存在未分配线程', JSON.stringify(a1.after2));
+  // v3.7.1 ①：领导者是全局加成位，恒不占岗位；其余线程仍应全部落位
+  const leaderState = await page.evaluate(() => {
+    const c = window.S.cultists.find(x => x.leader);
+    return { bound: c ? c.boundTo : 'no-leader', total: window.S.cultists.length };
+  });
+  const boundCount = a1.after2.filter(Boolean).length;
+  if (boundCount === a1.after2.length - 1 && leaderState.bound === null)
+    ok('① 重排后除领导者外全部落位，领导恒空闲（v3.7.1 ①）', `${a1.after2.join(',')}`);
+  else bad('① 落位结果异常', JSON.stringify({ after2: a1.after2, leaderState }));
 
   // ===== ② 神谕广播带效果 =====
   const p1 = await page.evaluate(async () => {

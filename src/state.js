@@ -383,9 +383,12 @@ function normalizeCrew(raw) {
     if (c.boundTo !== undefined && c.boundTo !== null && raw.converterOn && raw.converterOn[c.boundTo] === false) c.boundTo = null;
   }
   // v3.3.1 反馈⑤：领导者唯一——旧档若存在多位领导者，只保留第一位
+  // v3.7.1 反馈①：领导者是全局加成位（与 threadBinding.canBind 同口径），
+  //   旧档残留的岗位绑定在加载时一并清除，避免旧档继续占用岗位吃转化加成
   let seenLeader = false;
   for (const c of raw.cultists) {
     if (!c.leader) continue;
+    c.boundTo = null;
     if (seenLeader) c.leader = false; else seenLeader = true;
   }
   return raw;

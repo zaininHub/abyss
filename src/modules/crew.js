@@ -94,6 +94,10 @@ export function renderCrewPanel(container) {
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
       opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? slotText(t) : '（未解锁）'}</option>`)).join('');
+    // v3.7.1 反馈①：领导者是全局加成位，不占任何岗位 → 卡面不给岗位下拉，只陈述自身状态
+    const bindCtrl = isLeader(c)
+      ? '<span title="全局加成位：不占任何岗位，也不参与智能分配" style="font-size:11px;color:var(--good,#3fb950)">★ 全局加成 · 不占岗位</span>'
+      : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
     cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
@@ -103,7 +107,7 @@ export function renderCrewPanel(container) {
         <div class="crew-stat">${affinityIcon} · Lv.${lvl}</div>
         <div class="crew-stat">产出 <b class="c-out">0</b>/s</div>
         <div class="crew-stat dim"><span class="c-tenure"></span></div>
-        <div class="crew-stat"><select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>${leaderBtn}</div>
+        <div class="crew-stat">${bindCtrl}${leaderBtn}</div>
       </div>
     </div>`;
   }
@@ -132,14 +136,14 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" title="按设施容量分配：先保证每个模块有人，都满员后其余线程转入超线程；优先安排空闲线程，再纠正错位岗位；手动超线程保留">智能分配</button>
+      <button class="btn" data-autobind="1" title="按设施容量分配：先保证每个模块有人，其余线程统一转入超线程；优先安排空闲线程，再纠正错位岗位；手动超线程保留；领导者不占岗位">智能分配</button>
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
         ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}${slotText(t)}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成并可「智能分配」；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先保证每个模块有人，都满员后其余线程转入超线程；分配时优先安排空闲线程、再纠正错位岗位，手动设定的超线程会保留；新招募的线程优先补空缺岗位。下拉框可自由切换岗位</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成，不占任何岗位，也不参与智能分配；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先保证每个模块有人，资源岗位满员、未解锁或开关关闭时，其余线程统一转入超线程；分配时优先安排空闲线程、再纠正错位岗位，手动设定的超线程会保留；新招募的线程优先补空缺岗位。下拉框可自由切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
@@ -157,10 +161,12 @@ export function renderCrewPanel(container) {
             const prev = S.cultists.find(x => x.leader && x !== c);
             if (prev) { prev.leader = false; crewPush(`【${prev.name}】卸任领导者（领导者只能存在一位）`); }
             c.leader = true;
+            // v3.7.1 反馈①：领导者只提供全局加成，不能同时占用岗位
+            if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位（全局加成位不占岗位）`); }
             crewPush(`【${c.name}】晋升为领导者，全局产出提升`, 'good');
           } else {
             c.leader = false;
-            crewPush(`【${c.name}】卸任领导者`);
+            crewPush(`【${c.name}】卸任领导者，恢复为可分配线程`);
           }
           renderCrewPanel(container);
         }
@@ -170,7 +176,7 @@ export function renderCrewPanel(container) {
       if (ab) {
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
-        crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先补齐各模块空缺，满员后转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先补齐各模块空缺，其余转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
         renderCrewPanel(container);
         return;
       }
