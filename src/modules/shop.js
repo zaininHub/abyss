@@ -823,7 +823,7 @@ function makeVehicleItem(u) {
   // v1.3 D：载具协议加成实时体现在描述里
   const protoMult = S.upgrades.dmprotocol ? BALANCE.vehicles.protocolMult : 1;
   if (protoMult > 1) div.title = '载具协议 ×1.5（DM 采集速率提升）'; // v2.8.30：协议加成移入悬浮，卡片主文案精简
-  const cpsEach = u.cps * globalMult() * protoMult;
+  // v3.7.3 反馈⑥：载具卡不再出现「+X EP/s」——只陈述消耗（EP）与产出（DM）两行。
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
   // v2.8.30：探采卡文案精简为两行（消耗负红 / 产出正绿），障碍信息移除
@@ -836,9 +836,7 @@ function makeVehicleItem(u) {
   if (probeEp > 0) {
     div.title = `基础单价 ${Number((dmRate * BALANCE.vehicles.epPerDm / 60).toFixed(2))} EP/s × 汇率 ${fmt(vehicleEpPerDm() / BALANCE.vehicles.epPerDm)} × 加成 ${vehMult.toFixed(2)}× = ${fmt(probeEp)} EP/s（单辆；DM 满仓时按剩余容量结算，可能低于名义值）`;
   }
-  const lines = probeEp > 0
-    ? `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`
-    : `<div class="veh-line">${fmt(cpsEach)} EP/s</div>`;
+  const lines = `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
     <div class="desc">${lines}</div>
     <div class="cost mono">${fmt(cost)}</div>`;

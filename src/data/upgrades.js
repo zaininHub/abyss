@@ -86,16 +86,17 @@ export const UPGRADES = [
   //   深井仓储 2.25 EP/点（L1）· 每级单价 ×1.22 → 后期大宗扩容（原 5e4 换 +80 万 = 0.06 EP/点，比存储节点便宜 48 倍，本次一并纠正）
   // v3.4.6 反馈⑫：备用粮仓定义上移至存储节点之前（链序：粮仓先解锁先显示）；深井仓储仍为终局大宗
   {id:'deep_bin',name:'深井仓储',base:B.deepBin.base,growth:B.deepBin.growth,cps:0,cat:'D',desc:'EP 存储上限 +800,000/级（逐级 ×1.15）'},
-  // 探采平台
-  {id:'scooter',name:'外勤摩托队',base:1500.0,cps:2.5,desc:'地面快速采集'},
-  {id:'convoy',name:'装甲车队',base:150000.0,cps:25,desc:'重装地面采集'},
-  {id:'orbital',name:'轨道飞行器',base:15000000.0,cps:250,desc:'近地轨道采集'},
-  {id:'submersible',name:'深渊潜航器',base:1500000000.0,cps:2500,desc:'深海/深空潜航'},
+  // 探采平台：v3.7.3 反馈⑥——载具只消耗 EP 换取 DM，不再提供 EP 基础产出（cps 恒 0）。
+  // 载具协议（dmprotocol）改为提升 DM 采集速率（见 economy.vehicleRateMult），不再乘 CPS。
+  {id:'scooter',name:'外勤摩托队',base:1500.0,cps:0,desc:'地面快速采集'},
+  {id:'convoy',name:'装甲车队',base:150000.0,cps:0,desc:'重装地面采集'},
+  {id:'orbital',name:'轨道飞行器',base:15000000.0,cps:0,desc:'近地轨道采集'},
+  {id:'submersible',name:'深渊潜航器',base:1500000000.0,cps:0,desc:'深海/深空潜航'},
   // 深渊科技
   {id:'dmsight',name:'深渊视觉',base:0.0,cps:0.0,dmCost:5,desc:'全局 +25%',cat:'dm'},
   {id:'dmfeed',name:'深渊供能',base:0.0,cps:0.0,dmCost:20,desc:'事件奖励 ×2',cat:'dm'},
   {id:'dmmind',name:'深渊心智',base:0.0,cps:0.0,dmCost:50,desc:'线程消耗 -40%',cat:'dm'},
-  // v1.3 模块 D 第 3 层：载具协议（20 DM 一次性，全载具 CPS +50%）
+  // v1.3 模块 D 第 3 层：载具协议（20 DM 一次性，DM 采集速率 +50%）
   {id:'dmprotocol',name:'载具协议',base:0.0,cps:0.0,dmCost:B.vehicles.protocolDmCost,desc:'所有载具产出 +50%',cat:'dm'},
   // v2.0 净化节点（矩阵腐化对策，EP 购买、可叠加，速率由 balance.js 配置）
   ...B.corruption.purifiers.map(p => ({

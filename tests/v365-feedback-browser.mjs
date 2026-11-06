@@ -95,15 +95,20 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   if (r.load.hyper === r.total - capSum) ok('④ 所有模块满员后，其余线程全部转入超线程', `hyper=${r.load.hyper}/${r.total - capSum}`);
   else bad('④ 溢出线程未全部转超线程', JSON.stringify(r));
 
-  // 面板展示「在岗/可容纳」
+  // v3.7.3 反馈①：下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字
   await page.evaluate(() => { window.__qa.threadBind.autoAssignThreads(); });
   await sleep(1200); // 班组面板由 tick 按秒渲染
   const ui = await page.evaluate(() => {
     const p = document.getElementById('crew-panel');
-    return { txt: p ? p.textContent : '', opts: p ? [...p.querySelectorAll('select[data-bind] option')].map(o => o.textContent) : [] };
+    return {
+      txt: p ? p.textContent : '',
+      opts: p ? [...p.querySelectorAll('select[data-bind] option')].map(o => o.textContent) : [],
+      filters: p ? [...p.querySelectorAll('[data-crew-filter-btn]')].map(b => b.textContent) : [],
+    };
   });
-  if (/\d+\/\d+/.test(ui.txt) || ui.opts.some(o => /\d+\/\d+/.test(o))) ok('①~③ 班组面板展示「在岗/可容纳」', (ui.opts.find(o => /\d+\/\d+/.test(o)) || '').slice(0, 24));
-  else bad('①~③ 面板未展示容量', JSON.stringify(ui).slice(0, 160));
+  const noRatio = [...ui.opts, ...ui.filters].every(s => !/\d+\s*\/\s*\d+/.test(s));
+  if (noRatio && !ui.txt.includes('在岗/可容纳')) ok('①~③ 班组不再展示岗位「在岗/容量」数字（v3.7.3 ①）');
+  else bad('①~③ 仍展示容量数字', JSON.stringify(ui).slice(0, 200));
 
   // 线程少于模块数：优先保证「每个模块各 1 条」，而不是堆到同一模块
   const few = await page.evaluate(() => {

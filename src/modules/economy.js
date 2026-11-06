@@ -536,6 +536,7 @@ export function vehicleRateMult() {
   let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
   if (hasAbyssMarket()) m *= 1.5;          // 深渊集市 ×1.5
   m *= researchMult('dm');                 // 星尘精炼（研究点）+8%/级
+  if (S.upgrades.dmprotocol) m *= BALANCE.vehicles.protocolMult; // v3.7.3 ⑥：载具协议的 +50% 语义落到此乘区
   // v3.3.8 反馈①：探采不吃班组乘区——线程加成曾让 27 辆×18 条线程把产出放大到 6600×（274 DM/s），
   // 与「消耗 100K 级 / 产出 10 DM 级」的目标口径差两个数量级，且超出 DM 容量后收益归零
   return m;
@@ -768,10 +769,8 @@ export function computeCps() {
   let base = 0;
   for (const u of UPGRADES) {
     if (!u.cps) continue;
-    let c = u.cps * (S.upgrades[u.id] || 0);
-    // v1.3 模块 D 第 3 层：载具协议——全载具 CPS ×1.5
-    if (S.upgrades.dmprotocol && BALANCE.vehicles.ids.includes(u.id)) c *= BALANCE.vehicles.protocolMult;
-    base += c;
+    // v3.7.3 反馈⑥：载具 cps 恒 0（只消耗 EP 换 DM），载具协议也已改作用于 DM 速率，CPS 侧不再有乘区
+    base += u.cps * (S.upgrades[u.id] || 0);
   }
   base += staffOutputPerSec();
   let m = globalMult();
@@ -827,19 +826,16 @@ export function multBreakdown() {
 }
 
 export function cpsBreakdown() {
-  // 与 computeCps 同口径拆分：载具 / 线程 / 其余升级（基础·建筑·家族等合并为「基础产出」）
-  let vehicle = 0, other = 0;
+  // 与 computeCps 同口径拆分：基础升级 / 线程（v3.7.3 ⑥：载具不再是 EP 产出来源，明细里也不出现「载具产出」）
+  let other = 0;
   for (const u of UPGRADES) {
     if (!u.cps) continue;
-    let c = u.cps * (S.upgrades[u.id] || 0);
-    if (S.upgrades.dmprotocol && BALANCE.vehicles.ids.includes(u.id)) c *= BALANCE.vehicles.protocolMult;
-    if (BALANCE.vehicles.ids.includes(u.id)) vehicle += c; else other += c;
+    other += u.cps * (S.upgrades[u.id] || 0);
   }
   const thread = staffOutputPerSec(); // 线程基础产出（心态/线程乘区），全局乘区在 computeCps 统一应用
   const parts = [];
   if (other > 0.005) parts.push(`基础产出 +${fmt(other)}/s`);
   if (thread > 0.005) parts.push(`线程 +${fmt(thread)}/s`);
-  if (vehicle > 0.005) parts.push(`载具产出 +${fmt(vehicle)}/s`);
   return parts;
 }
 export function drainBreakdown() {

@@ -110,11 +110,11 @@ try {
       return {
         sel: document.querySelectorAll('#crew-panel select[data-bind]').length,
         leaderHasSelect: !!leaderCard?.querySelector('select[data-bind]'),
-        leaderSlot: !!leaderCard?.textContent.includes('全局加成 · 不占岗位'),
+        leaderNoSlotCopy: !/不占岗位|全局加成 ·/.test(leaderCard?.textContent || ''),
       };
     });
-    rec('9 张普通线程卡含绑定下拉；领导卡改为全局加成位（v3.7.1 ①）',
-      ui.sel === 9 && !ui.leaderHasSelect && ui.leaderSlot, JSON.stringify(ui));
+    rec('9 张普通线程卡含绑定下拉；领导卡无下拉且不再写「不占岗位」（v3.7.1 ① / v3.7.3 ③）',
+      ui.sel === 9 && !ui.leaderHasSelect && ui.leaderNoSlotCopy, JSON.stringify(ui));
     const convCount = await page.evaluate(() => document.querySelectorAll('#crew-panel [data-conv-toggle]').length);
     rec('班组不再含转化器开关按钮（v3.3.2）', convCount === 0, `convCount=${convCount}`);
   }

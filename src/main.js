@@ -260,6 +260,7 @@ function render() {
     tentacleEl.classList.toggle('tentacle-3', fb >= 3);
   }
   if (dirty.prestige) {
+    syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：P3 未到时整块隐藏，达标后即时出现
     const preEl = document.getElementById('prestige-panel');
     if (preEl) {
       renderPrestige(preEl);
@@ -851,60 +852,40 @@ function refreshTabVisibility() {
 // EP 不足时各系统自动暂停消耗，回升后自动恢复（v3.2.2：去除「需手动恢复」的自动关闭）
 const QS_STYLE_ON = 'padding:4px 14px;font-size:11.5px;background:var(--good,#3fb950);color:#fff;border:none;border-radius:4px;cursor:pointer';
 const QS_STYLE_OFF = 'padding:4px 14px;font-size:11.5px;background:var(--red,#f85149);color:#fff;border:none;border-radius:4px;cursor:pointer';
-const QS_STYLE_LOCK = 'padding:4px 14px;font-size:11.5px;background:rgba(120,130,145,.16);color:var(--text-3,#6e7681);border:1px dashed var(--border);border-radius:4px;cursor:not-allowed;opacity:.75';
+// v3.7.3 反馈②：未解锁的自动转化不再灰显占位——解锁后才出现（与 Wiki「各系统解锁后出现」一致）。
+// 六枚开关各自用唯一解锁判定源（四枚转化器 + 两枚裂隙科技）；全部未解锁时整块面板隐藏，不留空壳。
 function renderQuickSwitches() {
   const panel = document.getElementById('quick-switches-panel');
   const host = document.getElementById('quick-switches');
   if (!panel || !host) return;
-  // v3.3.1 反馈④：常驻展示开关，未解锁的灰显（不再整块隐藏）
-  // v3.3.3 反馈⑦：扩为四枚——蒸馏 / 探采 / 孵化 / 圣所（孵化、圣所接入线程绑定统一口径）
-  // v3.6.3 ③：与班组岗位下拉共用「解锁」唯一判定源，避免两处口径漂移
-  const atriumOk = converterUnlocked('atrium');
-  const probeOk = converterUnlocked('vehicles');
-  const hatchOk = converterUnlocked('hatch');
-  const templeOk = converterUnlocked('temple');
   const items = [];
-  if (atriumOk) {
+  if (converterUnlocked('atrium')) {
     const on = converterEnabled('atrium');
     items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="atrium" style="${QS_STYLE_LOCK}" title="未解锁：在「升级商店 · 设施」购入灵感工坊后可用">蒸馏 未解锁</button>`);
   }
-  if (probeOk) {
+  if (converterUnlocked('vehicles')) {
     const on = converterEnabled('vehicles');
     items.push(`<button data-qs="probe" title="载具探采：EP → DM（与「遗物」页探采开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">探采 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="probe" style="${QS_STYLE_LOCK}" title="未解锁：在「遗物 · 探采平台」购入任一载具后可用">探采 未解锁</button>`);
   }
-  if (hatchOk) {
+  if (converterUnlocked('hatch')) {
     const on = converterEnabled('hatch');
     items.push(`<button data-qs="hatch" title="异兽孵化：EP → PT（与「异兽」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">孵化 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="hatch" style="${QS_STYLE_LOCK}" title="未解锁：在「升级商店 · 设施」购入异兽孵化工坊后可用">孵化 未解锁</button>`);
   }
-  if (templeOk) {
+  if (converterUnlocked('temple')) {
     const on = converterEnabled('temple');
     items.push(`<button data-qs="temple" title="信仰圣所：EP → FP（与「宗教」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">圣所 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="temple" style="${QS_STYLE_LOCK}" title="未解锁：信奉宗教后建造「信仰圣所」可用">圣所 未解锁</button>`);
   }
   // v3.4.9 反馈①：无限深入开关从裂隙科技树移到此处（与其余自动转化开关同一入口）
-  const descentOk = riftUpgradeLevel('auto_descent') >= 1;
-  if (descentOk) {
+  if (riftUpgradeLevel('auto_descent') >= 1) {
     const on = S.riftAuto === 'auto_descent';
     items.push(`<button data-qs="descent" title="无限深入：裂隙出现时自动深入探索（消耗 EP，腐化超阈值会损失）与「自动封印/自动拥抱」互斥" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">深入 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="descent" style="${QS_STYLE_LOCK}" title="未解锁：裂隙科技树购入「无限深入」（200 余烬）后可用">深入 未解锁</button>`);
   }
   // v3.4.9 反馈②：自动净化（腐化每涨 5% 自动净化 5%，消耗 EP；需先买「无限深入」）
-  const purifyOk = riftUpgradeLevel('auto_purify') >= 1;
-  if (purifyOk) {
+  if (riftUpgradeLevel('auto_purify') >= 1) {
     const on = !!S.autoPurify;
     items.push(`<button data-qs="purify" title="自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">净化 ${on ? '开' : '关'}</button>`);
-  } else {
-    items.push(`<button data-qs="-1" data-qs-lock="purify" style="${QS_STYLE_LOCK}" title="未解锁：裂隙科技树购入「自动净化仪」（1200 余烬，需先有无限深入）后可用">净化 未解锁</button>`);
   }
-  panel.style.display = '';
+  panel.style.display = items.length ? '' : 'none';
   const sig = items.join('|');
   if (host._qsSig === sig) return;
   host._qsSig = sig;
@@ -918,12 +899,6 @@ function bindQuickSwitches() {
     const b = e.target.closest('[data-qs]');
     if (!b) return;
     const k = b.dataset.qs;
-    if (k === '-1') { // 灰显态：给出解锁指引，不改变任何状态
-      const lock = b.dataset.qsLock;
-      const hint = { atrium: '灵感工坊未解锁：升级商店 · 设施 → 灵感工坊', probe: '探采未解锁：遗物 → 探采平台（先购入载具）', hatch: '孵化未解锁：升级商店 · 设施 → 异兽孵化工坊', temple: '圣所未解锁：信奉宗教后建造「信仰圣所」', descent: '无限深入未解锁：裂隙科技树（余烬 200）', purify: '自动净化仪未解锁：裂隙科技树（余烬 1200，需先有无限深入）' };
-      if (toast) toast(`🔒 ${hint[lock] || '尚未解锁'}`);
-      return;
-    }
     if (k === 'atrium') setConverterEnabled('atrium', !converterEnabled('atrium'));
     else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
     else if (k === 'hatch') setConverterEnabled('hatch', !converterEnabled('hatch'));
@@ -972,6 +947,14 @@ function renderRpPanel() {
     askConfirm('研究点（RP）说明',
       '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500，矩阵存储库首级 +400、之后每级 ×1.15 递增（EP 购买），达到上限后停止积累。', () => {});
   });
+}
+
+// v3.7.3 反馈⑤：晋升模块显隐的唯一判定源——与 btn-prestige 的 P3 阶段门控同源。
+// P3（游玩 1 天）之前整块面板（含标题/进度条/轮回区块）不展示，达标后即时出现。
+function prestigePanelVisible() { return isStageUnlocked('P3', S); }
+function syncPrestigePanelVisibility() {
+  const el = document.getElementById('tab-prestige');
+  if (el) el.style.display = prestigePanelVisible() ? '' : 'none';
 }
 
 // v2.0：渐进开放标签页锁定状态更新
@@ -1030,6 +1013,7 @@ function updateTabLocks() {
       if (!open && gate.label) el.title = gate.label;
     }
   }
+  syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：晋升模块与 P3 阶段门控同源
 }
 
 // ========== v2.8.30 ③：许愿池（研究升级解锁，右侧浮动投币） ==========
@@ -2785,7 +2769,7 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
-  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
+  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
     faithCap, // v3.5.0 ②：FP 上限（已从圣所搬到誓约圣龛）测试钩子
     rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
@@ -2795,6 +2779,7 @@ if (typeof window !== 'undefined') {
     riftLevelOf, riftLevelTech, buyRiftLevelTech, // v3.6.4 ①：裂隙等级只认科技
     // v3.3.0 线程绑定系统 QA 钩子
     petsModuleUnlocked, // v3.7.2 ①：异兽模块与顶栏 PT 同口径的唯一解锁判定
+    prestigePanelVisible, // v3.7.3 ⑤：晋升模块与 P3 阶段门控同源
     threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
       converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子
     // v3.7.0：核心抽象接线与 30 天浏览器推演所需的只读/纯函数钩子（不改变玩法）

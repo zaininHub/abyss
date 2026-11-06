@@ -86,6 +86,8 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
       text: document.getElementById('crew-panel')?.innerText || '',
       attrCount: document.querySelectorAll('#crew-panel select[data-bind]').length,
       qsLockedAtrium: !!document.querySelector('#quick-switches [data-qs-lock="atrium"]'),
+      qsCount: document.querySelectorAll('#quick-switches [data-qs]').length,
+      qsPanelHidden: document.getElementById('quick-switches-panel')?.style.display === 'none',
     };
   });
   if (initial.unlocked.length === 1 && initial.unlocked[0] === 'hyper') ok('② 超线程无需解锁任何模块即可分配', initial.unlocked.join(','));
@@ -96,8 +98,8 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   else bad('③ 筛选按钮泄漏未解锁岗位', initial.filters.join('|'));
   if (!/探采平台|灵感工坊|异兽孵化|信仰圣所/.test(initial.help)) ok('③ 说明行不点名未解锁岗位', initial.help.slice(0, 50));
   else bad('③ 说明行仍写未解锁岗位', initial.help.slice(0, 80));
-  if (initial.qsLockedAtrium) ok('③ 快捷开关与班组共用同一解锁判定（工坊灰显）');
-  else bad('③ 解锁判定双实现漂移', '');
+  if (!initial.qsLockedAtrium && initial.qsCount === 0 && initial.qsPanelHidden) ok('③ 未解锁的自动转化开关不展示、整块面板隐藏（v3.7.3 ②）');
+  else bad('③ 自动转化面板显隐异常', JSON.stringify(initial));
 
   // ④ 卡面
   if (!initial.text.includes('贡献') && !initial.text.includes('岗位：')) ok('④ 卡面不显示贡献累计 / 所处岗位', initial.text.slice(0, 60).replace(/\n/g, ' '));
@@ -153,7 +155,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
     return {
       ids: window.__qa.threadBind.unlockedConverterIds(),
       opts: sel ? [...sel.options].map(o => o.value) : [],
-      qsAtrium: !document.querySelector('#quick-switches [data-qs-lock="atrium"]'),
+      qsAtrium: !!document.querySelector('#quick-switches [data-qs="atrium"]'),
     };
   });
   const expected = ['hyper', 'vehicles', 'atrium', 'hatch', 'temple'];

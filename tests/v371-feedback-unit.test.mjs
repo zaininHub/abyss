@@ -127,7 +127,7 @@ test('A6 领导者解绑不影响全局加成，也不再吃岗位转化加成',
 test('A7 晋升入口自动撤离岗位（源码接线，防止 UI 只改标记）', () => {
   assert.match(CREW_SRC, /c\.leader\s*=\s*true/, '晋升分支存在');
   assert.match(CREW_SRC, /if \(c\.boundTo\) \{ unbindThread\(c\)/, '晋升时解绑');
-  assert.match(CREW_SRC, /isLeader\(c\)\s*\?\s*'<span title="全局加成位/, '领导卡不再提供岗位下拉');
+  assert.match(CREW_SRC, /const bindCtrl = isLeader\(c\)\s*\? ''/, '领导卡不再提供岗位下拉、也不展示「不占岗位」文案（v3.7.3 ③）');
   assert.match(STATE_SRC, /c\.boundTo = null;\s*\n\s*if \(seenLeader\)/, '旧档加载清除领导岗位残留');
   assert.match(TB_SRC, /export function canBind\(c\) \{ return !isLeader\(c\); \}/, '单一判定源存在');
 });

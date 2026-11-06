@@ -10,8 +10,9 @@ import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
-  unlockedConverterIds, converterCapacity, converterLoad,
-} from './threadBinding.js'; // v3.6.5 ①~③：岗位容量（设施数量）展示 // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
+  unlockedConverterIds,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
+// v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
 const STATE_META = {
@@ -64,11 +65,8 @@ export function renderCrewPanel(container) {
   const start = crewPage * PAGE_SIZE;
   const pageCultists = filtered.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
-  // v3.6.5 ①~③：每个岗位的「在岗/容量」也是面板自身数据，纳入签名——买设施扩容后下拉即时刷新
-  const slotText = (t) => t === HYPER_CONVERTER_ID ? '' : ` ${converterLoad(t)}/${converterCapacity(t)}`;
-  const capSig = visibleTypes.map(t => `${t}:${converterLoad(t)}/${converterCapacity(t)}`).join(',');
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}|${capSig}`;
+  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -86,10 +84,10 @@ export function renderCrewPanel(container) {
     const opts = visibleTypes.slice();
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? slotText(t) : '（未解锁）'}</option>`)).join('');
-    // v3.7.1 反馈①：领导者是全局加成位，不占任何岗位 → 卡面不给岗位下拉，只陈述自身状态
+      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
+    // v3.7.1 反馈①：领导者是全局加成位，不给岗位下拉；v3.7.3 反馈③：卡面不再写领导岗位说明文字
     const bindCtrl = isLeader(c)
-      ? '<span title="全局加成位：不占任何岗位，也不参与智能分配" style="font-size:11px;color:var(--good,#3fb950)">★ 全局加成 · 不占岗位</span>'
+      ? ''
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
@@ -128,15 +126,15 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位；领导者不占岗位">智能分配</button>
-      <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）；领导者本就不占岗位，不受影响">一键收回</button>
+      <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位">智能分配</button>
+      <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）">一键收回</button>
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
-        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}${slotText(t)}</button>`).join('')}
+        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成，不占任何岗位，也不参与智能分配；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；分配时优先安排空闲线程、再纠正错位岗位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程优先补空缺岗位。「一键收回」把所有线程撤离岗位置为空闲（消耗恢复）。下拉框可自由切换岗位</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局产出加成；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。智能分配先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程、再纠正错位岗位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程优先补空缺岗位。「一键收回」把所有线程撤离岗位置为空闲（消耗恢复）。下拉框可自由切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
@@ -155,7 +153,7 @@ export function renderCrewPanel(container) {
             if (prev) { prev.leader = false; crewPush(`【${prev.name}】卸任领导者（领导者只能存在一位）`); }
             c.leader = true;
             // v3.7.1 反馈①：领导者只提供全局加成，不能同时占用岗位
-            if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位（全局加成位不占岗位）`); }
+            if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位`); }
             crewPush(`【${c.name}】晋升为领导者，全局产出提升`, 'good');
           } else {
             c.leader = false;

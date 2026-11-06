@@ -72,7 +72,7 @@ export const BALANCE = {
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
     embraceBonusSec: 5,                     // 拥抱裂隙爆发时长加成（秒 × 档位）
-    protocolMult: 1.5,                      // 载具协议：全载具 CPS ×1.5
+    protocolMult: 1.5,                      // v3.7.3：载具协议 → 全载具 DM 采集速率 ×1.5（不再乘 CPS）
     protocolDmCost: 20,
   },
   // v1.3 模块 B：功能建筑（一次性多级，效果经读侧修饰 wages 生效值）

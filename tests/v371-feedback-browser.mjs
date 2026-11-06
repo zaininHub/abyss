@@ -95,12 +95,12 @@ try {
         leaderText: leaderCard?.textContent.replace(/\s+/g, ' ').trim().slice(0, 120) || '',
         normalHasSelect: !!normalCard,
         normalOpts: normalCard ? [...normalCard.querySelectorAll('option')].map(o => o.textContent) : [],
-        help: panel?.textContent.includes('不占任何岗位') || false,
+        help: !!panel?.textContent.includes('全局产出加成') && !panel?.textContent.includes('不占岗位'),
         staleHelp: panel?.textContent.includes('并可「智能分配」') || false,
         bad: /undefined|NaN|Infinity/.test(panel?.textContent || ''),
       };
     });
-    if (!ui.leaderHasSelect && ui.leaderText.includes('全局加成') && ui.leaderText.includes('不占岗位')) ok('① 领导卡无岗位下拉，显示「全局加成 · 不占岗位」');
+    if (!ui.leaderHasSelect && !ui.leaderText.includes('不占岗位') && !ui.leaderText.includes('全局加成 ·')) ok('① 领导卡无岗位下拉，且不再展示「不占岗位」文案（v3.7.3 ③）');
     else bad('① 领导卡 UI 异常', JSON.stringify(ui));
     if (ui.normalHasSelect && ui.normalOpts.some(o => o.includes('超线程'))) ok('① 普通线程下拉仍可用且含超线程选项');
     else bad('① 普通线程下拉异常', JSON.stringify(ui.normalOpts));
@@ -216,7 +216,7 @@ try {
     });
     if (ui.filterBtns.some(b => b.includes('超线程')) && ui.hasHyperOpt) ok('② 班组筛选按钮与下拉都含超线程岗位');
     else bad('② 超线程 UI 入口缺失', JSON.stringify(ui));
-    if (ui.hasCap && !ui.bad) ok('② 面板容量展示正常且无 undefined/NaN');
+    if (!ui.hasCap && !ui.bad) ok('② 班组不再展示容量数字且无 undefined/NaN（v3.7.3 ①）');
     else bad('② 面板文本异常', JSON.stringify(ui));
     await page.close();
   }
