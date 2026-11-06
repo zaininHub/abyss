@@ -42,29 +42,29 @@ export const UPGRADES = [
   {id:'vacuum',name:'真空能',base:3.6e+19,cps:4.2e+11,growth:1.55,desc:'基础产出+420B/s'}, // v2.8.3
   {id:'brane',name:'膜宇宙',base:3.6e+20,cps:2.95e+12,growth:1.55,desc:'基础产出+2.95T/s'}, // v2.8.3
   {id:'string',name:'弦织机',base:3.6e+21,cps:2.1e+13,growth:1.55,desc:'基础产出+21T/s'}, // v2.8.3
-  {id:'holographic',name:'全息投影',base:3.6e+22,cps:1.25e+14,growth:1.55,desc:'基础产出+250T/s'}, // v2.8.3
-  {id:'observer',name:'观察者效应',base:3.6e+23,cps:8.5e+14,growth:1.55,desc:'基础产出+1.7Qa/s'}, // v2.8.3
-  {id:'simulation',name:'模拟舱',base:3.6000000000000004e+24,cps:6.3e+15,growth:1.55,desc:'基础产出+12.6Qa/s'}, // v2.8.3
-  {id:'creator',name:'造物主',base:3.5999999999999997e+25,cps:4.2e+16,growth:1.55,desc:'基础产出+84Qa/s'}, // v2.8.3
-  {id:'recursion',name:'递归',base:3.6e+26,cps:2.95e+17,growth:1.55,desc:'基础产出+590Qa/s'}, // v2.8.3
-  {id:'paradox',name:'自指悖论',base:3.6e+27,cps:2.1e+18,growth:1.55,desc:'基础产出+4.2Qi/s'}, // v2.8.3
-  {id:'final',name:'终极奇点',base:3.6e+28,cps:1.25e+19,growth:1.55,desc:'基础产出+25Qi/s'}, // v2.8.3
-  {id:'omega',name:'欧米茄点',base:3.6000000000000005e+29,cps:8.5e+19,growth:1.55,desc:'基础产出+170Qi/s'}, // v2.8.3
-  {id:'zero',name:'无',base:3.6e+30,cps:6.3e+20,growth:1.55,desc:'基础产出+1.26Sx/s'}, // v2.8.3
-  {id:'origin',name:'起源',base:3.5999999999999995e+31,cps:4.2e+21,growth:1.55,desc:'基础产出+8.4Sx/s'}, // v2.8.3
-  {id:'essence',name:'本质',base:3.6e+32,cps:2.95e+22,growth:1.55,desc:'基础产出+59Sx/s'}, // v2.8.3
-  {id:'one',name:'太一',base:3.6e+33,cps:2.1e+23,growth:1.55,desc:'基础产出+420Sx/s'}, // v2.8.3
-  {id:'tao',name:'道',base:3.6e+34,cps:1.25e+24,growth:1.55,desc:'基础产出+2.5Sp/s'}, // v2.8.3
-  {id:'void',name:'虚空',base:3.6e+35,cps:8.5e+24,growth:1.55,desc:'基础产出+17Sp/s'}, // v2.8.3
-  {id:'dream',name:'大梦',base:3.6e+36,cps:6.3e+25,growth:1.55,desc:'基础产出+126Sp/s'}, // v2.8.3
-  {id:'thought',name:'一念',base:3.6e+37,cps:4.2e+26,growth:1.55,desc:'基础产出+840Sx/s'}, // v2.8.3
-  {id:'unknown',name:'不可名状',base:3.6000000000000004e+38,cps:2.95e+27,growth:1.55,desc:'基础产出+5.9Oc/s'}, // v2.8.3
-  {id:'god',name:'神之领域',base:3.6000000000000004e+39,cps:2.1e+28,growth:1.55,desc:'基础产出+42Oc/s'}, // v2.8.3
-  {id:'universe',name:'宇宙之心',base:3.6e+40,cps:1.7e+29,growth:1.55,desc:'基础产出+340Oc/s'}, // v2.8.3
-  {id:'creation',name:'创世',base:3.6e+41,cps:1.25e+30,growth:1.55,desc:'基础产出+2.5No/s'}, // v2.8.3
-  {id:'infinity',name:'无限',base:3.6e+42,cps:8.5e+30,growth:1.55,desc:'基础产出+17No/s'}, // v2.8.3
-  {id:'absolute',name:'绝对',base:3.6000000000000006e+43,cps:6.3e+31,growth:1.55,desc:'基础产出+126No/s'}, // v2.8.3
-  {id:'beyond',name:'超越',base:3.6e+44,cps:4.2e+32,growth:1.55,desc:'基础产出+840No/s'}, // v2.8.3
+  {id:'holographic',name:'全息投影',base:3.6e+22,cps:1.25e+14,growth:1.55,desc:'基础产出+125T/s'}, // v2.8.3
+  {id:'observer',name:'观察者效应',base:3.6e+23,cps:8.5e+14,growth:1.55,desc:'基础产出+850T/s'}, // v2.8.3
+  {id:'simulation',name:'模拟舱',base:3.6000000000000004e+24,cps:6.3e+15,growth:1.55,desc:'基础产出+6.3Qa/s'}, // v2.8.3
+  {id:'creator',name:'造物主',base:3.5999999999999997e+25,cps:4.2e+16,growth:1.55,desc:'基础产出+42Qa/s'}, // v2.8.3
+  {id:'recursion',name:'递归',base:3.6e+26,cps:2.95e+17,growth:1.55,desc:'基础产出+295Qa/s'}, // v2.8.3
+  {id:'paradox',name:'自指悖论',base:3.6e+27,cps:2.1e+18,growth:1.55,desc:'基础产出+2.1Qi/s'}, // v2.8.3
+  {id:'final',name:'终极奇点',base:3.6e+28,cps:1.25e+19,growth:1.55,desc:'基础产出+12.5Qi/s'}, // v2.8.3
+  {id:'omega',name:'欧米茄点',base:3.6000000000000005e+29,cps:8.5e+19,growth:1.55,desc:'基础产出+85Qi/s'}, // v2.8.3
+  {id:'zero',name:'无',base:3.6e+30,cps:6.3e+20,growth:1.55,desc:'基础产出+630Qi/s'}, // v2.8.3
+  {id:'origin',name:'起源',base:3.5999999999999995e+31,cps:4.2e+21,growth:1.55,desc:'基础产出+4.2Sx/s'}, // v2.8.3
+  {id:'essence',name:'本质',base:3.6e+32,cps:2.95e+22,growth:1.55,desc:'基础产出+29.5Sx/s'}, // v2.8.3
+  {id:'one',name:'太一',base:3.6e+33,cps:2.1e+23,growth:1.55,desc:'基础产出+210Sx/s'}, // v2.8.3
+  {id:'tao',name:'道',base:3.6e+34,cps:1.25e+24,growth:1.55,desc:'基础产出+1.25Sp/s'}, // v2.8.3
+  {id:'void',name:'虚空',base:3.6e+35,cps:8.5e+24,growth:1.55,desc:'基础产出+8.5Sp/s'}, // v2.8.3
+  {id:'dream',name:'大梦',base:3.6e+36,cps:6.3e+25,growth:1.55,desc:'基础产出+63Sp/s'}, // v2.8.3
+  {id:'thought',name:'一念',base:3.6e+37,cps:4.2e+26,growth:1.55,desc:'基础产出+420Sp/s'}, // v2.8.3
+  {id:'unknown',name:'不可名状',base:3.6000000000000004e+38,cps:2.95e+27,growth:1.55,desc:'基础产出+2.95Oc/s'}, // v2.8.3
+  {id:'god',name:'神之领域',base:3.6000000000000004e+39,cps:2.1e+28,growth:1.55,desc:'基础产出+21Oc/s'}, // v2.8.3
+  {id:'universe',name:'宇宙之心',base:3.6e+40,cps:1.7e+29,growth:1.55,desc:'基础产出+170Oc/s'}, // v2.8.3
+  {id:'creation',name:'创世',base:3.6e+41,cps:1.25e+30,growth:1.55,desc:'基础产出+1.25No/s'}, // v2.8.3
+  {id:'infinity',name:'无限',base:3.6e+42,cps:8.5e+30,growth:1.55,desc:'基础产出+8.5No/s'}, // v2.8.3
+  {id:'absolute',name:'绝对',base:3.6000000000000006e+43,cps:6.3e+31,growth:1.55,desc:'基础产出+63No/s'}, // v2.8.3
+  {id:'beyond',name:'超越',base:3.6e+44,cps:4.2e+32,growth:1.55,desc:'基础产出+420No/s'}, // v2.8.3
   // 资源型模块（v2.0：灵感工坊/神谕所/数据熔炉由 balance.js 配置）
   {id:'atrium',name:'灵感工坊',base:B.atrium.base,growth:2.2,cps:0,desc:`自动蒸馏：每秒消耗 ${B.atrium.epRate} EP 转化 ${B.atrium.rate} RP，升级在蒸馏开关处`}, // v3.0.3 第四批③：升级入口移至开关处
   // v3.4.6 反馈⑩：删除「路边神龛」——v3.0.3 起已无任何产出（信仰解锁入口 = 宗教面板「唤醒信仰」，

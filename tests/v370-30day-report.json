@@ -1,0 +1,1235 @@
+{
+  "version": "3.7.0",
+  "days": 30,
+  "line": "line_order",
+  "startedAt": "2026-11-06T02:07:14.945Z",
+  "daily": [
+    {
+      "ep": 43714.39889999886,
+      "cps": 62.522349999999996,
+      "cap": 1109046,
+      "chapter": "1",
+      "corruption": 0,
+      "rp": 8,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 77,
+      "totalClicks": 1440,
+      "upgradeKinds": 5,
+      "upgrades": {
+        "scribble": 29,
+        "script": 21,
+        "reserve_bin": 12,
+        "parallel": 11,
+        "storage": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 77,
+        "clicks": 1440,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 1
+    },
+    {
+      "ep": 123891.81580000148,
+      "cps": 106.7781,
+      "cap": 1224481,
+      "chapter": "1",
+      "corruption": 0,
+      "rp": 43,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 94,
+      "totalClicks": 2880,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 34,
+        "script": 26,
+        "reserve_bin": 12,
+        "parallel": 16,
+        "storage": 5,
+        "intern": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 94,
+        "clicks": 2880,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 2
+    },
+    {
+      "ep": 121186.80620000516,
+      "cps": 161.5779,
+      "cap": 2693594,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 110,
+      "totalClicks": 4320,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 36,
+        "script": 28,
+        "reserve_bin": 12,
+        "parallel": 19,
+        "storage": 12,
+        "intern": 3
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 110,
+        "clicks": 4320,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 3
+    },
+    {
+      "ep": 125117.04309989793,
+      "cps": 191.94559999999998,
+      "cap": 3919791,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 120,
+      "totalClicks": 5760,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 39,
+        "script": 30,
+        "reserve_bin": 12,
+        "parallel": 21,
+        "storage": 15,
+        "intern": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 120,
+        "clicks": 5760,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 4
+    },
+    {
+      "ep": 2293481.6578896693,
+      "cps": 197.505,
+      "cap": 5784683,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 127,
+      "totalClicks": 7200,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 40,
+        "script": 32,
+        "reserve_bin": 12,
+        "parallel": 22,
+        "storage": 18,
+        "intern": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 127,
+        "clicks": 7200,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 5
+    },
+    {
+      "ep": 3954456.0009445995,
+      "cps": 226.73364999999998,
+      "cap": 8970464,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 108,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 134,
+      "totalClicks": 8640,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 41,
+        "script": 33,
+        "reserve_bin": 14,
+        "parallel": 24,
+        "storage": 21,
+        "intern": 5
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 134,
+        "clicks": 8640,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 6
+    },
+    {
+      "ep": 504793.2687952574,
+      "cps": 252.30479999999997,
+      "cap": 10212685,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 108,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 139,
+      "totalClicks": 10080,
+      "upgradeKinds": 6,
+      "upgrades": {
+        "scribble": 42,
+        "script": 34,
+        "reserve_bin": 14,
+        "parallel": 25,
+        "storage": 22,
+        "intern": 6
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 139,
+        "clicks": 10080,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 7
+    },
+    {
+      "ep": 7069198.205996582,
+      "cps": 368.14304999999996,
+      "cap": 13770736,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 143,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 144,
+      "totalClicks": 11520,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 42,
+        "script": 35,
+        "reserve_bin": 16,
+        "parallel": 25,
+        "storage": 24,
+        "intern": 6,
+        "team": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 144,
+        "clicks": 11520,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 8
+    },
+    {
+      "ep": 8142650.004095234,
+      "cps": 392.8259499999999,
+      "cap": 17832648,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 198,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 149,
+      "totalClicks": 12960,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 43,
+        "script": 35,
+        "reserve_bin": 16,
+        "parallel": 26,
+        "storage": 26,
+        "intern": 7,
+        "team": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 149,
+        "clicks": 12960,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 9
+    },
+    {
+      "ep": 1172841.5414974235,
+      "cps": 513.33535,
+      "cap": 21399178,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 204,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 154,
+      "totalClicks": 14400,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 44,
+        "script": 37,
+        "reserve_bin": 16,
+        "parallel": 27,
+        "storage": 26,
+        "intern": 7,
+        "team": 2
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 154,
+        "clicks": 14400,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 10
+    },
+    {
+      "ep": 9536866.422197692,
+      "cps": 517.11825,
+      "cap": 24770442,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 224,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 158,
+      "totalClicks": 15840,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 45,
+        "script": 37,
+        "reserve_bin": 17,
+        "parallel": 28,
+        "storage": 27,
+        "intern": 7,
+        "team": 2
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 158,
+        "clicks": 15840,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 11
+    },
+    {
+      "ep": 11148269.019194257,
+      "cps": 653.8565,
+      "cap": 28218439,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 224,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 162,
+      "totalClicks": 17280,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 45,
+        "script": 38,
+        "reserve_bin": 17,
+        "parallel": 28,
+        "storage": 28,
+        "intern": 8,
+        "team": 3
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 162,
+        "clicks": 17280,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 12
+    },
+    {
+      "ep": 11362256.987992115,
+      "cps": 657.6393999999999,
+      "cap": 37183759,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 224,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 167,
+      "totalClicks": 18720,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 46,
+        "script": 38,
+        "reserve_bin": 18,
+        "parallel": 29,
+        "storage": 30,
+        "intern": 8,
+        "team": 3
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 167,
+        "clicks": 18720,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 13
+    },
+    {
+      "ep": 7440189.239590871,
+      "cps": 679.5530499999999,
+      "cap": 37183759,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 170,
+      "totalClicks": 20160,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 47,
+        "script": 39,
+        "reserve_bin": 18,
+        "parallel": 29,
+        "storage": 30,
+        "intern": 9,
+        "team": 3
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 170,
+        "clicks": 20160,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 14
+    },
+    {
+      "ep": 1787977.2426884568,
+      "cps": 798.16055,
+      "cap": 42947105,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 174,
+      "totalClicks": 21600,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 47,
+        "script": 39,
+        "reserve_bin": 19,
+        "parallel": 30,
+        "storage": 31,
+        "intern": 9,
+        "team": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 174,
+        "clicks": 21600,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 15
+    },
+    {
+      "ep": 3313935.8854773487,
+      "cps": 799.1741999999999,
+      "cap": 48977673,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 177,
+      "totalClicks": 23040,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 48,
+        "script": 40,
+        "reserve_bin": 19,
+        "parallel": 30,
+        "storage": 32,
+        "intern": 9,
+        "team": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 177,
+        "clicks": 23040,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 16
+    },
+    {
+      "ep": 27751444.33602828,
+      "cps": 802.8317,
+      "cap": 49590535,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 179,
+      "totalClicks": 24480,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 48,
+        "script": 40,
+        "reserve_bin": 20,
+        "parallel": 31,
+        "storage": 32,
+        "intern": 9,
+        "team": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 179,
+        "clicks": 24480,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 17
+    },
+    {
+      "ep": 31383842.875785276,
+      "cps": 823.7316999999999,
+      "cap": 64501114,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 182,
+      "totalClicks": 25920,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 48,
+        "script": 40,
+        "reserve_bin": 20,
+        "parallel": 31,
+        "storage": 34,
+        "intern": 10,
+        "team": 4
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 182,
+        "clicks": 25920,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 18
+    },
+    {
+      "ep": 6764289.381489549,
+      "cps": 939.69535,
+      "cap": 64501114,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 259,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 185,
+      "totalClicks": 27360,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 49,
+        "script": 41,
+        "reserve_bin": 20,
+        "parallel": 31,
+        "storage": 34,
+        "intern": 10,
+        "team": 5
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 185,
+        "clicks": 27360,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 19
+    },
+    {
+      "ep": 29309134.11189864,
+      "cps": 754.68228,
+      "cap": 73672855,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 187,
+      "totalClicks": 28800,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 49,
+        "script": 41,
+        "reserve_bin": 20,
+        "parallel": 32,
+        "storage": 35,
+        "intern": 10,
+        "team": 5
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 187,
+        "clicks": 28800,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 20
+    },
+    {
+      "ep": 41242088.884144515,
+      "cps": 944.2410999999998,
+      "cap": 84220356,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 189,
+      "totalClicks": 30240,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 49,
+        "script": 42,
+        "reserve_bin": 20,
+        "parallel": 32,
+        "storage": 36,
+        "intern": 10,
+        "team": 5
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 189,
+        "clicks": 30240,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 21
+    },
+    {
+      "ep": 26518168.392861594,
+      "cps": 948.024,
+      "cap": 84220356,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 191,
+      "totalClicks": 31680,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 50,
+        "script": 42,
+        "reserve_bin": 20,
+        "parallel": 33,
+        "storage": 36,
+        "intern": 10,
+        "team": 5
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 191,
+        "clicks": 31680,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 22
+    },
+    {
+      "ep": 7864741.40486151,
+      "cps": 1083.874,
+      "cap": 96349983,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 193,
+      "totalClicks": 33120,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 50,
+        "script": 42,
+        "reserve_bin": 20,
+        "parallel": 33,
+        "storage": 37,
+        "intern": 11,
+        "team": 6
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 193,
+        "clicks": 33120,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 23
+    },
+    {
+      "ep": 12002630.584215693,
+      "cps": 1084.7622499999998,
+      "cap": 110299054,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 195,
+      "totalClicks": 34560,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 50,
+        "script": 43,
+        "reserve_bin": 20,
+        "parallel": 33,
+        "storage": 38,
+        "intern": 11,
+        "team": 6
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 195,
+        "clicks": 34560,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 24
+    },
+    {
+      "ep": 42025916.64751823,
+      "cps": 1084.88765,
+      "cap": 110299054,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 196,
+      "totalClicks": 36000,
+      "upgradeKinds": 7,
+      "upgrades": {
+        "scribble": 51,
+        "script": 43,
+        "reserve_bin": 20,
+        "parallel": 33,
+        "storage": 38,
+        "intern": 11,
+        "team": 6
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 196,
+        "clicks": 36000,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 25
+    },
+    {
+      "ep": 54546647.8214284,
+      "cps": 1715.54515,
+      "cap": 110299054,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 198,
+      "totalClicks": 37440,
+      "upgradeKinds": 8,
+      "upgrades": {
+        "scribble": 51,
+        "script": 43,
+        "reserve_bin": 20,
+        "parallel": 34,
+        "storage": 38,
+        "intern": 11,
+        "team": 6,
+        "ai": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 198,
+        "clicks": 37440,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 26
+    },
+    {
+      "ep": 50567668.49465292,
+      "cps": 1736.44515,
+      "cap": 144788131,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 201,
+      "totalClicks": 38880,
+      "upgradeKinds": 8,
+      "upgrades": {
+        "scribble": 51,
+        "script": 43,
+        "reserve_bin": 20,
+        "parallel": 34,
+        "storage": 40,
+        "intern": 12,
+        "team": 6,
+        "ai": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 201,
+        "clicks": 38880,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 27
+    },
+    {
+      "ep": 44093508.90422308,
+      "cps": 1737.4587999999997,
+      "cap": 144788131,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 203,
+      "totalClicks": 40320,
+      "upgradeKinds": 8,
+      "upgrades": {
+        "scribble": 52,
+        "script": 44,
+        "reserve_bin": 20,
+        "parallel": 34,
+        "storage": 40,
+        "intern": 12,
+        "team": 6,
+        "ai": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 203,
+        "clicks": 40320,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 28
+    },
+    {
+      "ep": 30462603.671023816,
+      "cps": 1856.0662999999997,
+      "cap": 144788131,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 205,
+      "totalClicks": 41760,
+      "upgradeKinds": 8,
+      "upgrades": {
+        "scribble": 52,
+        "script": 44,
+        "reserve_bin": 20,
+        "parallel": 35,
+        "storage": 40,
+        "intern": 12,
+        "team": 7,
+        "ai": 1
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 205,
+        "clicks": 41760,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 29
+    },
+    {
+      "ep": 64229418.23190361,
+      "cps": 2483.0662999999995,
+      "cap": 166002924,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 294,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 207,
+      "totalClicks": 43200,
+      "upgradeKinds": 8,
+      "upgrades": {
+        "scribble": 52,
+        "script": 44,
+        "reserve_bin": 20,
+        "parallel": 35,
+        "storage": 41,
+        "intern": 12,
+        "team": 7,
+        "ai": 2
+      },
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 42,
+      "linePets": 7,
+      "stats": {
+        "buys": 207,
+        "clicks": 43200,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": []
+      },
+      "day": 30
+    }
+  ],
+  "checks": {
+    "playability": {
+      "finalCps": 2483.0662999999995,
+      "finalEp": 64229418.23190361,
+      "totalBuys": 207,
+      "chapter": "6A",
+      "capStallPct": 0
+    },
+    "numeric": {
+      "maxRelErrPct": 0,
+      "probes": [
+        {
+          "earnedBefore": 1945424946.757712,
+          "earnedAfter": 1945449777.420712,
+          "gross": 24830.66300010681,
+          "cps": 2483.0662999999995,
+          "cap": 166002924,
+          "dt": 10
+        },
+        {
+          "earnedBefore": 1945449777.420712,
+          "earnedAfter": 1945474608.083712,
+          "gross": 24830.66300010681,
+          "cps": 2483.0662999999995,
+          "cap": 166002924,
+          "dt": 10
+        },
+        {
+          "earnedBefore": 1945474608.083712,
+          "earnedAfter": 1945499438.7467122,
+          "gross": 24830.66300010681,
+          "cps": 2483.0662999999995,
+          "cap": 166002924,
+          "dt": 10
+        }
+      ],
+      "priceSample": [
+        {
+          "id": "scribble",
+          "bulk": 97950646,
+          "unit": 97950646
+        },
+        {
+          "id": "script",
+          "bulk": 96061745,
+          "unit": 96061745
+        },
+        {
+          "id": "parallel",
+          "bulk": 101909066,
+          "unit": 101909066
+        }
+      ]
+    },
+    "ui": {
+      "tabs": [
+        {
+          "id": "btn-shop",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2914
+        },
+        {
+          "id": "btn-tech",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2914
+        },
+        {
+          "id": "btn-rp",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 2887
+        },
+        {
+          "id": "btn-relics",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 2909
+        },
+        {
+          "id": "btn-pets",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2774
+        },
+        {
+          "id": "btn-expedition",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2780
+        },
+        {
+          "id": "btn-religion",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2771
+        },
+        {
+          "id": "btn-policy",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2769
+        },
+        {
+          "id": "btn-delve",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2777
+        },
+        {
+          "id": "btn-rift-tab",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2772
+        },
+        {
+          "id": "btn-bazaar",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2767
+        },
+        {
+          "id": "btn-prestige",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2542
+        },
+        {
+          "id": "btn-achievement",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2542
+        },
+        {
+          "id": "btn-offline",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2542
+        },
+        {
+          "id": "btn-storyline",
+          "visible": 11,
+          "hasBadText": false,
+          "textLen": 2542
+        }
+      ],
+      "epTxt": "",
+      "priceMatch": {
+        "id": "scribble",
+        "domText": "草稿记录×52\n    0.1 EP/s\n    97.95M",
+        "cost": 97950646
+      },
+      "wikiOk": true,
+      "researchGroups": [
+        {
+          "key": "prod",
+          "n": 11
+        },
+        {
+          "key": "res",
+          "n": 11
+        },
+        {
+          "key": "abyss",
+          "n": 7
+        },
+        {
+          "key": "star",
+          "n": 6
+        }
+      ],
+      "researchTotal": 35,
+      "storyEvents": 42,
+      "linePets": 7
+    }
+  },
+  "elapsedSec": "197.6",
+  "pass": 16,
+  "fail": 0
+}

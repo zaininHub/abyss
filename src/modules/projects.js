@@ -10,8 +10,9 @@ let logFn = null;
 export function setProjectLogFn(fn) { logFn = fn; }
 
 export function maxProjects() {
-  // v2.1 建筑驱动：项目平行台（max 聚合，1 级 = 2 并行项目）
-  return Math.max(MAX_PROJECTS, Math.round(fxValue('maxProjects')));
+  // v3.7.0 bugfix：原实现 Math.max(3, fxValue) 而建筑只给 2 → 恒等于基础 3，
+  //   玩家花 4.8M EP 买的「项目平行台」完全没有效果。改为基础 3 + 建筑增量（叠加而非取大）。
+  return MAX_PROJECTS + Math.round(fxValue('maxProjects'));
 }
 
 // v2.0：记录上次生成时间，配合 PROJECT_SPAWN_COOLDOWN 防止秒刷

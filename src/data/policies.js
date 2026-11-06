@@ -3,6 +3,7 @@
 // 规则：每组三选一，选 A 锁 B/C；每轮（晋升/轮回）后清空重选；改选消耗跨周期资源 ×2^n；
 //       立誓（岔路口买建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。
 import { S } from '../state.js';
+import { researchMult } from '../core/research.js'; // v3.7.0：律令演绎走标准研究读侧，不再内联第二份公式
 
 export const POLICY_GROUPS = [
   {
@@ -53,6 +54,17 @@ export const POLICY_GROUPS = [
       { id: 'rift_seal',   name: '封印之誓',   effect: { global: 0.10, ep: -0.10 },                 desc: '全局 +10%，EP -10%' },
     ],
   },
+  // v3.7.0 政策扩充（6 组 → 7 组、16 项 → 19 项）：效果键全部落在已有 policyMult 消费点上，
+  // 不引入「选了但没效果」的死政策；解锁条件只依赖已持久化字段。
+  {
+    id: 'observe', name: '观测纪律', unlock: (S) => !!(S.delve && S.delve.unlocked) || (S.projectsDone || 0) >= 20,
+    hint: '需深潜已解锁或完成 20 个任务',
+    policies: [
+      { id: 'observe_strict', name: '严格观测', effect: { delve: 0.18, ep: -0.08 },  desc: '深潜产出 +18%，EP 产出 -8%' },
+      { id: 'observe_open',   name: '开放采样', effect: { ep: 0.12, thread: 0.08 },  desc: 'EP 产出 +12%，线程产出 +8%' },
+      { id: 'observe_quiet',  name: '静默归档', effect: { ember: 0.12, global: -0.05 }, desc: '余烬产出 +12%，全局 -5%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }
@@ -88,7 +100,7 @@ export function policyMult(key) {
     const p = g.policies.find(x => x.id === pid);
     if (p && p.effect[key] !== undefined) sum += p.effect[key];
   }
-  let base = (1 + sum) * (1 + 0.06 * ((S.rpTheories && S.rpTheories.rp_policy) || 0)); // v3.6.0：律令演绎研究放大政策幅度
+  let base = (1 + sum) * researchMult('policy'); // v3.6.0 律令演绎；v3.7.0 改走 core 标准读侧（数值不变）
   if (S.vowPolicyBoost && sum > 0) base += 0.05; // 立誓：本局政策幅度 +5%（仅正向）
   return base;
 }
@@ -126,9 +138,13 @@ export function canPayReroll(groupId) {
 }
 // v2.8.6 B2a：本轮政策走向记入历史（跨周期保留；晋升/轮回时调用）
 export function recordPolicyRun() {
-  const picks = Object.entries(S.policies || {}).map(([gid, pid]) => {
+  // v3.7.0 bugfix：S.policies[gid] 自 v2.8.30 起是 { id, lv } 对象（groupPolicyId 已适配），
+  //   此处却仍把整个对象当字符串 id 去比对 → picks 恒空 → 政策历史永远不增长、
+  //   成就 policyruns3 与 wiki「历史周期走向」均不可达。
+  const picks = Object.entries(S.policies || {}).map(([gid]) => {
     const g = groupByName(gid);
-    const p = g && g.policies.find(x => x.id === pid);
+    const pid = groupPolicyId(gid);
+    const p = g && pid && g.policies.find(x => x.id === pid);
     return p ? `${g.name}·${p.name}` : null;
   }).filter(Boolean);
   if (picks.length === 0) return;

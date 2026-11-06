@@ -105,13 +105,16 @@ function bestPaybackItem() {
   for (const u of UPGRADES) {
     if (!isBaseProduction(u)) continue;
     if (!aiShopUnlocked(u)) continue;
-    const cost = unitCost(u, 1); // v3.0.3 修复：与实购同口径（原内联 ceil(base×growth^(owned)×costMult) 默认 growth 1.15 落后于 unitCost 的 1.30，回本排序低估成本 15–50%）
+    // v3.7.0 口径修正：unitCost(u,n) 的 n 是「价格档位偏移」，n=0 才是当前这一件的实价
+    // （商店实购 bulkCostCalc(u,1) === unitCost(u,0)）。旧代码用 n=1 按 growth^(owned+1) 计价，
+    // 导致 AI 自动升级/助手购买每次多扣 30%，与主商店卡面及手动购买不一致。
+    const cost = unitCost(u, 0);
     const margCps = u.cps * globalMult();
     if (margCps <= 0) continue;
     const payback = cost / margCps;
     if (payback < bestPayback) { bestPayback = payback; best = u; }
   }
-  return best ? { u: best, cost: unitCost(best, 1), payback: bestPayback } : null;
+  return best ? { u: best, cost: unitCost(best, 0), payback: bestPayback } : null;
 }
 
 function aiHireOne() {
@@ -265,7 +268,7 @@ function chaosIntuitionTick(dt) {
   // v2.6.6 ③：候选 = 未拥有的商店升级 + 已解锁未满级的 v21 建筑（混沌直觉也会购建，且每次买入都有日志）
   const upgCands = UPGRADES
     .filter(u => !(S.upgrades[u.id] || 0))
-    .map(u => ({ kind: 'upgrade', u, cost: unitCost(u, 1) }));
+    .map(u => ({ kind: 'upgrade', u, cost: unitCost(u, 0) })); // v3.7.0：与商店实购同口径，混沌直觉不再多扣 30%
   const bldCands = V21_BUILDINGS
     .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
     .map(b => ({ kind: 'building', b, cost: v21BuildingCost(b) }));

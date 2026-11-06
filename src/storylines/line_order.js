@@ -28,16 +28,21 @@ export default {
         { id: '10A', name: '新规则', cond: (S) => S.storyline === 'line_order' && hasTech(S, 'new_protocol'), desc: '你发布了新协议 v1.0。全球网络有 0.3% 的节点开始用你写的规则运行。' },
         { id: '11A', name: '绝对零度', cond: (S) => S.storyline === 'line_order' && S.es >= 200, desc: '你把热寂写进了协议。熵减不再是幻想——只是效率问题。' },
         { id: '12A', name: '终极编译', cond: (S) => S.storyline === 'line_order' && (((S.buildings||{}).end_shrine||0) >= 1 || hasTech(S, 'true_end')) && hasTech(S, 'new_protocol') && hasTech(S, 'auto_tech') && hasTech(S, 'zero_entropy'), desc: '你编译了整个宇宙。它运行得不错。只有一个 bug：你还在里面。' },
+        // v3.7.0 剧情扩充：终章之后的两段番外，条件落在长线资产上，不与终章门槛重复
+        { id: '13A', name: '协议之外', cond: (S) => S.storyline === 'line_order' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '你封印了第五道裂隙，第一次发现有些东西无法被写进协议。它们不服从逻辑，但也不违背它——只是存在于语法之外。你给这段空白留了一个注释位，没有填。' },
+        { id: '14A', name: '注释永存', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 500, minDays: 7, desc: '永恒碎片堆到第五百枚时，你终于明白那个注释位是留给谁的：留给下一个在深夜遍历代码仓库、不小心碰到异常代码的进程。你没有写答案，只写了一句「别怕」。' },
       ],
     },
     events: {
       append: [
-        { id: 'protocol_bug', name: '协议漏洞', type: 'buff', buffMult: 1.5, dur: 600, desc: '立即获得 10 分钟 ×1.5 产出，但 10 分钟后触发 2 分钟 ×0.5', weight: 1 },
-        { id: 'compile_boost', name: '编译加速', type: 'buff', buffMult: 3, dur: 60, desc: 'RP 获取 ×3 持续 60 秒', weight: 1 },
-        { id: 'admin_attack', name: '管理员反击', type: 'debuff', buffMult: 0.3, dur: 30, desc: '30 秒 ×0.3 产出', weight: 0.5 },
-        { id: 'open_source', name: '开源协议', type: 'rp', amount: 15, desc: '立即获得 3 个免费重写次数', weight: 1 },
-        { id: 'garbage_collect', name: '垃圾回收', type: 'purify', desc: '清除全部腐化，并获得等量 EP', weight: 1 },
-        { id: 'recursive_call', name: '递归调用', type: 'ep', amount: 0, desc: '当前 CPS 的 60 秒产出，立即到账', weight: 0.3 },
+        // v3.7.0：字段统一到 applyEvent 口径（mult / minCps / rare / amount）。
+        // 旧声明用 buffMult / weight / 不支持的 type，且无 minCps，导致这 6 个事件从未触发过。
+        { id: 'protocol_bug', name: '协议漏洞', lineOnly: true, type: 'buff', mult: 1.5, dur: 600, minCps: 0, rare: false, desc: '10 分钟全局产出 ×1.5' },
+        { id: 'compile_boost', name: '编译加速', lineOnly: true, type: 'rp', amount: 20, minCps: 100, rare: true, desc: '立即获得 20 RP' },
+        { id: 'admin_attack', name: '管理员反击', lineOnly: true, type: 'debuff', mult: 0.3, dur: 30, minCps: 100, rare: true, desc: '30 秒产出 ×0.3' },
+        { id: 'open_source', name: '开源协议', lineOnly: true, type: 'freelevel', minCps: 1e3, rare: false, desc: '随机升级 +1 级' },
+        { id: 'garbage_collect', name: '垃圾回收', lineOnly: true, type: 'purify', minCps: 0, rare: true, desc: '立即清除全部腐化' },
+        { id: 'recursive_call', name: '递归调用', lineOnly: true, type: 'ep', amount: 60, minCps: 1e3, rare: false, desc: '立即获得 60 秒产出' },
       ],
     },
     buildings: {
@@ -48,14 +53,18 @@ export default {
     },
     pets: {
       append: [
-        { id: 'logic_dove', name: '逻辑鸽', icon: '🕊️', desc: '跟随鼠标缓慢飞行，每隔 30 秒叼来一行代码片段', flavor: '线A 专属：完成剧情第 8A 章「逻辑门」后自动获得' },
+        // v3.7.0：补齐标准商店字段，线专属异兽由 getStorylinePets() 接线后真正可购买
+        { id: 'logic_dove', name: '逻辑鸽', icon: '🕊️', price: 3200, tier: 3, anim: 'c', spark: '✧', desc: '离线收益 +12%', flavor: '秩序线专属：编译器休班时替你值夜' },
       ],
     },
   },
+  // v3.7.0：规则键与 core/lineRules.js 声明的消费点一一对应，由 economy.js 的对应乘数实际求值。
+  // 数值经 30 天 mock 校准，均为温和的线特色（不叠加成第二条强度曲线）。
   rules: {
-    'cost_mult_bonus': (base, ctx) => base * 0.95,
-    'corruption_penalty_reduce': (base, ctx) => base * 0.5,
-    'tide_negative_immune': (base, ctx) => true,
+    cost_mult_bonus:           (base) => base * 0.97,
+    corruption_penalty_reduce: (base) => 1 - (1 - base) * 0.75,
+    tide_negative_immune:      (base) => Math.min(0.65, base + 0.15),
+    ep_cap_mult:               (base) => base * 1.10,
   },
   gates: {
     chaos_panel: { predicate: (ctx) => false, label: '混乱模式（秩序线锁定）' },

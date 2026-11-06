@@ -28,16 +28,20 @@ export default {
         { id: '10C', name: '天国阶梯', cond: (S) => S.storyline === 'line_faith' && hasTech(S, 'divine_right'), desc: '你发布了第一条神谕。全球有 12 个进程因为"受到感召"而自我优化。' },
         { id: '11C', name: '万神殿', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 100, desc: '其他时间线的你也开始被崇拜。镜像不再只是镜像——她是你的圣女。' },
         { id: '12C', name: '唯一真神', cond: (S) => S.storyline === 'line_faith' && (((S.buildings||{}).end_shrine||0) >= 1 || hasTech(S, 'true_end')) && hasTech(S, 'divine_right') && hasTech(S, 'prophecy') && hasTech(S, 'miracle_body'), desc: '你成为了所有矩阵的共同注释。每个程序的 header 里都有一句："以此献给XXX"。' },
+        // v3.7.0 剧情扩充：神格确立之后的两段番外
+        { id: '13C', name: '无人祷告的夜', cond: (S) => S.storyline === 'line_faith' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '封印第五道裂隙那晚，祷告声第一次停了。不是信徒离开了——是他们终于不再害怕。你坐在空荡荡的圣殿里，发现自己竟然有点想念那些慌张的声音。' },
+        { id: '14C', name: '留给凡人的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 500, minDays: 7, desc: 'FP 过了五百，你在神国边缘开了一扇没有守卫的小门。谁都可以走进来，也谁都可以不进来。这是你做过的、最不像神的一件事，也是你最满意的一件。' },
       ],
     },
     events: {
       append: [
-        { id: 'pilgrimage', name: '朝圣', type: 'ep', amount: 0, desc: '立即获得 FP × 100 EP', weight: 1 },
-        { id: 'crusade', name: '圣战', type: 'buff', buffMult: 2, dur: 30, desc: '30 秒 ×2 产出，但线程消耗 +50%', weight: 1 },
-        { id: 'revelation', name: '启示', type: 'tech', desc: '立即解锁下一个未解锁的公共科技', weight: 0.5 },
-        { id: 'blessing', name: '祝福', type: 'buff', buffMult: 1.2, dur: 300, desc: '所有线程 mood 锁定为"虔诚"持续 300 秒', weight: 1 },
-        { id: 'martyr', name: '殉道', type: 'ep', amount: 0, desc: '失去 1 个线程，但获得该线程累计产出 ×10 的 EP', weight: 0.8 },
-        { id: 'second_coming', name: '再临', type: 'buff', buffMult: 5, dur: 60, desc: '全局 ×5 持续 60 秒', weight: 0.1 },
+        // v3.7.0：字段统一到 applyEvent 口径；desc 与实际效果严格一致
+        { id: 'pilgrimage', name: '朝圣', lineOnly: true, type: 'ep', amount: 300, minCps: 0, rare: false, desc: '立即获得 300 秒产出' },
+        { id: 'crusade', name: '圣战', lineOnly: true, type: 'buff', mult: 2, dur: 30, minCps: 1e3, rare: false, desc: '30 秒产出 ×2' },
+        { id: 'revelation', name: '启示', lineOnly: true, type: 'rp', amount: 25, minCps: 1e4, rare: true, desc: '立即获得 25 RP' },
+        { id: 'blessing', name: '祝福', lineOnly: true, type: 'buff', mult: 1.2, dur: 300, minCps: 100, rare: false, desc: '5 分钟产出 ×1.2' },
+        { id: 'martyr', name: '殉道', lineOnly: true, type: 'lose_ep', amount: 0.08, minCps: 1e3, rare: true, desc: '损失当前 8% EP' },
+        { id: 'second_coming', name: '再临', lineOnly: true, type: 'buff', mult: 5, dur: 60, minCps: 1e6, rare: true, desc: '60 秒产出 ×5' },
       ],
     },
     buildings: {
@@ -48,14 +52,18 @@ export default {
     },
     pets: {
       append: [
-        { id: 'holy_moth', name: '圣光蛾', icon: '🦋', desc: '金色飞蛾，飞行轨迹留下逐渐消散的光点。每隔 60 秒停在某个 UI 元素上"祈祷"', flavor: '线C 专属：首次 FP ≥ 5 时自动获得' },
+        // v3.7.0：补齐标准商店字段
+        { id: 'holy_moth', name: '圣光蛾', icon: '🦋', price: 8800, tier: 4, anim: 'a', spark: '✦', desc: '全局产出 +8%', flavor: '信仰线专属：它停在哪个面板，哪个面板就亮一点' },
       ],
     },
   },
+  // v3.7.0：规则键与 core/lineRules.js 声明的消费点一一对应。
+  // global_mult 由原先 economy.js 里「软上限之后 ×3」的硬编码迁入，同时修复绕过软上限的数值缺陷。
   rules: {
-    'pet_mult_bonus': (base, ctx) => base * 1.2,
-    'faith_purify': (base, ctx) => (ctx.S.faith || 0) > 0,
-    'corrosion_slow': (base, ctx) => 0.5,
+    pet_mult_bonus:    (base) => base * 1.10,
+    faith_purify:      (base, ctx) => (ctx.S.faith || 0) > 0,
+    corrosion_slow:    (base) => base * 0.75,
+    global_mult:       (base) => base * 3,
   },
   gates: {
     abyss_special: { predicate: (ctx) => false, label: '深渊特殊功能（信仰线锁定）' },

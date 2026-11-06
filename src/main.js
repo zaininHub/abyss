@@ -10,7 +10,8 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
-  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes } from './modules/economy.js'; // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
+  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
+  corruptionCap, researchMult } from './modules/economy.js'; // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -20,11 +21,11 @@ import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePa
 import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn } from './modules/projects.js';
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn, refreshReligionAffordability } from './modules/religions.js'; // v2.8.26 ④
 import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
-import { policyOpenGroups } from './data/policies.js';
+import { policyOpenGroups, policyMult, POLICY_GROUPS } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn } from './modules/shop.js'; // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
@@ -42,7 +43,9 @@ import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './mo
 import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
-import { maybeTriggerEvent, peekNextEvent } from './modules/events.js';
+import { chapterRank, chapterProgress, chapterCode, chapterSeq, getStorylineEvents, getStorylinePets, validateEvent } from './core/storylineContent.js'; // v3.7.0：章节 ID 统一口径
+import { lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS } from './core/lineRules.js'; // v3.7.0 QA
+import { maybeTriggerEvent, peekNextEvent, eventPool } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
@@ -83,8 +86,9 @@ function renderStorylinePanel() {
     for (const ch of curChs) {
       let ok = false;
       try { ok = !!ch.cond(S); } catch (e) { /* 未解锁 */ }
-      const chIdx = ch.id !== undefined ? parseInt(ch.id, 10) : curChs.indexOf(ch) + 1;
-      if (seen.includes(chIdx) || prevOk2) ok = true;
+      const code = chapterCode(ch.id);
+      // v3.7.0：新编码 + 旧档数字双向兼容
+      if (seen.includes(code) || seen.includes(chapterSeq(ch.id)) || prevOk2) ok = true;
       if (ok) unlockedN++;
       prevOk2 = ok;
     }
@@ -121,8 +125,9 @@ function renderStorylinePanel() {
         for (const ch of chs) {
           let ok = false;
           try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
-          const chIdx = ch.id !== undefined ? parseInt(ch.id, 10) : chs.indexOf(ch) + 1;
-          if (seenChs.includes(chIdx)) ok = true; // 历史已进入 → 永久点亮
+          const code = chapterCode(ch.id);
+          // v3.7.0：新编码 + 旧档数字双向兼容（历史已进入 → 永久点亮）
+          if (seenChs.includes(code) || seenChs.includes(chapterSeq(ch.id))) ok = true;
           if (prevOk) ok = true; // 前一章可见 → 本章剧情顺次解锁（cond 节奏仍作用于后续）
           html += `<div class="codex-ch${ok ? ' on' : ' locked'}"><span class="codex-ch-name">${ok ? '✓' : '🔒'} ${ch.name}</span>`;
           if (ok && ch.desc) html += `<div class="codex-ch-desc">${ch.desc}</div>`;
@@ -1349,8 +1354,8 @@ function bindEvents() {
     const seen = (S.chaptersUnlocked && S.chaptersUnlocked[S.storyline]) || [];
     h += CHAPTERS.map(c => {
       let ok = false; try { ok = !!c.cond(S); } catch {}
-      const idx = parseInt(c.id, 10) || 0;
-      if (seen.includes(idx)) ok = true;
+      const code = chapterCode(c.id);
+      if (seen.includes(code) || seen.includes(chapterSeq(c.id))) ok = true;
       return `<p class="wiki-line"><span style="color:${ok ? 'var(--green)' : 'var(--text-3)'}">${ok ? '✓' : '🔒'} ${escWiki(c.name)}</span>${ok ? `：${escWiki(c.desc)}` : ''}</p>`;
     }).join('');
     return h;
@@ -2029,13 +2034,23 @@ const ACHIEVEMENTS = [
   { id: 'ai_unlock', name: '机械之心',   icon: '🤖', desc: '解锁 AI 助手（科技「AI 管理核心」）', test: s => !!s.tech?.ai_core },
   { id: 'ai_autobuild', name: '自治协议', icon: '🤖', desc: '激活 AI 自动购建', test: s => !!(s.ai && s.ai.autoBuildUnlocked) },
   { id: 'ai_assist', name: '助手编队',   icon: '🤖', desc: '解锁并分配首位 AI 助手', test: s => (s.upgrades?.ai_assist || 0) >= 1 && Object.values(s.ai?.alloc || {}).some(v => v > 0) },
-  { id: 'chapter5',  name: '星图展开',   icon: '📖', desc: '剧情推进至第 5 章', test: s => parseInt(s.chapter || '1', 10) >= 5 },
-  { id: 'chapter9',  name: '命运分岔',   icon: '📖', desc: '剧情推进至第 9 章', test: s => parseInt(s.chapter || '1', 10) >= 9 },
-  { id: 'chapter18', name: '终末序曲',   icon: '📖', desc: '剧情推进至第 18 章', test: s => parseInt(s.chapter || '1', 10) >= 18 },
+  // v3.7.0：改用 chapterProgress —— 旧 parseInt 让变体章节（12A/14B）玩家永远拿不到 chapter18
+  { id: 'chapter5',  name: '星图展开',   icon: '📖', desc: '剧情推进至第 5 章', test: s => chapterProgress(s.chapter || '1') >= 5 },
+  { id: 'chapter9',  name: '命运分岔',   icon: '📖', desc: '剧情推进至第 9 章', test: s => chapterProgress(s.chapter || '1') >= 9 },
+  { id: 'chapter18', name: '终末序曲',   icon: '📖', desc: '剧情推进至第 18 章', test: s => chapterProgress(s.chapter || '1') >= 18 },
   { id: 'es10k',     name: '永恒长城',   icon: '💎', desc: '持有 10K ES', test: s => (s.es || 0) >= 1e4 },
   { id: 'reincarn20', name: '二十重劫', icon: '♻️', desc: '完成 20 次轮回', test: s => (s.reincarned || 0) >= 20 },
   { id: 'pt1m',      name: '契约帝国',   icon: '🍪', desc: '持有 1M PT', test: s => (s.pt || 0) >= 1e6 },
   { id: 'dm10m',     name: '深渊富矿',   icon: '🜏', desc: '持有 10M DM', test: s => (s.dm || 0) >= 1e7 },
+  // v3.7.0 成就扩充（78→86，+10%）：全部只读已持久化字段，判定 O(1)
+  { id: 'event100',   name: '见多识广',   icon: '🎲', desc: '累计触发 100 次随机事件', test: s => (s.eventsSeen || 0) >= 100 },
+  { id: 'policy7',    name: '七政齐备',   icon: '⚖️', desc: '同时采用 7 项周期政策', test: s => Object.keys(s.policies || {}).length >= 7 },
+  { id: 'chapter22',  name: '归档之人',   icon: '📖', desc: '剧情推进至番外·归档（第 22 章进度）', test: s => chapterProgress(s.chapter || '1') >= 22 },
+  { id: 'research35', name: '理论满架',   icon: '🔬', desc: '研究升级累计投入 35 级', test: s => Object.values(s.rpTheories || {}).reduce((a, b) => a + (b || 0), 0) >= 35 },
+  { id: 'vow',        name: '立誓者',     icon: '🗝️', desc: '在命运的岔路口立誓选定故事线', test: s => !!s.storyline && s.storyline !== 'default' },
+  { id: 'rift8',      name: '裂隙守夜',   icon: '🌀', desc: '累计封印 8 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 8 },
+  { id: 'corrupt50',  name: '半身入渊',   icon: '🌑', desc: '矩阵腐化达到 50%', test: s => (s.corruption || 0) >= 50 },
+  { id: 'projects50', name: '任务熟练',   icon: '📋', desc: '累计完成 50 个任务', test: s => (s.projectsDone || 0) >= 50 },
 ];
 
 function checkAch() {
@@ -2429,7 +2444,11 @@ function tick(now) {
   const chNow = currentChapter(S);
   const chNowStr = String(chNow.id);
   const sChapterStr = String(S.chapter || '1');
-  if (parseInt(chNowStr, 10) > parseInt(sChapterStr, 10)) {
+  // v3.7.0：统一用 [序号, 后缀] 元组比较。旧版两个 parseInt 让 '12A' 与主线 12 相等，
+  //   主线玩家跳不进变体终章，且 '5A'/5 在图鉴里撞号被去重误判。
+  const [nNow, sufNow] = chapterRank(chNowStr);
+  const [nCur, sufCur] = chapterRank(sChapterStr);
+  if (nNow > nCur || (nNow === nCur && sufNow > sufCur)) {
     S.chapter = chNowStr;
     S.chapterEnteredAt = Date.now(); // v3.6.0 方向⑥：重置章节驻留计时
     dirty.story = true;
@@ -2437,9 +2456,10 @@ function tick(now) {
     S.chaptersUnlocked = S.chaptersUnlocked || {};
     const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
     S.chaptersUnlocked[slId] = S.chaptersUnlocked[slId] || [];
-    if (!S.chaptersUnlocked[slId].includes(parseInt(chNowStr, 10))) S.chaptersUnlocked[slId].push(parseInt(chNowStr, 10));
+    const code = chapterCode(chNowStr);
+    if (!S.chaptersUnlocked[slId].includes(code)) S.chaptersUnlocked[slId].push(code);
     // v2.8.3：章节转变触发明显事件——toast + 日志 + 章节馈赠（RP 克制奖励）
-    const chId = parseInt(chNowStr, 10);
+    const chId = nNow;
     const gift = Math.max(5, chId * 5);
     addRp(gift); // v3.0.8：受 RP 上限约束
     const chName = chNow.name || `第 ${chId} 章`;
@@ -2769,6 +2789,13 @@ if (typeof window !== 'undefined') {
     // v3.3.0 线程绑定系统 QA 钩子
     threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
       converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子
+    // v3.7.0：核心抽象接线与 30 天浏览器推演所需的只读/纯函数钩子（不改变玩法）
+    lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS,
+    getStorylineEvents, getStorylinePets, validateEvent, eventPool,
+    loadStoryline, maxProjects, corruptionCap, policyMult, researchMult,
+    researchUpgCost, RP_GROUPS, UPGRADES, BALANCE, PETS, POLICY_GROUPS,
+    // v3.7.0 30 天 mock 推演：自动玩家只调用产品真实入口，禁止直接写 S 伪造进度
+    sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige, reincarnReady, doReincarn },
   };
 }
 

@@ -1,4 +1,4 @@
-// 随机事件 31 个（v2.0：奖励由 balance.js 驱动；新增深渊净化）
+// 随机事件 36 个（v2.0：奖励由 balance.js 驱动；v3.7.0 新增 6 个中途档事件，填补 1e4~1e6 CPS 区间）
 import { BALANCE } from './balance.js';
 export const EVENTS = [
   {id:'idea',name:'好点子',desc:'立即 300 秒产出',minCps:0,type:'ep',amount:300},
@@ -33,4 +33,11 @@ export const EVENTS = [
   {id:'fine',name:'罚单',desc:'巨额罚单 -15% EP',minCps:1e4,type:'lose_ep',amount:0.15,rare:true},
   // v2.0 新增
   {id:'purify',name:'深渊净化',desc:'立即清除全部腐化',minCps:0,type:'purify',rare:true},
+  // v3.7.0 扩充：中途档 6 个（复用既有 type，不引入新分支；数值均在主表既有天花板内）
+  {id:'cache_hit',name:'缓存命中',desc:'立即获得 450 秒产出',minCps:1e4,type:'ep',amount:450},
+  {id:'night_shift',name:'夜班窗口',desc:'3 分钟产出 ×1.8',minCps:1e3,type:'buff',mult:1.8,dur:180},
+  {id:'code_review',name:'代码评审',desc:'+12 RP',minCps:1e5,type:'rp',amount:12},
+  {id:'cold_start',name:'冷启动',desc:'45 秒产出 ×0.6',minCps:1e5,type:'debuff',mult:0.6,dur:45},
+  {id:'deep_cache',name:'深缓存命中',desc:'立即获得 1200 秒产出',minCps:1e6,type:'ep',amount:1200,rare:true},
+  {id:'sanity_check',name:'完整性校验',desc:'专注 +8',minCps:1e6,type:'focus',amount:8},
 ];

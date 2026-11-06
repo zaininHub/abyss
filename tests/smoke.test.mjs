@@ -715,12 +715,14 @@ t('渐进开放：progressive.js 含 P0~P9 阶段定义', () => {
   assert.equal(PROGRESSIVE_STAGES[9].id, 'P9', '末阶段应为 P9');
 });
 
-t('规则引擎：registerRule + evaluate 聚合结果', () => {
+t('规则引擎：registerRule + evaluate 聚合结果（v3.7.0 起按故事线隔离）', () => {
   _clearRules();
   registerRule('test_key', (base) => base * 2, 10, 'test');
-  assert.equal(evaluate('test_key', 5), 10, 'base=5 × 2 = 10');
+  // v3.7.0：evaluate 只应用 default + context.storyline 的规则（旧实现恒真过滤会串线）
+  assert.equal(evaluate('test_key', 5, { storyline: 'test' }), 10, 'base=5 × 2 = 10');
+  assert.equal(evaluate('test_key', 5, { storyline: 'line_order' }), 5, '其它故事线不应吃到 test 规则');
   registerRule('test_key', (base) => base + 3, 5, 'test');
-  assert.equal(evaluate('test_key', 5), 13, '高优先级 ×2 + 低优先级 +3 = 13');
+  assert.equal(evaluate('test_key', 5, { storyline: 'test' }), 13, '高优先级 ×2 + 低优先级 +3 = 13');
   _clearRules();
 });
 

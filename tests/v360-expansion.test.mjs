@@ -29,7 +29,8 @@ test('v3.6.0 ① 新研究项（10 项）齐全且 fx.key 正确', () => {
     assert.equal(u.fx.key, key, `${id} 的 fx.key 应为 ${key}`);
     assert.ok(u.cap >= 6 && u.cap <= 10, `${id} cap 在 6~10 区间`);
   }
-  assert.equal(BALANCE.researchUpgs.length, 30, '研究点共 30 项（原 20 + 新 10）');
+  // v3.7.0：研究项扩充到 35 项，改为下界断言，允许后续继续扩充
+  assert.ok(BALANCE.researchUpgs.length >= 30, `研究点至少 30 项，实际 ${BALANCE.researchUpgs.length}`);
 });
 
 // ===== T1b 防回归：每个研究项都必须在面板分组中可见、可购买 =====
@@ -38,7 +39,7 @@ test('v3.6.0 ① 研究菜单 4 组 30 项，无遗漏/重复/幽灵 id', () => 
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(RP_GROUPS.length, 4, '研究菜单扩到 4 组');
   assert.equal(new Set(all).size, all.length, '分组内 id 不重复');
-  assert.equal(all.length, 30, '分组覆盖全部 30 项');
+  assert.equal(all.length, defined.length, '分组覆盖全部研究项（数量与实际表动态对齐）');
   for (const id of defined) assert.ok(all.includes(id), `研究项 ${id} 未进分组 → 面板不可见/不可购买`);
   for (const id of all) assert.ok(defined.includes(id), `分组引用了不存在的研究项 ${id}`);
   assert.ok(RP_GROUPS.some(g => g.key === 'star' && g.ids.includes('rp_jump')), '新增「星际与拟我」整组菜单');

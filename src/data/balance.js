@@ -441,6 +441,13 @@ export const BALANCE = {
     { id: 'rp_rift2',   name: '裂隙拓扑',   cap: 6, base: 5000, growth: 1.90, fx: { key: 'rift',    v: 0.18 }, desc: '裂隙余烬 +18%/级（叠加虚空凝视）' },
     { id: 'rp_delve2',  name: '深潜超算',   cap: 8, base: 3600, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级（叠加深渊观测·改）' },
     { id: 'rp_ep2',     name: '熵流增幅',   cap: 8, base: 400,  growth: 1.68, fx: { key: 'ep',      v: 0.08 }, desc: '基础 EP 产出 +8%/级（叠加量子推演）' },
+    // v3.7.0 研究项扩充（30→35，+17%）：一律复用已接线的 fx.key，沿用 v3.4.4「高阶 ×4 + growth +0.10」口径，
+    // 避免新增无人消费的效果键；五项按语义分入既有 4 组（RP_GROUPS 已同步）。
+    { id: 'rp_ep3',     name: '熵流超频',   cap: 8, base: 900,  growth: 1.72, fx: { key: 'ep',      v: 0.09 }, desc: '基础 EP 产出 +9%/级' },
+    { id: 'rp_thread2', name: '群体意识',   cap: 8, base: 980,  growth: 1.72, fx: { key: 'thread',  v: 0.07 }, desc: '线程产出 +7%/级' },
+    { id: 'rp_wage2',   name: '弹性薪酬',   cap: 8, base: 1100, growth: 1.75, fx: { key: 'wage',    v: -0.06 }, desc: '线程消耗 -6%/级' },
+    { id: 'rp_rift3',   name: '裂隙演算',   cap: 6, base: 6000, growth: 1.90, fx: { key: 'rift',    v: 0.10 }, desc: '裂隙余烬 +10%/级' },
+    { id: 'rp_ai2',     name: '拟我演化',   cap: 8, base: 1400, growth: 1.80, fx: { key: 'ai',      v: 0.06 }, desc: 'AI 助手效率 +6%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

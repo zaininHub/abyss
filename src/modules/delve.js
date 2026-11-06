@@ -1,7 +1,7 @@
 // v2.6.0：终局层「深渊深潜」模块——解锁 / 下潜上浮 / 深潜产出与腐化 / 升级树 / 里程碑 / 面板
 import { S, save } from '../state.js';
 import { policyMult } from '../data/policies.js';
-import { fmt, echoLv, delveTechMult, researchMult, epStorageCap } from './economy.js';
+import { fmt, echoLv, delveTechMult, researchMult, epStorageCap, corruptionCap } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：湮灭刻印——深潜产出乘区
 import {
@@ -98,10 +98,12 @@ export function tickDelve(dt) {
   const rate = vsPerSec(depth, delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult() * researchMult('delve'); // v2.7.0 遗物 + v2.8.4 虚空视界 + v2.8.25 ②：深渊观测
   if (rate > 0) S.vs = (S.vs || 0) + rate * dt * (1 + 0.5 * (echoLv('echo_delve') || 0)) * policyMult('delve'); // v2.7.3 ⑤：回响·深潜共振 + v2.8.6 B2a：观测主义/实证主义
   const cr = delveCorruptRate(depth, delveUpgradeLv('purge'));
-  if (cr > 0) S.corruption = Math.min(100, (S.corruption || 0) + cr * dt);
+  // v3.7.0：上限统一走 corruptionCap()（深渊线可由规则抬高），不再硬编码 100
+  const cCap = corruptionCap();
+  if (cr > 0) S.corruption = Math.min(cCap, (S.corruption || 0) + cr * dt);
   // v2.8.6 B2a：观测主义——腐化 +0.02/s（拿深潜产出强的代价）
   const obsMult = policyMult('corruption');
-  if (obsMult > 1 && S.corruption < 100) S.corruption = Math.min(100, (S.corruption || 0) + 0.02 * dt);
+  if (obsMult > 1 && S.corruption < cCap) S.corruption = Math.min(cCap, (S.corruption || 0) + 0.02 * dt);
   // v3.0.0 ①：深潜维持开销——每秒烧 EP（层深驱动）。EP 耗尽 → 算力枯竭，强制上浮（防死锁，不吞层深）
   const upkeep = delveEpUpkeep(depth, epStorageCap(), delveUpgradeLv('hull'));
   if (upkeep > 0) {

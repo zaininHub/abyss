@@ -6,7 +6,9 @@
 // ⑤ 统一成就表 ACHIEVEMENTS 完整性（id 唯一、abyss_gaze_egg 含 test、手动点亮项无 test）
 import assert from 'node:assert';
 import test from 'node:test';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // ---- 浏览器无关的垫片（与既有 *-unit.test.mjs 同范式）----
 global.localStorage = { getItem: () => null, setItem() {}, removeItem() {}, clear() {} };
@@ -51,8 +53,23 @@ test('研究升级：10 个新增项齐备且 cap>0、fx.key 合法', () => {
   }
 });
 
-// researchMult 实际消费的键集合（与代码 grep 结果同源）
-const CONSUMED = new Set(['ep', 'global', 'thread', 'wage', 'storage', 'dm', 'offline', 'rift', 'delve', 'faith']);
+// v3.7.0：改为从源码动态提取 researchMult('key') 调用键，避免每次扩充研究项都要手改白名单
+// （旧的 10 键硬编码集合把 v3.6.0 的 jump / starres / policy / ai / colony / cosmos 误判成「死升级」）。
+const CONSUMED = (() => {
+  const keys = new Set();
+  const srcRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith('.js')) {
+        for (const m of readFileSync(p, 'utf8').matchAll(/researchMult\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)/g)) keys.add(m[1]);
+      }
+    }
+  };
+  walk(srcRoot);
+  return keys;
+})();
 test('研究升级：所有 fx.key 均被 researchMult 消费（无「死升级」）', () => {
   for (const u of BALANCE.researchUpgs) {
     assert.ok(u.fx, `研究升级 ${u.id} 缺 fx`);

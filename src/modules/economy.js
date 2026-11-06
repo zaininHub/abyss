@@ -1,7 +1,7 @@
 import { S } from '../state.js';
 import { UPGRADES } from '../data/upgrades.js';
 import { ETERNALS, esCost as _esCost } from '../data/eternals.js';
-import { PETS, petBaseMult } from '../data/pets.js';
+import { PETS, petBaseMult, petLevelMilestoneMult, petsStarving } from '../data/pets.js';
 import { MOOD_MULT, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水（吞噬吞没线程）
 import { BALANCE } from '../data/balance.js';
@@ -12,6 +12,9 @@ import { fxValue, fxBest } from '../core/effectEngine.js';
 import {
   geomCostBase, geomCostRaw, bulkGeomCost, powerScale, compoundBuff, geomSeriesSum,
 } from '../core/pricing.js'; // 纯价格内核：几何单价/批量/幂律/复利/等比级数和
+import { lineRule, lineFlag, LINE_RULE_KEYS as K } from '../core/lineRules.js'; // v3.7.0：线专属效果唯一入口
+import { researchMult } from '../core/research.js'; // v3.7.0：研究读侧下沉到 core
+export { researchMult };
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
@@ -36,18 +39,27 @@ export function activePetIds() {
 }
 
 export function petMult(key) {
+  // v3.7.0：PT 耗尽休战 → 出战加成整体失效（与 main.js 的休战日志、异兽面板灰显同口径）
+  const active = activePetIds();
+  if (petsStarving(S.pt, active.length)) return 1;
   let m = 1;
-  for (const id of activePetIds()) {
+  for (const id of active) {
     const p = S.pets[id];
     if (!p) continue;
     const base = petBaseMult(id, key);
     if (base === 1 && !p.mixed) continue;
     const levelMult = 1 + p.level * 0.02;
+    // v3.7.0：25/50/80/100 级里程碑此前只存在于 UI 文案与一份死实现里，真实产出未计入 → 补齐
+    const mileMult = petLevelMilestoneMult(p.level);
     const genMult = 1 + (p.gen - 1) * 0.5 * (1 + elv('fuse') * 0.1);
-    let pm = (p.mixed ? (p.mixed[key] || 1) : base) * levelMult * genMult;
+    let pm = (p.mixed ? (p.mixed[key] || 1) : base) * levelMult * genMult * mileMult;
     if (S.runTalent === 'pet_master' && key === 'global') pm *= 2;
     pm *= (1 + elv('pet') * 0.08);
     if (S.religion && S.religion.nature) pm *= 2;
+    // v3.7.0：信仰线「圣宠庇佑」——只放大「实际生效的异兽」加成。
+    // 必须放在循环内：旧版硬编码也是逐宠放大；若放到 return 上，
+    // 没有任何异兽时 m=1 也会被乘 1.10，等于凭空白送全局产出（30 天浏览器对照实测比值 3.3 而非 3）。
+    pm *= lineRule(K.PET_MULT, 1, S);
     m *= pm;
   }
   return m;
@@ -66,7 +78,8 @@ export function tidePhaseInfo(idx) {
 export function tideMult(key) {
   const ph = tidePhaseInfo(S.tidePhase);
   // v2.8.4：零熵协议——潮汐负面效果减半（不再免疫，只减缓）
-  const soften = hasTech('zero_entropy') ? 0.5 : 0;
+  // v3.7.0：秩序线「逻辑稳流」在此叠加规则（与科技取同一 soften 通道，不重复乘算）
+  const soften = lineRule(K.TIDE_NEGATIVE, hasTech('zero_entropy') ? 0.5 : 0, S);
   const halve = (m) => (soften > 0 && m !== 1) ? (m < 1 ? 1 - (1 - m) * soften : 1 + (m - 1) * soften) : m;
   if (key === 'ep') return halve(ph.epMult);
   if (key === 'salary') return halve(ph.salaryMult);
@@ -77,13 +90,21 @@ export function tideMult(key) {
 }
 
 // ========== 矩阵腐化（v2.0 §3） ==========
+// v3.7.0：腐化上限统一由故事线规则给出（深渊线「混沌容器」抬高上限），
+//   delve.js / rift.js 的三处硬编码 Math.min(100, ...) 也改走本函数，避免口径分叉。
+export function corruptionCap() {
+  return lineRule(K.CORRUPTION_CAP, BALANCE.corruption.max, S);
+}
+
 export function corruptionPenalty() {
-  const c = Math.max(0, Math.min(BALANCE.corruption.max, S.corruption || 0));
+  const c = Math.max(0, Math.min(corruptionCap(), S.corruption || 0));
   if (c === 0) return 1;
   let per = BALANCE.corruption.penaltyPerPercent;
   if (hasTech('entropy_reduce')) per /= 1.5;
   if (hasTech('zero_entropy')) per /= 1.25; // v2.8.4：零熵协议（-25%，不再免疫级 -50%）
-  return Math.max(BALANCE.corruption.penaltyFloor, 1 - c * per);
+  per *= lineRule(K.CORROSION_SLOW, 1, S);   // v3.7.0：信仰线「神迹之躯」腐化积累惩罚 -25%
+  const raw = Math.max(BALANCE.corruption.penaltyFloor, 1 - c * per);
+  return lineRule(K.CORRUPTION_PENALTY, raw, S); // v3.7.0：秩序线「熵减护盾」
 }
 
 export function purifierCleanRate() {
@@ -93,7 +114,8 @@ export function purifierCleanRate() {
     if (n === 0) continue;
     total += p.rate * n;
   }
-  return total;
+  // v3.7.0：信仰线「信仰中和」——有 FP 时净化效率 +20%（不改变「无节点则无净化」的前提）
+  return lineFlag(K.FAITH_PURIFY, S) ? total * 1.2 : total;
 }
 
 // ========== v2.1.1 P1-B：腐化 tick（自 main.js 迁出，便于数值自测） ==========
@@ -158,17 +180,8 @@ export function esDiscovered() {
   return !!(S.resDiscovered && S.resDiscovered.es);
 }
 
-// v2.8.4：研究点升级（RP 购买）读侧
-export function researchMult(key) {
-  const T = BALANCE.researchUpgs || [];
-  let m = 1;
-  for (const u of T) {
-    const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
-    if (lv <= 0 || !u.fx || u.fx.key !== key) continue;
-    m *= compoundBuff({ base: 1, perLevel: u.fx.v, levels: lv, mode: key === 'global' ? 'multiplicative' : 'linear' });
-  }
-  return m;
-}
+// v3.7.0：研究点升级读侧已下沉到 core/research.js（供 policies.js 等数据层复用，避免循环依赖）。
+// 此处再导出保持既有 `from './economy.js'` 的 import 兼容。
 
 // v2.8.4：深渊遗存（跨轮回携带建筑）读侧
 export function legacyLv(id) { return (S.relicLegacy && S.relicLegacy[id]) || 0; }
@@ -264,10 +277,13 @@ export function globalMult() {
   m *= leaderGlobalMult(); // v3.3.0：领导者线程全局加成（每个 +5%，封顶 +25%）
   // v3.4.6 反馈③：星际燃料模式——持续燃烧 CPS 加速全局产出（星图页开关，CPS 耗尽自动熄火）
   if (S.fuelMode && (S.starCps || 0) > 0) m *= 1.5;
+  // v3.7.0：线专属全局乘区统一走规则表，并置于软上限「之前」。
+  //   旧版信仰线 ×3 写在压缩之后，等于绕过防无限滚钳制（本次 review 修复的数值缺陷）。
+  m *= lineRule(K.GLOBAL_MULT, 1, S);
+  if (lineFlag(K.SYMBIOSIS, S)) m *= 1.05; // 深渊线「共生」：高腐化时的小额回报
   if (m > B.softCapThreshold) {
     m = B.softCapThreshold + Math.sqrt(m - B.softCapThreshold) * B.softCapFactor;
   }
-  if (S.storyline === 'line_faith') m *= 3; // v2.8.30 ③：神权协议——全局 ×3（信仰传播者线）
   return m;
 }
 
@@ -316,7 +332,8 @@ export function costMult() {
   if (S.runTalent === 'thrift') m *= 0.8;
   m *= Math.max(0.1, 1 - elv('cost') * 0.02);
   if (S.religion && S.religion.genesis) m *= 0.8;
-  return m;
+  // v3.7.0：秩序线「协议折扣」
+  return lineRule(K.COST_MULT, m, S);
 }
 
 export function focusCostMult() {
@@ -498,7 +515,8 @@ export function sealDmReward(rift) {
   let r = (rift.dmReward || 0) + vehicleTierDmBonus();
   if (abyssFishbowlLevel() >= 3) r += 5;
   if (hasAbyssMarket()) r *= 2;
-  return r;
+  // v3.7.0：深渊线「裂隙亲和」
+  return lineRule(K.SEAL_DM, r, S);
 }
 // 拥抱裂隙爆发时长（毫秒，基准 60s + 档位×5s）
 export function embraceDurMs() {
@@ -801,6 +819,10 @@ export function multBreakdown() {
   if (S.religion && S.religion.crusade > 0) parts.push(`圣战军 ×${Math.pow(1.12, S.religion.crusade).toFixed(2)}`);
   const tome = relicMult('tome');
   if (tome !== 1) parts.push(`遗物·古卷 ×${tome.toFixed(2)}`);
+  // v3.7.0：线专属乘区（与 globalMult 同源），悬浮明细不再漏列
+  const lineG = lineRule(K.GLOBAL_MULT, 1, S);
+  if (lineG !== 1) parts.push(`线专属全局 ×${lineG.toFixed(2)}`);
+  if (lineFlag(K.SYMBIOSIS, S)) parts.push('共生 ×1.05');
   return parts;
 }
 
@@ -967,9 +989,8 @@ export function epStorageCap() {
   // 里程碑乘算基座：每个已达成里程碑 +25%（v2.0.2 由 50% 压缩）
   const milesDone = Object.keys(S.milesDone || {}).length;
   cap *= (1 + B.storageMileBonus * milesDone);
-  // v2.0.2：故事线变体上限加成
-  if (S.storyline === 'line_abyss') cap *= 1.15;
-  else if (S.storyline === 'line_order') cap *= 1.10;
+  // v3.7.0：线专属仓储加成由规则表给出（深渊线 ×1.15 / 秩序线 ×1.10，行为与旧硬编码一致）
+  cap *= lineRule(K.EP_CAP, 1, S);
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
   cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
   cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）

@@ -1,6 +1,6 @@
 // v2.0 核心：故事线管理器（Storyline Manager）
 import { setStoryline, registerVariants } from './provider.js';
-import { registerRule, _clearRules } from './ruleEngine.js';
+import { clearDynamicRules, _clearRules } from './ruleEngine.js';
 import { registerGate, _clearGates } from './gates.js';
 
 let _registered = new Map();
@@ -28,18 +28,15 @@ export function loadStoryline(id) {
       try { prev.hooks.onUnload(); } catch (e) { /* console.error(e); */ }
     }
   }
-  _clearRules();
+  // v3.7.0：只清动态扩展规则。各线声明的 rules 已由 core/lineRules.js 静态注册，
+  //   若在此重复注册会让同一变换执行两次（数值翻倍）；若直接 _clearRules() 又会让规则永久丢失。
+  clearDynamicRules();
   _clearGates();
   _current = id;
   setStoryline(id);
   const pkg = _registered.get(id);
   if (pkg) {
     if (pkg.data) registerVariants(pkg.data);
-    if (pkg.rules) {
-      for (const [key, fn] of Object.entries(pkg.rules)) {
-        registerRule(key, fn, 10, id);
-      }
-    }
     if (pkg.gates) {
       for (const [moduleId, gateDef] of Object.entries(pkg.gates)) {
         registerGate(moduleId, gateDef.predicate, gateDef.label || '', id);

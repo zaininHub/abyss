@@ -1,36 +1,22 @@
 import { S, save } from '../state.js';
-import { PETS, petBaseMult } from '../data/pets.js';
+import { petBaseMult, petLevelMilestoneMult, petsStarving as _petsStarving } from '../data/pets.js';
+import { getStorylinePets } from '../core/storylineContent.js'; // v3.7.0：异兽表按当前故事线动态合并
 import { elv, fmt, ptCap } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
 import { BALANCE } from '../data/balance.js'; // v3.4.0 反馈③：孵化汇率与 tick 同源
 import { converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径）
 import { checkEasterEggs } from './progression.js';
 
+// v3.7.0：不能把表在模块加载时固化——main.js 才在启动链里 setStoryline，
+// 且玩家立誓后当前线会变化。每次读取时按当前线动态合并基础表 + 线专属变体。
+function petTable() { return getStorylinePets(); }
+
 export function activePetIds() {
   return S.activePets.filter(id => S.pets[id]);
 }
 
-export function petMult(key) {
-  if (petStarving()) return 1; // v3.2.1 反馈⑨：PT 不足休战中——出战加成整体失效
-  let m = 1;
-  for (const id of activePetIds()) {
-    const p = S.pets[id];
-    if (!p) continue;
-    const base = petBaseMult(id, key);
-    if (base === 1 && !p.mixed) continue;
-    const levelMult = 1 + p.level * 0.02;
-    // v2.7.3 ⑦：等级里程碑——25/50/80/100 级各解锁一档额外加成（玩法深度）
-    const MILESTONES = [[25, 1.25], [50, 1.5], [80, 1.8], [100, 2.2]];
-    let mileMult = 1;
-    for (const [lv, mv] of MILESTONES) if (p.level >= lv) mileMult *= mv;
-    const genMult = 1 + (p.gen - 1) * 0.5 * (1 + elv('fuse') * 0.1);
-    let pm = (p.mixed ? (p.mixed[key] || 1) : base) * levelMult * genMult * mileMult;
-    if (S.runTalent === 'pet_master' && key === 'global') pm *= 2;
-    pm *= (1 + elv('pet') * 0.08);
-    if (S.religion && S.religion.nature) pm *= 2;
-    m *= pm;
-  }
-  return m;
-}
+// v3.7.0 review：此处原有一份与 economy.js 同名的 petMult，但全项目无人 import（死实现）。
+// 它算了等级里程碑与 PT 休战，真实产出那份却没算 → UI/日志与 computeCps 口径分叉。
+// 现在里程碑与休战统一下沉 data/pets.js，真实乘数只认 economy.js 的 petMult。
 
 export function petExpNeed(level) {
   // v2.7.3 ⑦：升级减速——需求曲线抬高（1000×l^2.5 → 1200×l^2.8），防止后期产出爆炸导致宠物等级飞涨
@@ -40,7 +26,7 @@ export function petExpNeed(level) {
 // v3.4.5 反馈④：异兽分档（tier 1~6，融合兽按 6）——档位越高，升级饼干与维持消耗越贵
 export function petTierOf(id, p) {
   if (p && p.tier) return p.tier;
-  const def = PETS.find(x => x.id === id);
+  const def = petTable().find(x => x.id === id);
   if (def) return def.tier || 1;
   return 6; // 融合异兽（无静态定义）
 }
@@ -103,7 +89,7 @@ export function petUpkeepTotalPerSec() {
   return sum;
 }
 export function petStarving() {
-  return (S.pt || 0) <= 0 && activePetIds().length > 0;
+  return _petsStarving(S.pt, activePetIds().length); // v3.7.0：与 economy.js 真实乘数共用同一判定
 }
 
 export function buyPet(petDef) {
@@ -190,15 +176,13 @@ export function petEffectText(id, p) {
     const base = p.mixed ? (p.mixed[k] || 1) : petBaseMult(id, k);
     if (base <= 1.0001) continue;
     const levelMult = 1 + p.level * 0.02;
-    const MILESTONES = [[25, 1.25], [50, 1.5], [80, 1.8], [100, 2.2]];
-    let mileMult = 1;
-    for (const [lv, mv] of MILESTONES) if (p.level >= lv) mileMult *= mv;
+    const mileMult = petLevelMilestoneMult(p.level); // v3.7.0：与真实产出共用 data 层常量
     const genMult = 1 + (p.gen - 1) * 0.5 * (1 + elv('fuse') * 0.1);
     const total = base * levelMult * genMult * mileMult * (1 + elv('pet') * 0.08);
     parts.push(`${label} +${Math.round((total - 1) * 100)}%`);
   }
   if (!parts.length) {
-    const def = PETS.find(x => x.id === id);
+    const def = petTable().find(x => x.id === id);
     return def ? def.desc : '无加成';
   }
   return parts.join(' · ');
@@ -210,7 +194,7 @@ const _petEls = new Map(); // id -> card el（原地刷新用）
 
 function petCardHtml(id, p, actives, starving) {
   const isActive = actives.includes(id);
-  const def = PETS.find(x => x.id === id);
+  const def = petTable().find(x => x.id === id);
   const genTag = p.gen > 1 ? `<div class="gen">G${p.gen}</div>` : '';
   const upk = petUpkeepPerSec(p, id);
   const upkLine = isActive
@@ -263,7 +247,7 @@ export function renderPetGrid(container) {
   const autoHatch = S.ptAutoHatch === true;
   const hatchLv = S.ptHatchLv || 1;
   const ownedIds = Object.keys(S.pets);
-  const buyable = PETS.filter(p => !ownedIds.includes(p.id));
+  const buyable = petTable().filter(p => !ownedIds.includes(p.id));
   const ptFull = (S.pt || 0) >= ptCap() - 1e-9; // v3.3.9 反馈⑦：满仓停产提示（开关保持开启）
 
   // v3.3.9 反馈③⑥：结构签名——只在「等级/出战/可升级/孵化开关/可购买品种/休战」变化时重建，
@@ -338,7 +322,7 @@ export function renderPetGrid(container) {
       }
       const buy = ev.target.closest ? ev.target.closest('[data-pet-buy]') : null;
       if (buy) {
-        const p = PETS.find(x => x.id === buy.dataset.petBuy);
+        const p = petTable().find(x => x.id === buy.dataset.petBuy);
         if (p && buyPet(p)) {
           _gridSig = '';
           renderPetGrid(container);
@@ -371,7 +355,7 @@ export function renderPetFloat(container) {
   let html = '';
   if (ids.length > 0) {
     for (const id of ids) {
-      const def = PETS.find(x => x.id === id);
+      const def = petTable().find(x => x.id === id);
       const p = S.pets[id];
       const mile = p.level >= 100 ? '神临' : p.level >= 80 ? '异化' : p.level >= 50 ? '觉醒' : p.level >= 25 ? '成长' : '';
       const anim = def && def.anim ? def.anim : 'a';
@@ -390,7 +374,7 @@ export function renderPetFloat(container) {
 export function refreshPetsAffordability() {
   const cards = document.querySelectorAll('#pet-grid [data-pet-buy]');
   for (const card of cards) {
-    const p = PETS.find(x => x.id === card.dataset.petBuy);
+    const p = petTable().find(x => x.id === card.dataset.petBuy);
     if (!p) continue;
     card.classList.toggle('cant', (S.pt || 0) < p.price);
   }

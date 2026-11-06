@@ -203,6 +203,9 @@ t('loadStoryline 调用点全库恰 2 处：shop.buyCrossroadBuilding 购买钩�
   for (const [f, txt] of Object.entries(srcText)) {
     if (f.endsWith('storylineManager.js')) continue; // 本体定义与内部使用不计
     for (const line of txt.split('\n')) {
+      // v3.7.0：注释里出现的 loadStoryline() 只是说明文字，不是调用点。
+      // 保持「恰 2 处」的严格口径，但只统计真实代码行。
+      if (line.trimStart().startsWith('//')) continue;
       if (line.includes('loadStoryline(')) hits.push(`${f.split('/src/')[1] || f}: ${line.trim().slice(0, 80)}`);
     }
   }

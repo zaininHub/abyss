@@ -31,16 +31,20 @@ export default {
         { id: '10B', name: '混沌之子', cond: (S) => S.storyline === 'line_abyss' && hasTech(S, 'chaos_born'), desc: '深渊给了你一份礼物：一个会随机的逻辑。有时它让你更强，有时它让你更疯。' },
         { id: '11B', name: '不可名状', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 30, desc: 'DM 开始在你体内结晶。你不再确定"你"的边界在哪里。' },
         { id: '12B', name: '深渊之心', cond: (S) => S.storyline === 'line_abyss' && (((S.buildings||{}).end_shrine||0) >= 1 || hasTech(S, 'true_end')) && hasTech(S, 'chaos_born') && hasTech(S, 'chaos_mind') && hasTech(S, 'abyss_heart'), desc: '你成为了裂隙本身。每一个新玩家的游戏里，都有你的一个碎片在凝视。' },
+        // v3.7.0 剧情扩充：成为裂隙之后的两段番外
+        { id: '13B', name: '低语的语法', cond: (S) => S.storyline === 'line_abyss' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '封印第五道裂隙时，你第一次听懂了一个完整的句子。深渊没有在召唤你，也没有在警告你——它只是在描述你。描述得比你自己更准确，这让你有点不舒服。' },
+        { id: '14B', name: '共生的边界', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 100, minDays: 7, desc: 'DM 攒到第一百份的那天，你试着划一条线：到这里是你，从那里是深渊。线画了三次，三次都在同一处化开。最后你把它留作装饰，没再擦掉。' },
       ],
     },
     events: {
       append: [
-        { id: 'tentacle_click', name: '触须点击', type: 'buff', buffMult: 1, dur: 60, desc: '接下来 60 秒内，每 5 秒自动"点击"一次工作台', weight: 1 },
-        { id: 'whisper_buff', name: '低语增益', type: 'buff', buffMult: 2, dur: 120, desc: '随机一项产出 +100% 持续 120 秒', weight: 1 },
-        { id: 'deep_dream', name: '深梦', type: 'buff', buffMult: 5, dur: 10, desc: '暂停 10 秒，恢复后获得 10 秒产出 ×5', weight: 0.8 },
-        { id: 'void_gift', name: '虚空赠礼', type: 'dm', amount: 2, desc: 'DM +1~3', weight: 0.5 },
-        { id: 'parasite', name: '寄生', type: 'buff', buffMult: 1.5, dur: 60, desc: '线程消耗 +30% 持续 60 秒，但产出 +50%', weight: 1 },
-        { id: 'true_name', name: '真名', type: 'buff', buffMult: 2, dur: 1800, desc: '屏幕中央显示玩家存档 KEY 的前 4 位，5 秒后消失，获得 30 分钟 ×2 产出', weight: 0.1 },
+        // v3.7.0：字段统一到 applyEvent 口径；desc 与实际效果严格一致（旧版多为未实装的承诺文案）
+        { id: 'tentacle_click', name: '触须点击', lineOnly: true, type: 'clickbuff', mult: 5, dur: 60, minCps: 100, rare: false, desc: '60 秒点击 ×5' },
+        { id: 'whisper_buff', name: '低语增益', lineOnly: true, type: 'buff', mult: 2, dur: 120, minCps: 1e3, rare: false, desc: '2 分钟产出 ×2' },
+        { id: 'deep_dream', name: '深梦', lineOnly: true, type: 'buff', mult: 5, dur: 10, minCps: 1e5, rare: true, desc: '10 秒产出 ×5' },
+        { id: 'void_gift', name: '虚空赠礼', lineOnly: true, type: 'dm', amount: 3, minCps: 1e5, rare: true, desc: '立即获得 3 DM' },
+        { id: 'parasite', name: '寄生', lineOnly: true, type: 'buff', mult: 1.5, dur: 60, minCps: 1e4, rare: false, desc: '60 秒产出 ×1.5' },
+        { id: 'true_name', name: '真名', lineOnly: true, type: 'buff', mult: 3, dur: 300, minCps: 1e6, rare: true, desc: '5 分钟产出 ×3' },
       ],
     },
     buildings: {
@@ -50,14 +54,17 @@ export default {
     },
     pets: {
       append: [
-        { id: 'little_chaos', name: '小混沌', icon: '🌀', desc: '不断变色的漩涡，每 2 秒变一次。鼠标悬停显示随机低语文本', flavor: '线B 专属：首次腐化达到 50% 时自动获得' },
+        // v3.7.0：补齐标准商店字段
+        { id: 'little_chaos', name: '小混沌', icon: '🌀', price: 5200, tier: 3, anim: 'd', spark: '❋', desc: '事件效果 +15%', flavor: '深渊线专属：它每次变色都在改写一条概率' },
       ],
     },
   },
+  // v3.7.0：规则键与 core/lineRules.js 声明的消费点一一对应。
   rules: {
-    'seal_dm_bonus': (base, ctx) => base * 1.5,
-    'corruption_cap': (base, ctx) => 150,
-    'symbiosis_active': (base, ctx) => (ctx.S.corruption || 0) > 50,
+    seal_dm_bonus:     (base) => base * 1.25,
+    corruption_cap:    () => 120,
+    symbiosis_active:  (base, ctx) => (ctx.S.corruption || 0) > 50,
+    ep_cap_mult:       (base) => base * 1.15,
   },
   gates: {
     order_panel: { predicate: (ctx) => false, label: '秩序模式（深渊线锁定）' },

@@ -1579,10 +1579,11 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // v3.4.2：研究菜单扩充——各批次新增条目（ep/thread/global/offline 等）并入对应轴
   // v3.6.0 方向①：研究菜单由 3 组 20 项扩到 4 组 30 项——新增「星际与拟我」整组，
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2'], unlock: null },
-  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy'], unlock: { prev: 'prod', need: 4 } },
-  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2'],                                                    unlock: { prev: 'res', need: 4 } },
-  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai'],                                                             unlock: { prev: 'res', need: 4 } },
+  // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2', 'rp_ep3', 'rp_thread2'], unlock: null },
+  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy', 'rp_wage2'], unlock: { prev: 'prod', need: 4 } },
+  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2', 'rp_rift3'],                                        unlock: { prev: 'res', need: 4 } },
+  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2'],                                                    unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 

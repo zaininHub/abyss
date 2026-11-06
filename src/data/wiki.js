@@ -4,11 +4,14 @@
 import { S } from '../state.js';
 import { BALANCE } from './balance.js';
 import { MOOD_MULT } from './threads.js'; // v3.6.3 ⑥：心情倍率文案改读数据源，消除硬编码漂移
-import { PRAISE, SECRET_SANCTUMS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
+import { PRAISE, SECRET_SANCTUMS, RELIGIONS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
 import { POLICY_GROUPS } from './policies.js';
 import { BAZAAR, RES_LABEL } from './bazaar.js'; // v3.0.0：深渊集市
-import { fmt } from '../modules/economy.js';
+import { DELVE } from './delve.js'; // v3.7.0：深潜段落改读数据源，消除硬编码漂移
+import { fmt, corruptionCap } from '../modules/economy.js';
 import { delveDepth } from '../modules/delve.js';
+import { getRegisteredStorylines, getStorylinePackage } from '../core/storylineManager.js'; // v3.7.0：故事线特色章节
+import { LINE_RULE_LABELS } from '../core/lineRules.js';
 
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -80,11 +83,11 @@ export const WIKI_SECTIONS = [
       ${D.tide.phases.map(p => `<tr><td>${p.icon} ${p.name}</td><td>${(p.epMult*100-100|0)}%</td><td>${(p.salaryMult*100-100|0)}%</td><td>${(p.techCostMult*100-100|0)}%</td><td>${p.eventBadWeight>1?'负面 ×'+p.eventBadWeight:'正常'}</td></tr>`).join('')}
     </table>
     <h4>矩阵腐化</h4>
-    <p>腐化来源：深入裂隙（${D.rift.delveCorruptPerLevel}%/s/级）、深潜（${fmt(0.02)}/层/s）、观测主义政策（+0.02/s）。每 1% 腐化全局产出 -${D.corruption.penaltyPerPercent*100}%（下限 -${(1-D.corruption.penaltyFloor)*100}%）。</p>
+    <p>腐化来源：深入裂隙（单次约 ${D.rift.delveCorruptPerRun}%，随裂隙等级递增、单次上限 ${D.rift.delveCorruptRunCap}%）、深潜（随层深累积）、观测主义政策（+0.02/s）。每 1% 腐化全局产出 -${D.corruption.penaltyPerPercent*100}%（下限 -${(1-D.corruption.penaltyFloor)*100}%），当前腐化上限 ${corruptionCap()}%。</p>
     <h4>主动净化（消耗 EP，腐化越严重析出 DM 越多）</h4>
     <p>每次清除最多 ${purify.maxCut}% 腐化，EP 成本 ≈ 存储上限 × ${(purify.epCostPerPct*100).toFixed(1)}% × 净化量；DM 析出 = 净化量² × ${purify.dmPerPctSq}（50% → ${50*50*purify.dmPerPctSq} DM，10% → ${10*10*purify.dmPerPctSq} DM）。</p>
     <h4>深渊吞噬倒计时</h4>
-    <p>腐化满额（100%）→ 启动 ${60}s 倒计时（稳定协议科技 ${180}s）。<b>倒计时一旦启动即锁定</b>——被动净化被深渊压制，唯二解除：① 主动净化（消耗 EP）压至满额以下；② 倒计时终结的命运抉择。<b>转生不可脱离深渊</b>——晋升/轮回在倒计时/抉择/崩溃期间均被锁定。</p>
+    <p>腐化满额（${corruptionCap()}%）→ 启动 ${60}s 倒计时（稳定协议科技 ${180}s）。<b>倒计时一旦启动即锁定</b>——被动净化被深渊压制，唯二解除：① 主动净化（消耗 EP）压至满额以下；② 倒计时终结的命运抉择。<b>转生不可脱离深渊</b>——晋升/轮回在倒计时/抉择/崩溃期间均被锁定。</p>
     <p class="wiki-warn">⚠️ 倒计时终结抉择（不可关闭，二选一）：<br>💰 <b>贿赂深渊</b>：上缴 90% EP，成为深渊的朋友（本局继续，腐化清零）→ 成就「恶魔的朋友」<br>💥 <b>同归于尽</b>：立即触发崩溃杀死深渊（本局湮灭 + 强制转生，湮灭残片 +1）→ 成就「凝视深渊」</p>
   ` },
   { id: 'rift', name: '裂隙与余烬', unlock: 'rift', body: () => `
@@ -96,7 +99,7 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'religion', name: '宗教与虔诚', unlock: 'faith', body: () => `
     <h4>宗教分支（选一锁定，跨转生保留）</h4>
-    <p>日耀议会（全局 ×2）/ 创世枢机（成本 ×0.8）/ 月影修道会（离线 ×1.5）/ 天启密会（项目 ×2）/ 自然亲和（异兽 ×2）/ 永生日轮（ES ×2）/ 全知教团（全局 ×10）。</p>
+    <p>${RELIGIONS.map(r => `${r.name}（${r.effect}）`).join(' / ')}。</p>
     <h4>赞颂 → 虔诚 → 超验</h4>
     <p><b>FP（信仰）</b>（圣所产出）→ ≥容量 ${PRAISE.thresholdRatio*100}% 时<b>赞颂</b>转化得<b>虔诚</b>（跨周期保留）→ 消耗虔诚<b>超验</b>提升层级（成本 ${PRAISE.transcendBase}×${PRAISE.transcendGrowth}^级）。</p>
     <ul>
@@ -109,17 +112,28 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'policy', name: '周期政策', unlock: 'policy', body: () => `
     <h4>周期政策（组内互斥、每轮重选）</h4>
-    <p>每局（晋升/轮回后）按跨周期资产开放政策组，每组三选一，选 A 锁 B/C；效果 ±10-30% 正负成对（拿一头强必吃另一头弱）；改选消耗回响/虔诚 ×2^n（立誓改选成本翻倍，中立半价）。</p>
+    <p>每局（晋升/轮回后）按跨周期资产开放政策组，共 ${POLICY_GROUPS.length} 组；组内互斥，每组 2~3 选一，选 A 锁同组其余项；效果 ±10-30% 正负成对（拿一头强必吃另一头弱）；改选消耗回响/虔诚 ×2^n（立誓改选成本翻倍，中立半价）。</p>
     ${POLICY_GROUPS.map(g => `<p><b>${g.name}组</b>：${g.policies.map(p => `${p.name}（${p.desc}）`).join(' / ')}</p>`).join('')}
     <p class="wiki-hint">立誓（岔路口买定向建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。每轮政策走向记入图鉴「历史周期走向」。</p>
   ` },
+  { id: 'line', name: '故事线特色', unlock: null, body: () => `
+    <h4>立誓之后的线专属规则</h4>
+    ${getRegisteredStorylines().filter(id => id !== 'default').map(id => {
+      const pkg = getStorylinePackage(id);
+      if (!pkg) return '';
+      const rules = Object.keys(pkg.rules || {});
+      const evCount = (pkg.data && pkg.data.events && pkg.data.events.append || []).length;
+      return `<p><b>${pkg.name}${S.storyline === id ? '（当前）' : ''}</b>：${rules.map(k => LINE_RULE_LABELS[k] || k).join(' / ')}${evCount ? `；另有 ${evCount} 个线专属随机事件` : ''}。</p>`;
+    }).join('')}
+    <p class="wiki-hint">线专属效果由故事线规则表统一驱动，与全局加成明细同源；线专属事件与异兽只在对应故事线出现。切换故事线需重新立誓，单局锁定后不可更改。</p>
+  ` },
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `
     <h4>深渊深潜（终局层，层深/VS 跨转生保留）</h4>
-    <p>解锁：ES ≥ 3 + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × 4% × 1.12^层深（封顶 75% 上限，耐压舱 -8%/级），DM 成本 ${100}×1.35^层深；<b>下潜即层深 +1</b>；越深 VS 产出越高（基础 ${0.5}/s × (1+0.5×层)）。</p>
-    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × 0.02% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${0.02}%/层/s（净化核心 -30%/级）。</p>
-    <p>当前层深：Lv.${delveDepth()}。里程碑：10 层 +50 VS / 25 层 +200 / 50 层 +1000 / 75 层 +2500 / 100 层 +5000（深渊之眼终局徽记）/ 150 层 +20000（回声定位 +20%/级）。</p>
-    <h4>深潜升级树（VS 消耗，8 项）</h4>
-    <p>深潜器（VS+50%/级）/ 虚空强化（全局 ×1.10/级）/ 净化核心（腐化 -30%/级）/ 深渊共鸣（圣印+2/级·FP×1.5/级）/ 拟态矩阵（AI 间隔 -20%/级）/ 星辰余烬（离线上限 +20%/级）/ <b>耐压舱</b>（EP 维持 -25%/级·下潜 EP 成本 -8%/级）/ <b>回声定位</b>（VS+35%/级·里程碑 +20%/级）。</p>
+    <p>解锁：ES ≥ ${DELVE.unlockEs} + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × ${DELVE.epDiveRatio*100}% × ${DELVE.epDiveGrowth}^层深（封顶 ${DELVE.epDiveRatioCap*100}% 上限，耐压舱 -8%/级），DM 成本 ${DELVE.diveBase}×${DELVE.diveGrowth}^层深；<b>下潜即层深 +1</b>；越深 VS 产出越高（基础 ${DELVE.vsBase}/s × (1+${DELVE.vsDepthMult}×层)）。</p>
+    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × ${(DELVE.epUpkeepPerDepth*100).toFixed(2)}% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${DELVE.corruptPerDepth}%/层/s（净化核心 -30%/级）。</p>
+    <p>当前层深：Lv.${delveDepth()}。里程碑：${DELVE.milestones.map(m => `${m.depth} 层 +${m.vs} VS`).join(' / ')}（100 层得「深渊之眼」终局徽记）。</p>
+    <h4>深潜升级树（VS 消耗，${Object.keys(DELVE.upgrades).length} 项）</h4>
+    <p>${Object.values(DELVE.upgrades).map(u => `${u.name}（${u.desc}）`).join(' / ')}。</p>
   ` },
   { id: 'bazaar', name: '深渊集市', unlock: 'bazaar', body: () => `
     <h4>深渊集市（v3.0.0 大模块）</h4>
@@ -142,12 +156,13 @@ export const WIKI_SECTIONS = [
     <h4>轮回（第二层循环，晋升之上）</h4>
     <p>门槛：本局 ≥ 1 次晋升 + 累计 EP ≥ ${fmt(1e9)}。结算深渊回响 = min(100, 8×√(本局成就评分))，每点全局 +5%（跨轮回保留）。每次轮回按本局最强维度携带 1 座「深渊遗存」（同种 cap 3）：湮灭核心（全局 ×1.25）/ 记忆库（上限 ×2）/ 虚空锚（余烬 +25%）。</p>
     <h4>回响商店（永久，跨轮回）</h4>
-    <p>回响增幅（全局 ×1.3/级）/ 裂隙共鸣（余烬 ×2/级）/ 深潜共振（深潜 ×1.5/级）/ 信仰共鸣 / 异兽共鸣。</p>
+    <p>${D.reincarn.upgs.map(u => `${u.name}（${u.desc}）`).join(' / ')}。</p>
     <p class="wiki-warn">深渊吞噬期间，晋升与轮回均被锁定——转生不可脱离深渊（唯命运抉择可终结）。</p>
   ` },
   { id: 'ach', name: '成就与彩蛋', unlock: null, body: () => `
     <h4>成就（跨转生保留，达成即点亮；未达成不显示）</h4>
-    <p>初次接触 / 一丝涟漪（1K EP）/ 涌动（100K）/ 深流（1M）/ 渊海（1B）/ 十件造物 / 三人成众 / 初次超脱 / 循环之始 / 永恒碎片 / 认知扩展 / 短暂告别 / 深渊伙伴 / 裂缝缝合 / 深渊之下 / 信仰觉醒 / 深渊物质 / 缸中之渊 / 静默一分钟。</p>
+    <p>覆盖产出、晋升、轮回、宗教、政策、裂隙、深潜、AI、剧情与彩蛋等维度；达成即点亮，未达成不显示，跨转生保留。判定只读当前存档状态。</p>
+    <p class="wiki-hint">v3.7.0 新增：见多识广（100 次事件）/ 七政齐备（7 项政策）/ 归档之人（第 22 章进度）/ 理论满架（研究 35 级）/ 立誓者 / 裂隙守夜（8 道）/ 半身入渊（腐化 50%）/ 任务熟练（50 个任务）。</p>
     <h4>吞噬专属成就（v2.9.0）</h4>
     <p>🤝 <b>恶魔的朋友</b>：倒计时终结选贿赂深渊<br>🌑 <b>凝视深渊</b>：倒计时终结选同归于尽<br>🌑 <b>被深渊吞噬</b>：本局被深渊吞没（同归于尽触发）</p>
   ` },
@@ -155,7 +170,7 @@ export const WIKI_SECTIONS = [
     <h4>系统/功能解锁条件总表（研发手册口径，与代码同步）</h4>
     <table class="wiki-tbl"><tr><th>内容</th><th>解锁条件</th><th>说明</th></tr>
       <tr><td>科技树</td><td>第 1 章 ∧ 购入「矩阵存储库」（RP 锚点）</td><td>RP 消耗，开辟玩法</td></tr>
-      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>分三批次：产出强化开局显现 → 资源与消耗（累计 4 级）→ 深渊终局（再累计 4 级）；未显现批次不占版面</td></tr>
+      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>共 ${D.researchUpgs.length} 项、分四组：产出强化开局显现 → 资源与消耗（累计 4 级）→ 深渊终局 / 星际与拟我（并列，再累计 4 级）；未达条件的组不占版面</td></tr>
       <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点 tab「晋升 RP 加成」分区</td></tr>
       <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点 tab 底部，RP + 里程碑双门控，逐档线性</td></tr>
       <tr><td>异兽（PT/宠物）</td><td>第 3 章 ∧ 购入「饵料仓库」</td><td>仓库即 PT 解锁入口；顶栏 PT、异兽 tab 同步开放；自动孵化需首次购买「孵化升级」解锁；出战异兽维持消耗 PT（不足自动休战）</td></tr>

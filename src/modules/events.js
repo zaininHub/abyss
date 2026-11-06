@@ -1,14 +1,16 @@
 import { S, save } from '../state.js';
-import { getEvents } from '../core/provider.js';
 import { UPGRADES } from '../data/upgrades.js';
-import { computeCps, eventFreqMult, offlineRate, fmt, elv, tideMult, addEp, addRp } from './economy.js';
+import { computeCps, eventFreqMult, offlineRate, fmt, elv, tideMult, addEp, addRp, addDm } from './economy.js';
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：机会感知器·锐
+import { getStorylineEvents } from '../core/storylineContent.js'; // v3.7.0：事件池唯一入口（含线专属变体规范化）
 
 // v3.3.1 反馈③：预言系统（信仰线科技 prophecy）——把「抽取下一个事件」拆出来，
 // 供神谕广播（每 30 秒预告）与实际触发共用同一结果，预告不再是空话
-function eventPool() {
+export function eventPool() {
   const cps = computeCps();
-  const pool = getEvents().filter(e => cps >= e.minCps);
+  // v3.7.0：改走规范化入口。旧实现直读 getEvents()，线专属变体因缺 minCps 被
+  //   `cps >= undefined` 全量过滤掉（18 个事件从未触发），且 buffMult/weight 无人消费。
+  const pool = getStorylineEvents().filter(e => cps >= e.minCps);
   return S.runTalent === 'lucky2' ? pool.filter(e => !e.rare || Math.random() < 0.5) : pool;
 }
 function weightedPick(pool) {
@@ -68,6 +70,9 @@ export function applyEvent(ev, durMult = 1) {
     S.clickBuffUntil = Date.now() + ev.dur * 1000 * durMult;
   } else if (ev.type === 'rp') {
     addRp(Math.ceil(ev.amount * luckyMult * (1 + fxValue('eventRewardAdd')))); // v2.8.27 ②：RP 上限 // v2.1 建筑驱动：机会感知器·锐 +50%/级
+  } else if (ev.type === 'dm') {
+    // v3.7.0：深渊线「虚空赠礼」——与主表 DM 到账统一走 addDm（受 DM 容量约束）
+    addDm(Math.ceil(ev.amount * luckyMult));
   } else if (ev.type === 'focus') {
     S.focusLevel += ev.amount;
   } else if (ev.type === 'freelevel') {

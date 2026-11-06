@@ -6,7 +6,7 @@
 //       ④ 第三选项「深入裂隙」：持续 60s 探索（产出递增 + 腐化累积），结算时腐化超阈值损失 EP，可提前脱出。
 // 既有 sealDmReward / embraceDurMs / 封印与拥抱行为保持（v2.1/v2.4 断言依赖）。
 import { S, save } from '../state.js';
-import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv } from './economy.js';
+import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv, corruptionCap } from './economy.js';
 // v2.7.3 ⑤：回响·裂隙共鸣（余烬 ×2/级）
 function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift') * (1 + 0.12 * riftUpgradeLevel('wellspring')) * ((S.religion && S.religion.abyss) ? 2 : 1); } // v3.6.0：余烬井喷 + 深渊崇拜分支 // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
 import { BALANCE } from '../data/balance.js';
@@ -313,7 +313,7 @@ function settleRiftExpedition(dt) {
   ex.gainedDm += BALANCE.rift.delveDmPerLevel * rewardMul * dt;
   if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * rewardMul * dt;
   // v3.5.0 反馈①：腐化按「单次深入 = 33%~50%」摊到每秒，等级越高单次腐化越多（净化成本同步抬升）
-  S.corruption = Math.min(100, (S.corruption || 0) + riftDelveCorruptPerSec(lv) * dt);
+  S.corruption = Math.min(corruptionCap(), (S.corruption || 0) + riftDelveCorruptPerSec(lv) * dt);
   if (Date.now() >= ex.until) {
     // 终局：腐化 > 阈值 → 损失；否则结算奖励
     const fail = S.corruption > BALANCE.rift.delveFailCorrupt;
