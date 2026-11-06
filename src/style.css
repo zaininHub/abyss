@@ -972,6 +972,8 @@ body.paused .pet-grid .pet-card {
 /* ========== v1.3 模块 A：AI 助手面板 ========== */
 /* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
 #ai-card { padding: 8px 10px; }
+/* v3.7.5 反馈：编队按钮 EP 不足 / 满编灰显（暗色 + 禁点，与全局 .btn:disabled 同口径） */
+#ai-panel [data-assist-buy]:disabled { opacity: .45; cursor: not-allowed; background: #14161c !important; color: #666 !important; border-color: #2a2e3a !important; }
 #code-rain {
   position: fixed; inset: 0; z-index: 999; pointer-events: none; /* v2.8.21 ①：z-index 提到最顶层（此前 z36 仍低于内容 z100/200 被盖住 → 用户多轮看不到粒子）*/
 }

@@ -401,18 +401,47 @@ function assistantDec(type) {
   if ((alloc[type] || 0) <= 0) return;
   alloc[type] -= 1; if (alloc[type] <= 0) delete alloc[type]; save(S);
 }
+// v3.7.5 反馈：「购买编队」可购态唯一真源——渲染 / 300ms 快刷 / 点击兜底共用，
+// 避免「EP 不够却亮着可点」与「攒够 EP 后按钮仍灰」两条链各自判断而漂移。
+// 成本与商店 buyUpgrade 同口径（unitCost(u, 0) === bulkCostCalc(u, 1)，v3.6.0 纪律）。
+export function assistantBuyState() {
+  const u = UPGRADES.find(x => x.id === 'ai_assist');
+  if (!u) return { cost: Infinity, atCap: true, afford: false, disabled: true, label: '已满编', title: '助手编队不可用', sig: 'unavailable' };
+  const cap = u.maxLevel || BALANCE.ai.assistants.maxSlots;
+  const cost = unitCost(u, 0);
+  const atCap = (S.upgrades['ai_assist'] || 0) >= cap;
+  const afford = (S.ep || 0) >= cost;
+  const disabled = atCap || !afford;
+  const label = atCap ? '已满编' : `购买编队（${fmt(cost)} EP）`;
+  const title = atCap ? `助手编队已满编（${cap} 槽）`
+    : afford ? `消耗 ${fmt(cost)} EP 增加 1 个助手槽`
+      : `EP 不足：还需 ${fmt(Math.max(0, cost - (S.ep || 0)))} EP`;
+  return { cost, atCap, afford, disabled, label, title, sig: `${disabled}|${label}|${title}` };
+}
+
+// v3.7.5：EP / 单价 / 等级变动时原地维护可购态（纯属性切换，不重建面板，
+// 避免打断自动购建的二次确认与 hover；sig 去重保证零闪烁）。
+export function refreshAssistantAffordability() {
+  const btn = document.querySelector('#ai-panel [data-assist-buy]');
+  if (!btn) return;
+  const st = assistantBuyState();
+  if (btn.dataset.affordSig === st.sig) return;
+  btn.dataset.affordSig = st.sig;
+  btn.disabled = st.disabled;
+  btn.classList.toggle('disabled', st.disabled);
+  btn.textContent = st.label;
+  btn.title = st.title;
+}
+
 function renderAssistantSection() {
   const total = Math.min(BALANCE.ai.assistants.maxSlots, S.upgrades['ai_assist'] || 0);
   const alloc = (S.ai && S.ai.alloc) || {};
   const used = BALANCE.ai.assistants.allocTypes.reduce((s, t) => s + (alloc[t] || 0), 0);
   const free = Math.max(0, total - used);
-  const u = UPGRADES.find(x => x.id === 'ai_assist');
-  // v3.6.0：与商店 buyUpgrade 同口径（bulkCostCalc(u,1) === unitCost(u,0)），避免两条购买路径价差
-  const cost = unitCost(u, 0);
-  const atCap = (S.upgrades['ai_assist'] || 0) >= (u.maxLevel || 8);
+  const st = assistantBuyState();
   let html = `<div class="ai-desc" style="margin-top:10px">🤖 AI 助手编队：<b>${total}</b>/${BALANCE.ai.assistants.maxSlots} 槽（空闲 ${free}）`;
   if (aiUnlocked()) {
-    html += ` <button class="btn ${atCap ? 'disabled' : ''}" data-assist-buy ${atCap ? 'disabled' : ''}>${atCap ? '已满编' : '购买编队（' + fmt(cost) + ' EP）'}</button>`;
+    html += ` <button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`;
   }
   html += `</div>`;
   const labels = BALANCE.ai.assistants.typeLabels || {};
@@ -544,13 +573,12 @@ export function renderAiPanel(container) {
       }
       const assistBuy = e.target.closest('[data-assist-buy]');
       if (assistBuy) {
-        const u = UPGRADES.find(x => x.id === 'ai_assist');
-        const cost = unitCost(u, 0); // 与主商店 bulkCostCalc(u,1) 同口径
-        if (S.ep >= cost && (S.upgrades['ai_assist'] || 0) < (u.maxLevel || 8)) {
-          S.ep -= cost; S.upgrades['ai_assist'] = (S.upgrades['ai_assist'] || 0) + 1;
+        const st = assistantBuyState(); // v3.7.5：与卡面/快刷同口径，防 EP 在点击瞬间被钳回上限的竞态
+        if (!st.disabled) {
+          S.ep -= st.cost; S.upgrades['ai_assist'] = (S.upgrades['ai_assist'] || 0) + 1;
           S.totalBuys = (S.totalBuys || 0) + 1; ailog('助手编队 +1', 'good');
           dirty.shop = true; // 主商店卡同步刷新（等级/成本/灰态）
-        } else ailog('助手编队购买失败：EP 不足或已满编', 'bad');
+        } else ailog(st.atCap ? '助手编队已满编' : `助手编队购买失败：EP 不足（还需 ${fmt(Math.max(0, st.cost - (S.ep || 0)))} EP）`, 'bad');
         save(S); renderAiPanel(container); return;
       }
       const incEl = e.target.closest('[data-assist-inc]');
