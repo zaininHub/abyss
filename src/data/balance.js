@@ -1,4 +1,21 @@
 // v2.0 数值配置中心：所有平衡常量集中于此（设计方案 §4.1）
+
+// ===== v3.7.4 反馈①：组 A「产出与效率」价效统一口径 =====
+// 旧问题：base 与 fx.value 各自手填 → 预热节点 +2% 要 2.5e5、效能尖塔 +10% 也是 2.5e5，
+//   同价不同加成（截图 455.63K / 525.63K / 552.00K 对应 +2% / +10% / ×1.12）；
+//   desc 又混用「+X%」（加算）与「×N」（乘算），玩家无法横向比较性价比。
+// 新口径（三项不变量，由 tests/v374-value-price-unit.test.mjs 锁定）：
+//   ① 文案唯一真源 aGain()：+X% 由 fx 派生（乘算按 value-1 折算成等效每级增量），全组同句式；
+//   ② 入门三座 aBase()：Lv.0 基价 = 增量% × A_UNIT_PRICE，growth 统一 A_GROWTH
+//      → 任意等级下「价格比 ≡ 加成比」（成本 growth^lv 对三者同比作用）；
+//   ③ 后期七座单价档逐档抬高、单调递增以抑制速通，base 保持 v3.4.2 标定，
+//      里程碑价位映射（<6e5 / 6e5 / 1.5e6 / 4e6）不因本轮改动跨档。
+const A_UNIT_PRICE = 3e4;   // 入门档：每级 +1% 全局产出 = 3 万 EP（Lv.0 基价）
+const A_GROWTH = 1.40;      // 入门三座统一成本递增，保证同等级下比例不漂移
+const aPct = (key, value) => Math.round((key === 'globalMul' ? value - 1 : value) * 100);
+const aGain = (key, value) => ({ fx: { key, value }, desc: `每级全局产出 +${aPct(key, value)}%` });
+const aBase = (key, value) => aPct(key, value) * A_UNIT_PRICE;
+
 export const BALANCE = {
   // 初始与前期
   initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）
@@ -92,19 +109,19 @@ export const BALANCE = {
   // unlockTech = 原 52 科技 ID（作 RP 解锁定价基准：原 RP × buildingUnlockRatio）；保留钥匙（click_up 等 6 项）另作族门控
   buildingsV21: [
     // ---- 组 A · 全局乘数（10 座）----
-    // v3.4.2 反馈①「效能建筑还是太便宜了，提升多消耗又少」：全组重标价——
-    //   base 抬到原值 3~8 倍、growth 统一陡化（1.18~1.50 → 1.35~1.52），
-    //   使「满级总投入」与收益同阶：效能尖塔 +90% 全局 ≈1,500 万 EP（原 ≈29 万，×52）。
-    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: 2.5e5, growth: 1.35, unlockTech: 'warmup',    fx: { key: 'globalAdd', value: 0.02 },  desc: '每级全局产出 +2%' },
-    { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: 2.5e5, growth: 1.45, unlockTech: 'eff2',      fx: { key: 'globalAdd', value: 0.10 },  desc: '每级全局产出 +10%' },
-    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: 4e5,   growth: 1.38, unlockTech: 'speed2',    fx: { key: 'globalMul', value: 1.12 },  desc: '每级全局产出 ×1.12' },
-    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1.2e6, growth: 1.40, unlockTech: 'auto2',     fx: { key: 'globalAdd', value: 0.20 },  desc: '每级全局产出 +20%' },
-    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e6,   growth: 1.45, unlockTech: 'quantum2',  fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.6e6, growth: 1.48, unlockTech: 'singular',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
-    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3.2e6, growth: 1.48, unlockTech: 'transcend', fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 3.8e6, growth: 1.50, unlockTech: 'ascend',    fx: { key: 'globalMul', value: 1.20 }, desc: '每级全局产出 ×1.20' },
-    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.6e6, growth: 1.50, unlockTech: 'eternity',  fx: { key: 'globalMul', value: 1.22 }, desc: '每级全局产出 ×1.22' },
-    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5.4e6, growth: 1.50, unlockTech: 'true_end',  fx: { key: 'globalMul', value: 1.25 }, desc: '每级全局产出 ×1.25' },
+    // v3.4.2 反馈①「效能建筑还是太便宜了，提升多消耗又少」：全组重标价（满级总投入与收益同阶）。
+    // v3.7.4 反馈①「加成和价格不成比例、显示文案不同」：入门三座按 aBase 重排，全组 desc 走 aGain。
+    //   价效阶梯（Lv.0 每 +1% 的单价）：入门三座 3e4 → 调度中枢 6e4 → 锚链 1e5~2.16e5，单调递增。
+    { id: 'warmup_node',    name: '预热节点',   cat: 'A', cap: 5, base: aBase('globalAdd', 0.02), growth: A_GROWTH, unlockTech: 'warmup',    ...aGain('globalAdd', 0.02) },
+    { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: aBase('globalAdd', 0.10), growth: A_GROWTH, unlockTech: 'eff2',      ...aGain('globalAdd', 0.10) },
+    { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: aBase('globalMul', 1.12), growth: A_GROWTH, unlockTech: 'speed2',    ...aGain('globalMul', 1.12) },
+    { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1.2e6, growth: 1.40, unlockTech: 'auto2',     ...aGain('globalAdd', 0.20) },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e6,   growth: 1.45, unlockTech: 'quantum2',  ...aGain('globalMul', 1.20) },
+    { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.6e6, growth: 1.48, unlockTech: 'singular',  ...aGain('globalMul', 1.25) },
+    { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3.2e6, growth: 1.48, unlockTech: 'transcend', ...aGain('globalMul', 1.20) },
+    { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 3.8e6, growth: 1.50, unlockTech: 'ascend',    ...aGain('globalMul', 1.20) },
+    { id: 'eternity_hall',  name: '永恒回廊',   cat: 'A', cap: 3, base: 4.6e6, growth: 1.50, unlockTech: 'eternity',  ...aGain('globalMul', 1.22) },
+    { id: 'end_shrine',     name: '终焉圣殿',   cat: 'A', cap: 3, base: 5.4e6, growth: 1.50, unlockTech: 'true_end',  ...aGain('globalMul', 1.25) },
     // ---- 组 B · 点击乘数（7 座）----
     // v2.6.3 反馈①：移除「点击与暴击」B 分区（弱化主动点击宗旨；field_1~4 / crit_furnace / crit_reactor / crit_reactor_2 全删；已购旧档乘区随 fx 表缺失自然失效）
     // ---- 组 C · 成本折扣（6 座）----

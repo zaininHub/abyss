@@ -285,7 +285,9 @@ t('v21Level / v21Maxed / buildingCostV21 基础读侧', () => {
   const b = V21_BUILDINGS.find(x => x.id === 'warmup_node');
   assert.equal(v21Level('warmup_node', S), 3);
   assert.equal(v21Maxed(b, S), false);
-  assert.equal(buildingCostV21(b, S, 1), Math.ceil(2.5e5 * Math.pow(1.35, 3))); // v3.4.2 反馈① warmup base 2.5e5/growth 1.35
+  // v3.7.4 反馈①：预热节点按价效口径重标 → base 6e4（+2% × 3e4/1%）、growth 统一 1.40
+  assert.equal(b.base, 6e4); assert.equal(b.growth, 1.40);
+  assert.equal(buildingCostV21(b, S, 1), Math.ceil(b.base * Math.pow(b.growth, 3)));
   S.buildings = { warmup_node: 5 };
   assert.equal(v21Maxed(b, S), true);
   S.buildings = {};

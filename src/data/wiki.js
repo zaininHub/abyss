@@ -205,6 +205,8 @@ export const WIKI_SECTIONS = [
       <li>专注：30 × 1.6^级</li>
       <li>探采平台：载具价 ×1.30^已购数；载具 cps = 0（不产 EP，只扣 EP 换 DM）；EP→DM 汇率 = ${fmt(D.vehicles.epPerDm)} × ${D.vehicles.epPerDmGrowth}^总载具数；载具协议使 DM 采集速率 ×${D.vehicles.protocolMult}</li>
     </ul>
+    <h4>效能建筑 · 全局产出（「产出与效率」组）</h4>
+    <p>卡面统一写「每级全局产出 +X%」，X 即<b>本级在当前产出基础上带来的增量</b>：加算建筑把 X 个百分点加进全局加法区，乘算建筑按 ×(1+X%) 复利叠进全局乘区，所以同类文案下乘算项的长期收益更高、后期单价也更贵。入门三座（预热节点 / 效能尖塔 / 双倍工坊）按每 +1% 同一基价定价、成本递增同为 ×1.40，<b>同一等级下价格比恒等于加成比</b>；越往后的建筑每 +1% 的单价逐档抬高，用于抑制速通。不同等级之间价格会按 growth^级 拉开，属级制成长而非性价比失衡。</p>
     <h4>全局乘数软上限</h4>
     <p>m > ${fmt(D.softCapThreshold)} → ${fmt(D.softCapThreshold)} + √(m-${fmt(D.softCapThreshold)}) × ${D.softCapFactor}（防无限滚）。</p>
     <h4>时间尺度</h4>
