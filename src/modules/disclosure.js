@@ -59,6 +59,16 @@ export function anchorShown(key, S) {
   return !!(S && S.resDiscovered && S.resDiscovered[key]);
 }
 
+// v3.7.2 反馈①：异兽模块的唯一解锁判定源 = PT 锚点完成，与顶栏 PT 完全同口径。
+// 此前 btn-pets 只挂 P2 天数门控（游玩满 0.5 天），而顶栏 PT 走 anchorDone('pt') 即时门控，
+// 于是出现「PT 还没解锁、异兽大模块却已开放」的错位；Wiki 口径本就是「仓库即 PT 解锁入口，
+// 顶栏 PT、异兽 tab 同步开放」，故废弃 P2 天数门控，避免反向错位（PT 已亮、tab 还锁）。
+// 口径刻意用 anchorDone 而非 anchorShown：PT / 宠物是本局制（转生清空），
+// 不能让跨转生持久标记 resDiscovered.pt 在顶栏 PT 隐藏时仍把模块放行。
+export function petsModuleUnlocked(S) {
+  return anchorDone('pt', S);
+}
+
 // v2.5 ①：深渊裂隙触发门控——首次裂隙出现（S._riftSeen）后解锁探采平台与深渊商店；
 // v2.4 及以前旧档（S._v25Legacy，迁移时按 DM/RP 锚点进度自动打标）保持解锁不回退；
 // v2.5 起新档购入载具/灵感工坊不再解锁（解锁前提唯一 = 触发深渊裂隙）。

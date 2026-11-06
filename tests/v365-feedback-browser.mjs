@@ -122,7 +122,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   await page.close();
 }
 
-// ---- ⑤ 优先安排空闲线程 → 再纠正错位；手动超线程保留；容量不被突破 ----
+// ---- ⑤ 优先安排空闲线程 → 再纠正错位；v3.7.2 起手动超线程会被优先拉回资源岗位；容量不被突破 ----
 {
   const page = await boot(browser, mkSave({ cultists: cultists(5) }));
   const r = await page.evaluate(() => {
@@ -142,8 +142,9 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   });
   if (r.bound[1] === 'atrium') ok('⑤ 智能分配仍会纠正错位岗位（蒸馏师 → 灵感工坊）', JSON.stringify(r.bound));
   else bad('⑤ 错位岗位未被纠正', JSON.stringify(r));
-  if (r.bound[0] === 'hyper') ok('⑤ 手动设定的超线程被保留（空闲线程足够时不抽调）', JSON.stringify(r.bound));
-  else bad('⑤ 手动超线程被抢走', JSON.stringify(r));
+  // v3.7.2 反馈④：资源岗位容量优先填满，手动设定的超线程也会被拉回来补岗位
+  if (r.bound[0] !== 'hyper' && r.bound.filter(x => x !== 'hyper').length === r.capTotal) ok('⑤ 手动设定的超线程被优先拉回资源岗位（容量填满后才轮到超线程）', JSON.stringify(r.bound));
+  else bad('⑤ 资源岗位未优先填满', JSON.stringify(r));
   if (Object.values(r.load).every((n, i) => n <= 1) && Object.values(r.load).reduce((a, b) => a + b, 0) === r.capTotal) ok('⑤ 四个模块各按容量 1 条填满，无超容量', JSON.stringify(r.load));
   else bad('⑤ 容量被突破或模块未填满', JSON.stringify(r));
   await page.close();

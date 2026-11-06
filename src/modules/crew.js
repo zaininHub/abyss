@@ -1,6 +1,7 @@
-// v3.1.0 反馈③：线程拟人化「班组面板」——个人档案卡（状态灯/心情/个人产出/累计贡献/工龄）+ 班组事件流水
+// v3.1.0 反馈③：线程拟人化「班组面板」——个人档案卡（状态灯/心情/个人产出/累计贡献）+ 班组事件流水
 // 设计边界：薪资四态仍是全局状态机（wages.js），个人卡片的状态灯派生自全局态；
-// 个体差异通过「个人产出基数（招募时随机）/ 心情（正交叠加）/ 累计贡献（按实际入账份额分摊）/ 工龄」表达。
+// 个体差异通过「个人产出基数（招募时随机）/ 心情（正交叠加）/ 累计贡献（按实际入账份额分摊）」表达。
+// v3.7.2 反馈③：卡面不再展示共事时长（信息噪音，且与岗位调度无关）。
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
@@ -8,7 +9,7 @@ import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, HYPER_CONVERTER_ID } from '../
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
-  autoAssignThreads, bindThread, unbindThread, threadLevelMult, threadBindOutputFactor,
+  autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
   unlockedConverterIds, converterCapacity, converterLoad,
 } from './threadBinding.js'; // v3.6.5 ①~③：岗位容量（设施数量）展示 // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
 
@@ -43,14 +44,6 @@ export function crewStateMeta() {
   if (!S.cultists.length) return { label: '待招募', color: 'var(--text-3,#6e7681)' };
   if (isLazy()) return { label: `懒惰怠工 · 产出 ×${BALANCE.lazy.prodMult} 消耗 ×${BALANCE.lazy.costMult}`, color: 'var(--warn,#c8a24a)' };
   return STATE_META[(S.wageState || {}).state] || STATE_META.ok;
-}
-
-function tenure(c) {
-  const t0 = c.hiredAt || S.startTime || Date.now();
-  const sec = Math.max(0, Math.floor((Date.now() - t0) / 1000));
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟`;
-  if (sec < 86400) return `${(sec / 3600).toFixed(1)} 小时`;
-  return `${(sec / 86400).toFixed(1)} 天`;
 }
 
 export function renderCrewPanel(container) {
@@ -106,7 +99,6 @@ export function renderCrewPanel(container) {
         <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}${lazyBadge}</div>
         <div class="crew-stat">${affinityIcon} · Lv.${lvl}</div>
         <div class="crew-stat">产出 <b class="c-out">0</b>/s</div>
-        <div class="crew-stat dim"><span class="c-tenure"></span></div>
         <div class="crew-stat">${bindCtrl}${leaderBtn}</div>
       </div>
     </div>`;
@@ -136,14 +128,15 @@ export function renderCrewPanel(container) {
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" title="按设施容量分配：先保证每个模块有人，其余线程统一转入超线程；优先安排空闲线程，再纠正错位岗位；手动超线程保留；领导者不占岗位">智能分配</button>
+      <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位；领导者不占岗位">智能分配</button>
+      <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）；领导者本就不占岗位，不受影响">一键收回</button>
       <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
         <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
         <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
         ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}${slotText(t)}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成，不占任何岗位，也不参与智能分配；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先保证每个模块有人，资源岗位满员、未解锁或开关关闭时，其余线程统一转入超线程；分配时优先安排空闲线程、再纠正错位岗位，手动设定的超线程会保留；新招募的线程优先补空缺岗位。下拉框可自由切换岗位</div>
+    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局加成，不占任何岗位，也不参与智能分配；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。岗位后的「在岗/可容纳」由对应设施数量决定：智能分配先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；分配时优先安排空闲线程、再纠正错位岗位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程优先补空缺岗位。「一键收回」把所有线程撤离岗位置为空闲（消耗恢复）。下拉框可自由切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
@@ -176,7 +169,15 @@ export function renderCrewPanel(container) {
       if (ab) {
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
-        crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先补齐各模块空缺，其余转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先填满资源岗位，其余转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');
+        renderCrewPanel(container);
+        return;
+      }
+      // v3.7.2 反馈②：一键收回——所有线程撤离岗位，全部置于空闲
+      const ra = ev.target.closest ? ev.target.closest('[data-release-all]') : null;
+      if (ra) {
+        const k = releaseAllThreads();
+        crewPush(k > 0 ? `一键收回：${k} 条线程撤离岗位，全部置为空闲（消耗恢复）` : '一键收回：当前没有在岗线程', k > 0 ? 'good' : '');
         renderCrewPanel(container);
         return;
       }
@@ -206,7 +207,7 @@ export function renderCrewPanel(container) {
   refreshCrewDyn(container, start, pageCultists);
 }
 
-// 每秒原地更新动态数值（个人产出/工龄），不重建 DOM（v2.6.7 防闪烁纪律）
+// 每秒原地更新动态数值（个人产出），不重建 DOM（v2.6.7 防闪烁纪律）
 // v3.2.3 反馈①：索引跟随当前分页切片（原全量前 24 条直读）
 // v3.6.3 反馈④：累计贡献已从卡面移除，动态刷新不再维护 c-earned
 function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0, PAGE_SIZE)) {
@@ -217,10 +218,8 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
     sumEls[1].textContent = fmt(staffSalaryPerSec());
   }
   const outEls = container.querySelectorAll('.c-out');
-  const tenEls = container.querySelectorAll('.c-tenure');
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
     outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c));
-    if (tenEls[i]) tenEls[i].textContent = `已共事 ${c.hiredAt ? tenure(c) : '—'}`;
   }
 }

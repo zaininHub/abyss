@@ -26,8 +26,8 @@ import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnloc
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
-import { EXPAND_KEY, anchorShown, anchorDone } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）
-import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
+import { EXPAND_KEY, anchorShown, anchorDone, petsModuleUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -728,6 +728,8 @@ function policyTickRefresh() {
   }
 }
 function switchTab(id) {
+  // v3.7.2 反馈①：程序化切换也走同一解锁判定源，防止绕过 nav 的 disabled 打开未解锁模块
+  if (id === 'pets' && !petsModuleUnlocked(S)) { toast('🔒 异兽将在解锁 PT 后开放'); return; }
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('on'));
   const pane = document.getElementById('tab-' + id);
@@ -992,14 +994,19 @@ function updateTabLocks() {
     if (!btn) continue;
     const anchorKey = TAB_ANCHOR[id];
     // v3.0.4 反馈②：异兽回归 P2 章节门控（chapter≥3）——此前 petsPt 恒 true 导致开局即解锁
-    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
+    // v3.7.2 反馈①：异兽再叠 PT 锚点（见 petsTabUnlocked），修复「PT 未解锁、异兽大模块却已开放」
+    const unlocked = id === 'btn-pets'
+      ? petsModuleUnlocked(S)
+      : isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
     if (!unlocked) {
       if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」与解锁提示）
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';
-      btn.title = anchorKey && isStageUnlocked(stage, S) && !anchorShown(anchorKey, S)
-        ? `${label} 将在解锁对应资源后开放`
-        : `${label} 将在 ${stage} 阶段解锁`;
+      btn.title = id === 'btn-pets'
+        ? '异兽将在解锁 PT 后开放'
+        : (anchorKey && isStageUnlocked(stage, S) && !anchorShown(anchorKey, S)
+          ? `${label} 将在解锁对应资源后开放`
+          : `${label} 将在 ${stage} 阶段解锁`);
       btn.disabled = true;
     } else {
       if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：锁定态由 setTabLocked 管，勿覆盖其文案
@@ -2787,7 +2794,8 @@ if (typeof window !== 'undefined') {
     bulkCostCalc, unitCost, // v3.6.4 ④：粮仓首购价（卡面/实付同口径）
     riftLevelOf, riftLevelTech, buyRiftLevelTech, // v3.6.4 ①：裂隙等级只认科技
     // v3.3.0 线程绑定系统 QA 钩子
-    threadBind: { bindThread, unbindThread, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
+    petsModuleUnlocked, // v3.7.2 ①：异兽模块与顶栏 PT 同口径的唯一解锁判定
+    threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
       converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子
     // v3.7.0：核心抽象接线与 30 天浏览器推演所需的只读/纯函数钩子（不改变玩法）
     lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS,

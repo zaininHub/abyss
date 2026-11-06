@@ -181,19 +181,34 @@ export function bindThread(c, type) {
 }
 export function unbindThread(c) { c.boundTo = null; }
 
-// ---- 方向③：智能分配（容量感知 · v3.7.1 重写）----
+// v3.7.2 反馈②：一键收回全部线程岗位 → 空闲（消耗恢复）。
+// 与 autoAssignThreads 同属「岗位编排」单一真源；领导者恒不占岗位，本就空闲，不受影响。
+export function releaseAllThreads() {
+  let changed = 0;
+  for (const c of (S.cultists || [])) {
+    if (!c.boundTo) continue;
+    c.boundTo = null;
+    c.assignSince = null;
+    changed++;
+  }
+  return changed;
+}
+
+// ---- 方向③：智能分配（容量感知 · v3.7.2 重写）----
 // 规则：
 //   0) 领导者是全局加成位，恒不占岗位（v3.7.1 反馈①）；全量重排顺带纠正旧档残留
 //   1) 每个资源岗位容量 = 对应设施数量（converterCapacity），分配结果不会超容量
-//   2) 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者），避免被「补空缺」抢走
-//   3) 阶段 A2：优先保证每个已开启模块至少 1 条（空闲不足时从手动超线程池抽调）
-//   4) 阶段 B：按剩余槽位均衡填满（擅长岗位优先，其次剩余槽位最多的岗位）
-//   5) 阶段 C：所有无法进入资源岗位的线程统一转入超线程（v3.7.1 反馈②）——
-//      覆盖「模块满员 / 未解锁 / 开关全关 / 容量为 0」四种情况，不再有「释放为空闲」旁路，
-//      全量与增量(only) 走同一条路径；超线程恒解锁、无容量上限，点击必有可见收益
-//   6) 「优先空闲」：先安排空闲（未绑定）线程，再重排已在岗线程以纠正错位；
-//      手动超线程保留，仅当可调配线程不足以保证每模块有人时才从超线程池抽调
-//   only：传入单条线程时做「增量安置」（招募新线程用），其余线程一律视为固定不动。
+//   2) 全量重排：所有可绑定线程（含原本手动设定的超线程）统一进入重排池，
+//      先按容量把资源岗位填满，实在放不下的才转入超线程（v3.7.2 反馈④）
+//      ——废弃 v3.6.5「手动超线程保留」：该语义会让资源岗位空着、线程却滞留超线程
+//   3) 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者），避免被「补空缺」抢走
+//   4) 阶段 A2：保证每个已开启模块至少 1 条
+//   5) 阶段 B：按剩余槽位均衡填满（擅长岗位优先，其次剩余槽位最多的岗位）
+//   6) 阶段 C：仅「资源岗位分配完」之后的剩余线程转入超线程；覆盖「模块满员 /
+//      未解锁 / 开关全关 / 容量为 0」四种情况，超线程恒解锁、无容量上限（v3.7.1 反馈②）
+//   7) 「优先空闲」：先安排空闲（未绑定）线程，再重排已在岗/超线程线程以纠正错位
+//   only：传入单条线程时做「增量安置」（招募新线程用），其余线程一律视为固定不动；
+//         其余线程在超线程不占资源岗位坑，新线程仍优先补资源岗位空缺。
 export function autoAssignThreads(only = null) {
   const cultists = (S.cultists || []);
   const before = new Map(cultists.map(c => [c, c.boundTo || null]));
@@ -203,16 +218,15 @@ export function autoAssignThreads(only = null) {
   const movable = only ? [only] : cultists;
   const movableSet = new Set(movable);
 
-  // 反馈①：全局加成位不占岗位——任何一次分配都把旧档残留的领导绑定清空。
-  // 领导者在 UI 上没有岗位下拉，不存在「玩家手动设定」需要保留，故不违反增量安置纪律。
+  // v3.7.1 反馈①：全局加成位不占岗位——任何一次分配都把旧档残留的领导绑定清空。
   for (const c of cultists) {
     if (isLeader(c) && c.boundTo) c.boundTo = null;
   }
 
   const cap = {}, load = {};
   for (const t of types) { cap[t] = converterCapacity(t); load[t] = 0; }
-  const free = [];   // 本次参与重排的线程（旧岗位先释放，统一重新规划）
-  const spare = [];  // 手动超线程（保留，仅不足时抽调）
+  // 统一重排池：原本在超线程的线程也先释放，与其它线程一起竞争资源岗位
+  const pool = [];
   for (const c of cultists) {
     if (isLeader(c)) continue;           // 恒跳过：不参与重排、不占容量、不进超线程
     const b = c.boundTo;
@@ -220,23 +234,14 @@ export function autoAssignThreads(only = null) {
       if (b && types.includes(b)) load[b] += 1; // 增量安置时：其余线程固定占坑
       continue;
     }
-    if (b === HYPER_CONVERTER_ID) { spare.push(c); continue; }
     const wasBound = !!b;
-    c.boundTo = null; // 含未解锁/已关闭的旧岗位：一律释放后重排
-    free.push({ c, wasBound });
+    c.boundTo = null; // 含未解锁/已关闭的旧岗位与超线程：一律释放后重排
+    pool.push({ c, wasBound });
   }
   // 「优先空闲」：未绑定线程先落位，已在岗线程随后重排（纠正错位）
-  free.sort((a, b) => (a.wasBound ? 1 : 0) - (b.wasBound ? 1 : 0));
-  const idle = free.map(x => x.c);
+  pool.sort((a, b) => (a.wasBound ? 1 : 0) - (b.wasBound ? 1 : 0));
+  const idle = pool.map(x => x.c);
   const place = (c, t) => { c.boundTo = t; c.assignSince = Date.now(); load[t] += 1; };
-  const takeFor = (t) => {
-    let i = idle.findIndex(c => affinityMatches(c, t));
-    if (i < 0 && idle.length) i = 0;
-    if (i >= 0) return idle.splice(i, 1)[0];
-    i = spare.findIndex(c => affinityMatches(c, t));
-    if (i < 0 && spare.length) i = 0;
-    return i >= 0 ? spare.splice(i, 1)[0] : null;
-  };
 
   // 阶段 A1：擅长职业先归位（每模块至多 1 条匹配者）
   for (const t of types) {
@@ -245,14 +250,13 @@ export function autoAssignThreads(only = null) {
     if (i < 0) continue;
     place(idle.splice(i, 1)[0], t);
   }
-  // 阶段 A2：优先保证每个模块都有人（空闲不足时从超线程池抽调）
+  // 阶段 A2：优先保证每个模块都有人
   for (const t of types) {
-    if (load[t] > 0 || load[t] >= cap[t]) continue;
-    const c = takeFor(t);
-    if (!c) break;
-    place(c, t);
+    if (load[t] > 0 || load[t] >= cap[t] || !idle.length) continue;
+    const i = idle.findIndex(c => affinityMatches(c, t));
+    place(idle.splice(i < 0 ? 0 : i, 1)[0], t);
   }
-  // 阶段 B：剩余空闲线程填满槽位（擅长岗位优先，其次剩余槽位最多的岗位）
+  // 阶段 B：剩余线程填满槽位（擅长岗位优先，其次剩余槽位最多的岗位）
   for (const c of idle.slice()) {
     const aff = threadProfession(c) && threadProfession(c).affinity;
     let t = (aff && types.includes(aff) && load[aff] < cap[aff]) ? aff : null;
@@ -266,7 +270,7 @@ export function autoAssignThreads(only = null) {
     idle.splice(idle.indexOf(c), 1);
     place(c, t);
   }
-  // 阶段 C：所有无法进入资源岗位的线程统一转入超线程；抽调后剩余的超线程池保持原状
+  // 阶段 C：资源岗位分配完，剩下的才进超线程
   for (const c of idle) { c.boundTo = HYPER_CONVERTER_ID; c.assignSince = Date.now(); }
   let changed = 0;
   for (const c of cultists) if ((c.boundTo || null) !== before.get(c)) changed++;

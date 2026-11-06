@@ -245,7 +245,9 @@ try {
     });
     if (r.none === 8) ok('③ 无模块解锁时全部转超线程（v3.6.4 ③ 保持）', `${r.none}`);
     else bad('③ 无解锁场景回归', JSON.stringify(r));
-    if (r.manual === 'hyper' && r.vehicles <= 1 && r.atrium <= 2 && r.hyper === 8 - r.vehicles - r.atrium) ok('③ 手动超线程保留、容量不突破、溢出仍进超线程', JSON.stringify(r));
+    // v3.7.2 反馈④：不再约束手动超线程是否留在 hyper（容量优先后结果取决于擅长归位），
+    // 只守住「资源岗位按容量填满 + 溢出才进超线程 + 容量不突破」这条不变量。
+    if (r.vehicles <= 1 && r.atrium <= 2 && r.hyper === 8 - r.vehicles - r.atrium) ok('③ 资源岗位按容量填满、溢出进超线程、容量不突破', JSON.stringify(r));
     else bad('③ 分配语义回归', JSON.stringify(r));
 
     // Wiki 文案同步（弹窗 → 「线程与薪资」章节）
@@ -254,7 +256,7 @@ try {
       document.querySelector('[data-wiki="thread"]')?.click();
       const t = document.getElementById('wiki-body')?.textContent || '';
       return {
-        leader: t.includes('不占任何岗位'), hyper: t.includes('统一兜底岗位'),
+        leader: t.includes('不占任何岗位'), hyper: t.includes('最后兜底岗位'),
         bad: /undefined|NaN/.test(t), len: t.length,
       };
     });

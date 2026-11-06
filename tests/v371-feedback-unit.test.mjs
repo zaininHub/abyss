@@ -5,7 +5,9 @@
 // ② 智能分配必须能把线程送进超线程：删除「已解锁但开关全关 → 释放为空闲」旁路后，
 //    资源岗位满员 / 未解锁 / 开关关闭 / 容量 0 四种情况统一由超线程兜底，全量与增量同口径。
 //
-// 同时守住 v3.6.5 的容量约束与「手动超线程保留」不被本次重写破坏。
+// 同时守住 v3.6.5 的容量约束不被本次重写破坏。
+// 注：v3.7.2 反馈④已废弃「手动超线程保留」语义（改为资源岗位优先、超线程最后），
+// B7/B10 的断言随之对齐；B7 场景（开关全关）在新旧语义下结果一致，仍为有效回归。
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -198,7 +200,7 @@ test('B6 容量 0 的已解锁模块不接收线程，且不突破任何容量',
   assert.equal(l.hyper, 20 - l.vehicles - l.atrium - l.hatch - l.temple);
 });
 
-test('B7 开关全关时手动设定的超线程仍保留，其余补入', () => {
+test('B7 开关全关时全部线程（含手动设定的超线程）统一进超线程', () => {
   reset({ upgrades: { scooter: 1 }, _probeEnabled: false });
   const manual = mk(0, { boundTo: HYPER_CONVERTER_ID });
   S.cultists.push(manual, ...Array.from({ length: 4 }, (_, i) => mk(i + 1)));
@@ -232,5 +234,5 @@ test('B9 超线程分配沿用既有经济口径（产出/消耗各 +10%）', ()
 test('B10 源码不再有「释放为空闲」旁路（防接线回退）', () => {
   assert.doesNotMatch(TB_SRC, /有已解锁岗位但开关全关/, 'v3.6.4 遗留分支应已删除');
   assert.doesNotMatch(TB_SRC, /if \(!types\.length\)/, '不得再有 types 为空的提前返回');
-  assert.match(TB_SRC, /阶段 C：所有无法进入资源岗位的线程统一转入超线程/, '统一兜底阶段存在');
+  assert.match(TB_SRC, /阶段 C：资源岗位分配完，剩下的才进超线程/, 'v3.7.2 统一兜底阶段存在');
 });
