@@ -298,15 +298,19 @@ t('P1-B：一次性入口仍截断不产腐化（addEp 口径不变）', () => {
   assert.equal(S.corruption, 0, '一次性入口不产腐化');
   S.ep = 50;
 });
-t('P1-B：挂机产出走「先加后截」+ 钳后记账（源码断言，v2.3.1 缺陷③修订口径）', () => {
-  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('S.ep += gain;'), 'tick 产出应先全额加（不预先截断）');
+t('P1-B：挂机产出走「先加后截」+ 钳后记账（源码断言，v2.3.1 缺陷③修订口径；v3.8.0 迁移到资源流声明层）', () => {
+  // v3.8.0：产出结算从 main.js tick() 下沉到 systems/resourceFlows.js 的 ep:main 流，公式逐字不变。
+  // 此处改读新的单一真源，并守住「主循环只做调度、不再内联结算」这条重构红线。
+  const src = readFileSync(new URL('../src/systems/resourceFlows.js', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('S.ep += gain;'), '产出流应先全额加（不预先截断）');
   // v2.3.1 缺陷③：EP 满上限后被钳制的增量不再计入本局/累计（用户反馈③），
-  // runEarned/allTimeEp 改记 credited（= min(gain, cap - S.ep)，与 addEp 同口径）；
-  // 腐化累积与溢出池机制不变（tickCorruption 的 overflow 与修复前一致）。
+  // runEarned/allTimeEp 改记 credited（= min(gain, cap - S.ep)，与 addEp 同口径）。
   assert.ok(src.includes('S.runEarned += credited;'), '产出应按钳后口径计入本局累计');
   assert.ok(src.includes('const credited = Math.min(gain, Math.max(0, capNow - S.ep));'), 'credited 钳后增量定义存在');
-  assert.ok(!src.includes('addEp(gain); // v2.1 D1：统一入口（受上限约束 + 统一记账）'), 'tick 产出不应再走 addEp 预截断（暂停补算等一次性入口保留 addEp 不变）');
+  assert.ok(!src.includes('addEp(gain); // v2.1 D1'), '产出不应再走 addEp 预截断');
+  assert.ok(!main.includes('S.ep += gain;') && main.includes('runFlows(flowCtx, FLOW_PHASES.EP_PRODUCE)'),
+    '主循环只做阶段调度，不再内联结算公式');
 });
 t('P1-A：封印/拥抱裂隙后立即置 dirty.rift 重渲染（源码断言）', () => {
   const src = readFileSync(new URL('../src/modules/rift.js', import.meta.url), 'utf8');

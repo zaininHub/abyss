@@ -65,6 +65,18 @@ export const POLICY_GROUPS = [
       { id: 'observe_quiet',  name: '静默归档', effect: { ember: 0.12, global: -0.05 }, desc: '余烬产出 +12%，全局 -5%' },
     ],
   },
+  // v3.8.0 政策扩充（7 组→8 组、19 项→23 项，+21%）：效果键全部落在既有 policyMult 消费点，
+  // 不引入「选了但没效果」的死政策；解锁条件只依赖已持久化字段。
+  {
+    id: 'orchestration', name: '编排律令', unlock: (S) => (S.projectsDone || 0) >= 10 || (S.prestige || 0) >= 3,
+    hint: '需完成 10 个任务或职级 ≥3',
+    policies: [
+      { id: 'orch_output',   name: '产能律令', effect: { ep: 0.10, delve: -0.08 },     desc: 'EP 产出 +10%，深潜产出 -8%' },
+      { id: 'orch_research', name: '推演律令', effect: { ep: -0.06, collab: 0.18 },    desc: 'EP 产出 -6%，协作 +18%' },
+      { id: 'orch_abyss',    name: '裂隙律令', effect: { ember: 0.18, faith: -0.08 },  desc: '余烬产出 +18%，信仰 -8%' },
+      { id: 'orch_balance',  name: '均衡律令', effect: { thread: 0.10, recruit: 0.08 }, desc: '线程产出 +10%，招募 +8%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }

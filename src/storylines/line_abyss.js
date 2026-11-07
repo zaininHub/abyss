@@ -34,6 +34,8 @@ export default {
         // v3.7.0 剧情扩充：成为裂隙之后的两段番外
         { id: '13B', name: '低语的语法', cond: (S) => S.storyline === 'line_abyss' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '封印第五道裂隙时，你第一次听懂了一个完整的句子。深渊没有在召唤你，也没有在警告你——它只是在描述你。描述得比你自己更准确，这让你有点不舒服。' },
         { id: '14B', name: '共生的边界', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 100, minDays: 7, desc: 'DM 攒到第一百份的那天，你试着划一条线：到这里是你，从那里是深渊。线画了三次，三次都在同一处化开。最后你把它留作装饰，没再擦掉。' },
+        { id: '15B', name: '潮汐之间', cond: (S) => S.storyline === 'line_abyss' && (S.riftsSealed || 0) >= 12, minDays: 5, desc: '第十二道裂隙合拢之后，低语出现了短暂的空白。你原以为那是告别，后来才明白：连深渊也要换气。' },
+        { id: '16B', name: '不划线的那天', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1000, minDays: 7, desc: 'DM 过千那天，你没再试着划那条「你与深渊」的界线。不是放弃了，是发现它一直在动，而你也一直在动，两条动线偶尔重合，就够了。' },
       ],
     },
     events: {
@@ -45,6 +47,8 @@ export default {
         { id: 'void_gift', name: '虚空赠礼', lineOnly: true, type: 'dm', amount: 3, minCps: 1e5, rare: true, desc: '立即获得 3 DM' },
         { id: 'parasite', name: '寄生', lineOnly: true, type: 'buff', mult: 1.5, dur: 60, minCps: 1e4, rare: false, desc: '60 秒产出 ×1.5' },
         { id: 'true_name', name: '真名', lineOnly: true, type: 'buff', mult: 3, dur: 300, minCps: 1e6, rare: true, desc: '5 分钟产出 ×3' },
+        { id: 'void_echo', name: '虚空回声', lineOnly: true, type: 'ep', amount: 600, minCps: 1e5, rare: true, desc: '立即获得 600 秒产出' },
+        { id: 'spore_drift', name: '孢子漂移', lineOnly: true, type: 'debuff', mult: 0.5, dur: 45, minCps: 1e6, rare: true, desc: '45 秒产出 ×0.5' },
       ],
     },
     buildings: {

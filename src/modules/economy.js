@@ -15,6 +15,7 @@ import {
 import { lineRule, lineFlag, LINE_RULE_KEYS as K } from '../core/lineRules.js'; // v3.7.0：线专属效果唯一入口
 import { researchMult } from '../core/research.js'; // v3.7.0：研究读侧下沉到 core
 export { researchMult };
+import { orchestrationMult } from '../core/orchestration.js'; // v3.8.0：效能编排读侧（ep / dm 标准乘区）
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
@@ -536,6 +537,7 @@ export function vehicleRateMult() {
   let m = 1 + fxValue('dmRateAdd') + 0.2 * abyssFishbowlLevel();
   if (hasAbyssMarket()) m *= 1.5;          // 深渊集市 ×1.5
   m *= researchMult('dm');                 // 星尘精炼（研究点）+8%/级
+  m *= orchestrationMult('dm', S);         // v3.8.0：效能编排——DM 采集走标准乘区
   if (S.upgrades.dmprotocol) m *= BALANCE.vehicles.protocolMult; // v3.7.3 ⑥：载具协议的 +50% 语义落到此乘区
   // v3.3.8 反馈①：探采不吃班组乘区——线程加成曾让 27 辆×18 条线程把产出放大到 6600×（274 DM/s），
   // 与「消耗 100K 级 / 产出 10 DM 级」的目标口径差两个数量级，且超出 DM 容量后收益归零
@@ -785,6 +787,7 @@ export function computeCps() {
   m *= critExpectedMult();  // v2.1：暴击反应堆期望乘算（死代码真实接线）
   m *= corruptionPenalty(); // v2.0：矩阵腐化惩罚
   m *= tideMult('ep');      // v2.0：深渊潮汐相位乘数
+  m *= orchestrationMult('ep', S); // v3.8.0：效能编排——走标准乘区，保证 CPS 显示与真实入账同口径
   m *= researchMult('ep') * researchMult('global') * legacyGlobalMult() * techGlobalMult(); // v2.8.4：研究点 + 深渊遗存 + 长线科技
   let r = base * m;
   if (!isFinite(r)) r = 0;

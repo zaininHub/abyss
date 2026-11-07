@@ -1,0 +1,105 @@
+// v3.8.0 新玩法「效能编排」——读侧单一真源。
+//
+// 玩法：玩家为工作台选定一条编排策略，在四条资源管线之间做取舍（有增益必有代价），
+//       也可开启「随潮汐排班」让策略随深渊潮汐相位自动轮转，把既有潮汐机制变成可经营的变量。
+//
+// 接线纪律（与项目「无死数据」红线一致）：
+//   ep → economy.computeCps() 的标准乘区（保证 CPS 显示与真实入账同口径）
+//   rp → 灵感工坊蒸馏流 / 升级卡 RP 产出（flowEngine 修饰器 key 'rp'）
+//   pt → PT 孵化流（flowEngine 修饰器 key 'pt'）
+//   dm → economy.vehicleRateMult() 的标准乘区
+//   四个键都必须有真实消费点；新增键若没接线，单测 v380 会直接失败。
+import { registerModifier } from './flowEngine.js';
+
+export const ORCHESTRATION_KEYS = Object.freeze(['ep', 'rp', 'pt', 'dm']);
+export const ORCHESTRATION_KEY_LABELS = Object.freeze({
+  ep: 'EP 产出', rp: 'RP 蒸馏', pt: 'PT 孵化', dm: 'DM 采集',
+});
+
+// effects 为「倍率」：1 表示不变。增益与代价成对，任何策略都存在明确的取舍。
+export const ORCHESTRATION_MODES = Object.freeze([
+  { id: 'balanced', name: '均衡编排', icon: '◈', short: '均衡',
+    desc: '四条管线各按默认节奏运转，没有增益，也没有代价。',
+    effects: { ep: 1, rp: 1, pt: 1, dm: 1 } },
+  { id: 'output', name: '产能优先', icon: '▲', short: '产能',
+    desc: '把算力压到基础产出上：EP 更旺，但蒸馏、孵化与探采都慢下来。',
+    effects: { ep: 1.25, rp: 0.80, pt: 0.85, dm: 0.90 } },
+  { id: 'research', name: '研究优先', icon: '◇', short: '研究',
+    desc: '腾出带宽做推演：RP 蒸馏更快，代价是 EP 与孵化略微收窄。',
+    effects: { ep: 0.92, rp: 1.40, pt: 0.92, dm: 1 } },
+  { id: 'abyss', name: '深渊优先', icon: '◆', short: '深渊',
+    desc: '把管线接到裂隙一侧：孵化与探采大幅提速，基础产出相应让位。',
+    effects: { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 } },
+]);
+
+const MODE_BY_ID = new Map(ORCHESTRATION_MODES.map(m => [m.id, m]));
+export const DEFAULT_MODE = 'balanced';
+
+// 潮汐相位 → 策略（与 balance.tide.phases 的 0 涨潮 / 1 平潮 / 2 退潮 / 3 乱流 对应）
+export const TIDE_ORCHESTRATION = Object.freeze(['output', 'balanced', 'research', 'abyss']);
+
+/** 解锁门槛：完成 3 个任务或首次晋升。旧档用已持久化字段判定，无迁移成本。 */
+export function orchestrationUnlocked(S) {
+  if (!S) return false;
+  return (S.projectsDone || 0) >= 3 || (S.prestige || 0) >= 1;
+}
+
+/** 规范化状态：旧档无 orchestration / 字段被污染时一律回落到安全值。 */
+export function orchestrationState(S) {
+  const raw = (S && S.orchestration) || {};
+  const mode = MODE_BY_ID.has(raw.mode) ? raw.mode : DEFAULT_MODE;
+  return { mode, autoTide: !!raw.autoTide };
+}
+
+/** 当前实际生效的策略（自动排班时由潮汐相位决定，手动选择被旁路但不丢失）。 */
+export function effectiveModeId(S) {
+  const st = orchestrationState(S);
+  if (st.autoTide) {
+    const phase = Number.isInteger(S && S.tidePhase) ? S.tidePhase : 0;
+    return TIDE_ORCHESTRATION[((phase % 4) + 4) % 4] || DEFAULT_MODE;
+  }
+  return st.mode;
+}
+export function effectiveMode(S) { return MODE_BY_ID.get(effectiveModeId(S)) || MODE_BY_ID.get(DEFAULT_MODE); }
+
+/** 数值读侧唯一入口：未解锁、未知键、非法存档一律返回 1（绝不放大数值）。 */
+export function orchestrationMult(key, S) {
+  if (!orchestrationUnlocked(S)) return 1;
+  const m = effectiveMode(S);
+  const v = m && m.effects ? m.effects[key] : undefined;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/** 玩家操作入口：只允许合法 id；写入后由调用方置 dirty.orchestration。 */
+export function setOrchestrationMode(S, id) {
+  if (!S || !MODE_BY_ID.has(id)) return false;
+  const st = orchestrationState(S);
+  S.orchestration = { ...st, mode: id };
+  return true;
+}
+export function setOrchestrationAutoTide(S, on) {
+  if (!S) return false;
+  const st = orchestrationState(S);
+  S.orchestration = { ...st, autoTide: !!on };
+  return true;
+}
+export function toggleOrchestrationAutoTide(S) {
+  return setOrchestrationAutoTide(S, !orchestrationState(S).autoTide);
+}
+
+/** 面板用：当前生效策略的四条倍率（玩家可读，不暴露实现术语）。 */
+export function orchestrationSummary(S) {
+  const active = orchestrationUnlocked(S);
+  return ORCHESTRATION_KEYS.map(key => ({
+    key, label: ORCHESTRATION_KEY_LABELS[key],
+    mult: active ? orchestrationMult(key, S) : 1,
+  }));
+}
+
+// 声明式修饰器：只有 rp / pt 两类流走 flowEngine。
+// ep 与 dm 走 economy.js 的标准乘区（见文件头接线纪律），此处不注册，避免出现无人消费的死修饰器。
+for (const key of ['rp', 'pt']) {
+  registerModifier(key, (mult, ctx) => mult * orchestrationMult(key, ctx && ctx.S));
+}
+
+export { MODE_BY_ID };

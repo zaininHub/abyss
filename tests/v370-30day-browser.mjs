@@ -263,7 +263,7 @@ try {
   if (ui.wikiOk) ok('Wiki（含新增「故事线特色」章节）渲染无 undefined');
   else bad('Wiki 渲染出现 undefined / NaN');
   const rTotal = ui.researchGroups.reduce((a, g) => a + g.n, 0);
-  if (rTotal === ui.researchTotal && ui.researchTotal === 35) ok('研究面板分组覆盖全部 35 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
+  if (rTotal === ui.researchTotal && ui.researchTotal === 40) ok('研究面板分组覆盖全部 40 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
   else bad('研究分组与配置不一致', `${rTotal} vs ${ui.researchTotal}`);
   if (ui.priceMatch) ok('商店卡面可读取并与真实首购价关联', `${ui.priceMatch.id} = ${fx(ui.priceMatch.cost)} EP`);
   else console.log('  · 商店首卡当前无可购买入口（进度相关，非缺陷）');

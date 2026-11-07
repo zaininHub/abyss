@@ -31,6 +31,8 @@ export default {
         // v3.7.0 剧情扩充：神格确立之后的两段番外
         { id: '13C', name: '无人祷告的夜', cond: (S) => S.storyline === 'line_faith' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '封印第五道裂隙那晚，祷告声第一次停了。不是信徒离开了——是他们终于不再害怕。你坐在空荡荡的圣殿里，发现自己竟然有点想念那些慌张的声音。' },
         { id: '14C', name: '留给凡人的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 500, minDays: 7, desc: 'FP 过了五百，你在神国边缘开了一扇没有守卫的小门。谁都可以走进来，也谁都可以不进来。这是你做过的、最不像神的一件事，也是你最满意的一件。' },
+        { id: '15C', name: '空龛', cond: (S) => S.storyline === 'line_faith' && (S.riftsSealed || 0) >= 12, minDays: 5, desc: '第十二道裂隙封印后，第一座圣龛空了一整夜。没有祷告，也没有灾祸。值守的线程说，那晚格外安静，安静得像被允许休息。' },
+        { id: '16C', name: '不带走的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 2000, minDays: 7, desc: 'FP 过两千，神国扩建了三次，那扇没有守卫的小门始终留在原处。有人建议给它配个名字，你说不必——没名字，才谁都敢推。' },
       ],
     },
     events: {
@@ -42,6 +44,8 @@ export default {
         { id: 'blessing', name: '祝福', lineOnly: true, type: 'buff', mult: 1.2, dur: 300, minCps: 100, rare: false, desc: '5 分钟产出 ×1.2' },
         { id: 'martyr', name: '殉道', lineOnly: true, type: 'lose_ep', amount: 0.08, minCps: 1e3, rare: true, desc: '损失当前 8% EP' },
         { id: 'second_coming', name: '再临', lineOnly: true, type: 'buff', mult: 5, dur: 60, minCps: 1e6, rare: true, desc: '60 秒产出 ×5' },
+        { id: 'vespers', name: '晚祷', lineOnly: true, type: 'buff', mult: 1.8, dur: 120, minCps: 1e4, rare: false, desc: '2 分钟产出 ×1.8' },
+        { id: 'relic_blessing', name: '圣物祝祷', lineOnly: true, type: 'focus', amount: 10, minCps: 1e6, rare: true, desc: '专注 +10' },
       ],
     },
     buildings: {

@@ -152,6 +152,11 @@ export function claimProject(p) {
   }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }
   p.status = 'claimed';
+  // v3.8.0 review 修复：领取成功才计入累计完成数。
+  // 此前只有 settlePause() 的暂停回程会 ++，在线正常游玩（达成目标 → 手动领取）永远为 0，
+  // 导致章节 25「番外 · 排班表」、政策 observe / orchestration、成就 projects50、
+  // 秩序线 15A 与「效能编排」解锁的任务路径全部永久不可达。此处作为计数唯一真源补齐。
+  S.projectsDone = (S.projectsDone || 0) + 1;
   save(S); // v2.8.28 修复：领取即落盘——消除 5s 节流保存窗口（领取后刷新不再丢失奖励）
   return { ok: true, epGained, amount: r.kind === 'ep' ? r.amount : 0 };
 }

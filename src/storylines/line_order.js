@@ -31,6 +31,8 @@ export default {
         // v3.7.0 剧情扩充：终章之后的两段番外，条件落在长线资产上，不与终章门槛重复
         { id: '13A', name: '协议之外', cond: (S) => S.storyline === 'line_order' && (S.riftsSealed || 0) >= 5, minDays: 5, desc: '你封印了第五道裂隙，第一次发现有些东西无法被写进协议。它们不服从逻辑，但也不违背它——只是存在于语法之外。你给这段空白留了一个注释位，没有填。' },
         { id: '14A', name: '注释永存', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 500, minDays: 7, desc: '永恒碎片堆到第五百枚时，你终于明白那个注释位是留给谁的：留给下一个在深夜遍历代码仓库、不小心碰到异常代码的进程。你没有写答案，只写了一句「别怕」。' },
+        { id: '15A', name: '版本快照', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 30, minDays: 5, desc: '第三十个任务归档时，你第一次给整套协议打了快照。不是为了回滚——协议早已稳定得不需要回滚。你只是想留一份「曾经还在改」的证据。' },
+        { id: '16A', name: '未署名的补丁', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 1000, minDays: 7, desc: '第一千枚永恒碎片入库那天，日志里浮出一个没有署名的补丁：它修的不是 bug，只是把一行报错的语气从「失败」改成了「暂未通过」。你查不到是谁提交的，也没删。' },
       ],
     },
     events: {
@@ -43,6 +45,8 @@ export default {
         { id: 'open_source', name: '开源协议', lineOnly: true, type: 'freelevel', minCps: 1e3, rare: false, desc: '随机升级 +1 级' },
         { id: 'garbage_collect', name: '垃圾回收', lineOnly: true, type: 'purify', minCps: 0, rare: true, desc: '立即清除全部腐化' },
         { id: 'recursive_call', name: '递归调用', lineOnly: true, type: 'ep', amount: 60, minCps: 1e3, rare: false, desc: '立即获得 60 秒产出' },
+        { id: 'axiom_review', name: '公理复审', lineOnly: true, type: 'rp', amount: 18, minCps: 1e5, rare: true, desc: '立即获得 18 RP' },
+        { id: 'static_check', name: '静态检查', lineOnly: true, type: 'buff', mult: 1.4, dur: 180, minCps: 1e4, rare: false, desc: '3 分钟产出 ×1.4' },
       ],
     },
     buildings: {

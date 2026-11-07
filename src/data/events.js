@@ -40,4 +40,13 @@ export const EVENTS = [
   {id:'cold_start',name:'冷启动',desc:'45 秒产出 ×0.6',minCps:1e5,type:'debuff',mult:0.6,dur:45},
   {id:'deep_cache',name:'深缓存命中',desc:'立即获得 1200 秒产出',minCps:1e6,type:'ep',amount:1200,rare:true},
   {id:'sanity_check',name:'完整性校验',desc:'专注 +8',minCps:1e6,type:'focus',amount:8},
+  // v3.8.0 事件扩充（36→44，+22.2%）：复用既有 type，数值全在主表天花板内（buff ≤20 / dur ≤3600 / ep ≤14400 / debuff 0.3~1）
+  {id:'shift_handover',name:'交班',desc:'立即获得 900 秒产出',minCps:1e4,type:'ep',amount:900},
+  {id:'log_rotate',name:'日志轮转',desc:'4 分钟产出 ×1.6',minCps:1e5,type:'buff',mult:1.6,dur:240},
+  {id:'cold_backup',name:'冷备份',desc:'立即获得 2400 秒产出',minCps:1e6,type:'ep',amount:2400,rare:true},
+  {id:'audit_light',name:'轻量审计',desc:'审计抽走 5% EP',minCps:1e4,type:'lose_ep',amount:0.05},
+  {id:'focus_sprint',name:'专注冲刺',desc:'专注 +12',minCps:1e5,type:'focus',amount:12},
+  {id:'tide_lull',name:'平潮窗口',desc:'90 秒产出 ×2.2',minCps:1e3,type:'buff',mult:2.2,dur:90},
+  {id:'orphan_process',name:'孤儿进程',desc:'40 秒产出 ×0.55',minCps:1e5,type:'debuff',mult:0.55,dur:40},
+  {id:'memory_leak',name:'内存泄漏',desc:'泄漏损失 8% EP',minCps:1e6,type:'lose_ep',amount:0.08,rare:true},
 ];

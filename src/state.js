@@ -123,6 +123,8 @@ export function defaultState() {
     abyssGazeUnlocked: false,      // v3.4.2：凝视深渊彩蛋——已购裂隙「深渊凝视」升级（跨局保留）
     // v2.3.2 反馈②：_vehicleNames（载具命名记录）随命名彩蛋移除一并废除；旧档残留键无害随行
     _lastActionAt: Date.now(),     // 上次操作时间
+    // v3.8.0：效能编排（本局策略偏好，跨周期保留；旧档缺字段由 orchestrationState 兜底）
+    orchestration: { mode: 'balanced', autoTide: false },
     // 系统
     paused: false, pausedAt: 0,
     lastSeen: Date.now(), startTime: Date.now(),

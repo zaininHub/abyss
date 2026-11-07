@@ -13,6 +13,7 @@ export const dirty = {
   ai: true, // v1.3 A：AI 助手面板
   relics: false, // v2.7.0：深渊遗物
   storyline: false, achievements: false, // v3.2.4 反馈②：右列故事线/成就常驻面板（v3.2.1 三列布局后原 switchTab 渲染入口失效致恒空）
+  orchestration: true, // v3.8.0：效能编排卡（策略切换 / 潮汐排班）
 };
 
 // ========== 日志系统 ==========

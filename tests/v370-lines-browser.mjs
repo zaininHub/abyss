@@ -116,7 +116,7 @@ const onlyIn = (a, b) => a.filter(x => !b.includes(x));
 for (const l of LINES) {
   const other = LINES.find(x => x !== l);
   const diff = onlyIn(R[l].events, R[other].events);
-  if (R[l].events.length === 42 && diff.length === 6) ok(`${l} 事件池 = 主表 36 + 线专属 6`);
+  if (R[l].events.length === 52 && diff.length === 8) ok(`${l} 事件池 = 主表 44 + 线专属 8`);
   else bad(`${l} 事件池接线异常`, `总数 ${R[l].events.length} / 线专属 ${diff.length}`);
 }
 const petIds = { line_order: 'logic_dove', line_abyss: 'little_chaos', line_faith: 'holy_moth' };

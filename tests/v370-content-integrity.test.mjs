@@ -55,8 +55,8 @@ function compact(n) {
 
 console.log('[D] 内容完整性与卡面数值');
 
-test('D1 研究项 35 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
-  assert.equal(BALANCE.researchUpgs.length, 35);
+test('D1 研究项 40 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
+  assert.equal(BALANCE.researchUpgs.length, 40);
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内 id 不重复');
@@ -86,8 +86,8 @@ test('D3 所有政策 effect key 都有 policyMult 消费点（无死政策）',
     }
   }
   assert.equal(new Set(ids).size, ids.length, '政策 id 不重复');
-  assert.equal(POLICY_GROUPS.length, 7);
-  assert.equal(ids.length, 19);
+  assert.equal(POLICY_GROUPS.length, 8);
+  assert.equal(ids.length, 23);
 });
 
 test('D4 policyMult 与 researchMult(policy) 同口径（去掉内联第二实现）', () => {
@@ -124,15 +124,15 @@ test('D6 事件数值在既有天花板内，不破坏平衡', () => {
   }
 });
 
-test('D7 章节 id 全局唯一（主线 24 + 三线各 10）', () => {
+test('D7 章节 id 全局唯一（主线 28 + 三线各 12）', () => {
   const all = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(all.length, 54);
+  assert.equal(all.length, 64);
   assert.equal(new Set(all).size, all.length, '章节 id 撞号');
 });
 
-test('D8 事件 id 全局唯一（主表 36 + 三线各 6）', () => {
+test('D8 事件 id 全局唯一（主表 44 + 三线各 8）', () => {
   const all = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(all.length, 54);
+  assert.equal(all.length, 68);
   assert.equal(new Set(all).size, all.length, '事件 id 撞号');
 });
 
