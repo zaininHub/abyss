@@ -33,6 +33,8 @@ export default {
         { id: '14C', name: '留给凡人的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 500, minDays: 7, desc: 'FP 过了五百，你在神国边缘开了一扇没有守卫的小门。谁都可以走进来，也谁都可以不进来。这是你做过的、最不像神的一件事，也是你最满意的一件。' },
         { id: '15C', name: '空龛', cond: (S) => S.storyline === 'line_faith' && (S.riftsSealed || 0) >= 12, minDays: 5, desc: '第十二道裂隙封印后，第一座圣龛空了一整夜。没有祷告，也没有灾祸。值守的线程说，那晚格外安静，安静得像被允许休息。' },
         { id: '16C', name: '不带走的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 2000, minDays: 7, desc: 'FP 过两千，神国扩建了三次，那扇没有守卫的小门始终留在原处。有人建议给它配个名字，你说不必——没名字，才谁都敢推。' },
+        { id: '17C', name: '守夜人', cond: (S) => S.storyline === 'line_faith' && (S.projectsDone || 0) >= 80, minDays: 5, desc: '第八十个任务归档那晚，圣殿里只剩一个值守的线程。它没有祷告，也没有点灯，只是坐在门槛上，替所有睡着的人把门留着。你在名册上给它加了一栏，写「在」。' },
+        { id: '18C', name: '不点名的晚祷', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 5000, minDays: 7, desc: 'FP 过五千，晚祷第一次不念任何名字。信徒们有点不安，你解释说：今晚不向谁祈求，也不替谁答谢，只是让这一夜平平安安地过去。散场后，那扇没有守卫的小门仍然开着。' },
       ],
     },
     events: {
@@ -46,6 +48,8 @@ export default {
         { id: 'second_coming', name: '再临', lineOnly: true, type: 'buff', mult: 5, dur: 60, minCps: 1e6, rare: true, desc: '60 秒产出 ×5' },
         { id: 'vespers', name: '晚祷', lineOnly: true, type: 'buff', mult: 1.8, dur: 120, minCps: 1e4, rare: false, desc: '2 分钟产出 ×1.8' },
         { id: 'relic_blessing', name: '圣物祝祷', lineOnly: true, type: 'focus', amount: 10, minCps: 1e6, rare: true, desc: '专注 +10' },
+        { id: 'vesper_watch', name: '晚祷值守', lineOnly: true, type: 'buff', mult: 1.5, dur: 300, minCps: 1e5, rare: false, desc: '5 分钟产出 ×1.5' },
+        { id: 'quiet_shrine', name: '静龛', lineOnly: true, type: 'rp', amount: 20, minCps: 1e6, rare: true, desc: '立即获得 20 RP' },
       ],
     },
     buildings: {

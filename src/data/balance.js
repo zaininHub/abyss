@@ -381,6 +381,8 @@ export const BALANCE = {
     { cps: 1e8, rp: 20000 },
     // v3.8.0 里程碑扩充（7→9）：只追加更高门槛，既有门槛与 milesDone 键（以 cps 为键）完全不变
     { cps: 1e9, rp: 60000 }, { cps: 1e10, rp: 200000 },
+    // v3.9.0 里程碑扩充（9→11，+22.2%）：只追加更高门槛，既有 cps 键与奖励完全不变
+    { cps: 1e11, rp: 600000 }, { cps: 1e12, rp: 2000000 },
   ],
   // 科技乘数压缩（v2.0 §1.3）
   techMult: {
@@ -473,6 +475,13 @@ export const BALANCE = {
     { id: 'rp_ai3',      name: '拟我终局',   cap: 8, base: 2200, growth: 1.82, fx: { key: 'ai',     v: 0.07 }, desc: 'AI 助手效率 +7%/级' },
     { id: 'rp_rift4',    name: '裂隙终式',   cap: 6, base: 8000, growth: 1.92, fx: { key: 'rift',   v: 0.12 }, desc: '裂隙余烬 +12%/级' },
     { id: 'rp_dm2',      name: '星尘终炼',   cap: 8, base: 1600, growth: 1.78, fx: { key: 'dm',     v: 0.12 }, desc: '载具 DM 采集 +12%/级' },
+    // v3.9.0 研究项扩充（40→46，+15%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
+    { id: 'rp_ep5',      name: '熵流守夜',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'ep',     v: 0.11 }, desc: '基础 EP 产出 +11%/级' },
+    { id: 'rp_thread4',  name: '群体值守',   cap: 8, base: 2700, growth: 1.80, fx: { key: 'thread', v: 0.09 }, desc: '线程产出 +9%/级' },
+    { id: 'rp_global2',  name: '全域编排',   cap: 8, base: 3000, growth: 1.82, fx: { key: 'global', v: 0.06 }, desc: '全局产出 ×1.06/级' },
+    { id: 'rp_wage3',    name: '值守津贴',   cap: 8, base: 2400, growth: 1.80, fx: { key: 'wage',   v: -0.07 }, desc: '线程消耗 -7%/级' },
+    { id: 'rp_ai4',      name: '拟我值守',   cap: 8, base: 2800, growth: 1.82, fx: { key: 'ai',     v: 0.09 }, desc: 'AI 助手效率 +9%/级' },
+    { id: 'rp_dm3',      name: '星尘夜采',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'dm',     v: 0.13 }, desc: '载具 DM 采集 +13%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

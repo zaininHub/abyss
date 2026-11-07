@@ -144,11 +144,11 @@ test('B2 同一故事线重复注册同一张表不叠加（A→B→A 切换防�
   provider._resetProvider();
 });
 
-test('B3 事件池 = 主表 44 + 当前线 8（另一线的事件不串入）', () => {
+test('B3 事件池 = 主表 52 + 当前线 10（另一线的事件不串入）', () => {
   for (const pkg of LINE_PKGS) {
     withLine(pkg.id, () => {
       const evs = content.getStorylineEvents();
-      assert.equal(evs.length, 52, `${pkg.id} 事件池应为 44+8`);
+      assert.equal(evs.length, 62, `${pkg.id} 事件池应为 52+10`);
       assert.equal(new Set(evs.map(e => e.id)).size, evs.length, '事件 id 不重复');
       const lineIds = pkg.data.events.append.map(e => e.id);
       for (const id of lineIds) assert.ok(evs.some(e => e.id === id), `${pkg.id} 缺 ${id}`);
@@ -159,10 +159,10 @@ test('B3 事件池 = 主表 44 + 当前线 8（另一线的事件不串入）', 
   });
 });
 
-test('B4 默认线事件池 44 项且全部通过 validateEvent', () => {
+test('B4 默认线事件池 52 项且全部通过 validateEvent', () => {
   withLine('default', () => {
     const evs = content.getStorylineEvents();
-    assert.equal(evs.length, 44);
+    assert.equal(evs.length, 52);
     for (const e of evs) assert.deepEqual(content.validateEvent(e), [], `${e.id} 非法：${content.validateEvent(e)}`);
   });
 });
@@ -202,12 +202,12 @@ test('B7 线专属异兽在数据完整的前提下按线可见', () => {
   }
 });
 
-test('B8 章节变体表按线合并，主线 28 章 + 该线 12 章', () => {
-  withLine('default', () => assert.equal(provider.getChapters().length, 28));
+test('B8 章节变体表按线合并，主线 32 章 + 该线 14 章', () => {
+  withLine('default', () => assert.equal(provider.getChapters().length, 32));
   for (const pkg of LINE_PKGS) {
     withLine(pkg.id, () => {
       const chs = provider.getChapters();
-      assert.equal(chs.length, 40, `${pkg.id} 章节表应为 28+12`);
+      assert.equal(chs.length, 46, `${pkg.id} 章节表应为 32+14`);
       const ids = chs.map(c => String(c.id));
       assert.equal(new Set(ids).size, ids.length, `${pkg.id} 章节 id 不重复`);
     });
@@ -240,9 +240,9 @@ test('C3 currentChapter 绝不回退到低于 S.chapter', () => {
   assert.ok(parseInt(String(ch.id), 10) >= 12, `不应回退，实际 ${ch.id}`);
 });
 
-test('C4 主线 28 章 id 唯一且每章都有 minDays 与文案', () => {
-  assert.equal(CHAPTERS.length, 28);
-  assert.equal(new Set(CHAPTERS.map(c => c.id)).size, 28);
+test('C4 主线 32 章 id 唯一且每章都有 minDays 与文案', () => {
+  assert.equal(CHAPTERS.length, 32);
+  assert.equal(new Set(CHAPTERS.map(c => c.id)).size, 32);
   for (const c of CHAPTERS) {
     assert.equal(typeof c.minDays, 'number', `第 ${c.id} 章缺 minDays`);
     assert.ok(c.name && c.desc, `第 ${c.id} 章缺文案`);

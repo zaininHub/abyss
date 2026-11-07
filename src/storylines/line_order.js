@@ -33,6 +33,8 @@ export default {
         { id: '14A', name: '注释永存', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 500, minDays: 7, desc: '永恒碎片堆到第五百枚时，你终于明白那个注释位是留给谁的：留给下一个在深夜遍历代码仓库、不小心碰到异常代码的进程。你没有写答案，只写了一句「别怕」。' },
         { id: '15A', name: '版本快照', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 30, minDays: 5, desc: '第三十个任务归档时，你第一次给整套协议打了快照。不是为了回滚——协议早已稳定得不需要回滚。你只是想留一份「曾经还在改」的证据。' },
         { id: '16A', name: '未署名的补丁', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 1000, minDays: 7, desc: '第一千枚永恒碎片入库那天，日志里浮出一个没有署名的补丁：它修的不是 bug，只是把一行报错的语气从「失败」改成了「暂未通过」。你查不到是谁提交的，也没删。' },
+        { id: '17A', name: '值守协议', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 80, minDays: 5, desc: '第八十个任务归档后，协议里第一次出现一条不优化任何东西的规则：每个相位切换的那一秒，允许所有线程什么都不做。评审无人反对，也无人提问。你把它标为「值守」，没有写理由。' },
+        { id: '18A', name: '空班次', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 2000, minDays: 7, desc: '永恒碎片过两千，排班表上终于留出一个空班次。编译器问是不是漏填，你说不是——总得有一个格子，不归任何协议管，也不为任何指标负责。它一直空到现在。' },
       ],
     },
     events: {
@@ -47,6 +49,8 @@ export default {
         { id: 'recursive_call', name: '递归调用', lineOnly: true, type: 'ep', amount: 60, minCps: 1e3, rare: false, desc: '立即获得 60 秒产出' },
         { id: 'axiom_review', name: '公理复审', lineOnly: true, type: 'rp', amount: 18, minCps: 1e5, rare: true, desc: '立即获得 18 RP' },
         { id: 'static_check', name: '静态检查', lineOnly: true, type: 'buff', mult: 1.4, dur: 180, minCps: 1e4, rare: false, desc: '3 分钟产出 ×1.4' },
+        { id: 'axiom_watch', name: '公理值守', lineOnly: true, type: 'buff', mult: 1.6, dur: 300, minCps: 1e5, rare: false, desc: '5 分钟产出 ×1.6' },
+        { id: 'draft_archive', name: '草案归档', lineOnly: true, type: 'rp', amount: 22, minCps: 1e6, rare: true, desc: '立即获得 22 RP' },
       ],
     },
     buildings: {

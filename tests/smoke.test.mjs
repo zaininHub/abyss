@@ -277,9 +277,14 @@ t('R2：任务面板事件委托 + 原地更新，取消每秒整面板重建（
   // v2.0 旧模式是「行首独立语句」的无条件重建；v1.3 AI tick 的条件置位（if (tickAI(dt)) { ... }）合法
   assert.ok(!/^\s*dirty\.top = true; dirty\.projects = true;/m.test(src), '无条件重建任务面板的旧代码应已移除');
 });
-t('R4：每秒调用 refreshShopAffordability 快刷灰态（源码断言）', () => {
-  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('refreshShopAffordability();'), 'tick 每秒块应调用灰态刷新');
+t('R4：可购态快刷由 affordability 帧系统声明（源码断言）', () => {
+  // v3.9.0 设计变更：主循环收敛为声明式帧系统调度，300ms 灰态快刷从 tick 内联块
+  // 迁到 systems/frameSystems.js 的 affordability 系统（行为不变，仍每 300ms 原地刷新）。
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  const sys = readFileSync(new URL('../src/systems/frameSystems.js', import.meta.url), 'utf8');
+  assert.ok(sys.includes('refreshShopAffordability();'), 'affordability 系统应调用灰态刷新');
+  assert.ok(/id: 'affordability'[\s\S]{0,200}intervalMs: 300/.test(sys), '快刷应声明 300ms 节流');
+  assert.ok(main.includes('runSystems(frameCtx, FRAME_PHASES.FRAME);'), '主循环应消费 FRAME 阶段系统');
 });
 
 console.log('[7] v2.1.1 修复断言（P1-B 溢出产腐化 / P1-A 裂隙卡片残留）');

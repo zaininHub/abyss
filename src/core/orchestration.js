@@ -1,7 +1,10 @@
 // v3.8.0 新玩法「效能编排」——读侧单一真源。
+// v3.9.0 扩充：第 5 条策略「值守编排」+「潮汐预案」（四相位自定义排班表）。
 //
 // 玩法：玩家为工作台选定一条编排策略，在四条资源管线之间做取舍（有增益必有代价），
 //       也可开启「随潮汐排班」让策略随深渊潮汐相位自动轮转，把既有潮汐机制变成可经营的变量。
+//       v3.9.0 起，完成更多任务后可逐相位改写排班表：涨潮/平潮/退潮/乱流各指定一条策略，
+//       默认排班表与 v3.8.0 固定映射完全一致 —— 不改动即零数值漂移。
 //
 // 接线纪律（与项目「无死数据」红线一致）：
 //   ep → economy.computeCps() 的标准乘区（保证 CPS 显示与真实入账同口径）
@@ -15,6 +18,7 @@ export const ORCHESTRATION_KEYS = Object.freeze(['ep', 'rp', 'pt', 'dm']);
 export const ORCHESTRATION_KEY_LABELS = Object.freeze({
   ep: 'EP 产出', rp: 'RP 蒸馏', pt: 'PT 孵化', dm: 'DM 采集',
 });
+export const TIDE_PHASE_NAMES = Object.freeze(['涨潮', '平潮', '退潮', '乱流']);
 
 // effects 为「倍率」：1 表示不变。增益与代价成对，任何策略都存在明确的取舍。
 export const ORCHESTRATION_MODES = Object.freeze([
@@ -30,18 +34,35 @@ export const ORCHESTRATION_MODES = Object.freeze([
   { id: 'abyss', name: '深渊优先', icon: '◆', short: '深渊',
     desc: '把管线接到裂隙一侧：孵化与探采大幅提速，基础产出相应让位。',
     effects: { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 } },
+  // v3.9.0 第 5 条（4→5，+25%）：面向长夜挂机的「守夜」取舍——基础产出略降，
+  // 换取三条转化管线同时提速。与产能优先形成互补，专供自定义排班表填夜间相位。
+  { id: 'vigil', name: '值守编排', icon: '☾', short: '值守',
+    desc: '把算力留给值守与维护：基础产出略降，蒸馏、孵化与探采同步提速。',
+    effects: { ep: 0.94, rp: 1.18, pt: 1.18, dm: 1.20 } },
 ]);
 
 const MODE_BY_ID = new Map(ORCHESTRATION_MODES.map(m => [m.id, m]));
 export const DEFAULT_MODE = 'balanced';
 
 // 潮汐相位 → 策略（与 balance.tide.phases 的 0 涨潮 / 1 平潮 / 2 退潮 / 3 乱流 对应）
+// 同时是「默认排班表」：旧档无 schedule 字段、或未解锁预案时一律回落到此映射。
 export const TIDE_ORCHESTRATION = Object.freeze(['output', 'balanced', 'research', 'abyss']);
+
+// v3.9.0 数值配置：改写排班表的解锁门槛（两项满足其一）。
+// 取「任务链已跑通」为可达口径：30 天 mock 推演中第 8 个任务在开局数小时内即达成。
+export const SCHEDULE_UNLOCK = Object.freeze({ projectsDone: 8, prestige: 2 });
 
 /** 解锁门槛：完成 3 个任务或首次晋升。旧档用已持久化字段判定，无迁移成本。 */
 export function orchestrationUnlocked(S) {
   if (!S) return false;
   return (S.projectsDone || 0) >= 3 || (S.prestige || 0) >= 1;
+}
+
+/** v3.9.0：自定义排班表的解锁门槛（必须已开放编排，且积累更多任务/职级）。 */
+export function scheduleUnlocked(S) {
+  if (!orchestrationUnlocked(S)) return false;
+  return (S.projectsDone || 0) >= SCHEDULE_UNLOCK.projectsDone
+    || (S.prestige || 0) >= SCHEDULE_UNLOCK.prestige;
 }
 
 /** 规范化状态：旧档无 orchestration / 字段被污染时一律回落到安全值。 */
@@ -51,12 +72,23 @@ export function orchestrationState(S) {
   return { mode, autoTide: !!raw.autoTide };
 }
 
-/** 当前实际生效的策略（自动排班时由潮汐相位决定，手动选择被旁路但不丢失）。 */
+/**
+ * v3.9.0：读侧唯一入口 —— 四相位排班表。
+ * 未解锁 / 旧档 / 非法存档 / 越界 id 一律回落到 v3.8.0 默认映射，绝不放大数值。
+ */
+export function orchestrationSchedule(S) {
+  const raw = S && S.orchestration && Array.isArray(S.orchestration.schedule)
+    ? S.orchestration.schedule : null;
+  if (!scheduleUnlocked(S) || !raw) return [...TIDE_ORCHESTRATION];
+  return TIDE_ORCHESTRATION.map((fallback, i) => (MODE_BY_ID.has(raw[i]) ? raw[i] : fallback));
+}
+
+/** 当前实际生效的策略（自动排班时由潮汐相位 + 排班表决定，手动选择被旁路但不丢失）。 */
 export function effectiveModeId(S) {
   const st = orchestrationState(S);
   if (st.autoTide) {
     const phase = Number.isInteger(S && S.tidePhase) ? S.tidePhase : 0;
-    return TIDE_ORCHESTRATION[((phase % 4) + 4) % 4] || DEFAULT_MODE;
+    return orchestrationSchedule(S)[((phase % 4) + 4) % 4] || DEFAULT_MODE;
   }
   return st.mode;
 }
@@ -73,18 +105,46 @@ export function orchestrationMult(key, S) {
 /** 玩家操作入口：只允许合法 id；写入后由调用方置 dirty.orchestration。 */
 export function setOrchestrationMode(S, id) {
   if (!S || !MODE_BY_ID.has(id)) return false;
-  const st = orchestrationState(S);
-  S.orchestration = { ...st, mode: id };
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  S.orchestration = { ...raw, ...orchestrationState(S), mode: id };
   return true;
 }
 export function setOrchestrationAutoTide(S, on) {
   if (!S) return false;
-  const st = orchestrationState(S);
-  S.orchestration = { ...st, autoTide: !!on };
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  S.orchestration = { ...raw, ...orchestrationState(S), autoTide: !!on };
   return true;
 }
 export function toggleOrchestrationAutoTide(S) {
   return setOrchestrationAutoTide(S, !orchestrationState(S).autoTide);
+}
+
+/**
+ * v3.9.0：改写某一潮汐相位的排班策略。
+ * 严格校验解锁 / 相位 / 策略 id；非法输入不写状态（防存档污染与越权放大）。
+ */
+export function setOrchestrationPhaseMode(S, phase, id) {
+  if (!scheduleUnlocked(S) || !Number.isInteger(phase) || phase < 0 || phase > 3) return false;
+  if (!MODE_BY_ID.has(id)) return false;
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  const next = orchestrationSchedule(S).slice();
+  next[phase] = id;
+  S.orchestration = { ...raw, ...orchestrationState(S), schedule: next };
+  return true;
+}
+
+/** 恢复默认排班表（v3.8.0 固定映射），供玩家一键回退。 */
+export function resetOrchestrationSchedule(S) {
+  if (!scheduleUnlocked(S)) return false;
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  S.orchestration = { ...raw, ...orchestrationState(S), schedule: [...TIDE_ORCHESTRATION] };
+  return true;
+}
+
+/** 排班表是否已偏离默认（面板决定要不要显示「恢复默认」按钮）。 */
+export function scheduleCustomized(S) {
+  const sched = orchestrationSchedule(S);
+  return sched.some((id, i) => id !== TIDE_ORCHESTRATION[i]);
 }
 
 /** 面板用：当前生效策略的四条倍率（玩家可读，不暴露实现术语）。 */

@@ -48,36 +48,36 @@ console.log('[E] 扩充幅度与全局唯一性');
 
 test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   const rows = [
-    ['主线章节', CHAPTERS.length, 24],
-    ['主事件', EVENTS.length, 36],
-    ['研究项', BALANCE.researchUpgs.length, 35],
-    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 19],
-    ['百科章节', WIKI_SECTIONS.length, 14],
-    ['里程碑', BALANCE.miles.length, 7],
+    ['主线章节', CHAPTERS.length, 28],
+    ['主事件', EVENTS.length, 44],
+    ['研究项', BALANCE.researchUpgs.length, 40],
+    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 23],
+    ['百科章节', WIKI_SECTIONS.length, 17],
+    ['里程碑', BALANCE.miles.length, 9],
   ];
   for (const [name, now, before] of rows) {
     const pct = (now - before) / before * 100;
     assert.ok(pct >= 10 && pct <= 30, `${name} 扩充 ${pct.toFixed(1)}% 超出 10~30%：${before}→${now}`);
     assert.ok(now > before, `${name} 未扩充`);
   }
-  assert.equal(CHAPTERS.length, 28);
-  assert.equal(EVENTS.length, 44);
-  assert.equal(BALANCE.researchUpgs.length, 40);
-  assert.equal(POLICY_GROUPS.length, 8);
-  assert.equal(WIKI_SECTIONS.length, 17);
-  assert.equal(BALANCE.miles.length, 9);
+  assert.equal(CHAPTERS.length, 32);
+  assert.equal(EVENTS.length, 52);
+  assert.equal(BALANCE.researchUpgs.length, 46);
+  assert.equal(POLICY_GROUPS.length, 9);
+  assert.equal(WIKI_SECTIONS.length, 20);
+  assert.equal(BALANCE.miles.length, 11);
 });
 
-test('E2 三线变体章节 10→12、事件 6→8，章节/事件 id 全局唯一', () => {
+test('E2 三线变体章节 12→14、事件 8→10，章节/事件 id 全局唯一', () => {
   for (const pkg of LINE_PKGS) {
-    assert.equal(pkg.data.chapters.append.length, 12, `${pkg.id} 章节数`);
-    assert.equal(pkg.data.events.append.length, 8, `${pkg.id} 事件数`);
+    assert.equal(pkg.data.chapters.append.length, 14, `${pkg.id} 章节数`);
+    assert.equal(pkg.data.events.append.length, 10, `${pkg.id} 事件数`);
   }
   const chIds = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(chIds.length, 64);
+  assert.equal(chIds.length, 74);
   assert.equal(new Set(chIds).size, chIds.length, '章节 id 撞号');
   const evIds = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(evIds.length, 68);
+  assert.equal(evIds.length, 82);
   assert.equal(new Set(evIds).size, evIds.length, '事件 id 撞号');
 });
 
@@ -98,7 +98,7 @@ test('E3 新增章节均有 minDays / 文案 / 可安全求值的 cond', () => {
     assert.ok(c.name && c.desc, `第 ${c.id} 章缺文案`);
     assert.doesNotThrow(() => !!c.cond(rich), `第 ${c.id} 章 cond 抛错`);
   }
-  for (const id of [25, 26, 27, 28]) {
+  for (const id of [25, 26, 27, 28, 29, 30, 31, 32]) {
     const c = CHAPTERS.find(x => x.id === id);
     assert.ok(c, `缺新增章节 ${id}`);
     assert.ok(c.cond(rich), `第 ${id} 章条件应可达`);
@@ -108,7 +108,7 @@ test('E3 新增章节均有 minDays / 文案 / 可安全求值的 cond', () => {
 
 console.log('[F] 配置与消费点接线');
 
-test('F1 40 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消费点', () => {
+test('F1 46 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消费点', () => {
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内重复');
@@ -122,7 +122,7 @@ test('F1 40 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消
   }
 });
 
-test('F2 23 项政策 effect key 全部有 policyMult 消费点，新组 unlock 可安全求值', () => {
+test('F2 27 项政策 effect key 全部有 policyMult 消费点，新组 unlock 可安全求值', () => {
   const consumed = new Set([...ALL_SRC.matchAll(/policyMult\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)/g)].map(m => m[1]));
   const ids = [];
   for (const g of POLICY_GROUPS) {
@@ -136,10 +136,13 @@ test('F2 23 项政策 effect key 全部有 policyMult 消费点，新组 unlock 
     }
   }
   assert.equal(new Set(ids).size, ids.length, '政策 id 重复');
-  assert.equal(ids.length, 23);
+  assert.equal(ids.length, 27);
   const g = POLICY_GROUPS.find(x => x.id === 'orchestration');
-  assert.ok(g, '缺新增「编排律令」组');
+  assert.ok(g, '缺「编排律令」组');
   assert.equal(g.policies.length, 4);
+  const w = POLICY_GROUPS.find(x => x.id === 'watch');
+  assert.ok(w, '缺 v3.9.0 新增「值守纪律」组');
+  assert.equal(w.policies.length, 4);
   assert.equal(typeof policyMult('ep'), 'number', '政策读侧应可独立求值');
 });
 
@@ -155,7 +158,7 @@ test('F3 全部事件数值在主表天花板内，且 type 都有 applyEvent �
     if (e.type === 'ep') assert.ok((e.amount || 0) <= 14400, `${e.id} 产出秒数越界`);
     if (e.type === 'debuff') assert.ok(e.mult >= 0.3 && e.mult < 1, `${e.id} debuff 倍率异常`);
   }
-  assert.equal(all.length, 68);
+  assert.equal(all.length, 82);
 });
 
 test('F4 里程碑只追加不重排，既有 cps 键与奖励完全不变', () => {
@@ -192,15 +195,22 @@ test('G2 新增 3 条成就已注册，判定只读已持久化字段', () => {
   assert.ok(MAIN_SRC.includes("chapterProgress(s.chapter || '1') >= 25"));
 });
 
-test('G3 编排卡已接入渲染分发 / 解锁快刷 / 事件委托 / QA 暴露', () => {
-  assert.ok(MAIN_SRC.includes("if (dirty.orchestration) { renderOrchestrationPanel();"), '缺渲染分发');
+test('G3 编排卡已接入面板注册表 / 帧系统快刷 / 事件委托 / QA 暴露', () => {
+  const SYS_SRC = readFileSync(new URL('../src/systems/frameSystems.js', import.meta.url), 'utf8');
+  assert.ok(MAIN_SRC.includes("registerPanel({ key: 'orchestration', render: renderOrchestrationPanel });"),
+    '编排卡应由面板注册表消费 dirty.orchestration');
   assert.ok(MAIN_SRC.includes('bindOrchestrationPanel();'), '缺事件绑定');
-  assert.ok(MAIN_SRC.includes('lastOrchUnlocked'), '缺解锁翻转快刷');
-  assert.ok(MAIN_SRC.includes('dirty.orchestration = true;'), '缺兜底刷新');
-  assert.ok(MAIN_SRC.includes('flowStats, flowLedger, flowErrors, FLOW_PHASES'), '缺 QA 暴露');
+  assert.ok(SYS_SRC.includes('ctx.lastOrchUnlocked'), '解锁翻转快刷应由帧系统声明');
+  assert.ok(MAIN_SRC.includes('dirty.orchestration = true;') || SYS_SRC.includes('dirty.orchestration = true;'),
+    '缺兜底刷新');
+  assert.ok(MAIN_SRC.includes('flowStats, flowLedger, flowErrors, FLOW_PHASES'), '缺资源流 QA 暴露');
+  assert.ok(MAIN_SRC.includes('runSystems, systemStats, systemErrors, FRAME_PHASES'), '缺控制流层 QA 暴露');
+  assert.ok(MAIN_SRC.includes('setOrchestrationPhaseMode, resetOrchestrationSchedule'), '缺潮汐预案 QA 暴露');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.ok(html.includes('id="orchestration-card"') && html.includes('id="orchestration-panel"'));
   assert.ok(MAIN_SRC.includes('el._orchSig === sig'), '面板必须有结构签名去重，防 2s 兜底吞点击');
+  assert.ok(MAIN_SRC.includes('data-orch-slot-mode') && MAIN_SRC.includes('data-orch-schedule-reset'),
+    '潮汐预案排班表应有逐相位改写与恢复默认入口');
 });
 
 test('G4 currentChapter 新章节不回退，旧档 chapter 仍为权威下限', () => {

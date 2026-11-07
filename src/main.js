@@ -60,8 +60,14 @@ import { BALANCE } from './data/balance.js';
 // v3.8.0 核心玩法抽象：资源流引擎（声明 → 求值 → 消费），主循环不再内联任何结算公式
 import { runFlows, flowStats, flowLedger, flowErrors, FLOW_PHASES } from './core/flowEngine.js';
 import './systems/resourceFlows.js'; // 副作用：注册全部资源流（必须在 tick 之前完成）
-import { ORCHESTRATION_MODES, TIDE_ORCHESTRATION, orchestrationUnlocked, orchestrationState,
-  effectiveMode, effectiveModeId, orchestrationSummary, setOrchestrationMode,
+// v3.9.0 核心玩法抽象（控制流层）：帧系统调度 + 声明式面板分发
+import { runSystems, systemStats, systemErrors, FRAME_PHASES } from './core/systemScheduler.js';
+import { registerFrameSystems } from './systems/frameSystems.js';
+import { registerPanel, renderPanels, panelErrors, allPanels } from './core/panelRegistry.js';
+import { ORCHESTRATION_MODES, TIDE_ORCHESTRATION, TIDE_PHASE_NAMES, SCHEDULE_UNLOCK,
+  orchestrationUnlocked, orchestrationState, scheduleUnlocked, orchestrationSchedule,
+  scheduleCustomized, setOrchestrationMode, setOrchestrationPhaseMode, resetOrchestrationSchedule,
+  effectiveMode, effectiveModeId, orchestrationSummary,
   setOrchestrationAutoTide, toggleOrchestrationAutoTide, orchestrationMult } from './core/orchestration.js';
 import './style.css';
 
@@ -86,8 +92,12 @@ function renderOrchestrationPanel() {
   const auto = st.autoTide;
   const active = effectiveMode(S);
   const summary = orchestrationSummary(S);
+  const schedOK = scheduleUnlocked(S);
+  const sched = orchestrationSchedule(S);
   // 结构签名去重：2s 兜底刷新与潮汐相位变化都不重建按钮（防慢速点击被吞 / hover 闪烁）
-  const sig = `${unlocked}|${st.mode}|${auto}|${active.id}|${summary.map(x => x.mult).join(',')}`;
+  // v3.9.0：排班表 / 当前相位 / 解锁态一并进签名，改写任一位后卡片即时同步
+  const sig = `${unlocked}|${st.mode}|${auto}|${active.id}|${summary.map(x => x.mult).join(',')}`
+    + `|S:${schedOK ? sched.join('.') : '-'}|P:${auto ? S.tidePhase : -1}`;
   if (el._orchSig === sig) return;
   el._orchSig = sig;
 
@@ -102,10 +112,36 @@ function renderOrchestrationPanel() {
   }
   html += `</div>`;
 
+  const schedLine = TIDE_PHASE_NAMES
+    .map((n, i) => `${n}→${(ORCHESTRATION_MODES.find(m => m.id === sched[i]) || {}).short || '均衡'}`)
+    .join(' · ');
   html += `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
     <button class="btn-mini" data-orch-auto="1"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>随潮汐排班：${auto ? '开' : '关'}</button>
-    <span style="color:var(--text-3);font-size:10.5px">${auto ? '涨潮→产能 · 平潮→均衡 · 退潮→研究 · 乱流→深渊' : '手动选定一条编排'}</span>
+    <span style="color:var(--text-3);font-size:10.5px">${auto ? schedLine : '手动选定一条编排'}</span>
   </div>`;
+
+  // v3.9.0「潮汐预案」：解锁后，随潮汐排班开启时逐相位改写策略。
+  // 面板只陈述自身数据（四相位当前排班），不写获取入口、不暴露实现术语。
+  if (auto && schedOK) {
+    const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
+    // 标题与操作提示分行：窄卡内同行会把提示挤成「孤字」换行（实测末字单独占一行）
+    html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
+      <div style="font-size:11.5px;color:var(--text-2)">潮汐预案 · 四相位排班表</div>
+      <div style="color:var(--text-3);font-size:10.5px;margin:2px 0 7px">点相位下的策略即可改写</div>`;
+    for (let i = 0; i < 4; i++) {
+      const nowOn = curPhase === i;
+      // 槽位按钮放大到 24×24（可访问性点击目标下限），相位标签/间距相应收窄，保持单行不换行
+      html += `<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin:4px 0">
+        <span style="min-width:44px;font-size:11px;color:${nowOn ? 'var(--accent)' : 'var(--text-3)'}">${nowOn ? '▶ ' : ''}${TIDE_PHASE_NAMES[i]}</span>`;
+      for (const m of ORCHESTRATION_MODES) {
+        const on = sched[i] === m.id;
+        html += `<button class="btn-mini" data-orch-slot="${i}" data-orch-slot-mode="${m.id}" title="${TIDE_PHASE_NAMES[i]}改用${m.name}" aria-label="${TIDE_PHASE_NAMES[i]}改用${m.name}" style="min-width:24px;min-height:24px;display:inline-flex;align-items:center;justify-content:center;${on ? 'border-color:var(--accent);color:var(--accent);' : ''}">${m.icon}</button>`;
+      }
+      html += `<span style="font-size:10.5px;color:var(--text-3)">${(ORCHESTRATION_MODES.find(m => m.id === sched[i]) || {}).name || ''}</span></div>`;
+    }
+    if (scheduleCustomized(S)) html += `<button class="btn-mini" data-orch-schedule-reset="1">恢复默认排班</button>`;
+    html += `</div>`;
+  }
 
   html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
@@ -128,6 +164,16 @@ function bindOrchestrationPanel() {
     } else if (btn.dataset.orchAuto) {
       toggleOrchestrationAutoTide(S);
       log(`效能编排：随潮汐排班${orchestrationState(S).autoTide ? '开启' : '关闭'}`, 'good');
+    } else if (btn.dataset.orchSlot !== undefined) {
+      // v3.9.0：潮汐预案——逐相位改写排班表（非法/未解锁写入由读侧单一真源拦截）
+      const slot = Number(btn.dataset.orchSlot);
+      const modeId = btn.dataset.orchSlotMode;
+      if (!setOrchestrationPhaseMode(S, slot, modeId)) return;
+      const nm = (ORCHESTRATION_MODES.find(m => m.id === modeId) || {}).name || '';
+      log(`潮汐预案：${TIDE_PHASE_NAMES[slot]}改排「${nm}」`, 'good');
+    } else if (btn.dataset.orchScheduleReset) {
+      if (!resetOrchestrationSchedule(S)) return;
+      log('潮汐预案：恢复默认排班', 'good');
     } else return;
     dirty.orchestration = true; dirty.top = true; dirty.hero = true;
     renderOrchestrationPanel();
@@ -245,23 +291,29 @@ function updateCrossroad() {
   }
 }
 
-function render() {
-  ensureWishWell(); // v2.8.30 ③：许愿池（购买研究升级后即时出现/移除）
-  ensureFarewellGift(); // v2.9.2：离职礼盒（线程休眠/流失期间出现，1 EP 购买触发 sp3_farewell）
-  if (dirty.top) { renderTop(); dirty.top = false; }
-  if (dirty.hero) { renderHero(); dirty.hero = false; }
-  if (dirty.ai) { // v1.3 A：AI 面板（未解锁时整卡隐藏）
+// ========== v3.9.0：渲染分发表（声明式，替代原 20 余段手写 if 链） ==========
+// 注册顺序即渲染顺序，与 v3.8.0 原 render() 逐字对应；always 条目每帧执行。
+// 新增面板只需 registerPanel()，不必再改 render()；「dirty 键 ↔ 消费者」由 v390 单测静态审计。
+function registerAllPanels() {
+  registerPanel({ key: '__prelude', always: true, render: () => {
+    ensureWishWell();       // v2.8.30 ③：许愿池（购买研究升级后即时出现/移除）
+    ensureFarewellGift();   // v2.9.2：离职礼盒（线程休眠/流失期间出现）
+  } });
+  registerPanel({ key: 'top', render: renderTop });
+  registerPanel({ key: 'hero', render: renderHero });
+  registerPanel({ key: 'ai', render: () => { // v1.3 A：AI 面板（未解锁时整卡隐藏）
     const aiEl = document.getElementById('ai-panel');
     const aiCard = document.getElementById('ai-card');
     if (aiEl) renderAiPanel(aiEl);
     if (aiCard) aiCard.style.display = aiUnlocked() ? '' : 'none';
-    dirty.ai = false;
-  }
-  if (dirty.tide) { renderTide(); dirty.tide = false; }
-  if (dirty.corruption) { renderCorruption(); dirty.corruption = false; }
-  // v2.7.4 ③：腐化峰值记录（跨本局保留；深渊之心按峰值判定，净化节点不抵消）
-  if ((S.corruption || 0) > (S.corruptionPeak || 0)) { S.corruptionPeak = S.corruption; }
-  if (dirty.shop) {
+  } });
+  registerPanel({ key: 'tide', render: renderTide });
+  registerPanel({ key: 'corruption', render: renderCorruption });
+  registerPanel({ key: '__peak', always: true, render: () => {
+    // v2.7.4 ③：腐化峰值记录（跨本局保留；深渊之心按峰值判定，净化节点不抵消）
+    if ((S.corruption || 0) > (S.corruptionPeak || 0)) S.corruptionPeak = S.corruption;
+  } });
+  registerPanel({ key: 'shop', render: () => {
     const shopEl = document.getElementById('shop-list');
     if (shopEl) renderShop(shopEl);
     const threadEl = document.getElementById('thread-shop');
@@ -272,14 +324,12 @@ function render() {
       // v3.3.1 反馈①②：灵感工坊 / 异兽孵化升级并入「设施」列表（只有购买与升级）
       renderAtriumDistill(bldEl);
       renderHatchUpgrade(bldEl);
-      // 设施区标题：建筑未解锁但工坊卡已可见时仍需显示（原按建筑门控会空挂无标题的卡片）
       const bldT = document.getElementById('bld-title');
       if (bldT) bldT.style.display = bldEl.children.length > 0 ? '' : 'none';
     }
-    const v21El = document.getElementById('v21-building-list'); // v2.1：效能建筑分区
+    const v21El = document.getElementById('v21-building-list');
     if (v21El) renderV21Buildings(v21El);
-    // v2.7.5 ⑦：探采/深渊商店移入遗物 tab、岔路口移入故事线、族升级移入研究点——
-    // 容器跨 tab 但渲染仍随 shop 周期执行（隐藏 tab 渲染无碍，保证全页 DOM 查询与门控标题一致）
+    // v2.7.5 ⑦：容器跨 tab 但渲染仍随 shop 周期执行（隐藏 tab 渲染无碍，保证门控标题一致）
     const vehEl2 = document.getElementById('vehicle-shop');
     if (vehEl2) renderVehicles(vehEl2);
     const dmEl2 = document.getElementById('dm-shop');
@@ -288,107 +338,84 @@ function render() {
     if (crEl2) { renderCrossroadBuildings(crEl2); lastCrRenderState = S.crossroad; }
     const famEl2 = document.getElementById('family-upgrade-list');
     if (famEl2) renderFamilyUpgrades(famEl2);
-    dirty.shop = false;
-  }
-  if (dirty.rp) {
+  } });
+  registerPanel({ key: 'rp', render: () => {
     renderRpPanel();
-    renderResearchUpgrades(document.getElementById('research-upgrade-list')); // v2.8.4 ④：研究升级（RP 购买长线）
-    dirty.rp = false;
-  } // v2.7.4 ⑦：RP 蒸馏后面板刷新
-  if (dirty.tech) {
+    renderResearchUpgrades(document.getElementById('research-upgrade-list'));
+  } });
+  registerPanel({ key: 'tech', render: () => {
     const techEl = document.getElementById('tech-tree');
     if (techEl) renderTech(techEl);
     const eternalEl = document.getElementById('eternal-list');
-    // v2.8.4 ③：ES 未解锁（首次晋升获得 ES 前）不渲染永恒矩阵——升级项不再早于资源显示
-    // v2.8.7：标题一并隐藏（原仅清空列表，标题「永恒矩阵（ES 购买）· 当前 0 ES」仍显示）
     const eternalTitle = document.getElementById('eternal-title');
     if (eternalEl) {
       if (esDiscovered()) { renderEternal(eternalEl); if (eternalTitle) eternalTitle.style.display = ''; }
       else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
     }
-    // v3.3.9 反馈⑤：科技树「裂隙等级」（EP + DM 无限升级）
     const riftTechEl = document.getElementById('rift-tech-list');
     if (riftTechEl) renderRiftLevelTech(riftTechEl);
-    dirty.tech = false;
-  }
-  if (dirty.pets) {
+  } });
+  registerPanel({ key: 'pets', render: () => {
     const petEl = document.getElementById('pet-grid');
     if (petEl) renderPetGrid(petEl);
     const floatEl = document.getElementById('pet-float');
     if (floatEl) renderPetFloat(floatEl);
-    dirty.pets = false;
-  }
-  // v2.5.3 反馈③：深渊鱼缸触手——工作台底部缓慢摆动（≥1 级显示；3 级展示全部三只触手）
-  const tentacleEl = document.getElementById('tentacle-deco');
-  if (tentacleEl) {
+  } });
+  registerPanel({ key: '__tentacle', always: true, render: () => {
+    // v2.5.3 反馈③：深渊鱼缸触手（工作台底部缓慢摆动）
+    const tentacleEl = document.getElementById('tentacle-deco');
+    if (!tentacleEl) return;
     const fb = Math.min((S.buildings && S.buildings.abyss_fishbowl) || 0, 3);
     tentacleEl.style.display = fb >= 1 ? '' : 'none';
-    // v2.8.2 反馈⑫：1 级 1 条触手、2 级 2 条、3 级 3 条（CSS 默认只显示 tentacle-a）
     tentacleEl.classList.toggle('tentacle-2', fb >= 2);
     tentacleEl.classList.toggle('tentacle-3', fb >= 3);
-  }
-  if (dirty.prestige) {
-    syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：P3 未到时整块隐藏，达标后即时出现
+  } });
+  registerPanel({ key: 'prestige', render: () => {
+    syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：P3 未到时整块隐藏
     const preEl = document.getElementById('prestige-panel');
-    if (preEl) {
-      renderPrestige(preEl);
-      renderReincarn(preEl); // v2.7.3 ⑤：轮回区块（晋升面板底部）
-    }
-    dirty.prestige = false;
-  }
-  // v2.7.4 ①：遗物面板独立于晋升刷新（周期 gate/DM 状态更新；原嵌在 prestige 块内会导致
-  // dirty.relics 置位但 prestige 未脏时永不消费）
-  if (dirty.relics) { renderRelics(document.getElementById('relics-panel')); dirty.relics = false; } // v2.7.0：深渊遗物
-  if (dirty.projects) {
-    renderProjects();
-    dirty.projects = false;
-  }
-  if (dirty.story) {
+    if (preEl) { renderPrestige(preEl); renderReincarn(preEl); }
+  } });
+  registerPanel({ key: 'relics', render: () => renderRelics(document.getElementById('relics-panel')) });
+  registerPanel({ key: 'projects', render: renderProjects });
+  registerPanel({ key: 'story', render: () => {
     const storyEl = document.getElementById('chapter-bar');
     if (storyEl) renderStoryBar(storyEl);
-    dirty.story = false;
-  }
-  // v3.2.4 反馈②：右列故事线/成就常驻面板——v3.2.1 三列布局后原 switchTab('storyline'/'achievement')
-  // 渲染入口已不可达（按钮移除），面板从开档起恒空。现在走脏标记：开档渲染 + 每 2s 兜底 + 事件置位
-  if (dirty.storyline) { renderStorylinePanel(); dirty.storyline = false; }
-  if (dirty.orchestration) { renderOrchestrationPanel(); dirty.orchestration = false; } // v3.8.0：效能编排卡
-  if (dirty.achievements) { renderAchievementPanel(document.getElementById('achievement-panel')); dirty.achievements = false; }
-  if (dirty.religion) { // v2.5.7：宗教面板
+  } });
+  registerPanel({ key: 'storyline', render: renderStorylinePanel });
+  registerPanel({ key: 'orchestration', render: renderOrchestrationPanel });
+  registerPanel({ key: 'achievements', render: () => renderAchievementPanel(document.getElementById('achievement-panel')) });
+  registerPanel({ key: 'religion', render: () => {
     const relEl = document.getElementById('religion-panel');
     if (relEl) renderReligionPanel(relEl);
-    dirty.religion = false;
-  }
-  if (dirty.policy) { // v2.8.6 B2a：政策面板（开放组/选择状态实时刷新）
+  } });
+  registerPanel({ key: 'policy', render: () => {
     const polEl = document.getElementById('policy-panel');
     if (polEl) renderPolicyPanel(polEl);
-    dirty.policy = false;
-  }
-  if (dirty.delve) { // v2.6.0：深潜终局面板
+  } });
+  registerPanel({ key: 'delve', render: () => {
     const dvEl = document.getElementById('delve-panel');
     if (dvEl) renderDelvePanel(dvEl);
-    dirty.delve = false;
-  }
-  if (dirty.bazaar) { // v3.0.0：深渊集市面板
+  } });
+  registerPanel({ key: 'bazaar', render: () => {
     const bzEl = document.getElementById('bazaar-panel');
     if (bzEl) renderBazaarPanel(bzEl);
-    dirty.bazaar = false;
-  }
-  if (dirty.rift) {
+  } });
+  registerPanel({ key: 'rift', render: () => {
     const riftEl = document.getElementById('rift-panel');
     if (riftEl) renderRift(riftEl);
-    dirty.rift = false;
-  }
-  if (dirty.riftTab) { // v2.6.1：裂隙栏目（余烬升级树 + 历史）
+  } });
+  registerPanel({ key: 'riftTab', render: () => {
     const rtEl = document.getElementById('rift-tab-panel');
     if (rtEl) renderRiftPanel(rtEl);
-    dirty.riftTab = false;
-  }
-  if (dirty.expedition) {
+  } });
+  registerPanel({ key: 'expedition', render: () => {
     const expEl = document.getElementById('expedition-panel');
     if (expEl) renderExpeditions(expEl);
-    dirty.expedition = false;
-  }
+  } });
 }
+
+/** v3.9.0：渲染入口只负责把脏标记交给注册表，顺序与消费规则由注册声明决定。 */
+function render() { renderPanels(dirty); }
 
 // ========== v2.3.1 资源锚点发现（rev18 9.1：顶栏显示与升级解锁统一锚点制） ==========
 // resDiscovered 写入条件由「首次持有」改为「锚点完成」；锚点前「盲获得」照常入账不显示，
@@ -2116,6 +2143,18 @@ const ACHIEVEMENTS = [
   { id: 'orch_switch', name: '另排一班',   icon: '◈',  desc: '首次把效能编排切换为均衡以外的策略', test: s => !!(s.orchestration && s.orchestration.mode !== 'balanced') },
   { id: 'orch_tide',   name: '随潮而动',   icon: '🌊', desc: '开启随潮汐排班，让策略跟着相位轮转', test: s => !!(s.orchestration && s.orchestration.autoTide) },
   { id: 'chapter25',   name: '排班表的人', icon: '📖', desc: '剧情推进至番外·排班表（第 25 章进度）', test: s => chapterProgress(s.chapter || '1') >= 25 },
+  // v3.9.0 成就扩充（89→100，+12.4%）：全部只读已持久化字段，判定 O(1)
+  { id: 'orch_vigil',   name: '守夜人',     icon: '☾',  desc: '把效能编排手动切换为「值守编排」', test: s => !!(s.orchestration && s.orchestration.mode === 'vigil') },
+  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: s => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'balanced', 'research', 'abyss'][i])) },
+  { id: 'chapter29',    name: '值守日志',   icon: '📖', desc: '剧情推进至番外·值守日志（第 29 章进度）', test: s => chapterProgress(s.chapter || '1') >= 29 },
+  { id: 'chapter32',    name: '未命名进程', icon: '📖', desc: '剧情推进至番外·未命名进程（第 32 章进度）', test: s => chapterProgress(s.chapter || '1') >= 32 },
+  { id: 'policy9',      name: '九政并立',   icon: '⚖️', desc: '同时采用 9 项周期政策', test: s => Object.keys(s.policies || {}).length >= 9 },
+  { id: 'research46',   name: '满架推演',   icon: '🔬', desc: '研究升级累计投入 46 级', test: s => Object.values(s.rpTheories || {}).reduce((a, b) => a + (b || 0), 0) >= 46 },
+  { id: 'miles11',      name: '十一阶',     icon: '🚩', desc: '累计达成 11 档产能里程碑', test: s => Object.keys(s.milesDone || {}).length >= 11 },
+  { id: 'event200',     name: '见惯不惊',   icon: '🎲', desc: '累计触发 200 次随机事件', test: s => (s.eventsSeen || 0) >= 200 },
+  { id: 'projects200',  name: '任务老手',   icon: '📋', desc: '累计完成 200 个任务', test: s => (s.projectsDone || 0) >= 200 },
+  { id: 'rift30',       name: '三十道缝',   icon: '🌀', desc: '累计封印 30 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 30 },
+  { id: 'es1k',         name: '千枚永恒',   icon: '💎', desc: '持有 1K ES', test: s => (s.es || 0) >= 1000 },
 ];
 
 function checkAch() {
@@ -2218,29 +2257,28 @@ function tickTide(dt) {
 
 // ========== 主循环 ==========
 let lastTick = performance.now();
-let lastShopCheck = 0;
-let lastAffordCheck = 0; // v3.0.5 反馈②：可购买态（灰态/价格）快刷节拍——原与 5s 解锁检测同块，玩家感知「能不能买」滞后严重
-let _relicSig = ''; // v3.3.7 反馈①：遗物面板结构签名（gate/等级/净化节点/解锁）——变化才整面重建，杜绝周期性闪烁
-let lastUnlockedCount = -1;
-let lastProjRender = 0;      // v2.0：任务面板 1s 节流重绘
-let tideCachePhase = -1;     // v2.0：潮汐脏检查缓存
-let tideCacheTimer = -1;
-let corruptionCacheFloor = -1; // v2.0：腐化脏检查缓存
-let wageStateCache = '';      // v2.9.2 ②：线程薪资状态变化脏检查（dormant/losing 触发离职礼盒按钮出现）
-let lastAiUnlocked = false;  // v1.3 A：AI 核心解锁变化检测
-let lastAbVisible = false;   // v3.2.4 反馈④：自动购建区块（已激活或全资源解锁）显隐检测
-let lastAbEpOk = false;      // v3.2.4 反馈④：激活按钮 EP 充足态检测（原 disabled 后 EP 攒够不刷新 → 按钮永久禁点）
-let lastGateHash = '';       // v2.0 P1-1：门控状态变化检测
-let lastOrchUnlocked = false; // v3.8.0：效能编排解锁状态翻转检测（1s 快刷即时显隐）
-
-let frame = 0; // v2.7.4 ①：遗物 gate 周期刷新用计数器
 let _codeRainStarted = false, _codeRainTimer = null; // v3.0.0：前置声明（配合 __advance 时间加速，消除 TDZ）
+
+// v3.9.0：帧上下文（长生命周期对象，避免每帧分配）。
+// 原主循环十余个模块级缓存变量统一迁到此处，由 systemScheduler 与各声明式系统读写；
+// 节流节拍由 systemScheduler 按 intervalSec / intervalMs / everyFrames 统一维护。
+const frameCtx = {
+  S, dirty, log, toast,
+  dt: 0, now: 0, frame: 0,
+  // 初值与 v3.8.0 模块级 let 逐字一致，重构不引入首次帧行为差异
+  lastOrchUnlocked: false,
+  tideCachePhase: -1, tideCacheTimer: -1,
+  corruptionCacheFloor: -1, wageStateCache: '',
+  lastGateHash: '', relicSig: '',
+  lastUnlockedCount: -1,
+  lastAiUnlocked: false, lastAbVisible: false, lastAbEpOk: false,
+};
+
 function tick(now) {
-  frame++;
+  frameCtx.frame++;
   const rawDt = (now - lastTick) / 1000;
-  const dt = Math.max(0, Math.min(10, rawDt)); // v2.8.1：dt 上限 1→10s——掉帧/切后台不丢真实计时；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
-  // v3.3.5 反馈③：后台限流/挂起被钳掉的时间记账（单次上限 30 分钟）——供裂隙计时补偿，
-  // 原上限 60s 导致「挂后台 2 小时回来，裂隙只推进 70 秒」，裂隙长期不出现
+  const dt = Math.max(0, Math.min(10, rawDt)); // v2.8.1：dt 上限 1→10s；v3.0.0：下限钳 0（时钟回拨/加速注入防负时间）
+  // v3.3.5 反馈③：后台限流/挂起被钳掉的时间记账（单次上限 30 分钟），供裂隙计时补偿
   if (rawDt > 10) S._riftCatchup = Math.min(1800, (S._riftCatchup || 0) + Math.min(rawDt, 1800) - 10);
   lastTick = now;
   if (S.paused) {
@@ -2255,347 +2293,18 @@ function tick(now) {
   // v2.9.0 优化②：模态暂停（确认/抉择弹框打开期间一切计时暂停；绝对时间戳恢复时顺延）
   if (modalPauseAt) { lastTick = now; return; }
 
-  // v3.8.0：核心玩法抽象——资源流按阶段调度，公式全部下沉到 systems/resourceFlows.js。
-  // 执行顺序与 v3.7.5 原实现严格一致：EP 主产出 → 触手/懒惰/蒸馏 → 薪资与模块 tick。
+  // v3.9.0：主循环只剩「四个资源流阶段 + 三个系统阶段」的调度骨架。
+  // 结算公式在 systems/resourceFlows.js，模块顺序 / 节流 / 脏标记 / 重绘在 systems/frameSystems.js。
+  // 执行点与 v3.8.0 逐字对应，新增玩法只需注册系统，不必改这里。
+  frameCtx.dt = dt; frameCtx.now = now;
   const flowCtx = { S, dt, now, log, toast, tentacleTap: triggerTentacleTap };
   runFlows(flowCtx, FLOW_PHASES.EP_PRODUCE);
   runFlows(flowCtx, FLOW_PHASES.EP_AUX);
-
-  // 线程薪资 —— v1.3 模块 C：四态状态机（满薪/欠薪降效/强制休眠/流失预警），
-  // 替代 staffUnhappy 隐藏计数器（旧字段保留读兼容）；个体 mood 在状态机内正交叠加
-  tickWages(dt);
-
-  // v3.3.0 线程等级推进（在岗累积 XP → 刷新等级；合适岗位涨得快）
-  const leveled = tickThreads(dt);
-  for (const nm of leveled) { log(`线程【${nm}】晋升，班组调度经验提升`, 'good'); if (toast) toast(`🎖️ 线程【${nm}】晋升！`); }
-
-  // v3.1.0 反馈③：线程个人「累计贡献」——按实际入账 CPS 份额分摊到每条线程（休眠 ×0 时自然停止累计）
-  if (S.cultists.length > 0) {
-    const credited = computeCps() * dt;
-    const totalNominal = staffOutputPerSec();
-    if (credited > 0 && totalNominal > 0) {
-      for (const c of S.cultists) {
-        const nom = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1);
-        c.earned = (c.earned || 0) + credited * (nom / totalNominal);
-      }
-    }
-  }
-
-  // v3.8.0：升级卡被动产出（RP / PT / FP）改由声明式流驱动
+  runSystems(frameCtx, FRAME_PHASES.AFTER_EP_AUX);
   runFlows(flowCtx, FLOW_PHASES.PRODUCERS);
-
-  // v2.5.7 宗教：圣所信仰产出 + 入口/面板状态刷新
-  tickReligion(dt);
-  policyTickRefresh(); // v2.8.6 B2a：政策开放组变化刷新
-  // v2.6.0 深潜：深潜产出/腐化/里程碑（v3.0.0：含 EP 维持开销）
-  tickDelve(dt);
-  // v3.0.0：深渊集市——汇率波动 / 库存自然恢复
-  tickBazaar(dt);
-  // v3.8.0：PT 孵化 → 星际燃料 → 异兽 PT 维持，顺序保持原样
+  runSystems(frameCtx, FRAME_PHASES.AFTER_PRODUCERS);
   runFlows(flowCtx, FLOW_PHASES.CONVERTERS);
-  // v3.0.5 反馈②：tab 入口显隐（纯 display 开关，零重建）1s 快刷——原 5s 导致「条件已达成但入口迟迟不出现」
-  S._religCheckTimer = (S._religCheckTimer || 0) + dt;
-  if (S._religCheckTimer >= 1) {
-    S._religCheckTimer = 0;
-    // v3.8.0：效能编排解锁翻转即时刷新，不靠 2s 兜底（避免「条件已达成但卡片迟迟不出现」）
-    const orchNow = orchestrationUnlocked(S);
-    if (orchNow !== lastOrchUnlocked) { lastOrchUnlocked = orchNow; dirty.orchestration = true; }
-    refreshTabVisibility(); // 宗教/深潜/星图/裂隙/遗物/政策/集市入口条件达成后出现
-    if (typeof refreshReligionAffordability === 'function') refreshReligionAffordability();
-    // v3.3.5 反馈③：裂隙倒计时每秒原地刷新（首列常驻卡 + 裂隙页签），让「裂隙会不会来」可见可验证
-    if (S._riftSeen && !S.activeRift && !S.riftExpedition) dirty.rift = true;
-    const etaLabelEl = document.getElementById('rift-eta-label');
-    const etaTabEl = document.getElementById('rift-eta-tab');
-    if (etaTabEl) {
-      // v3.4.0 反馈①：裂隙在场时该行改语义（当前裂隙 · 剩余 Xs），不再显示「下次裂隙 0 秒」
-      if (S.activeRift) {
-        if (etaLabelEl) etaLabelEl.textContent = '当前裂隙';
-        etaTabEl.textContent = `进行中 · 剩余 ${fmtEta(Math.max(0, Math.ceil((S.activeRift.expiresAt - Date.now()) / 1000)))}`;
-      } else {
-        if (etaLabelEl) etaLabelEl.textContent = '下次裂隙';
-        etaTabEl.textContent = fmtEta(riftEtaSec());
-      }
-    }
-  }
-  // v2.6.0 / v3.0.0：深潜与集市面板为 innerHTML 重建（无内容签名跳过），保持 5s 低频——1s 重建会吞点击/闪烁
-  S._panelCheckTimer = (S._panelCheckTimer || 0) + dt;
-  if (S._panelCheckTimer >= 5) {
-    S._panelCheckTimer = 0;
-    if (delveUnlocked()) dirty.delve = true;
-    if (bazaarUnlocked()) dirty.bazaar = true;
-  }
-
-  // 深渊裂隙
-  const hadRift = !!S.activeRift;
-  tickRift(dt);
-  if (!!S.activeRift !== hadRift || S.activeRift) dirty.rift = true;
-
-  // v3.4.9 反馈②：自动净化仪——腐化每涨 5% 自动净化 5%（EP 充足时；EP 不足则暂停等待，不报错刷屏）
-  if (S.autoPurify && riftUpgradeLevel('auto_purify') >= 1) {
-    const step = 5;
-    // 基准点 = 上一次净化后的腐化值；首帧从 0 起算（不能对齐到当前值，否则永远差 5% 才触发一次）
-    if (!(S._autoPurifyMark >= 0)) S._autoPurifyMark = 0;
-    // 腐化大幅回落（手动净化 / 贿赂清零）→ 基准跟着下来，避免旧基准把下一次触发推得很晚
-    if ((S.corruption || 0) < S._autoPurifyMark - 2) S._autoPurifyMark = Math.max(0, S.corruption || 0);
-    if ((S.corruption || 0) >= S._autoPurifyMark + step) {
-      const cost = Math.ceil(purgeCostFor(step) * riftPurgeCostMult());
-      if ((S.ep || 0) >= cost) {
-        S.ep -= cost;
-        S.corruption = Math.max(0, (S.corruption || 0) - step);
-        S._autoPurifyMark = Math.max(0, S.corruption || 0);
-        dirty.corruption = true; dirty.top = true;
-      } else {
-        S._autoPurifyMark = (S.corruption || 0) - step; // EP 不足：不反复重试，等 EP 回升/腐化再涨 5%
-      }
-    }
-  }
-
-  // v1.3 模块 D：载具被动采集 DM（60s roll，到账走 [采集] 日志）
-  // v2.9.0 Bug④：'transition' = 自动暂停↔恢复切换 → 同步刷新探采页头（EP 不足自动暂停提示）
-  const vehChanged = tickVehicleCollect(dt);
-  if (vehChanged) { dirty.top = true; if (vehChanged === 'transition') dirty.shop = true; }
-
-  // 任务版
-  // v2.0 P1 修复：tickProjects() 返回本帧任务状态是否变化（生成/完成/过期），
-  // changed === true 时置 dirty.projects，任务面板只在奖励状态真正变化时重绘。
-  const projChanged = tickProjects();
-  if (projChanged) dirty.projects = true;
-  // v2.1 R2：进度刷新不再触发整面板重建，改为原地更新文本/进度条（消除吞点击）
-  if (S.projects.length > 0 && now - lastProjRender > 1000) {
-    lastProjRender = now;
-    updateProjectProgress();
-  }
-
-  // 星际探索
-  const exBefore = S.expeditions.length;
-  const exDoneBefore = S.expeditionsDone;
-  tickExpeditions();
-  tickColonies(dt); // v2.8.3 深空殖民：RP 产出结算
-  if (S.expeditions.length !== exBefore || S.expeditionsDone !== exDoneBefore) {
-    dirty.expedition = true;
-    refreshTabVisibility();
-  }
-
-  // v2.0 章节进度同步
-  const chNow = currentChapter(S);
-  const chNowStr = String(chNow.id);
-  const sChapterStr = String(S.chapter || '1');
-  // v3.7.0：统一用 [序号, 后缀] 元组比较。旧版两个 parseInt 让 '12A' 与主线 12 相等，
-  //   主线玩家跳不进变体终章，且 '5A'/5 在图鉴里撞号被去重误判。
-  const [nNow, sufNow] = chapterRank(chNowStr);
-  const [nCur, sufCur] = chapterRank(sChapterStr);
-  if (nNow > nCur || (nNow === nCur && sufNow > sufCur)) {
-    S.chapter = chNowStr;
-    S.chapterEnteredAt = Date.now(); // v3.6.0 方向⑥：重置章节驻留计时
-    dirty.story = true;
-    // v2.8.5 A3：章节解锁持久化写入图鉴（进入即记录，跨周期保留——图鉴不再依赖即时状态推断）
-    S.chaptersUnlocked = S.chaptersUnlocked || {};
-    const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
-    S.chaptersUnlocked[slId] = S.chaptersUnlocked[slId] || [];
-    const code = chapterCode(chNowStr);
-    if (!S.chaptersUnlocked[slId].includes(code)) S.chaptersUnlocked[slId].push(code);
-    // v2.8.3：章节转变触发明显事件——toast + 日志 + 章节馈赠（RP 克制奖励）
-    const chId = nNow;
-    const gift = Math.max(5, chId * 5);
-    addRp(gift); // v3.0.8：受 RP 上限约束
-    const chName = chNow.name || `第 ${chId} 章`;
-    if (toast) toast(`📖 进入${chName}：章节馈赠 +${gift} RP`);
-    log(`章节推进：${chName}——时间线向前折叠，+${gift} RP 馈赠`, 'good');
-    dirty.top = true;
-  }
-
-  // v2.0 P1-1：门控系统主循环检查——门控状态变化时触发 UI 重绘
-  const gateStates = [];
-  for (const gate of getAllGates()) {
-    gateStates.push(checkGate(gate.id, { S }) ? '1' : '0');
-  }
-  const gateHash = gateStates.join('');
-  if (gateHash !== lastGateHash) {
-    lastGateHash = gateHash;
-    dirty.top = true;
-  }
-
-  // v2.0 潮汐 / 腐化推进
-  tickTide(dt);
-  tickCorruption(dt);
-  ensureCodeRain(); // v2.8.4 ⑤：编译器神殿——青色代码雨粒子（低调，持有即启）
-
-  // v2.2 岔路口状态机推进（每帧幂等；替代 v2.0 弹窗强制选择）
-  updateCrossroad();
-
-  maybeTriggerEvent();
-
-  // v3.3.1 反馈③：预言系统（信仰线科技 prophecy）真正生效——神谕广播预告下一个随机事件；
-  // 预告写入 S.prophecyNext，事件触发时优先兑现（events.maybeTriggerEvent）
-  // v3.3.3 反馈④：广播频率 30s → 10 分钟（原频率刷屏且事件 4-7h 才触发一次，预言形同虚设）；
-  // 广播时若下一次事件过远（>15 分钟）则把事件提前到 5-15 分钟内——保证预言「真实生效、当场可验证」
-  if (hasTech('prophecy')) {
-    S._prophecyTimer = (S._prophecyTimer || 0) + dt;
-    if (S._prophecyTimer >= 600) {
-      S._prophecyTimer = 0;
-      const nxt = peekNextEvent();
-      if (nxt) {
-        const changed = !S.prophecyNext || S.prophecyNext.id !== nxt.id;
-        // v3.3.5 反馈②：广播同时给出事件效果（如「顿悟」+80 RP），不再只报名字
-        S.prophecyNext = { id: nxt.id, name: nxt.name, type: nxt.type, desc: nxt.desc || '', at: Date.now() };
-        if (changed) {
-          log(`🔮 神谕广播：下一个事件将是「${nxt.name}」——${nxt.desc || '效果未知'}`, 'good');
-          const wait = S.nextEventAt - Date.now();
-          if (wait > 15 * 60 * 1000) S.nextEventAt = Date.now() + (5 + Math.random() * 10) * 60 * 1000; // 预言事件限时兑现
-          dirty.ai = true;
-        }
-      } else if (S.prophecyNext) {
-        S.prophecyNext = null;
-      }
-    }
-  }
-
-  // 异兽经验
-  gainPetExp(dt);
-  // v2.5.7 检查修复：挂机升级/经验增长驱动宠物 UI 低频刷新（5s；HTML 相同则重建跳过，不影响动画）
-  S._petUiTimer = (S._petUiTimer || 0) + dt;
-  if (S._petUiTimer >= 5) {
-    S._petUiTimer = 0;
-    dirty.pets = true;
-  }
-
-  // v2.0 特殊任务检查（每帧检查）
-  checkSpecialTasks(S, log, toast);
-
-  // v2.0 彩蛋检查（周期性触发类）
-  checkEasterEggs('time_check', S, log, toast, () => { dirty.story = true; });
-  checkEasterEggs('idle', S, log, toast, () => { dirty.story = true; });
-  checkEasterEggs('state_check', S, log, toast, () => { dirty.story = true; });
-
-  // v2.0  idle 时间追踪
-  S._idleSec = ((Date.now() - S._lastActionAt) / 1000) || 0;
-
-  // 检查
-  checkMiles();
-  checkAch();
-
-  // v2.3 资源发现：集中单点检查（所有发放点统一覆盖；发现即 toast + 存档）
-  discoverCheck();
-
-  // v1.3 模块 A：AI 助手（每 5s 决策；有动作时刷英雄/顶栏/任务）
-  // v2.7.1 修复：AI/混沌买入已走单卡原地刷新（refreshShopItem/refreshV21Item），不再置 dirty.shop
-  // 整面板重建（原逻辑使混沌心智场景每 100ms 重建商店 → hover 卡被替换 → 闪烁/点击丢失）；
-  // 仅自动招募（线程区结构变化）才置 dirty.shop 刷新线程区。
-  const aiAct = tickAI(dt);
-  if (aiAct) { dirty.hero = true; dirty.top = true; dirty.projects = true; if (aiHireFlag()) dirty.shop = true; }
-
-  // v2.0 潮汐脏检查：相位或剩余秒数（向上取整）变化才重绘潮汐卡
-  const tideTimerCeil = Math.ceil(S.tideTimer);
-  if (S.tidePhase !== tideCachePhase || tideTimerCeil !== tideCacheTimer) {
-    dirty.tide = true; dirty.top = true;
-    dirty.orchestration = true; // v3.8.0：随潮汐排班时策略随相位变化，面板需同步（内部 sig 去重不重建按钮）
-    tideCachePhase = S.tidePhase;
-    tideCacheTimer = tideTimerCeil;
-  }
-  // v2.0 腐化脏检查：整数百分比变化才重绘腐化条
-  const corruptionFloor = Math.floor(S.corruption || 0);
-  if (corruptionFloor !== corruptionCacheFloor) {
-    dirty.corruption = true; dirty.hero = true; dirty.top = true;
-    corruptionCacheFloor = corruptionFloor;
-  }
-  // v2.9.2 ②：线程薪资状态变化（进入/离开 dormant·losing）触发离职礼盒按钮出现/隐藏
-  const wageSt = (S.wageState || {}).state || 'ok';
-  if (wageSt !== wageStateCache) {
-    wageStateCache = wageSt;
-    dirty.hero = true; dirty.top = true;
-  }
-  // v2.9.0：吞噬倒计时期间每秒强制刷新横幅（腐化钉在满额时 floor 不再变化，倒计时文本需独立节拍）
-  if (S._collapseAt || S.collapsed || S._collapseChoicePending) {
-    S._collapseUiTimer = (S._collapseUiTimer || 0) + dt;
-    if (S._collapseUiTimer >= 1) { S._collapseUiTimer = 0; dirty.corruption = true; }
-  } else {
-    S._collapseUiTimer = 0;
-  }
-
-  // v2.1 R2：仅保留纯文本刷新的脏标记（top/hero 只更新 textContent，不重建可点击节点）；
-  // 移除旧版无条件 dirty.projects —— 任务面板 100ms 全量重建是「奖励领不了」的根因
-  dirty.top = true; dirty.hero = true;
-  // v2.7.5 ①：晋升面板（含轮回区块）与故事线面板重建降频至每 2s——
-  // 原每 tick 无条件置位 → renderPrestige+renderReincarn+renderStorylinePanel 每 100ms innerHTML 重建
-  // → 晋升/轮回/岔路口按钮每帧被替换 → 慢速点击（mousedown/mouseup 间隔 >100ms）丢失（「大量点击才成功一次」）
-  // → 轮回卡/岔路口卡 hover 每帧替换闪烁。购买/转生等事件仍即时置位，此处仅降频兜底刷新
-  if ((frame % 20) === 0) { dirty.prestige = true; dirty.story = true; dirty.storyline = true; dirty.achievements = true; dirty.orchestration = true; } // v3.2.4 反馈②：右列故事线/成就随 2s 兜底刷新
-
-  // v2.7.4 ①：遗物 gate 状态周期刷新——v3.3.7 反馈①：不再无条件每 2s 整面重建！
-  // 原实现 dirty.relics 每 2s 置位 → renderRelics 每 2s innerHTML 全量替换 → 按钮/卡片每 2s 销毁重建，
-  // hover 一直闪烁、慢速点击（mousedown→mouseup 间隔跨重建点）被吞——「净化节点存活 68DM 消耗 50 一直闪烁无法购买」
-  // 现改为结构签名比对：仅 gate/等级/解锁结构变化时才整面重建；可购态（DM 够不够）由 300ms
-  // refreshRelicAffordability 原地维护（纯 class/disabled 切换，不动 DOM 结构，零闪烁）
-  const relicSigNow = RELICS.map(r => `${r.id}:${relicLevel(r.id)}:${r.gate() ? 1 : 0}`).join(',')
-    + `|P:${['purifier1', 'purifier2', 'purifier3'].map(id => (S.upgrades && S.upgrades[id]) || 0).join('.')}`
-    + `|T:${(S.tech && S.tech.entropy_reduce) ? 1 : 0}`
-    + `|U:${relicsUnlocked() ? 1 : 0}`;
-  if (relicSigNow !== _relicSig) { _relicSig = relicSigNow; dirty.relics = true; }
-
-  // v3.0.5 反馈②：可购买态快刷（灰态/价格，纯 class/textContent 原地更新不重建 DOM）——300ms
-  // 原实现与 5s 解锁检测同块执行，导致「EP 已够但卡片仍灰」「新解锁卡片迟迟不出现」肉眼可见延迟
-  if (now - lastAffordCheck > 300) {
-    lastAffordCheck = now;
-    refreshTechState();
-    refreshShopAffordability(); // 主商店/线程/载具/深渊商店/设施/效能建筑/岔路口/族升级灰态
-    refreshRelicAffordability(); // v2.8.26：遗物/净化 DM 可购
-    refreshPetsAffordability(); // v2.8.26：宠物 PT 可购
-    refreshReligionAffordability(); // v2.8.26 ④：宗教按钮可购
-    refreshRiftAffordability(); // v2.8.26 ④：裂隙余烬/深入按钮可购
-    refreshExpeditionAffordability(); // v3.0.5 反馈②：深空殖民 / 宇宙探索卡片可购态
-    refreshAssistantAffordability(); // v3.7.5：AI 助手「购买编队」EP 不足灰显 / 攒够后原地解禁（不重建面板）
-    const riftTechEl2 = document.getElementById('rift-tech-list'); // v3.3.9 反馈⑤：裂隙等级卡可购态
-    if (riftTechEl2) renderRiftLevelTech(riftTechEl2);
-  }
-
-  // v2.6.7：商店解锁检测（链窗揭示 + toast），v3.0.5 由 5s 收紧到 1s；
-  // 解锁数变化只增量揭示新卡（refreshShopChain），不整面板重建——保持「不每秒全重建」的防闪烁纪律
-  if (now - lastShopCheck > 1000) {
-    lastShopCheck = now;
-    // v3.6.2 反馈①：班组面板 ≥10 条线程后才显示（达标即持久解锁，跨转生保留）——未解锁整卡隐藏、不渲染
-    const crewVisible = crewShown();
-    const crewCard = document.getElementById('crew-card');
-    if (crewCard && crewCard.style.display !== (crewVisible ? '' : 'none')) crewCard.style.display = crewVisible ? '' : 'none';
-    if (crewVisible) renderCrewPanel(document.getElementById('crew-panel')); // v3.1.0 反馈③：班组面板（内部 sig 增量 + 动态数值原地刷新）
-    renderPetGrid(document.getElementById('pet-grid')); // v3.2.1 反馈⑥⑨：孵化文案/维持消耗/休战提示随周期刷新（内部 html 签名去重，无闪烁）
-    renderQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关（解锁态/开关态随周期同步，sig 去重）
-    // v3.3.1 反馈①②：设施区（灵感工坊 / 异兽孵化工坊）卡的揭示随周期检测——
-    // 只在「应显示 ↔ 未显示」翻转时整列表重建（避免每秒重建按钮致点击丢失）
-    const bldHost = document.getElementById('building-list');
-    if (bldHost) {
-      const base = BALANCE.atrium.base || 5e4;
-      const atrOwned = (S.upgrades && S.upgrades.atrium) || 0;
-      const shouldAtr = atrOwned >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
-      const hasAtr = !!bldHost.querySelector('.atrium-distill');
-      const shouldHatch = S.ptAutoHatch === true || (S.resDiscovered && S.resDiscovered.pt) || (S.pt || 0) > 0 || (S.ptHatchLv || 1) > 1;
-      const hasHatch = !!bldHost.querySelector('.hatch-upg');
-      if (hasAtr !== shouldAtr || hasHatch !== shouldHatch) dirty.shop = true;
-    }
-    let n = 0;
-    for (const u of UPGRADES) {
-      const owned = S.upgrades[u.id] || 0;
-      if (owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3) n++;
-    }
-    if (lastUnlockedCount === -1) lastUnlockedCount = n;
-    if (n !== lastUnlockedCount) {
-      lastUnlockedCount = n;
-      refreshShopChain();
-      toast('新升级模块已解锁');
-    }
-    // v1.3 A：AI 核心研究完成后面板出现（也覆盖晋升保留 ai_core 的场景）
-    const aiNow = aiUnlocked();
-    if (aiNow !== lastAiUnlocked) { lastAiUnlocked = aiNow; dirty.ai = true; }
-    // v3.2.4 反馈④：自动购建区块在「全资源解锁/已激活」翻转时刷新 AI 面板（激活后区块形态切换）；
-    // EP 充足态翻转同样刷新——否则激活按钮渲染时 EP 不足被 disabled，攒够后面板不重渲染 → 永久禁点
-    const abNow = aiNow && (autoBuildUnlocked() || allResDiscovered(S));
-    if (abNow !== lastAbVisible) { lastAbVisible = abNow; dirty.ai = true; }
-    else if (abNow && !autoBuildUnlocked()) {
-      const epOkNow = (S.ep || 0) >= autoBuildActivateCost();
-      if (epOkNow !== lastAbEpOk) { lastAbEpOk = epOkNow; dirty.ai = true; }
-    }
-  }
-
-  render();
+  runSystems(frameCtx, FRAME_PHASES.FRAME);
 }
 
 // ========== 初始化 ==========
@@ -2705,6 +2414,14 @@ function startApp() {
   setInterval(() => { if (!resetGuard) save(S); }, 5000);
 }
 
+// v3.9.0：声明层一次性注册（函数声明已提升，必须在 startApp 之前完成）。
+// deps 只注入 main.js 内的闭包函数，避免 systems/frameSystems.js 反向 import 主入口造成循环依赖。
+registerFrameSystems({
+  policyTickRefresh, updateProjectProgress, refreshTabVisibility, updateCrossroad,
+  ensureCodeRain, tickTide, checkMiles, checkAch, discoverCheck, renderQuickSwitches, render,
+});
+registerAllPanels();
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', startApp);
 } else {
@@ -2734,9 +2451,14 @@ if (typeof window !== 'undefined') {
     lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS,
     // v3.8.0：资源流引擎与效能编排（QA / 30 天推演数值守恒核对）
     runFlows, flowStats, flowLedger, flowErrors, FLOW_PHASES,
+    // v3.9.0：控制流层（30 天推演核对「零异常 / 无漏帧 / 声明完整」）
+    runSystems, systemStats, systemErrors, FRAME_PHASES, allPanels, panelErrors,
     orchestrationUnlocked, orchestrationState, effectiveModeId, effectiveMode,
     orchestrationMult, orchestrationSummary, setOrchestrationMode,
     setOrchestrationAutoTide, toggleOrchestrationAutoTide, ORCHESTRATION_MODES, TIDE_ORCHESTRATION,
+    // v3.9.0：潮汐预案（自定义排班表）QA / 30 天推演钩子
+    TIDE_PHASE_NAMES, SCHEDULE_UNLOCK, scheduleUnlocked, orchestrationSchedule,
+    scheduleCustomized, setOrchestrationPhaseMode, resetOrchestrationSchedule,
     getStorylineEvents, getStorylinePets, validateEvent, eventPool,
     loadStoryline, maxProjects, corruptionCap, policyMult, researchMult,
     researchUpgCost, RP_GROUPS, UPGRADES, BALANCE, PETS, POLICY_GROUPS,

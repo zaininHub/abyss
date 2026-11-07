@@ -49,4 +49,13 @@ export const EVENTS = [
   {id:'tide_lull',name:'平潮窗口',desc:'90 秒产出 ×2.2',minCps:1e3,type:'buff',mult:2.2,dur:90},
   {id:'orphan_process',name:'孤儿进程',desc:'40 秒产出 ×0.55',minCps:1e5,type:'debuff',mult:0.55,dur:40},
   {id:'memory_leak',name:'内存泄漏',desc:'泄漏损失 8% EP',minCps:1e6,type:'lose_ep',amount:0.08,rare:true},
+  // v3.9.0 事件扩充（44→52，+18.2%）：复用既有 type，数值全在主表天花板内
+  {id:'night_watch',name:'守夜窗口',desc:'5 分钟产出 ×1.7',minCps:1e3,type:'buff',mult:1.7,dur:300},
+  {id:'schedule_audit',name:'排班审计',desc:'立即获得 1500 秒产出',minCps:1e5,type:'ep',amount:1500},
+  {id:'phase_shift',name:'相位偏移',desc:'2 分钟产出 ×2.0',minCps:1e4,type:'buff',mult:2.0,dur:120},
+  {id:'quiet_hour',name:'静默时段',desc:'60 秒产出 ×0.65',minCps:1e4,type:'debuff',mult:0.65,dur:60},
+  {id:'ledger_sync',name:'台账对账',desc:'+24 RP',minCps:1e6,type:'rp',amount:24},
+  {id:'spare_core',name:'备用核心',desc:'专注 +18',minCps:1e6,type:'focus',amount:18},
+  {id:'cold_archive',name:'冷归档',desc:'立即获得 3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
+  {id:'leak_check',name:'泄漏排查',desc:'排查损失 6% EP',minCps:1e5,type:'lose_ep',amount:0.06},
 ];

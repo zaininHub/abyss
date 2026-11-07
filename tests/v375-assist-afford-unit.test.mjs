@@ -128,9 +128,11 @@ test('⑥ 接线：渲染、点击、快刷共用单一真源，且挂在 300ms 
   assert.ok(/const st = assistantBuyState\(\); \/\/ v3\.7\.5/.test(AI));
   assert.ok(/if \(!st\.disabled\)/.test(AI));
   assert.ok(/S\.ep -= st\.cost/.test(AI));
-  // main.js 快刷链
-  assert.match(MAIN, /refreshAssistantAffordability\(\); \/\/ v3\.7\.5/);
-  assert.ok(MAIN.indexOf('refreshAssistantAffordability()') > MAIN.indexOf('now - lastAffordCheck > 300'), '必须在 300ms 快刷块内调用');
+  // v3.9.0：快刷链由 affordability 帧系统声明（300ms 节流），主循环只消费 FRAME 阶段
+  const FRAME_SYS = read('src/systems/frameSystems.js');
+  assert.match(FRAME_SYS, /refreshAssistantAffordability\(\);/, 'AI 编队灰显必须挂在统一快刷系统内');
+  assert.match(FRAME_SYS, /id: 'affordability'[\s\S]{0,200}intervalMs: 300/, '快刷系统必须声明 300ms 节流');
+  assert.match(MAIN, /runSystems\(frameCtx, FRAME_PHASES\.FRAME\);/, '主循环应消费 FRAME 阶段快刷系统');
   // CSS 灰显
   assert.match(CSS, /#ai-panel \[data-assist-buy\]:disabled \{[^}]*opacity: \.45/);
 });

@@ -124,7 +124,8 @@ export function defaultState() {
     // v2.3.2 反馈②：_vehicleNames（载具命名记录）随命名彩蛋移除一并废除；旧档残留键无害随行
     _lastActionAt: Date.now(),     // 上次操作时间
     // v3.8.0：效能编排（本局策略偏好，跨周期保留；旧档缺字段由 orchestrationState 兜底）
-    orchestration: { mode: 'balanced', autoTide: false },
+    // v3.9.0：schedule 为四相位自定义排班表；旧档无此字段由 orchestrationSchedule 回落默认映射。
+    orchestration: { mode: 'balanced', autoTide: false, schedule: ['output', 'balanced', 'research', 'abyss'] },
     // 系统
     paused: false, pausedAt: 0,
     lastSeen: Date.now(), startTime: Date.now(),

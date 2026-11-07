@@ -77,6 +77,18 @@ export const POLICY_GROUPS = [
       { id: 'orch_balance',  name: '均衡律令', effect: { thread: 0.10, recruit: 0.08 }, desc: '线程产出 +10%，招募 +8%' },
     ],
   },
+  // v3.9.0 政策扩充（8→9 组、23→27 项，+12.5% / +17.4%）：
+  // 效果键全部落在既有 policyMult 消费点，不引入「选了但没效果」的死政策。
+  {
+    id: 'watch', name: '值守纪律', unlock: (S) => (S.projectsDone || 0) >= 25 || (S.prestige || 0) >= 5,
+    hint: '需完成 25 个任务或职级 ≥5',
+    policies: [
+      { id: 'watch_day',     name: '白班值守', effect: { ep: 0.14, faith: -0.08 },   desc: 'EP 产出 +14%，FP 产出 -8%' },
+      { id: 'watch_night',   name: '夜班推演', effect: { collab: 0.22, ep: -0.06 },  desc: '协作 +22%，EP 产出 -6%' },
+      { id: 'watch_rift',    name: '裂隙守夜', effect: { ember: 0.20, thread: -0.06 }, desc: '余烬产出 +20%，线程产出 -6%' },
+      { id: 'watch_balance', name: '轮值均衡', effect: { global: 0.06, recruit: 0.12 }, desc: '全局 +6%，招募 +12%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }
