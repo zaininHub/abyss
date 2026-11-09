@@ -96,7 +96,7 @@ export function defaultState() {
     // v1.3 模块 A：AI 助手（解锁后生效；默认全关，预留线默认 30%）
     ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: BALANCE.ai.defaultReserve, timer: 0,
         autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0,
-        autoTech: false, alloc: {} }, // v2.8.21 ③：自动研究开关默认字段；v3.6.0 增加 alloc（AI 助手按类型分配）
+        autoTech: false, assistants: 0 }, // v2.8.21 ③：自动研究开关默认字段；v3.10.5：alloc 改 assistants（助手=一次性消耗品，无编队/槽位/按类型分配）
     // v1.3 模块 E：一次性条目购入顺序（已升级区按此倒序展示）
     boughtOrder: [],
     // v2.0 故事线

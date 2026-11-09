@@ -183,7 +183,7 @@ test('C3 自动排班按潮汐相位轮转，手动策略被旁路但不丢失',
   st.orchestration.autoTide = true;
   assert.equal(orch.effectiveModeId(st), 'output');
   st.tidePhase = 3;
-  assert.equal(orch.orchestrationMult('pt', st), 0.88, '相位 3 = 级联（pt 0.88）');
+  assert.equal(orch.orchestrationMult('pt', st), 0.90, '相位 3 = 级联（pt 0.90）');
   st.orchestration.autoTide = false;
   assert.equal(orch.orchestrationMult('pt', st), 1.40, '关掉排班回到手动的深渊优先');
 });

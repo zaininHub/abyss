@@ -1096,7 +1096,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 ×1.15）+ 产出基座（当前 EP 上限 ×25%）。因此没买仓库升级时上限也会随 EP 上限增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 3,000 再逐次扩容。达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 ×1.15）+ 产出基座（当前 EP 上限 ×25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 3,000 再逐次扩容。达到上限后停止积累。', () => {});
   });
 }
 
@@ -1553,13 +1553,10 @@ function bindEvents() {
     renderRiftPanel(document.getElementById('rift-tab-panel'));
   });
 
-  // v2.5 ⑤：存档导出 / 导入（导出下载 JSON；导入校验版本并写回刷新，原档自动备份）
-  document.getElementById('export-btn')?.addEventListener('click', exportSave);
-  document.getElementById('import-btn')?.addEventListener('click', () => document.getElementById('import-file')?.click());
+  // v2.5 ⑤：存档导入（导入校验版本并写回刷新，原档自动备份）；导入入口见「📥 导入」按钮（importMode 分支）
   document.getElementById('import-file')?.addEventListener('change', importSave);
 
   // v2.5.4 ①：快照存档系统（3 槽 / 覆盖当前本地游戏 / 二级确认 / 新快照可覆盖旧快照）
-  document.getElementById('snap-btn')?.addEventListener('click', openSnapshotModal);
   document.getElementById('snap-save')?.addEventListener('click', onSnapSave);
   document.getElementById('snap-close')?.addEventListener('click', () => { const m = document.getElementById('snap-modal'); if (m) m.style.display = 'none'; });
   document.getElementById('snap-list')?.addEventListener('click', (e) => {

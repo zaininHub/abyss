@@ -703,10 +703,10 @@ try {
   if (orchProbe.tide0 === 'output' && orchProbe.tide3 === 'cascade') ok('默认排班表覆盖全部 6 策略中的 4 档（零数值漂移，值守/级联可用）', `涨潮→产能 / 乱流→级联`);
   else bad('默认排班映射错误', JSON.stringify({ t0: orchProbe.tide0, t3: orchProbe.tide3 }));
   if (orchProbe.unlocked && orchProbe.edited && orchProbe.editedMode === 'vigil'
-      && Math.abs(orchProbe.editedMult.ep - 0.94) < 1e-9 && Math.abs(orchProbe.editedMult.rp - 1.18) < 1e-9
-      && Math.abs(orchProbe.editedMult.pt - 1.18) < 1e-9 && Math.abs(orchProbe.editedMult.dm - 1.20) < 1e-9
+      && Math.abs(orchProbe.editedMult.ep - 0.90) < 1e-9 && Math.abs(orchProbe.editedMult.rp - 1.30) < 1e-9
+      && Math.abs(orchProbe.editedMult.pt - 1.30) < 1e-9 && Math.abs(orchProbe.editedMult.dm - 1.32) < 1e-9
       && orchProbe.editedCustomized) {
-    ok('潮汐预案改写后生效策略与四条倍率同口径', '相位 2 → 值守编排 EP×0.94 / RP×1.18 / PT×1.18 / DM×1.20');
+    ok('潮汐预案改写后生效策略与四条倍率同口径', '相位 2 → 值守编排 EP×0.90 / RP×1.30 / PT×1.30 / DM×1.32');
   } else bad('潮汐预案改写倍率不符', JSON.stringify(orchProbe));
   if (orchProbe.reset && orchProbe.resetMode === 'research' && !orchProbe.resetCustomized) {
     ok('恢复默认排班可一键回退', '相位 2 回到研究优先');
@@ -758,7 +758,7 @@ try {
   if (ui.wikiOk) ok('Wiki（含 v3.10.0 四个新章节）渲染无 undefined / NaN');
   else bad('Wiki 渲染出现 undefined / NaN');
   const rTotal = ui.researchGroups.reduce((a, g) => a + g.n, 0);
-  if (rTotal === ui.researchTotal && ui.researchTotal === 55) ok('研究面板分组覆盖全部 55 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
+  if (rTotal === ui.researchTotal && ui.researchTotal === 56) ok('研究面板分组覆盖全部 56 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
   else bad('研究分组与配置不一致', `${rTotal} vs ${ui.researchTotal}`);
   if (ui.policyGroups === 11 && ui.policyTotal === 33) ok('政策面板 11 组 33 项全部注册', `组 ${ui.policyGroups} / 项 ${ui.policyTotal}`);
   else bad('政策数量不符', JSON.stringify({ g: ui.policyGroups, n: ui.policyTotal }));

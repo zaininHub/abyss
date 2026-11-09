@@ -731,18 +731,34 @@ function vaultCap(base, per, lv) {
 }
 // v3.4.9 反馈⑥：RP/PT 仓容跟随 EP 上限（「产出基座」）——星图探索把 RP/TP 消耗抬到与 EP 同量级后，
 //   三仓库那点线性扩容（RP 满级约 4.3 万）根本装不下一次远征的 RP 报价，必须以 EP 上限为基座同步放大。
-//   v3.5.0 起口径是「仓库增量 + EP 上限 × 比例」相加（不再是早年的 max() 取较大者），
-//   所以没买仓库升级时上限也会随 EP 上限抬到千万级；新档 EP 上限 2,000 时 RP 上限恰为 3,000。
+//   v3.5.0 起口径是「仓库增量 + EP 上限 × 比例」相加（不再是早年的 max() 取较大者）。
+//   v3.10.5 ③：联动改由「星图同调」(rp_sync) 研究项门控——星图远征（深空探测）开启并购买该升级后，
+//   才启用 EP×比例产出基座；未购时 RP/PT 上限只靠各自仓库，避免早期就随 EP 涨到千万级。
 function prodCapFloor(ratio) {
+  if (!syncUnlocked()) return 0; // v3.10.5 ③：未购「星图同调」不启用产出基座联动
   const epCap = epStorageCap();
   return Math.round(Math.max(0, epCap) * ratio);
+}
+// v3.10.5 ③：「星图同调」研究项是否已购（researchMult('sync')>1 即 rpTheories.rp_sync ≥ 1，单一真源消费）
+function syncUnlocked() {
+  return researchMult('sync') > 1;
 }
 // v3.5.0 反馈④：仓库扩容必须「叠在基座之上」——此前用 max() 取大，基座一旦大于仓库总量，
 //   买再多级增量为 0（卡面只能写「已由产出基座接管，扩容不再叠加」，玩家完全看不懂）。
 //   vaultCap(0, per, lv) 是纯增量（不含 base），与基座相加后每级都真实生效。
-export function rpCap() { return Math.round(2500 + vaultCap(0, 400, S.upgrades && S.upgrades.rp_vault) + prodCapFloor(0.25)); } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
-export function dmCap() { return vaultCap(1000, 100, S.upgrades && S.upgrades.dm_vault); }
-export function ptCap() { return Math.round(1000 + vaultCap(0, 200, S.upgrades && S.upgrades.pt_vault) + prodCapFloor(0.18)); }
+// v3.10.5：上限构成分解（基础 + 仓库逐级 + 产出基座[EP上限×比例]），供商店卡面展示联动来源，单一真源
+function capParts(base, per, ratio, key) {
+  const lv = (S.upgrades && S.upgrades[key]) || 0;
+  const vault = vaultCap(0, per, lv);
+  const floor = ratio ? prodCapFloor(ratio) : 0;
+  return { base, vault, floor, ratio: ratio || 0, total: Math.round(base + vault + floor) };
+}
+export function rpCap() { return capParts(2500, 400, 0.25, 'rp_vault').total; } // v2.8.30 ⑤：RP 上限首给减少（5000→2500）
+export function dmCap() { return capParts(1000, 100, 0, 'dm_vault').total; }
+export function ptCap() { return capParts(1000, 200, 0.18, 'pt_vault').total; }
+export function rpCapParts() { return capParts(2500, 400, 0.25, 'rp_vault'); }
+export function ptCapParts() { return capParts(1000, 200, 0.18, 'pt_vault'); }
+export function dmCapParts() { return capParts(1000, 100, 0, 'dm_vault'); }
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
 export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }

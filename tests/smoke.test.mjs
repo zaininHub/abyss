@@ -155,14 +155,14 @@ t('线程招募成本 360 × 1.25^n × 前3级折扣（v2.9.1：n=0/1/2 ×0.5/0.
   S.cultists.push({ output: 2.5, mood: '正常' });
   assert.equal(staffCost(), 704); // v2.9.1：360×1.25³ = 703.125 → ceil 704（第 4 个起全额曲线）
 });
-t('v2.0.2 EP 容量 = (基础2000 + 缓存×8000 + 粮仓/存储级制累计 + DC加成) × (1 + 0.25×里程碑数)（v3.4.6 曲线对调）', () => {
+t('v2.0.2 EP 容量 = (基础2000 + 缓存×8000 + 粮仓/存储级制累计 + DC加成) × (1 + 0.15×里程碑数)（v3.4.6 曲线对调；v3.10.5 ④ 里程碑 25%→15%）', () => {
   S.upgrades = {}; S.milesDone = {}; S.buildings = {}; S.storyline = 'default';
   assert.equal(epStorageCap(), 2000);
   S.upgrades['cache'] = 1;          assert.equal(epStorageCap(), 10000);  // v2.8.2：2000 + 8000
   S.upgrades['reserve_bin'] = 2;    assert.equal(epStorageCap(), 18720);  // v3.4.6 ⑫：粮仓 +4000+4720（原存储节点曲线）
   S.buildings['datacenter'] = 1;    assert.equal(epStorageCap(), 28720);  // 18720 + DC 10000
   S.milesDone = { m1: true, m2: true };
-  assert.equal(epStorageCap(), 43080); // 28720 × 1.5（m1+m2 里程碑）
+  assert.equal(epStorageCap(), 37336); // 28720 × 1.3（m1+m2 里程碑 ×0.15）
   S.upgrades = {}; S.milesDone = {}; S.buildings = {};
 });
 t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
@@ -463,14 +463,14 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   S.tidePhase = 1; S.upgrades = {}; S.milesDone = {};
   S.allTimeEp = 1e9; // 保证候选项全部解锁可见
   const cap = epStorageCap();
-  // 1) 自动升级受预留线拦截：EP 低于预留线不买
-  S.ai = { autoUpgrade: true, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0 };
+  // 1) 自动升级受预留线拦截：EP 低于预留线不买（助手充足，仅验证预留线）
+  S.ai = { autoUpgrade: true, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5 };
   const line = cap * 0.3;
   S.ep = line - 1; // 高于任何便宜项成本，但低于预留线+成本
   const upg0 = { ...(S.upgrades) };
   assert.equal(tickAI(5), false, '低于预留线不应有动作');
   assert.deepEqual(S.upgrades, upg0, '不应发生购买');
-  // 2) 自动升级正常执行：EP 充足时买到回本最短项
+  // 2) 自动升级正常执行：EP 充足时买到回本最短项（每执行一次消耗 1 名助手）
   S.ep = cap; S.ai.timer = 0;
   const before = S.ep;
   const acted = tickAI(5);
@@ -478,22 +478,23 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   const bought = Object.keys(S.upgrades).filter(k => (S.upgrades[k] || 0) > (upg0[k] || 0));
   assert.ok(bought.length > 0, '应有购入记录');
   assert.ok(S.ep < before, 'EP 应扣减');
+  assert.equal(S.ai.assistants, 4, '自动升级消耗 1 名助手');
   // 3) 自动招募 net<0 停止
   // v3.4.8 反馈⑥：薪资已改为「产出 × 2/3」→ 常态下净收益恒为正，只有怠工态（薪资 ×2.5）才会净亏；
   //   这里用怠工标记构造 net<0 场景，验证守卫仍然生效
   S.upgrades = {}; S.ep = 1e9;
   S.cultists = [{ id: 1, name: 't', output: 0.01, mood: '正常', moodTimer: 60 }];
   S.lazySince = Date.now() - 120000; // 怠工 ≥60s → lazyCostMult ×2.5 → 薪资 > 产出
-  S.ai = { autoUpgrade: false, autoHire: true, autoClaim: false, reserve: 0.3, timer: 0 };
+  S.ai = { autoUpgrade: false, autoHire: true, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5 };
   tickAI(5);
   assert.equal(S.cultists.length, 1, 'net<0 不应招募');
   S.lazySince = 0;
   // 4) 全关 → 无新动作
-  S.ai = { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0 };
+  S.ai = { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5 };
   S.ep = 1e9;
   assert.equal(tickAI(10), false, '开关全关不应有动作');
   delete S.tech['ai_core'];
-  S.cultists = []; S.ai = { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0 };
+  S.cultists = []; S.ai = { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 0 };
 });
 t('A：预留线三档 + AI 核心科技定义（数值）', () => {
   const aiCore = TECHS.find(x => x.id === 'ai_core');
@@ -808,12 +809,12 @@ t('5.1：1 级数据中心上限增量 ≥ 10,000（建筑映射生效）', () =
   resetCapState();
 });
 
-t('5.1：3 个里程碑时上限乘数 = 1.75（+25%×3）', () => {
+t('5.1：3 个里程碑时上限乘数 = 1.45（+15%×3，v3.10.5 ④ 里程碑 25%→15%）', () => {
   resetCapState();
   const base = epStorageCap();
   S.milesDone = { m1: true, m2: true, m3: true };
   const boosted = epStorageCap();
-  assert.ok(Math.abs(boosted / base - 1.75) < 0.01, `乘数 ${boosted / base}`);
+  assert.ok(Math.abs(boosted / base - 1.45) < 0.01, `乘数 ${boosted / base}`);
   resetCapState();
 });
 

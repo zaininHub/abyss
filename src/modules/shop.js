@@ -6,7 +6,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
@@ -220,7 +220,6 @@ export function renderShop(container) {
       for (const [sid, sel] of shopItemEls) { const su = UPGRADES.find(x => x.id === sid); if (su && sel) updateShopItem(su); }
       // v2.8.22 ①：购买后全相关面板置脏——线程/科技/遗物/腐化即时重算灰显（资源变化跨面板同步）
       dirty.tech = true; dirty.relics = true; dirty.corruption = true; dirty.hero = true;
-      if (u.id === 'ai_assist') dirty.ai = true; // v3.6.0 方向⑨：商店买编队后 AI 面板槽位即时刷新
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {
@@ -524,6 +523,8 @@ function stripPct(desc) {
 const EP_STORAGE_IDS = ['storage', 'reserve_bin', 'deep_bin', 'cache'];
 // 资源仓库（RP/DM/PT 上限）同口径：{资源} 上限 +{本级增量}——v3.0.9 修正原「+购买后总量」误读（+2900 实为总量，真实增量 +400）
 const VAULT_RES = [['rp_vault', 'RP', () => rpCap()], ['dm_vault', 'DM', () => dmCap()], ['pt_vault', 'PT', () => ptCap()], ['faith_vault', 'FP', () => faithCap()]];
+// v3.10.5：含「产出基座」（EP 上限 × 比例）联动的仓库，卡面补一行来源，避免玩家误以为上限全是建筑给的
+const VAULT_CAP_PARTS = { rp_vault: rpCapParts, pt_vault: ptCapParts, dm_vault: dmCapParts };
 function vaultDesc(u) {
   const row = VAULT_RES.find(([id]) => id === u.id);
   if (!row) return null;
@@ -533,7 +534,14 @@ function vaultDesc(u) {
   // v3.5.0 反馈④：扩容已改为「叠在产出基座之上」，增量恒 >0——文案回到「+增量（当前总量）」，
   //   不再出现「已由产出基座接管，扩容不再叠加」这种内部术语
   if (after <= before) return `${label} 上限 ${fmt(before)}（本级已达上限）`;
-  return `${label} 上限 +${fmt(after - before)}（当前 ${fmt(before)}）`;
+  let s = `${label} 上限 +${fmt(after - before)}（当前 ${fmt(before)}）`;
+  const partsFn = VAULT_CAP_PARTS[u.id];
+  if (partsFn) {
+    const p = partsFn();
+    if (p.floor > 0) s += ` · 产出基座 ${fmt(p.floor)}（EP上限×${Math.round(p.ratio * 100)}%）`;
+    else if (p.ratio > 0) s += ' · 产出基座未启用（需研究「星图同调」）'; // v3.10.5 ③：联动已门控
+  }
+  return s;
 }
 // 线程强化变化量：cpu/gpu → 线程产出差值；subsist1-3/mem → 线程消耗差值；cache → 存储差值 + 消耗差值
 function threadEffectDesc(u) {
@@ -1559,7 +1567,10 @@ function bindFamilyDelegate(container) {
 export const RESEARCH_RES_ANCHORS = Object.freeze({ faith: 'faith' });
 export function researchResourceUnlocked(u, state = S) {
   const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];
-  return !key || anchorDone(key, state);
+  if (key && !anchorDone(key, state)) return false;
+  // v3.10.5 ③：研究项可要求前置科技（如星图同调要求「深空探测」），未解锁科技不显示也不可购
+  if (u && u.requiresTech && !hasTech(u.requiresTech)) return false;
+  return true;
 }
 export function researchUpgCost(id) {
   const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
@@ -1592,7 +1603,7 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2', 'rp_ep3', 'rp_thread2', 'rp_ep4', 'rp_thread3', 'rp_ep5', 'rp_thread4', 'rp_global2', 'rp_ep6', 'rp_thread5', 'rp_global3'], unlock: null },
   { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy', 'rp_wage2', 'rp_dm2', 'rp_wage3', 'rp_dm3', 'rp_wage4', 'rp_dm4'], unlock: { prev: 'prod', need: 4 } },
   { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2', 'rp_rift3', 'rp_rift4', 'rp_rift5', 'rp_delve3'],                                        unlock: { prev: 'res', need: 4 } },
-  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2', 'rp_ai3', 'rp_ai4', 'rp_ai5', 'rp_cosmos3'],                                                    unlock: { prev: 'res', need: 4 } },
+  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2', 'rp_ai3', 'rp_ai4', 'rp_ai5', 'rp_cosmos3', 'rp_sync'],                                                    unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 

@@ -249,6 +249,7 @@ test('D2 行为：转生 / 轮回后上限回落 3000，隐式保留的余额同
   fresh();
   S.upgrades = { storage: 20, reserve_bin: 10, rp_vault: 4, pt_vault: 3, dm_vault: 3 };
   S._rpOverflowSeen = true; S._epCapBasisCps = 5e6; S._epCapBasisSig = 'old';
+  S.rpTheories = { rp_sync: 1 }; // v3.10.5 ③：产出基座联动由「星图同调」门控，需已购才出现高上限
   S.rp = 9e9; S.pt = 5e9; S.dm = 1e6;
   assert.ok(eco.rpCap() > 1e8, '重置前确为高上限（复现用户场景）');
   schema.resetRunState(S, defaultState(), { clamp: eco.clampRunResourceBalances });

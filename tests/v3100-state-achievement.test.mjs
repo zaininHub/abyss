@@ -406,7 +406,7 @@ test('E3 红包数值回归数据表单一真源', () => {
 test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(CHAPTERS.length, 38);
   assert.equal(EVENTS.length, 62);
-  assert.equal(BALANCE.researchUpgs.length, 55);
+  assert.equal(BALANCE.researchUpgs.length, 56);
   assert.equal(BALANCE.miles.length, 13);
   assert.equal(WIKI_SECTIONS.length, 24);
   assert.equal(POLICY_GROUPS.length, 11);

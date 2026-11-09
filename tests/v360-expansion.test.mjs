@@ -151,43 +151,34 @@ test('v3.6.0 ⑧ 跃迁消耗专属资源并压缩在途等待（γ 倍）', () 
   S.expeditions = []; S.starRes = {}; S.jumpUses = 0;
 });
 
-// ===== T5 AI 助手按类型自动购买（独立于总开关）=====
+// ===== T5 AI 助手（v3.10.5 改为一次性消耗品）=====
 function seedAiBase() {
   Object.assign(S, {
-    tech: { ai_core: true, deep_space: true }, ai: { autoUpgrade: false, autoHire: false, autoClaim: false, autoBuild: false, autoTech: false, alloc: {} },
+    tech: { ai_core: true, deep_space: true }, ai: { autoUpgrade: false, autoHire: false, autoClaim: false, autoBuild: false, autoTech: false, assistants: 0 },
     starCps: 0, ep: 1e9, allTimeEp: 1e9, upgrades: {}, totalBuys: 0, colonies: {},
   });
 }
-test('v3.6.0 ④ AI：总开关全关但分配了助手 → 仍独立执行自动购买', () => {
+test('v3.10.5 ④ AI：无助手时自动升级/招募/领取不执行（消耗型）', () => {
   seedAiBase();
-  S.ai.alloc = { colony: 1 };
-  S.starCps = 1e4; // 足够殖民月球(200)/火星(1500)
-  const before = S.totalBuys;
-  const acted = tickAI(10);
-  assert.equal(acted, true, '有分配时 tickAI 应返回 true（早期返回已修复）');
-  assert.ok(S.colonies.moon === true, 'AI 助手自动建立月球殖民地');
-  assert.ok(S.totalBuys >= before, '殖民计入 totalBuys');
-});
-test('v3.6.0 ④ AI：分配升级类型 → 自动购入产出项', () => {
-  seedAiBase();
-  S.ai.alloc = { upgrade: 1 };
+  S.ai.autoUpgrade = true;
   const before = S.totalBuys || 0;
   const acted = tickAI(10);
-  assert.equal(acted, true, '升级类型分配后 tickAI 返回 true');
+  assert.equal(acted, false, '无助手时自动升级不应动作');
+  assert.equal(S.totalBuys || 0, before, '无助手时不应购入任何升级');
+});
+test('v3.10.5 ④ AI：有助手时自动升级消耗助手并买入', () => {
+  seedAiBase();
+  S.ai.autoUpgrade = true;
+  S.ai.assistants = 3;
+  const before = S.totalBuys || 0;
+  const acted = tickAI(10);
+  assert.equal(acted, true, '有助手时 tickAI 返回 true');
   assert.ok((S.totalBuys || 0) > before, '至少自动购入 1 个升级项');
+  assert.ok((S.ai.assistants || 0) < 3, '自动升级后助手数减少（消耗 1 名）');
 });
-test('v3.6.0 ④ AI：无任何开关且未分配 → tickAI 返回 false（不动作）', () => {
+test('v3.10.5 ④ AI：无开关 → tickAI 返回 false（不动作）', () => {
   seedAiBase();
-  S.ai.alloc = {};
-  assert.equal(tickAI(10), false, '无开关无分配 → 不动作');
+  S.ai.assistants = 5;
+  assert.equal(tickAI(10), false, '无开关 → 不动作，助手不消耗');
 });
-test('v3.6.0 ④ AI：rp_ai（拟我协议）提升助手行动强度', () => {
-  seedAiBase();
-  S.rpTheories = { rp_ai: 8 };
-  S.ai.alloc = { colony: 1 };
-  S.starCps = 1e4;
-  tickAI(10);
-  // 强度 = floor((1+1)*1.64)=3 → 可殖民月球+火星；仅强度 2（无 rp_ai）时也能殖民月球
-  assert.ok(S.colonies.moon === true, 'rp_ai 加持下仍完成殖民（强度更高）');
-  S.rpTheories = {};
-});
+

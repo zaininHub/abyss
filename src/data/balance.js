@@ -241,18 +241,12 @@ export const BALANCE = {
   // v1.3 模块 A：AI 助手
   ai: {
     interval: 5,
+    // v3.10.5：助手由「编队/槽位/按类型分配」改为「一次性消耗品」——
+    // 自动升级/自动招募/自动领取每执行一次消耗 1 名助手；无上限，靠购买价逐次递增限购。
     assistants: {
-      baseSlots: 0,            // 初始可用助手槽（无升级时为 0）
-      maxSlots: 8,            // 升级「AI 助手」可解锁的硬上限
-      upgradeId: 'ai_assist',  // 升级商店项 id（Task15 在 shop 接入）
-      upgradeBase: 5e6,        // 第 1 个助手解锁价（EP）
-      upgradeGrowth: 6,        // 后续每个助手 ×6
-      allocTypes: ['upgrade','building','colony','cosmos','tech','policy','rift','religion'],
-      typeLabels: {
-        upgrade: '升级商店', building: '效能建筑', colony: '星系殖民', cosmos: '宇宙工程',
-        tech: '科技研究', policy: '政策颁行', rift: '裂隙升级', religion: '宗教圣所',
-      },
-    },                    // 决策周期（秒）
+      baseCost: 2e6,          // 第 1 名助手的购买价（EP）
+      costGrowth: 1.5,        // 每买 1 名，下 1 名价格 ×1.5（数量越多越贵，天然限购）
+    },
     reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
     defaultReserve: 0.3,
     // v2.5.5：AI 自动购建（全部资源点解锁后可激活）
@@ -304,13 +298,13 @@ export const BALANCE = {
   // v3.4.7：深井仓储 / 缓存优化的逐级递增加成配置（economy.epStorageCap 同源读）
   deepBin: { base: 1.8e6, growth: 1.22, capPer: 8e5, capGrowth: 1.15 },
   cacheUpg: { capPer: 8000, capGrowth: 1.15, maxLevel: 5 },
-  storageMileBonus: 0.25,                                // 每个已达成里程碑：上限 +25%（乘算基座）
+  storageMileBonus: 0.15,                                // 每个已达成里程碑：上限 +15%（乘算基座；v3.10.5 ④ 由 25% 放缓，抑制早期上限过快增长）
   // v3.6.4 反馈②：恢复「首次溢出后 ≈ 1~3 小时存满」的节奏，同时保留 v3.6.3 ① 的
   //   「上限不随线程数量/状态抖动」。做法是时间基座不读「实时 cps」，改读
   //   「结构性投入快照产能」：只在玩家买了升级/建筑（签名变化）时刷新一次产能，
   //   且单调不回落；线程招募、心情、薪资四态、懒惰、吞噬都不触发刷新。
-  capHoursFloor: 2,   // 时间基座 = 快照产能 × 2 小时（1~3h 区间中位）
-  capOverflowMult: 3, // 基座下限 = 结构性上限 ×3（合计 4×）：纯结构性/零产出档也不会缩水
+  capHoursFloor: 1,   // 时间基座 = 快照产能 × 1 小时（v3.10.5 ④ 由 2 小时放缓，抑制上限过快增长）
+  capOverflowMult: 1.5, // 基座下限 = 结构性上限 ×1.5（合计 2.5×；v3.10.5 ④ 由 3 放缓）
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],
   // v2.0.2：防死锁硬约束——扩容项价格 ≤ 当前 EP 上限 ×30%（KG 谷仓模式：扩容永远只是存量的一小部分）
@@ -494,6 +488,10 @@ export const BALANCE = {
     { id: 'rp_delve3',   name: '深潜回响',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'delve',  v: 0.14 }, desc: '深潜产出 +14%/级' },
     { id: 'rp_ai5',      name: '拟我合弦',   cap: 8, base: 3600, growth: 1.86, fx: { key: 'ai',     v: 0.10 }, desc: 'AI 助手效率 +10%/级' },
     { id: 'rp_cosmos3',  name: '星力共鸣',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'cosmos', v: 0.10 }, desc: '宇宙工程星力 +10%/级' },
+    // v3.10.5 ③：星图同调——星图远征（深空探测）开启后，购买此升级才启用 RP/PT 上限的 EP×比例「产出基座」联动；
+    // 未购时 RP/PT 上限只靠各自仓库线性增长，解决「早期 RP/PT 上限就随 EP 涨到千万级」的问题。
+    // fx.key='sync' 由 economy.syncUnlocked() 消费（researchMult('sync')>1 即已购），非死键。
+    { id: 'rp_sync',     name: '星图同调',   cap: 1, base: 2000, growth: 1.5, fx: { key: 'sync', v: 1 }, requiresTech: 'deep_space', desc: '启用 RP/PT 上限随 EP 上限联动（产出基座）' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

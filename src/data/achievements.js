@@ -78,7 +78,7 @@ export const ACHIEVEMENTS = [
   { id: 'delve200',  name: '无尽下潜',   icon: '🌑', desc: '深潜达到 200 层', test: (s, ctx) => (s.delve?.depth || 0) >= 200 },
   { id: 'ai_unlock', name: '机械之心',   icon: '🤖', desc: '解锁 AI 助手（科技「AI 管理核心」）', test: (s, ctx) => !!s.tech?.ai_core },
   { id: 'ai_autobuild', name: '自治协议', icon: '🤖', desc: '激活 AI 自动购建', test: (s, ctx) => !!(s.ai && s.ai.autoBuildUnlocked) },
-  { id: 'ai_assist', name: '助手编队',   icon: '🤖', desc: '解锁并分配首位 AI 助手', test: (s, ctx) => (s.upgrades?.ai_assist || 0) >= 1 && Object.values(s.ai?.alloc || {}).some(v => v > 0) },
+  { id: 'ai_assist', name: '助手入列',   icon: '🤖', desc: '购入首位 AI 助手（一次性消耗品）', test: (s, ctx) => (s.ai?.assistants || 0) >= 1 }, // v3.10.5：助手改为消耗品，成就口径同步
   // v3.7.0：改用 chapterProgress —— 旧 parseInt 让变体章节（12A/14B）玩家永远拿不到 chapter18
   { id: 'chapter5',  name: '星图展开',   icon: '📖', desc: '剧情推进至第 5 章', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 5 },
   { id: 'chapter9',  name: '命运分岔',   icon: '📖', desc: '剧情推进至第 9 章', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 9 },

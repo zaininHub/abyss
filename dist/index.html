@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.10.4</title>
+<title>深渊效能工作台 v3.10.5</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-8H4d0lq4.js"></script>
+  <script defer src="./assets/index-DZzGlaYZ.js"></script>
   <link rel="stylesheet" href="./assets/index-BtOjaBGb.css">
 </head>
 <body>
@@ -374,13 +374,9 @@
         </div>
         <div class="save-list-label">存档列表</div>
         <div id="save-list" class="save-list"></div>
-        <hr class="save-sep">
-        <div class="save-legacy">
-          <button class="btn" id="export-btn">导出当前</button>
-          <button class="btn" id="import-btn">导入覆盖当前</button>
-          <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-          <button class="btn" id="snap-btn">存档管理（旧）</button>
-        </div>
+        <!-- v3.10.5 ⑤：去除旧「导出当前/导入覆盖当前/存档管理（旧）」按钮；
+             导入/导出已内聚为存档列表每条的功能，隐藏文件输入供「📥 导入」复用 -->
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
       </div>
     </div>
   </div>

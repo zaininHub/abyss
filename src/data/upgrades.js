@@ -28,7 +28,7 @@ export const UPGRADES = [
   {id:'intern',name:'实习生',base:600000.0,cps:20,growth:1.55,desc:'基础产出+20/s'}, // v2.8.3：base×4/cps 降
   {id:'team',name:'小组协作',base:6000000.0,cps:110,growth:1.55,desc:'基础产出+110/s'}, // v2.8.3：base×4/cps 降
   {id:'ai',name:'AI 助手',base:60000000.0,cps:600,growth:1.55,desc:'基础产出+600/s'}, // v2.8.3：base×4/cps 降
-  {id:'ai_assist',name:'AI 助手编队',base:5e6,growth:6,maxLevel:8,desc:'解锁 1 个 AI 助手槽（最多 8，于 AI 面板分配至各系统自动购买）'}, // v3.6.0 方向⑨
+  // v3.10.5：移除「AI 助手编队」(ai_assist)——助手改为消耗品，编队/槽位/按类型分配整套概念删除
   {id:'cloud',name:'云集群',base:900000000.0,cps:3250,growth:1.55,desc:'基础产出+3.25K/s'}, // v2.8.3：base×4/cps 降
   {id:'global',name:'全球网络',base:3900000000.0,cps:18500,growth:1.55,desc:'基础产出+18.5K/s'}, // v2.8.3：base×4/cps 降
   {id:'quantum',name:'量子计算',base:60000000000.0,cps:105000,growth:1.55,desc:'基础产出+105K/s'}, // v2.8.3

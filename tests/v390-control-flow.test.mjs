@@ -291,10 +291,10 @@ test('D4 逐相位改写即时生效，手动策略不丢失，恢复默认可�
   assert.equal(orch.effectiveModeId(S), 'balanced');
   assert.equal(orch.setOrchestrationPhaseMode(S, 1, 'vigil'), true);
   assert.equal(orch.effectiveModeId(S), 'vigil');
-  assert.equal(orch.orchestrationMult('ep', S), 0.94);
-  assert.equal(orch.orchestrationMult('rp', S), 1.18);
-  assert.equal(orch.orchestrationMult('pt', S), 1.18);
-  assert.equal(orch.orchestrationMult('dm', S), 1.20);
+  assert.equal(orch.orchestrationMult('ep', S), 0.90);
+  assert.equal(orch.orchestrationMult('rp', S), 1.30);
+  assert.equal(orch.orchestrationMult('pt', S), 1.30);
+  assert.equal(orch.orchestrationMult('dm', S), 1.32);
   assert.equal(orch.orchestrationState(S).mode, 'abyss', '手动策略不得被排班改写');
   assert.equal(orch.scheduleCustomized(S), true);
   assert.equal(orch.resetOrchestrationSchedule(S), true);
@@ -338,7 +338,7 @@ test('D7 第 5 条策略 vigil 四键数值正确，且增益与代价成对', (
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
   const v = orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil');
   assert.ok(v && v.name && v.icon && v.short && v.desc);
-  assert.deepEqual(v.effects, { ep: 0.94, rp: 1.18, pt: 1.18, dm: 1.20 });
+  assert.deepEqual(v.effects, { ep: 0.90, rp: 1.30, pt: 1.30, dm: 1.32 });
   for (const m of orch.ORCHESTRATION_MODES) {
     if (m.id === 'balanced') continue;
     assert.ok(Object.values(m.effects).some(x => x > 1), `${m.id} 应有增益`);

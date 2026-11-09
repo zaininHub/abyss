@@ -56,7 +56,7 @@ function compact(n) {
 console.log('[D] 内容完整性与卡面数值');
 
 test('D1 研究项 46 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
-  assert.equal(BALANCE.researchUpgs.length, 55);
+  assert.equal(BALANCE.researchUpgs.length, 56);
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内 id 不重复');
@@ -188,7 +188,8 @@ test('E3b AI 自动购买全部走 unitCost(u,0)（不再多扣 growth 倍）', 
   const ai = readFileSync(join(srcRoot, 'modules', 'ai.js'), 'utf8');
   assert.ok(!/unitCost\([^,]+,\s*1\s*\)/.test(ai), 'AI 实扣路径不应再出现 unitCost(u,1)');
   const hits = [...ai.matchAll(/unitCost\([^,]+,\s*0\s*\)/g)].length;
-  assert.ok(hits >= 5, `AI 自动购买应有 ≥5 处 unitCost(...,0)，实际 ${hits}`);
+  // v3.10.5：助手由「编队按类型自动购买」改为消耗品，AI 实扣调用点收敛到 3 处（回本/混沌直觉），阈值同步下调
+  assert.ok(hits >= 3, `AI 自动购买应有 ≥3 处 unitCost(...,0)，实际 ${hits}`);
 });
 
 test('E4 信仰线 ×3 已移入软上限之前（源码位置断言）', () => {
