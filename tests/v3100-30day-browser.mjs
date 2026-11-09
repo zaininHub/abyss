@@ -19,8 +19,11 @@
 //   DAYS=1 node tests/v3100-30day-browser.mjs                    # 灰度
 //   LINE=line_faith DAYS=3 REPORT=tests/v3100-30day-faith.json node ...
 import puppeteer from 'puppeteer-core';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 
+// v3.10.1：报告版本直接取 package.json，不再随版本 bump 手改硬编码。
+// 注意：本脚本后面有 `const URL = 'file://...'`，会遮蔽全局 URL 构造器（TDZ），此处只能用 cwd 相对路径。
+const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const CHROME = process.env.CHROME_PATH || '/usr/local/bin/chromium';
 const DAYS = Number(process.env.DAYS || 30);
 const LINE = process.env.LINE || 'line_order';
@@ -282,6 +285,16 @@ async function uiCheck(page) {
     const orchText = (orchPanel && orchPanel.innerText) || '';
     const summary = q.orchestrationSummary(S);
     const orchTextOk = summary.every(x => orchText.includes(x.label) && orchText.includes('×' + x.mult.toFixed(2)));
+    // v3.10.1：新增「编排倍率」口径标签必须单行呈现，窄卡不得出现孤字换行（与共鸣区同范式）
+    const orchLabel = [...(orchPanel ? orchPanel.querySelectorAll('div') : [])]
+      .find(d => d.children.length === 0 && (d.textContent || '').includes('编排倍率 ·'));
+    let orchLabelOrphans = -1;
+    if (orchLabel) {
+      const range = document.createRange();
+      range.selectNodeContents(orchLabel);
+      const rects = [...range.getClientRects()];
+      orchLabelOrphans = rects.length > 1 && rects[rects.length - 1].width < 28 ? 1 : 0;
+    }
     // 成就面板为「已解锁分页」制，新增 3 条在列表末尾（末页）。
     // 只取第一页会漏判，故逐页点击「下一页」收集全量文本再与读侧比对。
     const achPanel = document.getElementById('achievement-panel');
@@ -395,7 +408,8 @@ async function uiCheck(page) {
       storyEvents: q.getStorylineEvents().length,
       linePets: q.getStorylinePets().length,
       orch: { unlocked: q.orchestrationUnlocked(S), visible: !!(orchCard && orchCard.style.display !== 'none'),
-        textOk: orchTextOk, text: orchText.slice(0, 220), modes: q.ORCHESTRATION_MODES.length },
+        textOk: orchTextOk, text: orchText.slice(0, 220), modes: q.ORCHESTRATION_MODES.length,
+        labelOk: orchLabelOrphans === 0, labelOrphans: orchLabelOrphans },
       achPages,
       achNew: ['另排一班', '随潮而动', '排班表的人'].filter(n => achText.includes(n)),
       achNewUnlocked: ['orch_switch', 'orch_tide', 'chapter25']
@@ -416,7 +430,7 @@ const browser = await puppeteer.launch({
   executablePath: CHROME, headless: 'new',
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--no-zygote'],
 });
-const report = { version: '3.10.0', days: DAYS, line: LINE, startedAt: new Date().toISOString(), daily: [], checks: {} };
+const report = { version: VERSION, days: DAYS, line: LINE, startedAt: new Date().toISOString(), daily: [], checks: {} };
 console.log(`\n=== v3.10.0 浏览器 mock 推演：${DAYS} 天 / ${LINE} / ${DAYS * TICKS_PER_DAY} tick ===`);
 
 const { page, errs } = await boot(browser, LINE);
@@ -689,6 +703,8 @@ try {
     ok('效能编排卡可见，四条倍率文本与读侧一致', ui.orch.text.replace(/\n/g, ' ').slice(0, 90));
   } else if (!ui.orch.unlocked) bad('编排卡未解锁，新玩法对玩家不可见', JSON.stringify(ui.orch));
   else bad('编排卡 UI 与读侧不一致', JSON.stringify(ui.orch));
+  if (ui.orch.labelOk) ok('编排倍率口径标签单行呈现，窄卡无孤字换行', '编排倍率 · 策略与相位共鸣合并');
+  else bad('编排倍率标签缺失或出现孤字换行', JSON.stringify(ui.orch.labelOrphans));
   if (ui.achPanelTextLen > 0 && ui.achNew.length === ui.achNewUnlocked.length) {
     ok('成就面板逐页渲染与读侧一致（已解锁的新成就全部可见）',
       `${ui.achPages} 页 / 全页 ${ui.achPanelTextLen} 字；已解锁新成就 ${ui.achNewUnlocked.length} 条，面板可见 ${ui.achNew.length} 条`);

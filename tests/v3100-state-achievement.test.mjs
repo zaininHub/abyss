@@ -440,3 +440,35 @@ test('E5 新增事件 / 章节 / 政策条件全部可执行且类型合法', ()
   assert.ok(MAIN.includes("unlockAchievement(S, 'demon_friend')")
     && MAIN.includes("unlockAchievement(S, 'gaze_abyss')"));
 });
+
+console.log('[F] v3.10.1 编排 / 班组口径澄清（方案 A：仅文案，不动数值与交互）');
+const WIKI_SRC = read('data/wiki.js');
+
+test('F1 Wiki 两节都写明「编排调倍率 / 班组调人头 / 分层相乘」', () => {
+  const thread = WIKI_SECTIONS.find(s => s.id === 'thread').body();
+  const orch = WIKI_SECTIONS.find(s => s.id === 'orchestration').body();
+  for (const [name, body] of [['thread', thread], ['orchestration', orch]]) {
+    assert.ok(body.includes('效能编排') && body.includes('班组'), `${name} 节应同时提到两套系统`);
+    assert.ok(body.includes('相乘'), `${name} 节应说明相乘关系`);
+    assert.ok(!/undefined|NaN|Infinity/.test(body), `${name} 渲染出非法数值`);
+  }
+  assert.ok(orch.includes('不是全部加成的总和'), '编排节需明确卡面倍率不是总倍率');
+  assert.ok(thread.includes('DM 探采只看编排'), '班组节需说明 DM 不吃班组加成');
+});
+
+test('F2 编排卡倍率行标注口径，四条倍率仍由统一读侧驱动', () => {
+  assert.ok(MAIN.includes('编排倍率 · 策略与相位共鸣合并'), '卡面需标注「编排倍率」');
+  assert.ok(MAIN.includes('const summary = orchestrationSummary(S)'));
+  assert.ok(MAIN.includes('for (const x of summary)'), '倍率行仍走统一读侧，不得内联数值');
+});
+
+test('F3 Wiki 不再把编排倍率写成「每条管线的总倍率」', () => {
+  assert.doesNotMatch(WIKI_SRC, /倍率与(顶栏)?每秒产出始终同口径/);
+  assert.ok(WIKI_SRC.includes('编排倍率与真实入账同口径'));
+});
+
+test('F4 方案 A 边界：数值入口与交互绑定保持原样', () => {
+  assert.ok(MAIN.includes('data-res-toggle="1"') && MAIN.includes('data-orch-mode='));
+  assert.match(read('core/orchestration.js'), /return base \* resonanceMult\(key, S\)/,
+    '编排乘区仍与共鸣合并，口径澄清不得改数值');
+});

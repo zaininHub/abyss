@@ -175,6 +175,8 @@ function renderOrchestrationPanel() {
     </div>`;
   }
 
+  // v3.10.1：明确标注这四行是编排层倍率（策略 + 相位共鸣合并），不是全部加成的总和。
+  html += `<div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px">编排倍率 · 策略与相位共鸣合并</div>`;
   html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
     const color = x.mult > 1.0001 ? 'var(--good,#3fb950)' : x.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)';
