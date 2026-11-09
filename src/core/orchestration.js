@@ -52,7 +52,10 @@ export const DEFAULT_MODE = 'balanced';
 
 // 潮汐相位 → 策略（与 balance.tide.phases 的 0 涨潮 / 1 平潮 / 2 退潮 / 3 乱流 对应）
 // 同时是「默认排班表」：旧档无 schedule 字段、或未解锁预案时一律回落到此映射。
-export const TIDE_ORCHESTRATION = Object.freeze(['output', 'balanced', 'research', 'abyss']);
+// v3.10.3：默认排班表改为覆盖全部 6 种策略中的 4 档，确保「值守编排(vigil)」与「潮汐级联(cascade)」
+//   在随潮汐排班下也能被真实触发（旧默认只用 output/balanced/research/abyss，导致 vigil/cascade 永远用不到）。
+//   玩家仍可在「潮汐预案」中自由改写四相位，把 abyss/balanced 配回去。
+export const TIDE_ORCHESTRATION = Object.freeze(['output', 'vigil', 'research', 'cascade']);
 
 // v3.9.0 数值配置：改写排班表的解锁门槛（两项满足其一）。
 // 取「任务链已跑通」为可达口径：30 天 mock 推演中第 8 个任务在开局数小时内即达成。

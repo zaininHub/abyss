@@ -5,7 +5,7 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
-import { MOOD_MULT, PROFESSION_BY_ID, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
+import { MOOD_MULT, CONVERTERS } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
@@ -112,13 +112,6 @@ export function renderCrewPanel(container) {
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
   const totOut = staffOutputPerSec();
   const totSal = staffSalaryPerSec();
-  // v3.6.3 ③/④：说明行只列已解锁岗位的图标对照，未解锁岗位在面板内完全不出现
-  const helpIcons = visibleTypes
-    .filter(t => t !== HYPER_CONVERTER_ID)
-    .map(t => {
-      const p = Object.values(PROFESSION_BY_ID).find(x => x.affinity === t);
-      return p ? `${p.icon}${CONVERTERS[t].name}` : '';
-    }).filter(Boolean).join('、');
   container.innerHTML = `
     <div class="crew-head">
       <span class="crew-state" style="color:${meta.color}">● ${meta.label}</span>
@@ -134,7 +127,6 @@ export function renderCrewPanel(container) {
         ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
       </span>
     </div>
-    <div class="crew-help" style="font-size:11px;color:var(--text-3,#6e7681);margin-bottom:6px;line-height:1.7">卡面图标表示擅长岗位，匹配职业时无 EP/消耗惩罚且加成更高${helpIcons ? `：${helpIcons}` : ''}；🎖️领导者提供全局产出加成；😪怠惰为负面；⚙️超线程无需解锁，该线程产出 +10%、消耗 +10%。智能分配先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程、再纠正错位岗位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程优先补空缺岗位。「一键收回」把所有线程撤离岗位置为空闲（消耗恢复）。下拉框可自由切换岗位</div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）

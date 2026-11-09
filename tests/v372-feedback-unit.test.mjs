@@ -274,7 +274,6 @@ test('D9 擅长职业归位仍生效', () => {
 test('D10 源码不再有 spare 池 / 手动超线程保留语义（防接线回退）', () => {
   assert.doesNotMatch(TB_SRC, /const spare = \[\]/, '手动超线程池应已删除');
   assert.match(TB_SRC, /阶段 C：资源岗位分配完，剩下的才进超线程/, '兜底阶段注释应为新语义');
-  assert.match(CREW_SRC, /原本手动设定的超线程也会先被拉回来补资源岗位/, '班组说明应同步');
   assert.match(WIKI_SRC, /原本手动设定的超线程也会先被拉回来补资源岗位/, 'Wiki 应同步');
 });
 

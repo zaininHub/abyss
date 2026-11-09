@@ -439,16 +439,19 @@ function renderAssistantSection() {
   const used = BALANCE.ai.assistants.allocTypes.reduce((s, t) => s + (alloc[t] || 0), 0);
   const free = Math.max(0, total - used);
   const st = assistantBuyState();
-  let html = `<div class="ai-desc" style="margin-top:10px">🤖 AI 助手编队：<b>${total}</b>/${BALANCE.ai.assistants.maxSlots} 槽（空闲 ${free}）`;
+  let html = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手编队：<b>${total}</b>/${BALANCE.ai.assistants.maxSlots} 槽（剩余可分配 <b style="color:var(--good,#3fb950)">${free}</b>）`;
   if (aiUnlocked()) {
     html += ` <button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`;
   }
   html += `</div>`;
+  // v3.10.3：澄清「按类型自动购买数量」的意义——每为某类型分配 1 名助手，该类型每周期自动购买强度 +1（再受「拟我协议」研究加成）；
+  // 因此下方数量 = 投入该类型的助手数，受总槽位数约束。
+  html += `<div style="font-size:11px;color:var(--text-3,#6e7681);margin:2px 0 6px;line-height:1.5">每为某类型分配 1 名助手，该类型「自动购买」每周期强度 +1（× 拟我协议研究加成）。数量即投入该类型的助手数，上限为总槽位 ${BALANCE.ai.assistants.maxSlots}。</div>`;
   const labels = BALANCE.ai.assistants.typeLabels || {};
   for (const type of BALANCE.ai.assistants.allocTypes) {
     const n = alloc[type] || 0;
     html += `<div class="ai-build-box" style="display:flex;align-items:center;gap:8px;margin-top:4px">
-      <span style="flex:1;font-size:12px">${labels[type] || type} · 自动购买</span>
+      <span style="flex:1;font-size:12px">${labels[type] || type} · 自动购买 <b style="color:var(--text-2)">×${n + 1}</b></span>
       <button class="btn ai-rate-btn" data-assist-dec="${type}" ${n <= 0 ? 'disabled' : ''}>−</button>
       <b style="min-width:18px;text-align:center">${n}</b>
       <button class="btn ai-rate-btn" data-assist-inc="${type}" ${free <= 0 ? 'disabled' : ''}>+</button>
@@ -515,11 +518,13 @@ export function renderAiPanel(container) {
   }
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
+    <div style="font-size:12px;color:var(--text-2);margin:2px 0 6px;padding:4px 8px;background:var(--row,#161b27);border-radius:6px">🟢 基础自动化 · 无需编队（研究「AI 管理核心」即可用，独立于下方助手编队）</div>
     <div class="ai-desc">预留线：EP 上限的 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</div>
     ${sw('autoUpgrade', '自动升级', '每 5s 购买回本时间最短的产出项（成本 ÷ 边际 CPS，含全局乘数）；EP 低于预留线时暂停')}
     ${sw('autoHire', '自动招募', '线程净产出为正且 EP ≥ 2×招募成本时自动招募；净产出为负自动停止')}
     ${sw('autoClaim', '自动领取', '任务完成进入待领取状态立即自动领取')}
     ${buildHtml}
+    <div style="font-size:12px;color:var(--text-2);margin:10px 0 6px;padding:4px 8px;background:var(--row,#161b27);border-radius:6px">🔧 助手编队 · 高级按类型自动购买（需先购买编队槽；独立于上方基础开关）</div>
     ${renderAssistantSection()}
     <div class="ai-reserve-row">
       <span>预留线</span>${reserveOpts}

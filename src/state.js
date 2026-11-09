@@ -4,6 +4,7 @@ import { PROFESSION_BY_ID, LAZY_PROFESSION_ID, LEADER_PROFESSION_ID } from './da
 // v3.10.0：状态字段生命周期清单由 core/stateSchema.js 单一真源派生（本文件不再内联白名单）
 import { DEFAULT_RESONANCE } from './core/resonance.js';
 import { defaultResDiscovered, mergeCrossRun, fillMissingFields, applyNestedDefaults } from './core/stateSchema.js';
+import { TIDE_ORCHESTRATION } from './core/orchestration.js';
 
 export const SAVE_KEY = 'abyss_idle_v2';
 export const SAVE_VERSION = 6;
@@ -132,7 +133,8 @@ export function defaultState() {
     _lastActionAt: Date.now(),     // 上次操作时间
     // v3.8.0：效能编排（本局策略偏好，跨周期保留；旧档缺字段由 orchestrationState 兜底）
     // v3.9.0：schedule 为四相位自定义排班表；旧档无此字段由 orchestrationSchedule 回落默认映射。
-    orchestration: { mode: 'balanced', autoTide: false, schedule: ['output', 'balanced', 'research', 'abyss'] },
+    // v3.10.3②：默认排班表统一取自 TIDE_ORCHESTRATION 单一真源（覆盖全部 6 策略中的 4 档，使值守/级联可用）。
+    orchestration: { mode: 'balanced', autoTide: false, schedule: [...TIDE_ORCHESTRATION] },
     // v3.10.0：相位共鸣（默认关闭；旧档缺字段由 stateSchema.COMPAT_KEYS 自动兜底，无迁移成本）
     resonance: { ...DEFAULT_RESONANCE },
     // 系统

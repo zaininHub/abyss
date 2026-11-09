@@ -470,10 +470,12 @@ export function registerFrameSystems(deps = {}) {
       const S = ctx.S, d = ctx.dirty;
       const document_ = doc();
       if (!document_) return;
-      const crewVisible = crewShown();
-      const crewCard = document_.getElementById('crew-card');
-      if (crewCard && crewCard.style.display !== (crewVisible ? '' : 'none')) crewCard.style.display = crewVisible ? '' : 'none';
-      if (crewVisible) renderCrewPanel(document_.getElementById('crew-panel'));
+      // v3.10.3：编排 + 班组合并卡片显隐（两者解锁其一即显示整卡；编排控件由 renderOrchestrationPanel 负责）
+      const mergeVisible = orchestrationUnlocked(S) || crewShown();
+      const mergeCard = document_.getElementById('orchestration-card');
+      if (mergeCard && mergeCard.style.display !== (mergeVisible ? '' : 'none')) mergeCard.style.display = mergeVisible ? '' : 'none';
+      // 班组内容每帧渲染到合并卡片内的 #crew-panel（sibling of #orchestration-panel），保证 per-second 产出实时刷新
+      if (crewShown()) renderCrewPanel(document_.getElementById('crew-panel'));
       renderPetGrid(document_.getElementById('pet-grid'));
       if (typeof D.renderQuickSwitches === 'function') D.renderQuickSwitches();
       const bldHost = document_.getElementById('building-list');

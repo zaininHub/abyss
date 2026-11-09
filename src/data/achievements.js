@@ -101,7 +101,7 @@ export const ACHIEVEMENTS = [
   { id: 'chapter25',   name: '排班表的人', icon: '📖', desc: '剧情推进至番外·排班表（第 25 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 25 },
   // v3.9.0 成就扩充（89→100，+12.4%）：全部只读已持久化字段，判定 O(1)
   { id: 'orch_vigil',   name: '守夜人',     icon: '☾',  desc: '把效能编排手动切换为「值守编排」', test: (s, ctx) => !!(s.orchestration && s.orchestration.mode === 'vigil') },
-  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: (s, ctx) => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'balanced', 'research', 'abyss'][i])) },
+  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: (s, ctx) => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'vigil', 'research', 'cascade'][i])) },
   { id: 'chapter29',    name: '值守日志',   icon: '📖', desc: '剧情推进至番外·值守日志（第 29 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 29 },
   { id: 'chapter32',    name: '未命名进程', icon: '📖', desc: '剧情推进至番外·未命名进程（第 32 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 32 },
   { id: 'policy9',      name: '九政并立',   icon: '⚖️', desc: '同时采用 9 项周期政策', test: (s, ctx) => Object.keys(s.policies || {}).length >= 9 },

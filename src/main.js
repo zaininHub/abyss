@@ -96,9 +96,13 @@ function renderOrchestrationPanel() {
   const card = document.getElementById('orchestration-card');
   const el = document.getElementById('orchestration-panel');
   if (!card || !el) return;
+  // v3.10.3：合并面板——编排解锁或班组解锁其一即显示整卡；班组内容由 frameSystems 渲染到 sibling #crew-panel。
   const unlocked = orchestrationUnlocked(S);
-  card.style.display = unlocked ? '' : 'none';
-  if (!unlocked) return;
+  const visible = unlocked || crewShown();
+  card.style.display = visible ? '' : 'none';
+  if (!visible) return;
+  // 仅当编排解锁时才渲染编排控件；未解锁时清空，腾出空间给班组（班组独立渲染，不进此面板）。
+  if (!unlocked) { el.innerHTML = ''; return; }
 
   const st = orchestrationState(S);
   const auto = st.autoTide;

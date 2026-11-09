@@ -700,7 +700,7 @@ try {
   if (orchOk && orchProbe.base > 0) ok('六种编排策略的 CPS 实测倍率与声明值完全一致',
     Object.entries(orchProbe.out).map(([k, v]) => `${k} ×${v.cpsRatio.toFixed(2)}`).join(' / '));
   else bad('编排声明值与实测 CPS 不符', JSON.stringify(orchProbe.out));
-  if (orchProbe.tide0 === 'output' && orchProbe.tide3 === 'abyss') ok('默认排班表与 v3.8.0 固定映射一致（零漂移）', `涨潮→产能 / 乱流→深渊`);
+  if (orchProbe.tide0 === 'output' && orchProbe.tide3 === 'cascade') ok('默认排班表覆盖全部 6 策略中的 4 档（零数值漂移，值守/级联可用）', `涨潮→产能 / 乱流→级联`);
   else bad('默认排班映射错误', JSON.stringify({ t0: orchProbe.tide0, t3: orchProbe.tide3 }));
   if (orchProbe.unlocked && orchProbe.edited && orchProbe.editedMode === 'vigil'
       && Math.abs(orchProbe.editedMult.ep - 0.94) < 1e-9 && Math.abs(orchProbe.editedMult.rp - 1.18) < 1e-9

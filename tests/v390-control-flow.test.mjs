@@ -251,13 +251,13 @@ test('C5 __qa 暴露帧系统 / 面板注册表 / 潮汐预案钩子', () => {
 console.log('[D] 潮汐预案读侧单一真源');
 
 test('D1 默认排班表与 v3.8.0 固定映射逐字一致（零数值漂移）', () => {
-  assert.deepEqual([...orch.TIDE_ORCHESTRATION], ['output', 'balanced', 'research', 'abyss']);
+  assert.deepEqual([...orch.TIDE_ORCHESTRATION], ['output', 'vigil', 'research', 'cascade']);
   assert.equal(orch.TIDE_PHASE_NAMES.length, 4);
-  assert.deepEqual(defaultState().orchestration.schedule, ['output', 'balanced', 'research', 'abyss']);
+  assert.deepEqual(defaultState().orchestration.schedule, ['output', 'vigil', 'research', 'cascade']);
   const S = { projectsDone: 3, orchestration: { mode: 'abyss', autoTide: true } };
   assert.deepEqual([0, 1, 2, 3].map(p => orch.effectiveModeId({ ...S, tidePhase: p })),
-    ['output', 'balanced', 'research', 'abyss']);
-  assert.equal(orch.effectiveModeId({ ...S, tidePhase: 99 }), 'abyss', '越界相位取模而非崩溃');
+    ['output', 'vigil', 'research', 'cascade']);
+  assert.equal(orch.effectiveModeId({ ...S, tidePhase: 99 }), 'cascade', '越界相位取模而非崩溃（相位 3 = 级联）');
   assert.equal(SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
 });
 
@@ -298,7 +298,7 @@ test('D4 逐相位改写即时生效，手动策略不丢失，恢复默认可�
   assert.equal(orch.orchestrationState(S).mode, 'abyss', '手动策略不得被排班改写');
   assert.equal(orch.scheduleCustomized(S), true);
   assert.equal(orch.resetOrchestrationSchedule(S), true);
-  assert.equal(orch.effectiveModeId(S), 'balanced');
+  assert.equal(orch.effectiveModeId(S), 'vigil');
   assert.equal(orch.scheduleCustomized(S), false);
   assert.equal(orch.orchestrationState(S).mode, 'abyss');
   S.tidePhase = 0;

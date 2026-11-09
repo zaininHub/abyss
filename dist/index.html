@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.10.2</title>
-<link rel="icon" href="data:,">
-  <script defer src="./assets/index-rnisUZRJ.js"></script>
+<title>深渊效能工作台 v3.10.3</title>
+<link rel="icon" href="data:,">
+  <script defer src="./assets/index-XrgG-fgP.js"></script>
   <link rel="stylesheet" href="./assets/index-DsZ13I9Y.css">
 </head>
 <body>
@@ -69,12 +69,6 @@
         <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       </div>
 
-      <!-- v3.8.0：效能编排（完成 3 个任务或首次晋升后开放；整卡由状态门控，未解锁不渲染） -->
-      <div class="panel" id="orchestration-card" style="display:none">
-        <h3 style="color:var(--accent)">◈ 效能编排</h3>
-        <div id="orchestration-panel"></div>
-      </div>
-
       <!-- 深渊裂隙（v3.3.8 反馈③：深入裂隙状态 + 矩阵腐化条自 hero 移入此处） -->
       <div class="panel" id="rift-card" style="display:none">
         <h3 style="color:var(--purple)">深渊裂隙</h3>
@@ -129,9 +123,11 @@
         <div id="abyss-collapse" style="display:none;margin:10px 0;padding:12px 16px;border:1px solid var(--red,#e5484d);border-radius:8px;background:rgba(229,72,77,.12);color:var(--red,#ff6b6b);font-size:12.5px;line-height:1.7"></div>
       </div>
 
-      <!-- v3.2.1 反馈④：班组面板（线程拟人化个人档案）；v3.3.3 反馈②：留在第二列；v3.6.2 反馈①：≥10 条线程解锁 -->
-      <div class="panel" id="crew-card">
-        <h3>🧵 班组</h3>
+      <!-- v3.10.3：效能编排 + 班组合并为单一面板（完成 3 任务/1 晋升 或 ≥10 线程解锁其一即显示）；
+           从首列移至此处，避免与深渊裂隙卡互相挤压；编排控件在 #orchestration-panel，班组在 #crew-panel（siblings） -->
+      <div class="panel" id="orchestration-card" style="display:none">
+        <h3 style="color:var(--accent)">◈ 效能编排 · 🧵 班组</h3>
+        <div id="orchestration-panel"></div>
         <div id="crew-panel"></div>
       </div>
     </div>
@@ -376,6 +372,6 @@
       </div>
     </div>
   </div>
-</div>
+</div>
 </body>
 </html>

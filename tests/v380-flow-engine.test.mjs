@@ -178,12 +178,12 @@ test('C3 自动排班按潮汐相位轮转，手动策略被旁路但不丢失',
   assert.equal(orch.effectiveModeId(st), 'abyss', '未开排班时按手动策略');
   const auto = p => ({ projectsDone: 3, tidePhase: p, orchestration: { mode: 'abyss', autoTide: true } });
   assert.deepEqual([0, 1, 2, 3].map(p => orch.effectiveModeId(auto(p))),
-    ['output', 'balanced', 'research', 'abyss']);
-  assert.equal(orch.effectiveModeId(auto(99)), 'abyss', '越界相位应回落到合法映射而非崩溃');
+    ['output', 'vigil', 'research', 'cascade']);
+  assert.equal(orch.effectiveModeId(auto(99)), 'cascade', '越界相位应回落到合法映射（相位 3 = 级联）而非崩溃');
   st.orchestration.autoTide = true;
   assert.equal(orch.effectiveModeId(st), 'output');
   st.tidePhase = 3;
-  assert.equal(orch.orchestrationMult('pt', st), 1.40);
+  assert.equal(orch.orchestrationMult('pt', st), 0.88, '相位 3 = 级联（pt 0.88）');
   st.orchestration.autoTide = false;
   assert.equal(orch.orchestrationMult('pt', st), 1.40, '关掉排班回到手动的深渊优先');
 });
