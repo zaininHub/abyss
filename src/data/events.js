@@ -23,7 +23,7 @@ export const EVENTS = [
   {id:'cosmic',name:'宇宙彩蛋',desc:'3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
   {id:'happy_pet',name:'异兽开心',desc:'异兽经验 ×2 60 秒',minCps:100,type:'petxp'},
   {id:'offrush',name:'离线冲刺',desc:'立即 12 小时离线收益',minCps:1e4,type:'offrush'},
-  {id:'redpacket',name:'红包',desc:'+100K EP',minCps:1e3,type:'ep',amount:0},
+  {id:'redpacket',name:'红包',desc:'+100K EP',minCps:1e3,type:'ep',amount:10000},
   {id:'rift',name:'时空裂缝',desc:'60 秒 ×20',minCps:1e6,type:'buff',mult:20,dur:60,rare:true},
   {id:'fuse_luck',name:'融合灵感',desc:'融合成本 -50% 5 分钟',minCps:1e5,type:'fuse_luck'},
   // 负面事件
@@ -58,4 +58,15 @@ export const EVENTS = [
   {id:'spare_core',name:'备用核心',desc:'专注 +18',minCps:1e6,type:'focus',amount:18},
   {id:'cold_archive',name:'冷归档',desc:'立即获得 3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
   {id:'leak_check',name:'泄漏排查',desc:'排查损失 6% EP',minCps:1e5,type:'lose_ep',amount:0.06},
+  // v3.10.0 事件扩充（52→62，+19.23%）：复用既有 type，不引入新分支
+  {id:'echo_hit',name:'回声命中',desc:'立即获得 2100 秒产出',minCps:1e5,type:'ep',amount:2100},
+  {id:'phase_hold',name:'相位驻留',desc:'6 分钟产出 ×1.75',minCps:1e4,type:'buff',mult:1.75,dur:360},
+  {id:'focus_drift',name:'焦点漂移',desc:'70 秒产出 ×0.6',minCps:1e5,type:'debuff',mult:0.6,dur:70},
+  {id:'harmonic_rp',name:'谐波推演',desc:'+30 RP',minCps:1e6,type:'rp',amount:30},
+  {id:'layer_sprint',name:'叠层冲刺',desc:'专注 +20',minCps:1e6,type:'focus',amount:20},
+  {id:'tide_echo',name:'潮汐回声',desc:'立即获得 3000 秒产出',minCps:1e6,type:'ep',amount:3000,rare:true},
+  {id:'still_water',name:'静水时段',desc:'2 分钟产出 ×0.7',minCps:1e4,type:'debuff',mult:0.7,dur:120},
+  {id:'resonant_core',name:'共鸣核心',desc:'4 分钟产出 ×1.9',minCps:1e5,type:'buff',mult:1.9,dur:240},
+  {id:'ledger_echo',name:'台账回声',desc:'+36 RP',minCps:1e7,type:'rp',amount:36},
+  {id:'cold_resonance',name:'冷共振',desc:'立即获得 3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
 ];

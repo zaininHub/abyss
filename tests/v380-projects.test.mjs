@@ -41,11 +41,18 @@ function reset() {
   S.orchestration = { mode: 'balanced', autoTide: false };
 }
 
-test('P1 源码守卫：在线领取计数写入在 claimProject 内，且暂停回程仍保留', () => {
+test('P1 源码守卫：在线领取计数写入在 claimProject 内，暂停回程不得绕过它', () => {
   const body = PROJECTS_SRC.slice(PROJECTS_SRC.indexOf('export function claimProject'));
   assert.match(body, /S\.projectsDone\s*=\s*\(S\.projectsDone\s*\|\|\s*0\)\s*\+\s*1/,
     'claimProject 必须显式自增累计完成数');
-  assert.match(MAIN_SRC, /S\.projectsDone\+\+/, '暂停回程的既有计数不可被误删');
+  // v3.10.0 设计变更：暂停回程不再自行发奖 / 自行计数，改为冻结任务时钟，
+  // 与 applyOffline()「离线期间任务冻结」严格同口径；计数唯一真源收敛到 claimProject()。
+  const settle = MAIN_SRC.slice(MAIN_SRC.indexOf('function settlePause()'));
+  const settleBody = settle.slice(0, settle.indexOf('\nfunction ', 1));
+  assert.doesNotMatch(settleBody, /projectsDone/, '暂停回程不得再碰累计完成数');
+  assert.doesNotMatch(settleBody, /addEp\(p\.reward|addRp\(p\.reward/, '暂停回程不得绕过领取入口发奖');
+  assert.match(settleBody, /shiftProjectClocks\(S,/, '暂停期间任务时钟必须整体顺延');
+  assert.match(MAIN_SRC, /shiftProjectClocks/, 'main.js 必须消费状态层的任务时钟顺延');
 });
 
 test('P2 真实调用：领取成功 +1，重复领取幂等不重复计数', () => {
@@ -91,8 +98,9 @@ test('P4 内容可达性：章节 25 / 两条政策在累计完成数达门槛�
   assert.equal(observe.unlock(probe(20)), true);
   assert.equal(orchestration.unlock(probe(10)), true);
   assert.equal(orchestration.unlock({ ...probe(0), prestige: 3 }), true, '晋升路径同样可达');
-  // 成就 projects50 的门槛必须在源码里保持（防止被误改成不可达常量）
-  assert.match(MAIN_SRC, /projects50[\s\S]{0,160}projectsDone\s*\|\|\s*0\)\s*>=\s*50/);
+  // 成就 projects50 的门槛必须保持（防止被误改成不可达常量）；v3.10.0 表已下沉到数据层
+  const ACH_SRC = readFileSync(new URL('../src/data/achievements.js', import.meta.url), 'utf8');
+  assert.match(ACH_SRC, /projects50[\s\S]{0,160}projectsDone\s*\|\|\s*0\)\s*>=\s*50/);
   const orderPkg = (await import('../src/storylines/line_order.js')).default;
   const line15A = orderPkg.data.chapters.append.find(c => c.id === '15A');
   assert.ok(line15A && line15A.cond({ ...probe(30), storyline: 'line_order' }), '秩序线 15A 在 30 任务时可达');

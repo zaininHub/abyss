@@ -35,6 +35,8 @@ export default {
         { id: '16A', name: '未署名的补丁', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 1000, minDays: 7, desc: '第一千枚永恒碎片入库那天，日志里浮出一个没有署名的补丁：它修的不是 bug，只是把一行报错的语气从「失败」改成了「暂未通过」。你查不到是谁提交的，也没删。' },
         { id: '17A', name: '值守协议', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 80, minDays: 5, desc: '第八十个任务归档后，协议里第一次出现一条不优化任何东西的规则：每个相位切换的那一秒，允许所有线程什么都不做。评审无人反对，也无人提问。你把它标为「值守」，没有写理由。' },
         { id: '18A', name: '空班次', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 2000, minDays: 7, desc: '永恒碎片过两千，排班表上终于留出一个空班次。编译器问是不是漏填，你说不是——总得有一个格子，不归任何协议管，也不为任何指标负责。它一直空到现在。' },
+        { id: '19A', name: '共鸣入约', cond: (S) => S.storyline === 'line_order' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层共鸣叠满时，你第一次把它写进协议：允许系统在同一相位里连续做同一件事，不要求每一秒都产出可量化的结果。评审栏空着，编译器也没有报错。' },
+        { id: '20A', name: '注释之外', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 200, minDays: 6, desc: '第二百个任务归档，你翻回最早那个没填的注释位。它还是空的，但周围已经长出了二十来条别的注释，全是别人写的。你把光标挪开，没有补。' },
       ],
     },
     events: {
@@ -51,6 +53,8 @@ export default {
         { id: 'static_check', name: '静态检查', lineOnly: true, type: 'buff', mult: 1.4, dur: 180, minCps: 1e4, rare: false, desc: '3 分钟产出 ×1.4' },
         { id: 'axiom_watch', name: '公理值守', lineOnly: true, type: 'buff', mult: 1.6, dur: 300, minCps: 1e5, rare: false, desc: '5 分钟产出 ×1.6' },
         { id: 'draft_archive', name: '草案归档', lineOnly: true, type: 'rp', amount: 22, minCps: 1e6, rare: true, desc: '立即获得 22 RP' },
+        { id: 'protocol_echo', name: '协议回声', lineOnly: true, type: 'buff', mult: 1.8, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.8' },
+        { id: 'axiom_lock', name: '公理锁定', lineOnly: true, type: 'rp', amount: 28, minCps: 1e6, rare: true, desc: '立即获得 28 RP' },
       ],
     },
     buildings: {

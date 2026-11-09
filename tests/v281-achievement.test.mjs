@@ -8,10 +8,11 @@ const BASE = 'file://' + join(__dirname, '..', 'dist', 'index.html');
 let pass = 0, fail = 0;
 function rec(name, ok, detail = '') { if (ok) pass++; else fail++; console.log(`${ok ? '✓' : '✗'} ${name}${detail ? '  ' + detail : ''}`); }
 const mainSrc = readFileSync('src/main.js', 'utf-8');
+const achSrc = readFileSync('src/data/achievements.js', 'utf-8'); // v3.10.0：成就表下沉到数据层
 
 // A. 源码断言：成就定义 ≥16、含名称/描述、页面只渲染已解锁
-rec('A1 成就定义 ≥16 项（checkAch 内 id 计数）', (mainSrc.match(/\{ id: '(click|ep|own|thread|pre|reincarn|es|tech|offline|pet|rift|delve|faith|dm|fishbowl)\d*'/g) || []).length >= 16, 'count');
-rec('A2 成就含中文名与描述', mainSrc.includes("name: '初次接触'") && mainSrc.includes("desc: '第一次点击工作台"));
+rec('A1 成就定义 ≥16 项（数据层 id 计数）', (achSrc.match(/\{ id: '/g) || []).length >= 16, 'count');
+rec('A2 成就含中文名与描述', achSrc.includes("name: '初次接触'") && achSrc.includes("desc: '第一次点击工作台"));
 rec('A3 页面只渲染已解锁（filter S.achievements[d.id]）', mainSrc.includes("S.achievements[d.id]"), 'filter');
 const idxSrc = readFileSync('index.html', 'utf-8');
 rec('A4 成就 tab 按钮与面板（index.html）', idxSrc.includes('id="btn-achievement"') && idxSrc.includes('id="tab-achievement"'), 'tab');

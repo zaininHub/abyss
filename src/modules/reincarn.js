@@ -5,7 +5,8 @@
 //         评分 = 晋升×2 + 深潜层×0.5 + 裂隙余烬×0.1 + 信仰×0.05（本局增长口径）
 //   · 效果：每点回响全局 ×1.05（叠乘，跨轮回保留）；特殊升级池消耗回响购买（cap 3~5，50×1.6^n）
 //   · 克制：回响来源有限（每轮回上限 100）、升级成本指数涨、cap 封顶——资源不会失控
-import { S, save } from '../state.js';
+import { S, save, defaultState } from '../state.js';
+import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { fmt } from './economy.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
@@ -69,43 +70,14 @@ export function doReincarn() {
     S.storylinesCompleted.push(S.storyline);
   }
   // ---- 深度重置（本局内容清零，跨轮回资产保留） ----
-  S.ep = 0;
-  S.runEarned = 0;
-  S.earnedFull = 0;
-  S.upgrades = {};
-  S.tech = {};
-  S.focusLevel = 0;
-  S.projects = [];
-  S.cultists = [];
+  // v3.10.0：与晋升共用 core/stateSchema.resetRunState，差异只在下面两行显式表达。
+  recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
+  resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
+  resetRunState(S, defaultState(), {});
   crewPush('深渊轮回：班组随本局一起被抹去', 'bad'); // v3.1.0 反馈③：班组流水
-  S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
-  S.corruption = 0;
   // v2.9.0 优化③：轮回不再清除 collapsed/_collapseAt——转生不可脱离深渊（崩溃仅由「同归于尽」抉择结算）
-  S.vehCollectTimer = 0;
-  S.pets = {};
-  S.activePets = [];
-  S.buffMult = 1; S.buffUntil = 0;
-  S.clickBuffMult = 1; S.clickBuffUntil = 0;
-  S.petXpMult = 1; S.petXpUntil = 0;
-  S.fuseLuckUntil = 0;
-  S.staffUnhappy = 0;
-  S._farewellBought = false; // v2.9.2 ②：sp3_farewell 每局可再次触发
-  S.activeRift = null;
-  S.riftExpedition = null;
-  S.crossroad = 'inactive';
-  S.crossroadLockedBy = null;
-  // v2.8.6 B2a：政策每轮重选（清空本局政策与改选次数；虔诚/超验/隐密圣学保留跨周期）
-  recordPolicyRun();
-  S.policies = {};
-  S.policyRerolls = {};
-  S.vowPolicyBoost = false;
-  resetBazaarRun(); // v3.0.0：集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
-  S.cosmos = { lv: {} }; // v3.0.3 后续反馈④：宇宙探索本局制重置
-  // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
-  // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
-  S.resDiscovered = {
-    ep: true, es: !!S.resDiscovered.es, faith: !!S.resDiscovered.faith, rp: !!S.resDiscovered.rp,
-  };
+  S.riftExpedition = null; // 轮回独有：裂隙远征随本局抹去（晋升保留）
+  S.crossroad = 'inactive'; // 轮回从岔路口重开（后面按章节进度再决定 open）
   // 保留：S.rp / S.es / S.prestige / S.prestigePoints / S.religion / S.faith /
   //       S.riftEmber / S.riftsSealed / S.delve* / S.resDiscovered / S.storylinesCompleted /
   //       S.abyssEcho / S.echoUpgrades / S.reincarned

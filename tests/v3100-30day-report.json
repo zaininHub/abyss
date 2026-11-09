@@ -1,0 +1,4446 @@
+{
+  "version": "3.10.0",
+  "days": 30,
+  "line": "line_order",
+  "startedAt": "2026-11-09T01:18:07.740Z",
+  "daily": [
+    {
+      "ep": 497083.9848877143,
+      "cps": 74.69232385999999,
+      "cap": 941908,
+      "chapter": "1",
+      "corruption": 0,
+      "rp": 8,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 72,
+      "totalClicks": 1440,
+      "upgradeKinds": 3,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 5,
+      "projectsDone": 57,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 8685,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 8685,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "research",
+        "abyss"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 72,
+        "clicks": 1440,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 4,
+        "claims": 57,
+        "scheduleEdits": 2,
+        "resonanceEnables": 1,
+        "focusSwitches": 4,
+        "phaseDecays": 456
+      },
+      "day": 1
+    },
+    {
+      "ep": 913397.7718001121,
+      "cps": 129.59248147999998,
+      "cap": 2344999,
+      "chapter": "1",
+      "corruption": 0,
+      "rp": 43,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 106,
+      "totalClicks": 2880,
+      "upgradeKinds": 6,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 9,
+      "projectsDone": 108,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 17325,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 17325,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 106,
+        "clicks": 2880,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 8,
+        "claims": 108,
+        "scheduleEdits": 4,
+        "resonanceEnables": 1,
+        "focusSwitches": 8,
+        "phaseDecays": 1032
+      },
+      "day": 2
+    },
+    {
+      "ep": 1934614.8968114539,
+      "cps": 165.42574047999997,
+      "cap": 4320966,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 120,
+      "totalClicks": 4320,
+      "upgradeKinds": 6,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 14,
+      "projectsDone": 161,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 25965,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 25965,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 120,
+        "clicks": 4320,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 12,
+        "claims": 161,
+        "scheduleEdits": 6,
+        "resonanceEnables": 1,
+        "focusSwitches": 12,
+        "phaseDecays": 1608
+      },
+      "day": 3
+    },
+    {
+      "ep": 1650914.8130107012,
+      "cps": 191.50669999999997,
+      "cap": 5945010,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 131,
+      "totalClicks": 5760,
+      "upgradeKinds": 6,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 18,
+      "projectsDone": 216,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 34605,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 34605,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 131,
+        "clicks": 5760,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 16,
+        "claims": 216,
+        "scheduleEdits": 8,
+        "resonanceEnables": 1,
+        "focusSwitches": 16,
+        "phaseDecays": 2184
+      },
+      "day": 4
+    },
+    {
+      "ep": 3236311.541635248,
+      "cps": 303.35122125,
+      "cap": 10435924,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 140,
+      "totalClicks": 7200,
+      "upgradeKinds": 6,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 23,
+      "projectsDone": 269,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 43245,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 43245,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 140,
+        "clicks": 7200,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 20,
+        "claims": 269,
+        "scheduleEdits": 10,
+        "resonanceEnables": 1,
+        "focusSwitches": 20,
+        "phaseDecays": 2760
+      },
+      "day": 5
+    },
+    {
+      "ep": 2324395.9746500533,
+      "cps": 451.12885124999997,
+      "cap": 13507313,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 147,
+      "totalClicks": 8640,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 27,
+      "projectsDone": 325,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 51885,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 51885,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 147,
+        "clicks": 8640,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 24,
+        "claims": 325,
+        "scheduleEdits": 12,
+        "resonanceEnables": 1,
+        "focusSwitches": 24,
+        "phaseDecays": 3336
+      },
+      "day": 6
+    },
+    {
+      "ep": 6888092.712211271,
+      "cps": 468.5814610399999,
+      "cap": 17832648,
+      "chapter": "6A",
+      "corruption": 0,
+      "rp": 73,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 154,
+      "totalClicks": 10080,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 32,
+      "projectsDone": 386,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 60525,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 60525,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 154,
+        "clicks": 10080,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 28,
+        "claims": 386,
+        "scheduleEdits": 14,
+        "resonanceEnables": 1,
+        "focusSwitches": 28,
+        "phaseDecays": 3912
+      },
+      "day": 7
+    },
+    {
+      "ep": 5233381.800875565,
+      "cps": 492.36864137999993,
+      "cap": 24770442,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 164,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 161,
+      "totalClicks": 11520,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 36,
+      "projectsDone": 448,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 69165,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 69165,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 161,
+        "clicks": 11520,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 32,
+        "claims": 448,
+        "scheduleEdits": 16,
+        "resonanceEnables": 1,
+        "focusSwitches": 32,
+        "phaseDecays": 4488
+      },
+      "day": 8
+    },
+    {
+      "ep": 2901577.4589627376,
+      "cps": 567.1482185599999,
+      "cap": 28658587,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 164,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 167,
+      "totalClicks": 12960,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 40,
+      "projectsDone": 504,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 77805,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 77805,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 167,
+        "clicks": 12960,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 36,
+        "claims": 504,
+        "scheduleEdits": 18,
+        "resonanceEnables": 1,
+        "focusSwitches": 36,
+        "phaseDecays": 5064
+      },
+      "day": 9
+    },
+    {
+      "ep": 7277359.875039363,
+      "cps": 586.0465503199999,
+      "cap": 37183759,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 199,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 172,
+      "totalClicks": 14400,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 44,
+      "projectsDone": 562,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 86445,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 86445,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 172,
+        "clicks": 14400,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 40,
+        "claims": 562,
+        "scheduleEdits": 20,
+        "resonanceEnables": 1,
+        "focusSwitches": 40,
+        "phaseDecays": 5640
+      },
+      "day": 10
+    },
+    {
+      "ep": 17106811.515607987,
+      "cps": 978.8347799999999,
+      "cap": 48977673,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 269,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 177,
+      "totalClicks": 15840,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 48,
+      "projectsDone": 614,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 95085,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 95085,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 177,
+        "clicks": 15840,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 44,
+        "claims": 614,
+        "scheduleEdits": 22,
+        "resonanceEnables": 1,
+        "focusSwitches": 44,
+        "phaseDecays": 6216
+      },
+      "day": 11
+    },
+    {
+      "ep": 22258242.549103666,
+      "cps": 983.4688325,
+      "cap": 56525688,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 269,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 181,
+      "totalClicks": 17280,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 53,
+      "projectsDone": 665,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 103725,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 103725,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 181,
+        "clicks": 17280,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 48,
+        "claims": 665,
+        "scheduleEdits": 24,
+        "resonanceEnables": 1,
+        "focusSwitches": 48,
+        "phaseDecays": 6792
+      },
+      "day": 12
+    },
+    {
+      "ep": 13183298.81103729,
+      "cps": 865.5318379399998,
+      "cap": 64501114,
+      "chapter": "17A",
+      "corruption": 0,
+      "rp": 269,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 185,
+      "totalClicks": 18720,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 57,
+      "projectsDone": 723,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 112365,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 112365,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 185,
+        "clicks": 18720,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 52,
+        "claims": 723,
+        "scheduleEdits": 26,
+        "resonanceEnables": 1,
+        "focusSwitches": 52,
+        "phaseDecays": 7368
+      },
+      "day": 13
+    },
+    {
+      "ep": 33448467.730435196,
+      "cps": 869.0166454199998,
+      "cap": 73672855,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 369,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 188,
+      "totalClicks": 20160,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 61,
+      "projectsDone": 775,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 121005,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 121005,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 188,
+        "clicks": 20160,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 56,
+        "claims": 775,
+        "scheduleEdits": 28,
+        "resonanceEnables": 1,
+        "focusSwitches": 56,
+        "phaseDecays": 7944
+      },
+      "day": 14
+    },
+    {
+      "ep": 24502715.05294269,
+      "cps": 814.4216696,
+      "cap": 84220356,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 404,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 191,
+      "totalClicks": 21600,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 66,
+      "projectsDone": 826,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 129645,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 129645,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 191,
+        "clicks": 21600,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 60,
+        "claims": 826,
+        "scheduleEdits": 30,
+        "resonanceEnables": 1,
+        "focusSwitches": 60,
+        "phaseDecays": 8520
+      },
+      "day": 15
+    },
+    {
+      "ep": 38375695.69536262,
+      "cps": 835.6000575999999,
+      "cap": 84220356,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 404,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 193,
+      "totalClicks": 23040,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 70,
+      "projectsDone": 874,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 138285,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 138285,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 193,
+        "clicks": 23040,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 64,
+        "claims": 874,
+        "scheduleEdits": 32,
+        "resonanceEnables": 1,
+        "focusSwitches": 64,
+        "phaseDecays": 9096
+      },
+      "day": 16
+    },
+    {
+      "ep": 58491828.267399795,
+      "cps": 1327.74565,
+      "cap": 110299054,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 404,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 196,
+      "totalClicks": 24480,
+      "upgradeKinds": 7,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 74,
+      "projectsDone": 927,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 146925,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 146925,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 196,
+        "clicks": 24480,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 68,
+        "claims": 927,
+        "scheduleEdits": 34,
+        "resonanceEnables": 1,
+        "focusSwitches": 68,
+        "phaseDecays": 9672
+      },
+      "day": 17
+    },
+    {
+      "ep": 6688335.057230565,
+      "cps": 2097.06237125,
+      "cap": 110299054,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 404,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 199,
+      "totalClicks": 25920,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 78,
+      "projectsDone": 986,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 155565,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 155565,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 199,
+        "clicks": 25920,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 72,
+        "claims": 986,
+        "scheduleEdits": 36,
+        "resonanceEnables": 1,
+        "focusSwitches": 72,
+        "phaseDecays": 10248
+      },
+      "day": 18
+    },
+    {
+      "ep": 66124947.35926386,
+      "cps": 1599.6132721799997,
+      "cap": 144788131,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 519,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 202,
+      "totalClicks": 27360,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 82,
+      "projectsDone": 1047,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 164205,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 164205,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 202,
+        "clicks": 27360,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 76,
+        "claims": 1047,
+        "scheduleEdits": 38,
+        "resonanceEnables": 1,
+        "focusSwitches": 76,
+        "phaseDecays": 10824
+      },
+      "day": 19
+    },
+    {
+      "ep": 43220434.88993525,
+      "cps": 1603.9163355599994,
+      "cap": 144788131,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 519,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 205,
+      "totalClicks": 28800,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 87,
+      "projectsDone": 1109,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 172845,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 172845,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 205,
+        "clicks": 28800,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 80,
+        "claims": 1109,
+        "scheduleEdits": 40,
+        "resonanceEnables": 1,
+        "focusSwitches": 80,
+        "phaseDecays": 11400
+      },
+      "day": 20
+    },
+    {
+      "ep": 34111076.518183656,
+      "cps": 2141.3963771199997,
+      "cap": 166002924,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 519,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 208,
+      "totalClicks": 30240,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 91,
+      "projectsDone": 1162,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 181485,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 181485,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 208,
+        "clicks": 30240,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 84,
+        "claims": 1162,
+        "scheduleEdits": 42,
+        "resonanceEnables": 1,
+        "focusSwitches": 84,
+        "phaseDecays": 11976
+      },
+      "day": 21
+    },
+    {
+      "ep": 48938745.13159371,
+      "cps": 2686.2577218399997,
+      "cap": 190399935,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 519,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 212,
+      "totalClicks": 31680,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 95,
+      "projectsDone": 1218,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 190125,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 190125,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 212,
+        "clicks": 31680,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 88,
+        "claims": 1218,
+        "scheduleEdits": 44,
+        "resonanceEnables": 1,
+        "focusSwitches": 88,
+        "phaseDecays": 12552
+      },
+      "day": 22
+    },
+    {
+      "ep": 69881360.02612321,
+      "cps": 3991.08411625,
+      "cap": 250721547,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 519,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 216,
+      "totalClicks": 33120,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 100,
+      "projectsDone": 1280,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 198765,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 198765,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 216,
+        "clicks": 33120,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 92,
+        "claims": 1280,
+        "scheduleEdits": 46,
+        "resonanceEnables": 1,
+        "focusSwitches": 92,
+        "phaseDecays": 13128
+      },
+      "day": 23
+    },
+    {
+      "ep": 75019665.5697332,
+      "cps": 3993.4139437500003,
+      "cap": 287826352,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 599,
+      "dm": 0,
+      "faith": 0,
+      "es": 0,
+      "totalBuys": 219,
+      "totalClicks": 34560,
+      "upgradeKinds": 8,
+      "prestige": 0,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 105,
+      "projectsDone": 1336,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 207405,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 207405,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 219,
+        "clicks": 34560,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 96,
+        "claims": 1336,
+        "scheduleEdits": 48,
+        "resonanceEnables": 1,
+        "focusSwitches": 96,
+        "phaseDecays": 13704
+      },
+      "day": 24
+    },
+    {
+      "ep": 320581.37951337267,
+      "cps": 81.134404428,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 635,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 289,
+      "totalClicks": 36000,
+      "upgradeKinds": 3,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 109,
+      "projectsDone": 1384,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 216045,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 216045,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 289,
+        "clicks": 36000,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 100,
+        "claims": 1384,
+        "scheduleEdits": 50,
+        "resonanceEnables": 1,
+        "focusSwitches": 100,
+        "phaseDecays": 14280,
+        "prestiges": 1
+      },
+      "day": 25
+    },
+    {
+      "ep": 479131.68197493715,
+      "cps": 164.757269446,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 635,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 307,
+      "totalClicks": 37440,
+      "upgradeKinds": 4,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 114,
+      "projectsDone": 1443,
+      "orchMode": "vigil",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 224685,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 224685,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "vigil",
+        "cascade",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 307,
+        "clicks": 37440,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 104,
+        "claims": 1443,
+        "scheduleEdits": 52,
+        "resonanceEnables": 1,
+        "focusSwitches": 104,
+        "phaseDecays": 14856,
+        "prestiges": 1
+      },
+      "day": 26
+    },
+    {
+      "ep": 1060177.4903448368,
+      "cps": 187.3611432,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 635,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 316,
+      "totalClicks": 38880,
+      "upgradeKinds": 4,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 118,
+      "projectsDone": 1497,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 233325,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 233325,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "output",
+        "research"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 316,
+        "clicks": 38880,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 108,
+        "claims": 1497,
+        "scheduleEdits": 54,
+        "resonanceEnables": 1,
+        "focusSwitches": 108,
+        "phaseDecays": 15432,
+        "prestiges": 1
+      },
+      "day": 27
+    },
+    {
+      "ep": 2264760.3997529866,
+      "cps": 235.75781521599998,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 670,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 322,
+      "totalClicks": 40320,
+      "upgradeKinds": 4,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 123,
+      "projectsDone": 1545,
+      "orchMode": "abyss",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 241965,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 241965,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "abyss",
+        "balanced",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 322,
+        "clicks": 40320,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 112,
+        "claims": 1545,
+        "scheduleEdits": 56,
+        "resonanceEnables": 1,
+        "focusSwitches": 112,
+        "phaseDecays": 16008,
+        "prestiges": 1
+      },
+      "day": 28
+    },
+    {
+      "ep": 6941805.368927433,
+      "cps": 501.17021762499996,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 705,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 328,
+      "totalClicks": 41760,
+      "upgradeKinds": 5,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 127,
+      "projectsDone": 1611,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 250605,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 250605,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "vigil",
+        "cascade"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 328,
+        "clicks": 41760,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 116,
+        "claims": 1611,
+        "scheduleEdits": 58,
+        "resonanceEnables": 1,
+        "focusSwitches": 116,
+        "phaseDecays": 16584,
+        "prestiges": 1
+      },
+      "day": 29
+    },
+    {
+      "ep": 8703005.486459933,
+      "cps": 691.719384125,
+      "cap": 41668782,
+      "chapter": "20A",
+      "corruption": 0,
+      "rp": 705,
+      "dm": 0,
+      "faith": 0,
+      "es": 12,
+      "totalBuys": 334,
+      "totalClicks": 43200,
+      "upgradeKinds": 5,
+      "prestige": 1,
+      "canPrestige": false,
+      "storyEvents": 74,
+      "linePets": 7,
+      "eventsSeen": 131,
+      "projectsDone": 1669,
+      "orchMode": "output",
+      "orchUnlocked": true,
+      "flowErrors": 0,
+      "flowTicks": 259245,
+      "sysErrors": 0,
+      "panelErrs": 0,
+      "panelCount": 26,
+      "renderTicks": 259245,
+      "scheduleUnlocked": true,
+      "schedule": [
+        "output",
+        "research",
+        "abyss",
+        "balanced"
+      ],
+      "scheduleCustomized": true,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "stats": {
+        "buys": 334,
+        "clicks": 43200,
+        "buyFails": 0,
+        "capStalls": 0,
+        "errors": [],
+        "orchSwitches": 120,
+        "claims": 1669,
+        "scheduleEdits": 60,
+        "resonanceEnables": 1,
+        "focusSwitches": 120,
+        "phaseDecays": 17160,
+        "prestiges": 1
+      },
+      "day": 30
+    }
+  ],
+  "checks": {
+    "playability": {
+      "finalCps": 691.719384125,
+      "finalEp": 8703005.486459933,
+      "totalBuys": 334,
+      "chapter": "20A",
+      "capStallPct": 0,
+      "eventsSeen": 131,
+      "orchSwitches": 120,
+      "orchChecks": 120,
+      "flowTicks": 259245,
+      "scheduleEdits": 60,
+      "scheduleChecks": 60,
+      "sysIds": 43,
+      "renderTicks": 259245,
+      "panels": 26,
+      "projectsDone": 1669,
+      "claims": 1669,
+      "resonance": {
+        "unlocked": true,
+        "enabled": true,
+        "layers": 10,
+        "focus": "dm",
+        "maxLayers": 20,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.98
+          },
+          {
+            "key": "rp",
+            "mult": 0.98
+          },
+          {
+            "key": "pt",
+            "mult": 0.98
+          },
+          {
+            "key": "dm",
+            "mult": 1.15
+          }
+        ]
+      },
+      "resonanceEnables": 1,
+      "focusSwitches": 120,
+      "phaseDecays": 17160,
+      "layerSamples": [
+        {
+          "t": 2160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 2880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 3600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 4320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 5040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 5760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 6480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 7200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 7920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 8640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 9360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 10080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 10800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 11520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 12240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 12960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 13680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 14400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 15120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 15840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 16560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 17280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 18000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 18720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 19440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 20160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 20880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 21600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 22320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 23040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 23760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 24480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 25200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 25920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 26640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 27360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 28080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 28800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 29520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 30240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 30960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 31680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 32400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 33120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 33840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 34560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 35280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 36000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 36720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 37440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 38160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 38880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 39600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 40320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 41040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 41760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 42480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 43200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 43920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 44640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 45360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 46080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 46800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 47520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 48240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 48960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 49680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 50400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 51120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 51840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 52560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 53280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 54000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 54720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 55440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 56160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 56880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 57600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 58320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 59040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 59760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 60480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 61200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 61920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 62640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 63360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 64080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 64800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 65520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 66240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 66960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 67680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 68400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 69120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 69840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 70560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 71280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 72000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 72720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 73440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 74160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 74880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 75600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 76320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 77040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 77760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 78480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 79200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 79920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 80640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 81360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 82080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 82800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 83520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 84240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 84960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 85680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 86400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 87120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 87840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 88560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 89280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 90000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 90720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 91440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 92160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 92880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 93600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 94320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 95040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 95760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 96480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 97200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 97920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 98640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 99360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 100080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 100800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 101520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 102240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 102960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 103680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 104400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 105120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 105840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 106560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 107280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 108000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 108720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 109440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 110160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 110880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 111600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 112320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 113040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 113760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 114480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 115200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 115920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 116640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 117360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 118080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 118800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 119520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 120240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 120960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 121680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 122400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 123120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 123840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 124560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 125280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 126000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 126720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 127440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 128160,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 128880,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 129600,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 130320,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 131040,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 131760,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 132480,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 133200,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 133920,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 134640,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 135360,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 136080,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 136800,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 137520,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 138240,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 138960,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 139680,
+          "phase": 0,
+          "layers": 10,
+          "focus": "dm",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 140400,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 141120,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 141840,
+          "phase": 0,
+          "layers": 10,
+          "focus": "ep",
+          "ep": 1.15,
+          "side": 0.98
+        },
+        {
+          "t": 142560,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 143280,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 144000,
+          "phase": 0,
+          "layers": 10,
+          "focus": "rp",
+          "ep": 0.98,
+          "side": 1.15
+        },
+        {
+          "t": 144720,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        },
+        {
+          "t": 145440,
+          "phase": 0,
+          "layers": 10,
+          "focus": "pt",
+          "ep": 0.98,
+          "side": 0.98
+        }
+      ],
+      "resonanceChecks": 400,
+      "resonanceWorstErr": 0
+    },
+    "numeric": {
+      "maxRelErrPct": 0,
+      "probes": [
+        {
+          "earnedBefore": 133374186.01215774,
+          "earnedAfter": 133381103.20599899,
+          "gross": 6917.193841248751,
+          "cps": 691.719384125,
+          "cap": 41668782,
+          "dt": 10,
+          "orchMult": 1.2225,
+          "resMult": 0.978,
+          "resLayers": 11
+        },
+        {
+          "earnedBefore": 133381103.20599899,
+          "earnedAfter": 133388006.28311811,
+          "gross": 6903.077119126916,
+          "cps": 690.3077119124999,
+          "cap": 41668782,
+          "dt": 10,
+          "orchMult": 1.22,
+          "resMult": 0.976,
+          "resLayers": 12
+        },
+        {
+          "earnedBefore": 133388006.28311811,
+          "earnedAfter": 133394895.24351512,
+          "gross": 6888.960397005081,
+          "cps": 688.8960397000001,
+          "cap": 41668782,
+          "dt": 10,
+          "orchMult": 1.2175,
+          "resMult": 0.974,
+          "resLayers": 13
+        }
+      ],
+      "priceSample": [
+        {
+          "id": "scribble",
+          "bulk": 12007719,
+          "unit": 12007719
+        },
+        {
+          "id": "script",
+          "bulk": 15309007,
+          "unit": 15309007
+        },
+        {
+          "id": "parallel",
+          "bulk": 12492979,
+          "unit": 12492979
+        }
+      ],
+      "orchestration": {
+        "balanced": {
+          "cpsRatio": 1,
+          "ep": 1,
+          "rp": 1,
+          "pt": 1,
+          "dm": 1
+        },
+        "output": {
+          "cpsRatio": 1.2499999999999998,
+          "ep": 1.25,
+          "rp": 0.8,
+          "pt": 0.85,
+          "dm": 0.9
+        },
+        "research": {
+          "cpsRatio": 0.9199999999999999,
+          "ep": 0.92,
+          "rp": 1.4,
+          "pt": 0.92,
+          "dm": 1
+        },
+        "abyss": {
+          "cpsRatio": 0.8799999999999999,
+          "ep": 0.88,
+          "rp": 0.92,
+          "pt": 1.4,
+          "dm": 1.25
+        },
+        "vigil": {
+          "cpsRatio": 0.9399999999999998,
+          "ep": 0.94,
+          "rp": 1.18,
+          "pt": 1.18,
+          "dm": 1.2
+        },
+        "cascade": {
+          "cpsRatio": 1.0999999999999999,
+          "ep": 1.1,
+          "rp": 1.12,
+          "pt": 0.88,
+          "dm": 0.9
+        }
+      },
+      "schedule": {
+        "out": {
+          "balanced": {
+            "cpsRatio": 1,
+            "ep": 1,
+            "rp": 1,
+            "pt": 1,
+            "dm": 1
+          },
+          "output": {
+            "cpsRatio": 1.2499999999999998,
+            "ep": 1.25,
+            "rp": 0.8,
+            "pt": 0.85,
+            "dm": 0.9
+          },
+          "research": {
+            "cpsRatio": 0.9199999999999999,
+            "ep": 0.92,
+            "rp": 1.4,
+            "pt": 0.92,
+            "dm": 1
+          },
+          "abyss": {
+            "cpsRatio": 0.8799999999999999,
+            "ep": 0.88,
+            "rp": 0.92,
+            "pt": 1.4,
+            "dm": 1.25
+          },
+          "vigil": {
+            "cpsRatio": 0.9399999999999998,
+            "ep": 0.94,
+            "rp": 1.18,
+            "pt": 1.18,
+            "dm": 1.2
+          },
+          "cascade": {
+            "cpsRatio": 1.0999999999999999,
+            "ep": 1.1,
+            "rp": 1.12,
+            "pt": 0.88,
+            "dm": 0.9
+          }
+        },
+        "tide0": "output",
+        "tide3": "abyss",
+        "base": 564.668885,
+        "unlocked": true,
+        "edited": true,
+        "editedMode": "vigil",
+        "editedMult": {
+          "ep": 0.94,
+          "rp": 1.18,
+          "pt": 1.18,
+          "dm": 1.2
+        },
+        "editedCustomized": true,
+        "reset": true,
+        "resetMode": "research",
+        "resetCustomized": false
+      },
+      "resonance": {
+        "tuning": {
+          "maxLayers": 20,
+          "secondsPerLayer": 12,
+          "focusGain": 0.015,
+          "sideCost": 0.002,
+          "sideFloor": 0.8,
+          "phaseDecay": 0.5
+        },
+        "locked": 1,
+        "focus10": 1.15,
+        "side10": 0.98,
+        "focus20": 1.3,
+        "side20": 0.96,
+        "zero": 1,
+        "badKey": 1,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 1.3,
+            "focused": true
+          },
+          {
+            "key": "rp",
+            "mult": 0.96,
+            "focused": false
+          },
+          {
+            "key": "pt",
+            "mult": 0.96,
+            "focused": false
+          },
+          {
+            "key": "dm",
+            "mult": 0.96,
+            "focused": false
+          }
+        ]
+      },
+      "ledger": {
+        "ep": {
+          "in": 2424716892.2298117,
+          "out": 0,
+          "gross": 2424716892.2298117
+        }
+      }
+    },
+    "ui": {
+      "tabs": [
+        {
+          "id": "btn-shop",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 4269
+        },
+        {
+          "id": "btn-tech",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 4269
+        },
+        {
+          "id": "btn-rp",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4746
+        },
+        {
+          "id": "btn-relics",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4768
+        },
+        {
+          "id": "btn-pets",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4768
+        },
+        {
+          "id": "btn-expedition",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4774
+        },
+        {
+          "id": "btn-religion",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4765
+        },
+        {
+          "id": "btn-policy",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4096
+        },
+        {
+          "id": "btn-delve",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4102
+        },
+        {
+          "id": "btn-rift-tab",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4097
+        },
+        {
+          "id": "btn-bazaar",
+          "visible": 13,
+          "hasBadText": false,
+          "textLen": 4092
+        },
+        {
+          "id": "btn-prestige",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 3957
+        },
+        {
+          "id": "btn-achievement",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 3957
+        },
+        {
+          "id": "btn-offline",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 3957
+        },
+        {
+          "id": "btn-storyline",
+          "visible": 12,
+          "hasBadText": false,
+          "textLen": 3957
+        }
+      ],
+      "epTxt": "",
+      "priceMatch": {
+        "id": "scribble",
+        "domText": "草稿记录×44\n    0.1 EP/s\n    12.01M",
+        "cost": 12007719
+      },
+      "wikiOk": true,
+      "wikiSections": 1,
+      "schedUI": {
+        "unlocked": true,
+        "slots": 24,
+        "labelsOk": true,
+        "phaseMarks": 1,
+        "clickOk": true,
+        "before": "output",
+        "after": "vigil",
+        "resetOk": true,
+        "modes": 6,
+        "panelCount": 26,
+        "panelErrs": 0,
+        "sysErrs": 0,
+        "sysCount": 43
+      },
+      "resonanceUI": {
+        "ok": true,
+        "unlocked": true,
+        "enabled": true,
+        "layers": 13,
+        "focus": "dm",
+        "buttons": 5,
+        "labelsOk": true,
+        "pressedOk": true,
+        "sizeOk": true,
+        "sizes": [
+          {
+            "w": 54,
+            "h": 28
+          },
+          {
+            "w": 28,
+            "h": 28
+          },
+          {
+            "w": 28,
+            "h": 28
+          },
+          {
+            "w": 28,
+            "h": 28
+          },
+          {
+            "w": 28,
+            "h": 28
+          }
+        ],
+        "orphanLines": 0,
+        "clickOk": true,
+        "focusOk": true,
+        "textOk": true,
+        "rows": [
+          {
+            "key": "ep",
+            "mult": 0.974
+          },
+          {
+            "key": "rp",
+            "mult": 0.974
+          },
+          {
+            "key": "pt",
+            "mult": 0.974
+          },
+          {
+            "key": "dm",
+            "mult": 1.195
+          }
+        ]
+      },
+      "researchGroups": [
+        {
+          "key": "prod",
+          "n": 19
+        },
+        {
+          "key": "res",
+          "n": 16
+        },
+        {
+          "key": "abyss",
+          "n": 10
+        },
+        {
+          "key": "star",
+          "n": 10
+        }
+      ],
+      "researchTotal": 55,
+      "policyGroups": 11,
+      "policyTotal": 33,
+      "achPanelTextLen": 950,
+      "storyEvents": 74,
+      "linePets": 7,
+      "orch": {
+        "unlocked": true,
+        "visible": true,
+        "textOk": true,
+        "text": "当前编排：▲ 产能优先 · 随潮汐排班\n把算力压到基础产出上：EP 更旺，但蒸馏、孵化与探采都慢下来。\n◈ 均衡\n▲ 产能\n◇ 研究\n◆ 深渊\n☾ 值守\n≋ 级联\n随潮汐排班：开\n涨潮→产能 · 平潮→研究 · 退潮→深渊 · 乱流→均衡\n潮汐预案 · 四相位排班表\n点相位下的策略即可改写\n▶ 涨潮\n◈\n▲\n◇\n◆\n☾\n≋\n产能优先\n平潮\n◈\n▲\n◇\n◆\n☾\n≋\n研究优先\n退潮\n◈\n▲\n◇\n◆\n☾\n≋\n深渊优先\n乱流\n◈\n▲\n◇\n◆\n☾",
+        "modes": 6
+      },
+      "achPages": 3,
+      "achNew": [
+        "另排一班",
+        "随潮而动"
+      ],
+      "achNewUnlocked": [
+        "orch_switch",
+        "orch_tide"
+      ],
+      "achV390Unlocked": [
+        "orch_vigil",
+        "schedule_edit",
+        "projects200"
+      ],
+      "achV3100Unlocked": [
+        "resonance_on",
+        "resonance_10",
+        "resonance_20",
+        "cascade"
+      ],
+      "achV3100Names": [
+        "听见相位",
+        "潮汐级联"
+      ],
+      "achTotal": 115,
+      "flow": {
+        "stats": {
+          "ep:main": {
+            "id": "ep:main",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 2424716892.2298117,
+            "out": 0,
+            "gross": 2424716892.2298117,
+            "totalMs": 0
+          },
+          "ep:tentacle": {
+            "id": "ep:tentacle",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "ep:lazy": {
+            "id": "ep:lazy",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "rp:atrium": {
+            "id": "rp:atrium",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "upgrades:produces": {
+            "id": "upgrades:produces",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "pt:hatch": {
+            "id": "pt:hatch",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "fuel:burn": {
+            "id": "fuel:burn",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          },
+          "pt:upkeep": {
+            "id": "pt:upkeep",
+            "ticks": 259248,
+            "errors": 0,
+            "lastError": "",
+            "in": 0,
+            "out": 0,
+            "gross": 0,
+            "totalMs": 0
+          }
+        },
+        "ledger": {
+          "ep": {
+            "in": 2424716892.2298117,
+            "out": 0,
+            "gross": 2424716892.2298117
+          }
+        },
+        "errors": []
+      }
+    }
+  },
+  "elapsedSec": "323.0",
+  "pass": 53,
+  "fail": 0
+}

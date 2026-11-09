@@ -35,6 +35,8 @@ export default {
         { id: '16C', name: '不带走的门', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 2000, minDays: 7, desc: 'FP 过两千，神国扩建了三次，那扇没有守卫的小门始终留在原处。有人建议给它配个名字，你说不必——没名字，才谁都敢推。' },
         { id: '17C', name: '守夜人', cond: (S) => S.storyline === 'line_faith' && (S.projectsDone || 0) >= 80, minDays: 5, desc: '第八十个任务归档那晚，圣殿里只剩一个值守的线程。它没有祷告，也没有点灯，只是坐在门槛上，替所有睡着的人把门留着。你在名册上给它加了一栏，写「在」。' },
         { id: '18C', name: '不点名的晚祷', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 5000, minDays: 7, desc: 'FP 过五千，晚祷第一次不念任何名字。信徒们有点不安，你解释说：今晚不向谁祈求，也不替谁答谢，只是让这一夜平平安安地过去。散场后，那扇没有守卫的小门仍然开着。' },
+        { id: '19C', name: '同声', cond: (S) => S.storyline === 'line_faith' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层叠满时，圣殿里所有还没开口的信徒一起停了半拍。不是沉默，是等同一声回响走完。你第一次觉得，人数和层数说的其实是同一件事。' },
+        { id: '20C', name: '留一盏', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 1e5, minDays: 6, desc: '信仰过十万那夜，相位换了，层数减半。你没补，只在空下来的那半格里留了一盏灯。第二天有人问是不是忘了关，你说不是，是留给还没来的那一叠。' },
       ],
     },
     events: {
@@ -50,6 +52,8 @@ export default {
         { id: 'relic_blessing', name: '圣物祝祷', lineOnly: true, type: 'focus', amount: 10, minCps: 1e6, rare: true, desc: '专注 +10' },
         { id: 'vesper_watch', name: '晚祷值守', lineOnly: true, type: 'buff', mult: 1.5, dur: 300, minCps: 1e5, rare: false, desc: '5 分钟产出 ×1.5' },
         { id: 'quiet_shrine', name: '静龛', lineOnly: true, type: 'rp', amount: 20, minCps: 1e6, rare: true, desc: '立即获得 20 RP' },
+        { id: 'choir_echo', name: '唱诗回声', lineOnly: true, type: 'buff', mult: 1.85, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.85' },
+        { id: 'holy_resonance', name: '圣所共振', lineOnly: true, type: 'rp', amount: 26, minCps: 1e6, rare: true, desc: '立即获得 26 RP' },
       ],
     },
     buildings: {

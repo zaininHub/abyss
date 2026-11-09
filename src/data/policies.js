@@ -89,6 +89,25 @@ export const POLICY_GROUPS = [
       { id: 'watch_balance', name: '轮值均衡', effect: { global: 0.06, recruit: 0.12 }, desc: '全局 +6%，招募 +12%' },
     ],
   },
+  // v3.10.0 政策扩充（9→11 组、27→33 项）：效果键全部落在既有 policyMult 消费点
+  {
+    id: 'resonance_law', name: '共鸣纪律', unlock: (S) => !!(S.resonance && S.resonance.enabled),
+    hint: '需已开启相位共鸣',
+    policies: [
+      { id: 'reso_output',  name: '守相产出', effect: { ep: 0.16, faith: -0.08 },   desc: 'EP 产出 +16%，FP 产出 -8%' },
+      { id: 'reso_research',name: '守相推演', effect: { collab: 0.20, ep: -0.06 },  desc: '协作 +20%，EP 产出 -6%' },
+      { id: 'reso_balance', name: '守相均衡', effect: { global: 0.07, thread: 0.08 }, desc: '全局 +7%，线程产出 +8%' },
+    ],
+  },
+  {
+    id: 'longnight', name: '长夜纪律', unlock: (S) => (S.projectsDone || 0) >= 120 || (S.prestige || 0) >= 8,
+    hint: '需完成 120 个任务或职级 ≥8',
+    policies: [
+      { id: 'night_ember', name: '余烬长夜', effect: { ember: 0.24, delve: -0.08 }, desc: '余烬产出 +24%，深潜产出 -8%' },
+      { id: 'night_thread',name: '线程长夜', effect: { thread: 0.16, recruit: 0.10 }, desc: '线程产出 +16%，招募 +10%' },
+      { id: 'night_quiet', name: '静默长夜', effect: { delve: 0.22, global: -0.06 }, desc: '深潜产出 +22%，全局 -6%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }

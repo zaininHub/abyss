@@ -11,6 +11,8 @@ const ai = readFileSync(new URL('../src/modules/ai.js', import.meta.url), 'utf8'
 const rel = readFileSync(new URL('../src/modules/religions.js', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
+// v3.10.0：跨局保留清单已从 state.js 下沉到 core/stateSchema.js 单一真源
+const schema = readFileSync(new URL('../src/core/stateSchema.js', import.meta.url), 'utf8');
 
 // ===== ① 触手 =====
 rec('V1 触手平滑贝塞尔曲线 + 多层描边（基座粗 16 → 主 10 → 高光 4.5 → 霓虹 1.6，圆头端帽）', html.includes('C42 114 32 100 44 88') && html.includes('stroke-linecap="round"') && html.includes('stroke-width="10"') && html.includes('stroke-width="4.5"'), '');
@@ -25,7 +27,7 @@ rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovere
 // ===== ③ 宗教 =====
 rec('V3 唤醒按钮未达标带 disabled 属性（含每秒 affordability 刷新）', rel.includes('data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? \'\' : \'disabled\'}') && rel.includes('w.disabled = !canUnlockReligion() || (S.ep || 0) < religionWakeCost()'), '');
 rec('V3 宗教入口曾达标常显（_religionHintSeen）', main.includes('S._religionHintSeen = true') && main.includes("religionUnlocked() || canUnlockReligion() || S._religionHintSeen"), 'refreshTabVisibility');
-rec('V3 _religionHintSeen 入 defaultState + crossRun', state.includes('_religionHintSeen: false') && state.includes("'_religionHintSeen'"), '');
+rec('V3 _religionHintSeen 入 defaultState + crossRun', state.includes('_religionHintSeen: false') && schema.includes("'_religionHintSeen'") && schema.includes('CROSS_RUN_KEYS'), '');
 
 const failed = results.filter(r => !r.ok);
 console.log(`\n===== v2.6.2 三项修复源码断言：${results.length - failed.length}/${results.length} 通过 =====`);

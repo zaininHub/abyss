@@ -48,36 +48,36 @@ console.log('[E] 扩充幅度与全局唯一性');
 
 test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   const rows = [
-    ['主线章节', CHAPTERS.length, 28],
-    ['主事件', EVENTS.length, 44],
-    ['研究项', BALANCE.researchUpgs.length, 40],
-    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 23],
-    ['百科章节', WIKI_SECTIONS.length, 17],
-    ['里程碑', BALANCE.miles.length, 9],
+    ['主线章节', CHAPTERS.length, 32],
+    ['主事件', EVENTS.length, 52],
+    ['研究项', BALANCE.researchUpgs.length, 46],
+    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 27],
+    ['百科章节', WIKI_SECTIONS.length, 20],
+    ['里程碑', BALANCE.miles.length, 11],
   ];
   for (const [name, now, before] of rows) {
     const pct = (now - before) / before * 100;
     assert.ok(pct >= 10 && pct <= 30, `${name} 扩充 ${pct.toFixed(1)}% 超出 10~30%：${before}→${now}`);
     assert.ok(now > before, `${name} 未扩充`);
   }
-  assert.equal(CHAPTERS.length, 32);
-  assert.equal(EVENTS.length, 52);
-  assert.equal(BALANCE.researchUpgs.length, 46);
-  assert.equal(POLICY_GROUPS.length, 9);
-  assert.equal(WIKI_SECTIONS.length, 20);
-  assert.equal(BALANCE.miles.length, 11);
+  assert.equal(CHAPTERS.length, 38);
+  assert.equal(EVENTS.length, 62);
+  assert.equal(BALANCE.researchUpgs.length, 55);
+  assert.equal(POLICY_GROUPS.length, 11);
+  assert.equal(WIKI_SECTIONS.length, 24);
+  assert.equal(BALANCE.miles.length, 13);
 });
 
-test('E2 三线变体章节 12→14、事件 8→10，章节/事件 id 全局唯一', () => {
+test('E2 三线变体章节 14→16、事件 10→12，章节/事件 id 全局唯一', () => {
   for (const pkg of LINE_PKGS) {
-    assert.equal(pkg.data.chapters.append.length, 14, `${pkg.id} 章节数`);
-    assert.equal(pkg.data.events.append.length, 10, `${pkg.id} 事件数`);
+    assert.equal(pkg.data.chapters.append.length, 16, `${pkg.id} 章节数`);
+    assert.equal(pkg.data.events.append.length, 12, `${pkg.id} 事件数`);
   }
   const chIds = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(chIds.length, 74);
+  assert.equal(chIds.length, 86);
   assert.equal(new Set(chIds).size, chIds.length, '章节 id 撞号');
   const evIds = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(evIds.length, 82);
+  assert.equal(evIds.length, 98);
   assert.equal(new Set(evIds).size, evIds.length, '事件 id 撞号');
 });
 
@@ -136,7 +136,7 @@ test('F2 27 项政策 effect key 全部有 policyMult 消费点，新组 unlock 
     }
   }
   assert.equal(new Set(ids).size, ids.length, '政策 id 重复');
-  assert.equal(ids.length, 27);
+  assert.equal(ids.length, 33);
   const g = POLICY_GROUPS.find(x => x.id === 'orchestration');
   assert.ok(g, '缺「编排律令」组');
   assert.equal(g.policies.length, 4);
@@ -158,7 +158,7 @@ test('F3 全部事件数值在主表天花板内，且 type 都有 applyEvent �
     if (e.type === 'ep') assert.ok((e.amount || 0) <= 14400, `${e.id} 产出秒数越界`);
     if (e.type === 'debuff') assert.ok(e.mult >= 0.3 && e.mult < 1, `${e.id} debuff 倍率异常`);
   }
-  assert.equal(all.length, 82);
+  assert.equal(all.length, 98);
 });
 
 test('F4 里程碑只追加不重排，既有 cps 键与奖励完全不变', () => {
@@ -188,11 +188,13 @@ test('G1 Wiki 新增 3 章渲染无 undefined / NaN，且覆盖新玩法与番�
 });
 
 test('G2 新增 3 条成就已注册，判定只读已持久化字段', () => {
+  // v3.10.0：成就表已从 main.js 下沉到 data/achievements.js，源码断言改查数据层
+  const ACH_SRC = readFileSync(join(SRC_ROOT, 'data/achievements.js'), 'utf8');
   for (const id of ['orch_switch', 'orch_tide', 'chapter25']) {
-    assert.ok(MAIN_SRC.includes(`id: '${id}'`), `缺成就 ${id}`);
+    assert.ok(ACH_SRC.includes(`id: '${id}'`), `缺成就 ${id}`);
   }
-  assert.ok(MAIN_SRC.includes("s.orchestration && s.orchestration.mode !== 'balanced'"));
-  assert.ok(MAIN_SRC.includes("chapterProgress(s.chapter || '1') >= 25"));
+  assert.ok(ACH_SRC.includes("s.orchestration && s.orchestration.mode !== 'balanced'"));
+  assert.ok(ACH_SRC.includes("chapterProgress(s.chapter || '1') >= 25"));
 });
 
 test('G3 编排卡已接入面板注册表 / 帧系统快刷 / 事件委托 / QA 暴露', () => {

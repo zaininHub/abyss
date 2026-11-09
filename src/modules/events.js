@@ -53,9 +53,8 @@ export function applyEvent(ev, durMult = 1) {
   const cps = computeCps();
   const luckyMult = 1 + elv('lucky') * 0.05;
   if (ev.type === 'ep') {
-    let amt = ev.amount;
-    if (ev.id === 'redpacket') amt = 10000;
-    const gain = cps * amt * luckyMult;
+    // v3.10.0：红包数值回归数据表单一真源（此前 amount:0 与此处 10000 双口径）
+    const gain = cps * ev.amount * luckyMult;
     if (isFinite(gain) && gain > 0) {
       addEp(gain); // v2.1 D1：统一入口，受 EP 存储上限约束
     }

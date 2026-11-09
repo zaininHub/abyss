@@ -15,6 +15,7 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {}, clea
 global.window = { addEventListener() {} };
 
 const { S } = await import('../src/state.js');
+const { ACHIEVEMENTS } = await import('../src/data/achievements.js'); // v3.10.0：成就表已下沉到数据层
 const { BALANCE } = await import('../src/data/balance.js');
 const { researchMult } = await import('../src/modules/economy.js');
 const { buyRiftUpgrade, riftUpgradeCost, riftUpgradeLevel } = await import('../src/modules/rift.js');
@@ -152,27 +153,15 @@ test('abyssGaze：ensureAbyssGaze(true) 重载后裂开常驻', () => {
 
 // ============ ⑤ 统一成就表完整性 ============
 test('成就表 ACHIEVEMENTS：id 唯一、abyss_gaze_egg 含 test、手动项无 test', () => {
-  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  const start = src.indexOf('const ACHIEVEMENTS = [');
-  assert.ok(start >= 0, '应存在 ACHIEVEMENTS 表');
-  const open = src.indexOf('[', start);
-  let depth = 0, end = -1;
-  for (let i = open; i < src.length; i++) {
-    const c = src[i];
-    if (c === '[') depth++;
-    else if (c === ']') { depth--; if (depth === 0) { end = i; break; } }
-  }
-  assert.ok(end > open, '应能匹配 ACHIEVEMENTS 数组括号');
-  // eslint-disable-next-line no-eval
-  const ACH = eval('(' + src.slice(open, end + 1) + ')');
-  const ids = ACH.map(a => a.id);
-  assert.equal(new Set(ids).size, ids.length, `成就 id 必须唯一，重复: ${ids.filter((v, i) => ids.indexOf(v) !== i)}`);
-  const egg = ACH.find(a => a.id === 'abyss_gaze_egg');
+  // v3.10.0：表已下沉到 src/data/achievements.js，不再从 main.js 源码 eval 切片
+  const ids = ACHIEVEMENTS.map(a => a.id);
+  assert.equal(new Set(ids).size, ids.length, '成就 id 必须唯一');
+  const egg = ACHIEVEMENTS.find(a => a.id === 'abyss_gaze_egg');
   assert.ok(egg, '应存在 abyss_gaze_egg（凝视深渊）');
-  assert.equal(typeof egg.test, 'function', 'abyss_gaze_egg 应由 checkAch 自动判定');
-  for (const a of ACH) {
-    assert.ok(a.id && a.name && a.icon && a.desc, `成就 ${a.id} 缺字段`);
+  assert.equal(typeof egg.test, 'function', 'abyss_gaze_egg 应由注册表自动判定');
+  for (const a of ACHIEVEMENTS) {
+    assert.ok(a.id && a.name && a.icon && a.desc, '成就字段不全: ' + a.id);
     const manual = (a.id === 'demon_friend' || a.id === 'gaze_abyss');
-    if (manual) assert.notEqual(typeof a.test, 'function', `手动点亮项 ${a.id} 不应含 test`);
+    if (manual) assert.notEqual(typeof a.test, 'function', '手动点亮项不应含 test: ' + a.id);
   }
 });

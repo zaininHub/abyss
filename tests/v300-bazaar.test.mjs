@@ -180,7 +180,7 @@ test('v3.0.0 集市：周期政策组 3 → 4（新增集市组，组内互斥�
   assert.ok(keys.includes('tariff') && keys.includes('freetrade') && keys.includes('monopoly'));
 });
 
-test('v3.0.0 集市：跨周期只保留成交笔数（库存/汇率/刷新次数每轮重置）', () => {
+test('v3.0.0 集市：跨周期只保留成交笔数（库存/汇率/刷新次数每轮重置）', async () => {
   setup();
   bz.unlockBazaar();
   bz.trade('forge');
@@ -192,9 +192,9 @@ test('v3.0.0 集市：跨周期只保留成交笔数（库存/汇率/刷新次�
   assert.equal(bz.bazaarTierNow(), tier, '集市等级保留');
   assert.equal(S.bazaar.refreshCount, 0, '刷新次数每轮重置');
   assert.ok(bz.bazaarStockOf('forge') > 0, '库存每轮补满');
-  // 源码口径：bazaar 在 crossRun（跨周期保留），prestige/reincarn 调 resetBazaarRun
-  const st = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
-  assert.match(st, /'relics', 'bazaar'/, 'state.js crossRun 含 bazaar');
+  // v3.10.0：跨局保留清单下沉到 core/stateSchema.js，此处改查单一真源（语义不变）
+  const { CROSS_RUN_KEYS } = await import('../src/core/stateSchema.js');
+  assert.ok(CROSS_RUN_KEYS.includes('bazaar'), '跨局保留清单含 bazaar');
   const pr = readFileSync(new URL('../src/modules/prestige.js', import.meta.url), 'utf8');
   const rc = readFileSync(new URL('../src/modules/reincarn.js', import.meta.url), 'utf8');
   assert.ok(pr.includes('resetBazaarRun()'), '晋升重置集市本局状态');

@@ -70,6 +70,17 @@ import { ORCHESTRATION_MODES, TIDE_ORCHESTRATION, TIDE_PHASE_NAMES, SCHEDULE_UNL
   effectiveMode, effectiveModeId, orchestrationSummary,
   setOrchestrationAutoTide, toggleOrchestrationAutoTide, orchestrationMult } from './core/orchestration.js';
 import './style.css';
+// v3.10.0：成就表下沉为纯数据层 + 判定注册表（可在纯 Node 下单测）
+import { ACHIEVEMENTS } from './data/achievements.js';
+import { ACHIEVEMENT_IDS, evaluateAchievements, unlockAchievement, achievementProgress } from './core/achievementRegistry.js';
+// v3.10.0：状态生命周期清单 / 面板键清单的单一真源
+import { RESOURCE_DISCOVERY, shiftAbsoluteClocks, shiftProjectClocks } from './core/stateSchema.js';
+import { PANEL_KEYS, PANEL_DIRTY_ON_START } from './core/panelKeys.js';
+import { FRAME_DEPS_KEYS } from './systems/frameSystems.js';
+// v3.10.0：新玩法「相位共鸣」
+import { RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
+  resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
+  setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus } from './core/resonance.js';
 
 const app = document.getElementById('app');
 
@@ -94,10 +105,12 @@ function renderOrchestrationPanel() {
   const summary = orchestrationSummary(S);
   const schedOK = scheduleUnlocked(S);
   const sched = orchestrationSchedule(S);
+  const res = resonanceSummary(S); // v3.10.0：相位共鸣读侧
   // 结构签名去重：2s 兜底刷新与潮汐相位变化都不重建按钮（防慢速点击被吞 / hover 闪烁）
-  // v3.9.0：排班表 / 当前相位 / 解锁态一并进签名，改写任一位后卡片即时同步
+  // v3.9.0：排班表 / 当前相位 / 解锁态一并进签名；v3.10.0 补共鸣开关 / 层数 / 焦点
   const sig = `${unlocked}|${st.mode}|${auto}|${active.id}|${summary.map(x => x.mult).join(',')}`
-    + `|S:${schedOK ? sched.join('.') : '-'}|P:${auto ? S.tidePhase : -1}`;
+    + `|S:${schedOK ? sched.join('.') : '-'}|P:${auto ? S.tidePhase : -1}`
+    + `|R:${res.unlocked ? 1 : 0}:${res.enabled ? 1 : 0}:${res.layers}:${res.focus}`;
   if (el._orchSig === sig) return;
   el._orchSig = sig;
 
@@ -143,6 +156,25 @@ function renderOrchestrationPanel() {
     html += `</div>`;
   }
 
+  // v3.10.0「相位共鸣」：标题与说明分行，避免窄卡内提示被挤成孤字换行；
+  // 按钮点击目标 28×28 且带 aria-label / aria-pressed（可访问性），焦点态只用既有强调色。
+  if (res.unlocked) {
+    html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
+      <div style="font-size:11.5px;color:var(--text-2)">相位共鸣 · ${res.layers}/${res.maxLayers} 层</div>
+      <div style="font-size:10.5px;color:var(--text-3);margin:2px 0 7px">同一相位停留越久叠得越高，换相位减半</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" style="min-height:28px;min-width:28px">共鸣：${res.enabled ? '开' : '关'}</button>
+        <span style="font-size:10.5px;color:var(--text-3)">焦点每层 +1.5%，其余各 -0.2%</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${f.icon}</button>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-top:6px">
+        ${res.rows.map(r => `<div>${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
   html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
     const color = x.mult > 1.0001 ? 'var(--good,#3fb950)' : x.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)';
@@ -171,6 +203,14 @@ function bindOrchestrationPanel() {
       if (!setOrchestrationPhaseMode(S, slot, modeId)) return;
       const nm = (ORCHESTRATION_MODES.find(m => m.id === modeId) || {}).name || '';
       log(`潮汐预案：${TIDE_PHASE_NAMES[slot]}改排「${nm}」`, 'good');
+    } else if (btn.dataset.resToggle) {
+      // v3.10.0：相位共鸣开关（未解锁写入由读侧单一真源拦截）
+      if (!toggleResonanceEnabled(S)) return;
+      log(`相位共鸣：${resonanceState(S).enabled ? '开启' : '关闭'}`, 'good');
+    } else if (btn.dataset.resFocus) {
+      if (!setResonanceFocus(S, btn.dataset.resFocus)) return;
+      const f = RESONANCE_FOCI.find(x => x.id === btn.dataset.resFocus);
+      log(`相位共鸣：焦点改为「${f ? f.name : ''}」`, 'good');
     } else if (btn.dataset.orchScheduleReset) {
       if (!resetOrchestrationSchedule(S)) return;
       log('潮汐预案：恢复默认排班', 'good');
@@ -421,14 +461,7 @@ function render() { renderPanels(dirty); }
 // resDiscovered 写入条件由「首次持有」改为「锚点完成」；锚点前「盲获得」照常入账不显示，
 // 锚点完成后连历史累计一并显示（A2 核心）。锚点完成恰一次 toast，归零不回隐藏。
 // rank（职级）与 es 同锚点——完成首次晋升（S.prestige ≥ 1）。
-const DISCOVER_TOASTS = [
-  ['rp',    () => anchorDone('rp', S),    '新资源：研究点 RP——科技树货币'],
-  ['es',    () => anchorDone('es', S),    '新资源：永恒碎片 ES'],
-  ['rank',  () => anchorDone('es', S),    '晋升系统开启'],
-  ['faith', () => anchorDone('faith', S), '新资源：信仰（FP）'],
-  ['pt',    () => anchorDone('pt', S),    '新资源：PT'],
-  ['dm',    () => anchorDone('dm', S),    '新资源：深渊物质 DM'],
-];
+const DISCOVER_TOASTS = RESOURCE_DISCOVERY.map(r => [r.key, () => anchorDone(r.anchorKey, S), r.toast]);
 function discoverCheck() {
   const D = S.resDiscovered || (S.resDiscovered = { ep: true, cps: true, run: true, tide: true });
   let changed = false;
@@ -445,8 +478,8 @@ function renderTop() {
   updateTabLocks(); // v2.0：渐进开放标签页锁定状态
   // v2.3.1 ①（rev18 9.1）：顶栏资源显示 = 锚点完成（anchorShown 双读：即时谓词 ∨ 持久标记）。
   // 锚点完成当帧即亮出（不等 discoverCheck 落档），且连历史盲获得累计一并显示。
-  const discStatIds = ['h-rank', 'h-rp', 'h-es', 'h-faith', 'h-pt', 'h-dm'];
-  const discAnchorKeys = ['es', 'rp', 'es', 'faith', 'pt', 'dm']; // rank 与 es 同锚点（首次晋升）
+  const discStatIds = RESOURCE_DISCOVERY.map(r => r.statId);
+  const discAnchorKeys = RESOURCE_DISCOVERY.map(r => r.anchorKey); // 单一真源：core/stateSchema.js
   for (let i = 0; i < discStatIds.length; i++) {
     const el = document.getElementById(discStatIds[i]);
     if (!el || !el.parentElement) continue;
@@ -1660,18 +1693,7 @@ function resumeGameClock() {
   const shift = Date.now() - modalPauseAt;
   modalPauseAt = 0;
   if (shift <= 0) return;
-  if (S.riftExpedition) S.riftExpedition.until += shift;
-  if (S.activeRift) S.activeRift.expiresAt += shift;
-  if (S.buffUntil > 0) S.buffUntil += shift;
-  if (S.clickBuffUntil > 0) S.clickBuffUntil += shift;
-  if (S._collapseAt) S._collapseAt += shift;
-  if (S.nextEventAt) S.nextEventAt += shift;
-  if (S.petXpUntil) S.petXpUntil += shift;
-  if (S.fuseLuckUntil) S.fuseLuckUntil += shift;
-  if (S.restBonusUntil) S.restBonusUntil += shift;
-  if (S.lazySince) S.lazySince += shift;
-  if (S.pausedAt) S.pausedAt += shift;
-  for (const p of (S.projects || [])) { if (p.deadline) p.deadline += shift; if (p.pendingAt) p.pendingAt += shift; if (p.startsAt) p.startsAt += shift; }
+  shiftAbsoluteClocks(S, shift); // v3.10.0：字段清单来自 core/stateSchema.js，新增计时字段不再靠人肉记得改这里
   S._lastActionAt = Date.now();
   lastTick = performance.now();
 }
@@ -1701,14 +1723,14 @@ function resolveCollapseChoice(kind) {
     const paid = Math.floor((S.ep || 0) * 0.9);
     S.ep = Math.max(0, (S.ep || 0) - paid);
     S.corruption = 0;
-    S.achievements.demon_friend = true;
+    unlockAchievement(S, 'demon_friend');
     log(`贿赂深渊：上缴 ${fmt(paid)} EP（90%）——深渊收下了祭品，你成为了深渊的朋友（本局继续，腐化已被深渊收回）`, 'good');
     toast('🤝 成就解锁：恶魔的朋友');
     checkAch(); // 立即点亮成就面板
   } else {
     // 同归于尽：立即触发崩溃杀死深渊——本局湮灭并强制转生（湮灭残片 +1，成就「凝视深渊」）
-    S.achievements.gaze_abyss = true;
-    S.achievements.collapsed = true; // 旧「被深渊吞噬」成就同步点亮
+    unlockAchievement(S, 'gaze_abyss');
+    unlockAchievement(S, 'collapsed'); // 旧「被深渊吞噬」成就同步点亮
     S.abyssSplinter = (S.abyssSplinter || 0) + 1;
     S.collapsed = true;
     log('同归于尽：你引爆了全部效能核心——崩溃吞没了你，也杀死了深渊。新局将在灰烬中重启', 'bad');
@@ -1843,7 +1865,6 @@ function openTalentModal() {
       dirty.shop = true; dirty.tech = true; dirty.pets = true;
       dirty.prestige = true; dirty.projects = true; dirty.top = true;
       // v2.0：彩蛋检查
-      checkEasterEggs('prestige', S, log, toast, () => { dirty.story = true; });
     });
   });
 }
@@ -1968,15 +1989,22 @@ function updatePausePreview() {
     <span style="font-size:11px;color:var(--text-3)">按离线效率 × 已暂停时长结算，受离线上限与 EP 存储上限约束</span>`;
 }
 
-// v2.5 ⑥：暂停结算（与离线结算同口径：EP + 到期项目 + 小时 RP 加成）
+// v3.10.0 review：暂停结算与离线回程严格同口径——只结算 EP + 小时 RP 加成。
+// 旧实现在这里自行给「到期项目」发奖并 ++projectsDone，却与两处口径冲突：
+//   tickProjects() 规定过期任务奖励作废；applyOffline() 的 projDone 恒为 0 且任务冻结。
+// 同时该分支绕过 claimProject()（计数唯一真源 / save / RP 未解锁时的 EP 回退 / buff 奖励），
+// 使「暂停 → 恢复」可以凭空累计任务数，进而提前解锁章节、政策、成就与编排 / 共鸣。
+// 现在暂停期间只冻结任务时钟，恢复后任务仍需按真实入口领取。
 function settlePause() {
-  const dt = (Date.now() - S.pausedAt) / 1000;
+  const nowMs = Date.now();
+  const pausedAtMs = S.pausedAt || nowMs;
+  const dt = (nowMs - pausedAtMs) / 1000;
   S.paused = false;
   S.pausedAt = 0;
   document.getElementById('pauseBtn').textContent = '暂停';
   document.body.classList.remove('paused');
   hidePauseModal();
-  const now = Date.now();
+  shiftProjectClocks(S, nowMs - pausedAtMs); // 任务冻结：deadline / pendingAt / startsAt 整体顺延
   const logPts = [];
   if (dt > 5) {
     const eff = Math.min(dt, offlineCap());
@@ -1985,20 +2013,6 @@ function settlePause() {
     if (gain >= 1) {
       const gained = addEp(gain); // v2.1 D1：统一入口，受 EP 上限约束
       if (gained > 0) logPts.push(`+${fmt(gained)} EP`);
-    }
-    // 暂停期间到期项目一并结算（与离线回程同口径）
-    if (S.projects.length > 0) {
-      const still = [];
-      let projDone = 0;
-      for (const p of S.projects) {
-        if ((now - p.startsAt) >= (p.deadline - p.startsAt)) {
-          if (p.reward.kind === 'ep') addEp(p.reward.amount);
-          else if (p.reward.kind === 'rp') addRp(p.reward.amount); // v3.0.8：走统一入口，受 RP 上限约束
-          S.projectsDone++; projDone++;
-        } else still.push(p);
-      }
-      S.projects = still;
-      if (projDone > 0) logPts.push(`${projDone} 个项目完成`);
     }
     const hours = eff / 3600;
     let bonusRp = 0;
@@ -2014,8 +2028,6 @@ function settlePause() {
   S._pauseCycles = (S._pauseCycles || 0) + 1; // v2.0：彩蛋计数
   log('系统恢复', 'good');
   // v2.0：彩蛋检查
-  checkEasterEggs('pause', S, log, toast, () => { dirty.story = true; });
-  checkEasterEggs('pause_cycle', S, log, toast, () => { dirty.story = true; });
   dirty.top = true; dirty.prestige = true; dirty.projects = true;
 }
 
@@ -2047,131 +2059,18 @@ function checkMiles() {
   }
 }
 
-// v3.4.2：统一成就表（判定 + 面板同源，消除 tests/defs 双表漂移隐患）
-// id 唯一；含 test 的项由 checkAch 自动判定，无 test 的项（demon_friend / gaze_abyss）由剧情手动点亮
-const ACHIEVEMENTS = [
-  { id: 'click1',    name: '初次接触', icon: '👆', desc: '第一次点击工作台，深渊回应了你的触碰', test: s => s.totalClicks >= 1 },
-  { id: 'ep1k',      name: '一丝涟漪', icon: '🌊', desc: '累计获得 1K EP', test: s => s.allTimeEp >= 1e3 },
-  { id: 'ep100k',    name: '涌动',     icon: '🌊', desc: '累计获得 100K EP', test: s => s.allTimeEp >= 1e5 },
-  { id: 'ep1m',      name: '深流',     icon: '🌊', desc: '累计获得 1M EP', test: s => s.allTimeEp >= 1e6 },
-  { id: 'ep1b',      name: '渊海',     icon: '🌊', desc: '累计获得 1B EP', test: s => s.allTimeEp >= 1e9 },
-  { id: 'ep1t',      name: '滔天',     icon: '🌊', desc: '累计获得 1T EP', test: s => s.allTimeEp >= 1e12 },
-  { id: 'ep1qa',     name: '湮灭临界', icon: '🌊', desc: '累计获得 1Qa EP', test: s => s.allTimeEp >= 1e15 },
-  { id: 'ep1sx',     name: '奇点之外', icon: '🌊', desc: '累计获得 1Sx EP', test: s => s.allTimeEp >= 1e18 },
-  { id: 'own10',     name: '十件造物', icon: '🏗️', desc: '同时拥有 10 个升级/建筑', test: s => totalOwned() >= 10 },
-  { id: 'own25',     name: '造物者',   icon: '🏗️', desc: '同时拥有 25 个升级/建筑', test: s => totalOwned() >= 25 },
-  { id: 'own100',    name: '百工',     icon: '🏗️', desc: '同时拥有 100 个升级/建筑', test: s => totalOwned() >= 100 },
-  { id: 'thread3',   name: '三人成众', icon: '🧵', desc: '同时拥有 3 条产出线程', test: s => (s.cultists || []).length >= 3 },
-  { id: 'thread10',  name: '军团',     icon: '🧵', desc: '拥有 10 条产出线程', test: s => (s.cultists || []).length >= 10 },
-  { id: 'thread50',  name: '文明',     icon: '🧵', desc: '拥有 50 条产出线程', test: s => (s.cultists || []).length >= 50 },
-  { id: 'pre1',      name: '初次超脱', icon: '⬆️', desc: '完成首次晋升转生', test: s => s.prestige >= 1 },
-  { id: 'pre5',      name: '五度超脱', icon: '⬆️', desc: '完成 5 次晋升', test: s => s.prestige >= 5 },
-  { id: 'pre50',     name: '五十度轮回', icon: '⬆️', desc: '完成 50 次晋升', test: s => s.prestige >= 50 },
-  { id: 'pre150',    name: '百五十度', icon: '⬆️', desc: '完成 150 次晋升', test: s => s.prestige >= 150 },
-  { id: 'reincarn1', name: '循环之始', icon: '♻️', desc: '完成首次轮回（第二层循环）', test: s => (s.reincarned || 0) >= 1 },
-  { id: 'reincarn5', name: '五重循环', icon: '♻️', desc: '完成 5 次轮回', test: s => (s.reincarned || 0) >= 5 },
-  { id: 'es1',       name: '永恒碎片', icon: '💎', desc: '首次获得 ES（晋升结算）', test: s => (s.es || 0) >= 1 },
-  { id: 'es100',     name: '永恒印记', icon: '💎', desc: '持有 100 ES', test: s => (s.es || 0) >= 100 },
-  { id: 'es1000',    name: '永恒之主', icon: '💎', desc: '持有 1000 ES', test: s => (s.es || 0) >= 1000 },
-  { id: 'tech1',     name: '认知扩展', icon: '🔬', desc: '解锁首个科技', test: s => techCount() >= 1 },
-  { id: 'offline',   name: '短暂告别', icon: '🌙', desc: '离开一段时间后回归，领取离线收益', test: s => s.gotOffline },
-  { id: 'pet1',      name: '深渊伙伴', icon: '🐈', desc: '拥有一位深渊宠物伙伴', test: s => petCount() >= 1 },
-  { id: 'pet5',      name: '群兽之主', icon: '🐈', desc: '拥有 5 只异兽', test: s => petCount() >= 5 },
-  { id: 'rift1',     name: '裂缝缝合', icon: '🌀', desc: '首次封印深渊裂隙', test: s => (s.riftsSealed || 0) >= 1 },
-  { id: 'delve1',    name: '深渊之下', icon: '🌑', desc: '深潜达到 10 层', test: s => (s.delve && s.delve.depth) >= 10 },
-  { id: 'delve50',   name: '深潜者',   icon: '🌑', desc: '深潜达到 50 层', test: s => (s.delve && s.delve.depth) >= 50 },
-  { id: 'faith1',    name: '信仰觉醒', icon: '🙏', desc: '信奉一个宗教分支', test: s => !!(s.religion && s.religion.unlocked) },
-  { id: 'faith500',  name: '万世朝拜', icon: '🙏', desc: '持有 500 信仰', test: s => (s.faith || 0) >= 500 },
-  { id: 'dm100',     name: '深渊物质', icon: '🜏', desc: '持有 100 DM', test: s => (s.dm || 0) >= 100 },
-  { id: 'dm1k',      name: '深渊富翁', icon: '🜏', desc: '持有 1000 DM', test: s => (s.dm || 0) >= 1000 },
-  { id: 'dm100k',    name: '深渊之渊', icon: '🜏', desc: '持有 100K DM', test: s => (s.dm || 0) >= 100000 },
-  { id: 'fishbowl1', name: '缸中之渊', icon: '🐙', desc: '建造深渊鱼缸（触手苏醒）', test: s => (s.upgrades && s.upgrades.abyss_fishbowl) >= 1 },
-  { id: 'collapsed', name: '被深渊吞噬', icon: '🌊', desc: '腐化满额且 EP 触顶，线程出逃殆尽——本局被深渊吞噬（轮回失败）', test: s => !!s.collapsed },
-  { id: 'idle60', name: '静默一分钟', icon: '⏳', desc: '开局后 1 分钟不做任何操作（静置彩蛋）', test: s => !!(s._easterEggsFound && s._easterEggsFound.idle_start) },
-  { id: 'crossroad', name: '三岔抉择', icon: '🛤️', desc: '在岔路口立誓，选择一条故事线', test: s => !!(s.storyline && s.storyline !== 'default') },
-  { id: 'abyss_gaze_egg', name: '凝视深渊', icon: '👁️', desc: '在裂隙余烬中购得「深渊凝视」——屏幕底部中央浮起一只眼睛，正左右打量着你', test: s => !!s.abyssGazeUnlocked },
-  { id: 'wish1',    name: '掷币入井', icon: '🪙', desc: '首次向许愿池投币（100 EP）', test: s => (s.wishCoins || 0) >= 1 },
-  { id: 'wishwin',  name: '奇迹发生', icon: '✨', desc: '许愿池中奖（0.01% 概率 +100K EP）', test: s => !!s.wishWon },
-  { id: 'bazaar1',    name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 1 },
-  { id: 'bazaar_t3',  name: '集市巨贾', icon: '💼', desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: s => (s.bazaar && s.bazaar.trades) >= 60 },
-  { id: 'bazaar100', name: '百笔成交', icon: '📈', desc: '在深渊集市累计完成 100 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 100 },
-  { id: 'bazaar_t5', name: '星际巨贾', icon: '🛰️', desc: '在深渊集市累计完成 500 笔交易', test: s => (s.bazaar && s.bazaar.trades) >= 500 },
-  { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' },
-  { id: 'gaze_abyss', name: '同归于尽', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' },
-  // v3.6.0 成就扩充（方向②）：覆盖星际/宗教/政策/裂隙/AI/剧情/长线
-  { id: 'exped1',    name: '初次远征',   icon: '🛰️', desc: '完成首次星际探索，星图在眼前展开', test: s => (s.expeditionsDone || 0) >= 1 },
-  { id: 'exped10',   name: '星海旅人',   icon: '🛰️', desc: '累计完成 10 次星际探索', test: s => (s.expeditionsDone || 0) >= 10 },
-  { id: 'exped50',   name: '深空常客',   icon: '🛰️', desc: '累计完成 50 次星际探索', test: s => (s.expeditionsDone || 0) >= 50 },
-  { id: 'cps1k',     name: '燃料点火',   icon: '🔥', desc: '星际燃料 CPS 达到 1K', test: s => (s.starCps || 0) >= 1e3 },
-  { id: 'cps100k',   name: '星炬燎原',   icon: '🔥', desc: '星际燃料 CPS 达到 100K', test: s => (s.starCps || 0) >= 1e5 },
-  { id: 'cosmos1',   name: '宇宙工坊',   icon: '🌌', desc: '启动首个宇宙探索工程', test: s => Object.values(s.cosmos?.lv || {}).filter(v => v >= 1).length >= 1 },
-  { id: 'cosmos5',   name: '群星匠人',   icon: '🌌', desc: '五类宇宙工程各至少 1 级', test: s => { const v = s.cosmos?.lv || {}; return ['asteroid','collider','starwish','cinder','beacon','distill'].filter(k => (v[k] || 0) >= 1).length >= 5; } },
-  { id: 'faith5k',   name: '信徒如云',   icon: '🙏', desc: '持有 5K 信仰', test: s => (s.faith || 0) >= 5000 },
-  { id: 'faith100k', name: '神国降临',   icon: '🙏', desc: '持有 100K 信仰', test: s => (s.faith || 0) >= 1e5 },
-  { id: 'temple5',   name: '圣殿巍峨',   icon: '⛩️', desc: '神殿等级达到 Lv.5', test: s => (s.religion?.temple || 0) >= 5 },
-  { id: 'relbranch', name: '分道扬镳',   icon: '⛪', desc: '选择一条宗教分支（深渊/秩序/混沌）', test: s => !!s.religion?.branch },
-  { id: 'oracle3',   name: '神谕低语',   icon: '🔮', desc: '神谕等级达到 Lv.3', test: s => (s.religion?.oracle || 0) >= 3 },
-  { id: 'seal3',     name: '誓约封印',   icon: '📜', desc: '宗教封印等级达到 Lv.3', test: s => (s.religion?.seal || 0) >= 3 },
-  { id: 'policy3',   name: '律令初成',   icon: '⚖️', desc: '同时采用 3 项周期政策', test: s => Object.keys(s.policies || {}).length >= 3 },
-  { id: 'policy6',   name: '纲纪井然',   icon: '⚖️', desc: '同时采用 6 项周期政策', test: s => Object.keys(s.policies || {}).length >= 6 },
-  { id: 'policyruns3', name: '岁月更迭', icon: '🔁', desc: '经历 3 轮政策周期', test: s => (s.policyRuns || []).length >= 3 },
-  { id: 'rift5',     name: '裂隙牧者',   icon: '🌀', desc: '累计封印 5 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 5 },
-  { id: 'rift20',    name: '裂隙之主',   icon: '🌀', desc: '累计封印 20 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 20 },
-  { id: 'ember10k',  name: '余烬成山',   icon: '🕯️', desc: '持有 10K 裂隙余烬', test: s => (s.riftEmber || 0) >= 1e4 },
-  { id: 'delve200',  name: '无尽下潜',   icon: '🌑', desc: '深潜达到 200 层', test: s => (s.delve?.depth || 0) >= 200 },
-  { id: 'ai_unlock', name: '机械之心',   icon: '🤖', desc: '解锁 AI 助手（科技「AI 管理核心」）', test: s => !!s.tech?.ai_core },
-  { id: 'ai_autobuild', name: '自治协议', icon: '🤖', desc: '激活 AI 自动购建', test: s => !!(s.ai && s.ai.autoBuildUnlocked) },
-  { id: 'ai_assist', name: '助手编队',   icon: '🤖', desc: '解锁并分配首位 AI 助手', test: s => (s.upgrades?.ai_assist || 0) >= 1 && Object.values(s.ai?.alloc || {}).some(v => v > 0) },
-  // v3.7.0：改用 chapterProgress —— 旧 parseInt 让变体章节（12A/14B）玩家永远拿不到 chapter18
-  { id: 'chapter5',  name: '星图展开',   icon: '📖', desc: '剧情推进至第 5 章', test: s => chapterProgress(s.chapter || '1') >= 5 },
-  { id: 'chapter9',  name: '命运分岔',   icon: '📖', desc: '剧情推进至第 9 章', test: s => chapterProgress(s.chapter || '1') >= 9 },
-  { id: 'chapter18', name: '终末序曲',   icon: '📖', desc: '剧情推进至第 18 章', test: s => chapterProgress(s.chapter || '1') >= 18 },
-  { id: 'es10k',     name: '永恒长城',   icon: '💎', desc: '持有 10K ES', test: s => (s.es || 0) >= 1e4 },
-  { id: 'reincarn20', name: '二十重劫', icon: '♻️', desc: '完成 20 次轮回', test: s => (s.reincarned || 0) >= 20 },
-  { id: 'pt1m',      name: '契约帝国',   icon: '🍪', desc: '持有 1M PT', test: s => (s.pt || 0) >= 1e6 },
-  { id: 'dm10m',     name: '深渊富矿',   icon: '🜏', desc: '持有 10M DM', test: s => (s.dm || 0) >= 1e7 },
-  // v3.7.0 成就扩充（78→86，+10%）：全部只读已持久化字段，判定 O(1)
-  { id: 'event100',   name: '见多识广',   icon: '🎲', desc: '累计触发 100 次随机事件', test: s => (s.eventsSeen || 0) >= 100 },
-  { id: 'policy7',    name: '七政齐备',   icon: '⚖️', desc: '同时采用 7 项周期政策', test: s => Object.keys(s.policies || {}).length >= 7 },
-  { id: 'chapter22',  name: '归档之人',   icon: '📖', desc: '剧情推进至番外·归档（第 22 章进度）', test: s => chapterProgress(s.chapter || '1') >= 22 },
-  { id: 'research35', name: '理论满架',   icon: '🔬', desc: '研究升级累计投入 35 级', test: s => Object.values(s.rpTheories || {}).reduce((a, b) => a + (b || 0), 0) >= 35 },
-  { id: 'vow',        name: '立誓者',     icon: '🗝️', desc: '在命运的岔路口立誓选定故事线', test: s => !!s.storyline && s.storyline !== 'default' },
-  { id: 'rift8',      name: '裂隙守夜',   icon: '🌀', desc: '累计封印 8 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 8 },
-  { id: 'corrupt50',  name: '半身入渊',   icon: '🌑', desc: '矩阵腐化达到 50%', test: s => (s.corruption || 0) >= 50 },
-  { id: 'projects50', name: '任务熟练',   icon: '📋', desc: '累计完成 50 个任务', test: s => (s.projectsDone || 0) >= 50 },
-  // v3.8.0 成就扩充（86→89）：新玩法与新增章节各给一个可达目标，判定只读已持久化字段
-  { id: 'orch_switch', name: '另排一班',   icon: '◈',  desc: '首次把效能编排切换为均衡以外的策略', test: s => !!(s.orchestration && s.orchestration.mode !== 'balanced') },
-  { id: 'orch_tide',   name: '随潮而动',   icon: '🌊', desc: '开启随潮汐排班，让策略跟着相位轮转', test: s => !!(s.orchestration && s.orchestration.autoTide) },
-  { id: 'chapter25',   name: '排班表的人', icon: '📖', desc: '剧情推进至番外·排班表（第 25 章进度）', test: s => chapterProgress(s.chapter || '1') >= 25 },
-  // v3.9.0 成就扩充（89→100，+12.4%）：全部只读已持久化字段，判定 O(1)
-  { id: 'orch_vigil',   name: '守夜人',     icon: '☾',  desc: '把效能编排手动切换为「值守编排」', test: s => !!(s.orchestration && s.orchestration.mode === 'vigil') },
-  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: s => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'balanced', 'research', 'abyss'][i])) },
-  { id: 'chapter29',    name: '值守日志',   icon: '📖', desc: '剧情推进至番外·值守日志（第 29 章进度）', test: s => chapterProgress(s.chapter || '1') >= 29 },
-  { id: 'chapter32',    name: '未命名进程', icon: '📖', desc: '剧情推进至番外·未命名进程（第 32 章进度）', test: s => chapterProgress(s.chapter || '1') >= 32 },
-  { id: 'policy9',      name: '九政并立',   icon: '⚖️', desc: '同时采用 9 项周期政策', test: s => Object.keys(s.policies || {}).length >= 9 },
-  { id: 'research46',   name: '满架推演',   icon: '🔬', desc: '研究升级累计投入 46 级', test: s => Object.values(s.rpTheories || {}).reduce((a, b) => a + (b || 0), 0) >= 46 },
-  { id: 'miles11',      name: '十一阶',     icon: '🚩', desc: '累计达成 11 档产能里程碑', test: s => Object.keys(s.milesDone || {}).length >= 11 },
-  { id: 'event200',     name: '见惯不惊',   icon: '🎲', desc: '累计触发 200 次随机事件', test: s => (s.eventsSeen || 0) >= 200 },
-  { id: 'projects200',  name: '任务老手',   icon: '📋', desc: '累计完成 200 个任务', test: s => (s.projectsDone || 0) >= 200 },
-  { id: 'rift30',       name: '三十道缝',   icon: '🌀', desc: '累计封印 30 道深渊裂隙', test: s => (s.riftsSealed || 0) >= 30 },
-  { id: 'es1k',         name: '千枚永恒',   icon: '💎', desc: '持有 1K ES', test: s => (s.es || 0) >= 1000 },
-];
+
 
 function checkAch() {
-  // v2.8.1：成就列表扩充（名称/描述/判定；仅判定不渲染，页面只显示已解锁）
-  const tests = ACHIEVEMENTS.filter(a => typeof a.test === "function");
-  let unlocked = false;
-  for (const a of tests) {
-    if (!S.achievements[a.id] && a.test(S)) {
-      S.achievements[a.id] = true;
-      log(`成就解锁：${a.name}——${a.desc}`, 'good');
-      if (toast) toast(`🏆 成就解锁：${a.name}`);
-      unlocked = true;
-    }
+  // v3.10.0：判定下沉到 core/achievementRegistry.js（纯函数、可单测），此处只负责播报与置脏重绘。
+  const ctx = { totalOwned, techCount, petCount, chapterProgress };
+  const fresh = evaluateAchievements(S, ctx);
+  for (const a of fresh) {
+    log(`成就解锁：${a.name}——${a.desc}`, 'good');
+    if (toast) toast(`🏆 成就解锁：${a.name}`);
   }
-  if (unlocked && document.getElementById('achievement-panel')) renderAchievementPanel(document.getElementById('achievement-panel'));
+  if (fresh.length) { dirty.achievements = true; dirty.storyline = true; }
 }
-
 // v2.8.1：成就页面——只显示已解锁成就（达成即点亮，未达成不展示）
 const ACH_PAGE_SIZE = 10; // v3.3.3 反馈⑩：成就一页 10 条 + 分页（与班组同范式，会话级页码）
 let achPage = 0;
@@ -2377,13 +2276,7 @@ function startApp() {
   setDelveToastFn(toast); // v2.6.0：深潜日志/toast
   setBazaarLogFn(log); setBazaarToastFn(toast); // v3.0.0：深渊集市
 
-  dirty.top = true; dirty.hero = true; dirty.shop = true; dirty.tech = true; dirty.relics = true; // v2.7.0：深渊遗物
-  dirty.pets = true; dirty.prestige = true; dirty.projects = true; dirty.story = true;
-  dirty.rift = true; dirty.expedition = true; dirty.riftTab = true;
-  dirty.tide = true; dirty.corruption = true; dirty.ai = true;
-  dirty.religion = true; dirty.delve = true; dirty.bazaar = true; // v3.0.0：集市
-  dirty.storyline = true; dirty.achievements = true; // v3.2.4 反馈②：右列常驻面板开档即渲染
-  dirty.orchestration = true; // v3.8.0：效能编排卡开档即渲染
+  for (const k of PANEL_DIRTY_ON_START) dirty[k] = true; // v3.10.0：清单来自 core/panelKeys.js
 
   // v2.1：旧档迁移一次性提示（PM 4.2 玩家沟通口径；localStorage 防重）
   if (S._v21Migrated && !localStorage.getItem('v21_migrated_toast')) {
@@ -2462,6 +2355,12 @@ if (typeof window !== 'undefined') {
     getStorylineEvents, getStorylinePets, validateEvent, eventPool,
     loadStoryline, maxProjects, corruptionCap, policyMult, researchMult,
     researchUpgCost, RP_GROUPS, UPGRADES, BALANCE, PETS, POLICY_GROUPS,
+    // v3.10.0：成就注册表 / 状态清单 / 相位共鸣 QA 钩子
+    ACHIEVEMENTS, ACHIEVEMENT_IDS, evaluateAchievements, achievementProgress,
+    RESOURCE_DISCOVERY, PANEL_KEYS, PANEL_DIRTY_ON_START, FRAME_DEPS_KEYS,
+    RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
+    resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
+    setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus,
     // v3.7.0 30 天 mock 推演：自动玩家只调用产品真实入口，禁止直接写 S 伪造进度
     sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige, reincarnReady, doReincarn,
       claimProject }, // v3.8.0：30 天推演自动玩家经产品真实入口领取任务，验证任务链路可达

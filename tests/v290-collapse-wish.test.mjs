@@ -172,8 +172,10 @@ test('优化②（源码）：紧急脱出走 askConfirm + 模态暂停（tick �
   assert.ok(mainSrc.includes('pauseGameClock()'), '模态暂停入口');
   assert.ok(mainSrc.includes('resumeGameClock()'), '模态暂停恢复');
   assert.ok(mainSrc.includes('shiftAbsoluteTimers') === false && mainSrc.includes('modalPauseAt'), '暂停状态字段');
-  assert.ok(mainSrc.includes('riftExpedition.until += shift'), '探索倒计时恢复时顺延');
-  assert.ok(mainSrc.includes('_collapseAt += shift'), '吞噬倒计时恢复时顺延');
+  // v3.10.0：顺延字段清单收敛到 core/stateSchema.js，main.js 只保留一次调用
+  const clockSrc = readFileSync(new URL('../src/core/stateSchema.js', import.meta.url), 'utf8');
+  assert.ok(mainSrc.includes('shiftAbsoluteClocks(S, shift)') && clockSrc.includes("'riftExpedition.until'"), '探索倒计时恢复时顺延');
+  assert.ok(clockSrc.includes("'_collapseAt'"), '吞噬倒计时恢复时顺延');
 });
 
 test('吞噬横幅文案定稿（用户口径）', () => {

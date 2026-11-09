@@ -1,6 +1,9 @@
 // 游戏状态 + 存档兼容迁移（v3：新增故事线/渐进开放/特殊任务/彩蛋字段）
 import { BALANCE } from './data/balance.js';
 import { PROFESSION_BY_ID, LAZY_PROFESSION_ID, LEADER_PROFESSION_ID } from './data/threads.js';
+// v3.10.0：状态字段生命周期清单由 core/stateSchema.js 单一真源派生（本文件不再内联白名单）
+import { DEFAULT_RESONANCE } from './core/resonance.js';
+import { defaultResDiscovered, mergeCrossRun, fillMissingFields, applyNestedDefaults } from './core/stateSchema.js';
 
 export const SAVE_KEY = 'abyss_idle_v2';
 export const SAVE_VERSION = 6;
@@ -51,7 +54,7 @@ export function defaultState() {
     // 里程碑
     milesDone: {},
     // v2.3 资源发现：顶栏首次持有才显示（开局四常显项直接 true，归零不回隐藏）
-    resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: false, rp: false, es: false, faith: false, pt: false, dm: false },
+    resDiscovered: defaultResDiscovered(),
     relics: {}, // v2.7.0：深渊遗物（DM 消费，跨转生保留）
     // 成就
     achievements: {},
@@ -126,6 +129,8 @@ export function defaultState() {
     // v3.8.0：效能编排（本局策略偏好，跨周期保留；旧档缺字段由 orchestrationState 兜底）
     // v3.9.0：schedule 为四相位自定义排班表；旧档无此字段由 orchestrationSchedule 回落默认映射。
     orchestration: { mode: 'balanced', autoTide: false, schedule: ['output', 'balanced', 'research', 'abyss'] },
+    // v3.10.0：相位共鸣（默认关闭；旧档缺字段由 stateSchema.COMPAT_KEYS 自动兜底，无迁移成本）
+    resonance: { ...DEFAULT_RESONANCE },
     // 系统
     paused: false, pausedAt: 0,
     lastSeen: Date.now(), startTime: Date.now(),
@@ -316,42 +321,21 @@ export function load() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return defaultState();
     const migrated = migrateSave(raw);
-    const defs = defaultState();
-    // 保留跨局数据
-    const crossRun = ['es', 'prestigePoints', 'eternal', 'achievements', 'religion', 'faith', 'offHistory', 'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades', 'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar', 'abyssGazeUnlocked']; // v2.7.0 遗物跨转生保留；v3.0.0 集市（成交笔数/等级跨周期）
-    for (const k of crossRun) {
-      if (migrated[k] !== undefined) defs[k] = migrated[k];
-    }
-    // 存档兼容：缺失字段用默认值补齐
-    const newFields = ['tidePhase', 'tideTimer', 'corruption', 'wageState', 'buildings', 'vehCollectTimer', 'ai', 'boughtOrder', 'unlockedBuildings', 'buildingOverflow', 'epOverflowTotal', '_overflowRpAcc', 'delve', 'vs',
-                       'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone', '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades', '_farewellBought',
-                       'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
-                       'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar',
-                       'cosmos',
-                       'faithTemples', 'miraclesTriggered', 'prophecyNext',
-                       '_prestigeSkips', '_idleSec', '_catClicks', '_lastActionAt', 'resDiscovered', 'abyssGazeUnlocked']; // v2.3.2 反馈②：_vehicleNames 移除
-    for (const k of newFields) {
-      if (migrated[k] === undefined) migrated[k] = defs[k];
-    }
-    // 深兜底：嵌套对象字段部分缺失时补齐
-    const wDef = defs.wageState, w = migrated.wageState;
-    if (w && typeof w === 'object') {
-      for (const k of Object.keys(wDef)) if (w[k] === undefined) w[k] = wDef[k];
-    }
-    const aiDef = defs.ai, ai = migrated.ai;
-    if (ai && typeof ai === 'object') {
-      for (const k of Object.keys(aiDef)) if (ai[k] === undefined) ai[k] = aiDef[k];
-    }
-    // v2.3 深兜底：resDiscovered 部分键缺失时补默认（不覆盖已写 true）
-    const rdDef = defs.resDiscovered, rd = migrated.resDiscovered;
-    if (rd && typeof rd === 'object') {
-      for (const k of Object.keys(rdDef)) if (rd[k] === undefined) rd[k] = rdDef[k];
-    }
+    // v3.10.0：跨局保留 / 缺失补齐 / 嵌套兜底三份清单全部由 core/stateSchema.js 单一真源派生，
+    // 不再在 load() 内联白名单（新增字段只需在 schema 声明一次）。
+    const base = defaultState();
+    // v3.10.0 修复：mergeCrossRun 会把旧档的 resDiscovered 直接赋给 defs，若再用 defs 作为
+    // 嵌套兜底源就成了「拿残缺对象补自己」，旧档缺子键时 rp / faith 等会是 undefined。
+    // 嵌套兜底必须用未被旧档覆盖的纯净默认值。
+    const defs = mergeCrossRun({ ...base }, migrated);
+    fillMissingFields(migrated, defs);
+    applyNestedDefaults(migrated, base);
     // v2.5 ①：裂隙门控旧档兼容标记——v2.4 及以前已有 DM/RP 锚点进度（已购载具/灵感工坊
     // 或对应 resDiscovered 已写）的旧档视为已解锁探采平台/深渊商店，不回退；
     // v2.5 起新档不再因「购入载具」解锁（解锁前提改为触发深渊裂隙）。
     if (!migrated._riftSeen && migrated._v25Legacy === undefined) {
       const up = migrated.upgrades || {};
+      const rd = migrated.resDiscovered || {};
       if ((up.scooter || 0) >= 1 || rd.dm === true || (up.atrium || 0) >= 1 || rd.rp === true) {
         migrated._v25Legacy = true;
       }

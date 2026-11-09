@@ -140,8 +140,8 @@ test('B3 bookFlow 拒绝非法字段与非数值，resetFlowStats 清空台账',
 
 console.log('[C] 效能编排读侧单一真源');
 
-test('C1 五条策略、四个倍率键，增益与代价成对', () => {
-  assert.equal(orch.ORCHESTRATION_MODES.length, 5);
+test('C1 六条策略、四个倍率键，增益与代价成对', () => {
+  assert.equal(orch.ORCHESTRATION_MODES.length, 6);
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
   const ids = new Set();
   for (const m of orch.ORCHESTRATION_MODES) {
@@ -155,7 +155,7 @@ test('C1 五条策略、四个倍率键，增益与代价成对', () => {
       assert.ok(Object.values(m.effects).some(v => v < 1), `${m.id} 应有代价`);
     }
   }
-  assert.equal(ids.size, 5);
+  assert.equal(ids.size, 6);
   assert.equal(orch.DEFAULT_MODE, 'balanced');
   const vigil = orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil');
   assert.ok(vigil, 'v3.9.0 应新增第 5 条策略「值守编排」');

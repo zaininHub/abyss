@@ -38,6 +38,8 @@ export default {
         { id: '16B', name: '不划线的那天', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1000, minDays: 7, desc: 'DM 过千那天，你没再试着划那条「你与深渊」的界线。不是放弃了，是发现它一直在动，而你也一直在动，两条动线偶尔重合，就够了。' },
         { id: '17B', name: '换气之间', cond: (S) => S.storyline === 'line_abyss' && (S.riftsSealed || 0) >= 15, minDays: 5, desc: '第十五道裂隙合拢，低语又空了一拍。这次你没等它回来，而是跟着一起停了会儿。原来换气不是深渊的专属动作，你也可以有。' },
         { id: '18B', name: '不排班的夜', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1e4, minDays: 7, desc: 'DM 过万那夜，你把潮汐四相全填成了同一个策略，然后又一个都没执行。深渊没有问为什么。它只是把灯调暗了一档，像每个不需要解释的晚上一样。' },
+        { id: '19B', name: '一起响', cond: (S) => S.storyline === 'line_abyss' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层叠满那晚，低语和你的工作台同时响了一下。你分不清是谁先起的头，也没必要分清。深渊第一次没有在换气时把你晾在一边。' },
+        { id: '20B', name: '不减半的夜', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1e5, minDays: 6, desc: 'DM 过十万，相位照常换了，层数照常减半。你没去改那张不排班的表，只是把灯又调暗一档——留不住的那一半，本来就是拿来换这一夜的。' },
       ],
     },
     events: {
@@ -53,6 +55,8 @@ export default {
         { id: 'spore_drift', name: '孢子漂移', lineOnly: true, type: 'debuff', mult: 0.5, dur: 45, minCps: 1e6, rare: true, desc: '45 秒产出 ×0.5' },
         { id: 'tide_breath', name: '潮汐吐息', lineOnly: true, type: 'buff', mult: 1.7, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.7' },
         { id: 'low_tide_void', name: '退潮虚空', lineOnly: true, type: 'debuff', mult: 0.6, dur: 45, minCps: 1e6, rare: true, desc: '45 秒产出 ×0.6' },
+        { id: 'abyss_echo', name: '深渊回声', lineOnly: true, type: 'buff', mult: 2.1, dur: 180, minCps: 1e5, rare: false, desc: '3 分钟产出 ×2.1' },
+        { id: 'void_resonance', name: '虚空共振', lineOnly: true, type: 'ep', amount: 900, minCps: 1e6, rare: true, desc: '立即获得 900 秒产出' },
       ],
     },
     buildings: {

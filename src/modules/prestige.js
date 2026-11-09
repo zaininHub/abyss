@@ -1,4 +1,5 @@
-import { S } from '../state.js';
+import { S, defaultState } from '../state.js';
+import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp } from './economy.js';
@@ -23,44 +24,14 @@ export function doPrestige(talentId) {
   if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
   // v2.9.0：湮灭残片改由「同归于尽」抉择结算发放（main.js），晋升不再发放/清除吞噬状态
   S.runTalent = talentId;
-  S.ep = 0;
-  S.runEarned = 0;
-  S.earnedFull = 0; // v2.5.1：全量产出统计随轮次清零（任务进度口径同生命周期）
-  S.upgrades = {};
-  if (talentId !== 'legacy') S.focusLevel = 0;
-  S.projects = [];
-  S.cultists = [];
-  crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水（economy→crew 循环依赖：crew 仅函数内使用 economy，安全）
-  // v1.3：AI 管理核心跨晋升保留（设计 §9：晋升一轮后 AI/建筑状态保持；建筑在 S.buildings 本就不随晋升清空）
+  // v3.10.0：本局重置字段清单与重置动作收敛到 core/stateSchema.js（晋升 / 轮回共用一条路径）。
+  // 两条转生路径的差异只保留为 opts：晋升保留 AI 管理核心，legacy 天赋保留专注等级。
   const keepAiCore = !!S.tech.ai_core;
-  S.tech = {};
-  if (keepAiCore) S.tech.ai_core = true;
-  // v1.3：薪资状态机随线程清空重置
-  S.wageState = { state: 'ok', debtSec: 0, dormantSec: 0, bufferSec: 0, loseTimer: 0 };
-  S.corruption = 0; // v2.6.0 review：转生新轮从干净状态开始（旧轮腐化惩罚不带入新轮）
+  recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
+  resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
+  resetRunState(S, defaultState(), { keepAiCore, keepFocus: talentId === 'legacy' });
+  crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水
   // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
-  S.vehCollectTimer = 0;
-  // v2.8.5 A2：跨周期解锁模块克制（参考 KG）——本局解锁进度不带到下周期，
-  // 仅保留跨周期资产对应的锚点（ep/es/faith/rp）；cps/run/tide/rank/pt/dm 重置，重新发现
-  S.resDiscovered = {
-    ep: true, es: !!S.resDiscovered.es, faith: !!S.resDiscovered.faith, rp: !!S.resDiscovered.rp,
-  };
-  // v2.8.6 B2a：政策每轮重选（清空本局政策与改选次数；虔诚/超验/隐密圣学保留跨周期）
-  recordPolicyRun();
-  S.policies = {};
-  S.policyRerolls = {};
-  S.vowPolicyBoost = false;
-  resetBazaarRun(); // v3.0.0：集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
-  S.cosmos = { lv: {} }; // v3.0.3 后续反馈④：宇宙探索本局制重置
-  S.pets = {};
-  S.activePets = [];
-  S.buffMult = 1; S.buffUntil = 0;
-  S.clickBuffMult = 1; S.clickBuffUntil = 0;
-  S.petXpMult = 1; S.petXpUntil = 0;
-  S.fuseLuckUntil = 0;
-  S.staffUnhappy = 0;
-  S._farewellBought = false; // v2.9.2 ②：sp3_farewell 每局可再次触发
-  S.activeRift = null;
   let startEp = 0;
   if (talentId === 'rich') startEp = 500;
   if (talentId === 'rich2') startEp = 1500;

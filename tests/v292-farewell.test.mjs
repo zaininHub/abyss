@@ -55,17 +55,43 @@ test('v2.9.2 ② 购买入口实现：main.js 含 ensureFarewellGift + onFarewel
   assert.ok(mainSrc.includes("w.state === 'dormant'") && mainSrc.includes("w.state === 'losing'"), '条件守卫：dormant/losing');
 });
 
-test('v2.9.2 ② 转生重置 _farewellBought（每局可再次触发）', () => {
+test('v2.9.2 ② 转生重置 _farewellBought（每局可再次触发）', async () => {
+  // v3.10.0：两份复制的「S._farewellBought = false」收敛为 stateSchema.RUN_RESET_KEYS，
+  // 改查单一真源 + 真实调用 resetRunState() 验证行为，避免只做源码字符串匹配。
+  const schema = await import('../src/core/stateSchema.js');
+  const st = await import('../src/state.js');
+  assert.ok(schema.RUN_RESET_KEYS.includes('_farewellBought'), '本局重置清单含 _farewellBought');
   const prestigeSrc = readFileSync(new URL('../src/modules/prestige.js', import.meta.url), 'utf8');
   const reincarnSrc = readFileSync(new URL('../src/modules/reincarn.js', import.meta.url), 'utf8');
-  assert.ok(prestigeSrc.includes('S._farewellBought = false'), 'prestige 转生重置 _farewellBought');
-  assert.ok(reincarnSrc.includes('S._farewellBought = false'), 'reincarn 轮回重置 _farewellBought');
+  assert.ok(prestigeSrc.includes('resetRunState(') && reincarnSrc.includes('resetRunState('),
+    '两条转生路径共用本局重置');
+  const defs = st.defaultState();
+  const s = { ...defs, _farewellBought: true };
+  schema.resetRunState(s, defs, {});
+  assert.equal(s._farewellBought, false, '轮回后每局可再次触发');
+  const s2 = { ...defs, _farewellBought: true };
+  schema.resetRunState(s2, defs, { keepAiCore: true, keepFocus: true });
+  assert.equal(s2._farewellBought, false, '晋升后每局可再次触发');
 });
 
-test('v2.9.2 ② state.js 默认字段 + 存档迁移兜底 _farewellBought', () => {
+test('v2.9.2 ② state.js 默认字段 + 存档迁移兜底 _farewellBought', async () => {
+  const schema = await import('../src/core/stateSchema.js');
   const stateSrc = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
   assert.ok(stateSrc.includes('_farewellBought: false'), '默认字段 _farewellBought: false');
-  assert.ok(stateSrc.includes("'_farewellBought'"), '存档迁移 newFields 含 _farewellBought');
+  assert.ok(schema.COMPAT_KEYS.includes('_farewellBought'), '旧档补齐清单含 _farewellBought');
+  // 真实旧档：无该字段也应自动补齐 false
+  const st = await import('../src/state.js');
+  // 本套件是纯源码 + 纯状态测试，默认没有 DOM shim；这里临时注入最小 localStorage
+  const prev = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: () => JSON.stringify({ _version: 6, ep: 10 }),
+    setItem() {}, removeItem() {}, clear() {},
+  };
+  try {
+    assert.equal(st.load()._farewellBought, false, '旧档缺字段自动兜底');
+  } finally {
+    if (prev === undefined) delete globalThis.localStorage; else globalThis.localStorage = prev;
+  }
 });
 
 test('v2.9.2 ② CSS：离职礼盒按钮样式 + reduced-motion 降级', () => {

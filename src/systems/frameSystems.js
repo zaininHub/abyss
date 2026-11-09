@@ -35,6 +35,7 @@ import { chapterRank, chapterCode } from '../core/storylineContent.js';
 import { currentChapter } from '../modules/story.js';
 import { orchestrationUnlocked, orchestrationState, effectiveModeId,
   TIDE_PHASE_NAMES, MODE_BY_ID } from '../core/orchestration.js';
+import { tickResonance } from '../core/resonance.js'; // v3.10.0：相位共鸣推进
 import { refreshShopAffordability, refreshShopChain } from '../modules/shop.js';
 import { refreshTechState } from '../modules/tech.js';
 import { refreshRelicAffordability } from '../modules/relics.js';
@@ -275,6 +276,9 @@ export function registerFrameSystems(deps = {}) {
         }
         ctx.lastScheduleModeBooted = true;
       }
+      // v3.10.0 新玩法「相位共鸣」：复用本系统推进，不新增系统 id、不改主循环。
+      // 只有层数 / 相位变化才置脏，累加器每帧静默写入，避免每帧重建编排卡 DOM。
+      if (tickResonance(S, ctx.dt).changed) ctx.dirty.orchestration = true;
     },
   });
   registerSystem({
@@ -510,6 +514,16 @@ export function registerFrameSystems(deps = {}) {
     run: () => { if (typeof D.render === 'function') D.render(); },
   });
 }
+
+/**
+ * v3.10.0：main.js 注入的闭包依赖清单（此前 11 个 deps 无任何清单，是控制流层唯一的审计盲区）。
+ * 由 tests/v3100-state-schema.test.mjs 双向锁死：注入键 ↔ 本文件 D.<key> 消费点。
+ */
+export const FRAME_DEPS_KEYS = Object.freeze([
+  'policyTickRefresh', 'updateProjectProgress', 'refreshTabVisibility', 'updateCrossroad',
+  'ensureCodeRain', 'tickTide', 'checkMiles', 'checkAch', 'discoverCheck',
+  'renderQuickSwitches', 'render',
+]);
 
 /** 供单测 / QA 校验「声明 → 消费」接线完整的系统 id 清单 */
 export const FRAME_SYSTEM_IDS = Object.freeze([

@@ -21,6 +21,8 @@ const sys = await import('../src/core/systemScheduler.js');
 const panels = await import('../src/core/panelRegistry.js');
 const orch = await import('../src/core/orchestration.js');
 const { SAVE_VERSION, defaultState } = await import('../src/state.js');
+const { PANEL_DIRTY_ON_START } = await import('../src/core/panelKeys.js');
+const { ACHIEVEMENT_IDS } = await import('../src/core/achievementRegistry.js');
 
 const SRC_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const read = p => readFileSync(join(SRC_ROOT, p), 'utf8');
@@ -212,6 +214,8 @@ test('C3 dirty 键 ↔ 面板消费者一一对应（无孤儿脏键、无死面
   const alwaysKeys = new Set([...MAIN.matchAll(/registerPanel\(\{ key: '([^']+)', always: true/g)].map(m => m[1]));
   const assigned = new Set([...ALL_SRC.matchAll(/\b(?:ctx\.)?dirty\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*true|\bd\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*true/g)]
     .map(m => m[1] || m[2]));
+  // v3.10.0：开档置脏改为遍历 PANEL_DIRTY_ON_START 清单，源码里不再有逐行 dirty.X = true
+  for (const k of PANEL_DIRTY_ON_START) assigned.add(k);
   const consumers = new Set(panelKeys.filter(k => !alwaysKeys.has(k)));
   assert.equal(new Set(panelKeys).size, panelKeys.length, '面板 key 重复注册');
   assert.equal(consumers.size, 23, 'v3.9.0 应有 23 个受脏标记控制的面板');
@@ -330,7 +334,7 @@ test('D6 改模式 / 切开关都保留已排班表，不丢玩家配置', () =>
 });
 
 test('D7 第 5 条策略 vigil 四键数值正确，且增益与代价成对', () => {
-  assert.equal(orch.ORCHESTRATION_MODES.length, 5);
+  assert.equal(orch.ORCHESTRATION_MODES.length, 6);
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
   const v = orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil');
   assert.ok(v && v.name && v.icon && v.short && v.desc);
@@ -346,7 +350,7 @@ test('D7 第 5 条策略 vigil 四键数值正确，且增益与代价成对', (
 
 console.log('[E] 新增内容无死数据（真实调用链）');
 
-test('E1 新增 4 章进入真实章节链，防「data 层同名双实现」陷阱', async () => {
+test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷阱', async () => {
   const provider = await import('../src/core/provider.js');
   const story = await import('../src/modules/story.js');
   assert.ok(read('modules/story.js').includes("from '../data/chapters.js'"),
@@ -354,40 +358,48 @@ test('E1 新增 4 章进入真实章节链，防「data 层同名双实现」陷
   provider._resetProvider();
   provider.setStoryline('default');
   const chs = provider.getChapters();
-  assert.equal(chs.length, 32);
-  for (const id of [29, 30, 31, 32]) {
+  assert.equal(chs.length, 38);
+  for (const id of [33, 34, 35, 36, 37, 38]) {
     assert.ok(chs.some(c => String(c.id) === String(id)), `第 ${id} 章未进入真实章节表`);
   }
-  const rich = { chapter: '32', chapterEnteredAt: 0, prestige: 999, projectsDone: 999,
+  // v3.10.0 新增 6 章均带 minDays 5~7 的驻留门控；chapterEnteredAt 必须是真实的过去时间戳
+  // （旧的 0 会被 `S.chapterEnteredAt || now` 吞掉 → daysIn=0 → 永远停在第 32 章）。
+  const rich = { chapter: '32', chapterEnteredAt: Date.now() - 30 * 86400000,
+    prestige: 999, projectsDone: 999,
     riftsSealed: 999, dm: 1e9, allTimeEp: 1e18, es: 1e9, faith: 1e9, expeditionsDone: 999,
     riftEmber: 1e9, tech: {}, buildings: {}, unlockedBuildings: {}, upgrades: {}, religion: {},
-    wageState: { state: 'ok' } };
+    wageState: { state: 'ok' }, resonance: { enabled: true, layers: 20, focus: 'rp' } };
   const cur = story.currentChapter(rich);
-  assert.ok(Number.parseInt(String(cur.id), 10) >= 29, `真实推进应能到达新增章节，实际 ${cur.id}`);
+  assert.equal(Number.parseInt(String(cur.id), 10), 38, `真实推进应能走完新增章节，实际 ${cur.id}`);
   provider._resetProvider();
 });
 
-test('E2 v3.9.0 新增 11 条成就全部注册（判定只读已持久化字段）', () => {
-  for (const id of ['orch_vigil', 'schedule_edit', 'chapter29', 'chapter32', 'policy9',
-    'research46', 'miles11', 'event200', 'projects200', 'rift30', 'es1k']) {
-    assert.ok(MAIN.includes(`id: '${id}'`), `缺成就 ${id}`);
+test('E2 v3.10.0 新增 17 条成就全部注册（判定只读已持久化字段）', () => {
+  for (const id of ['resonance_on', 'resonance_10', 'resonance_20', 'resonance_focus', 'cascade',
+    'chapter35', 'chapter38', 'policy11', 'research55', 'miles13', 'event300',
+    'projects400', 'rift40', 'es100k', 'dm1b', 'exped100', 'thread100']) {
+    assert.ok(ACHIEVEMENT_IDS.includes(id), `缺成就 ${id}`);
   }
-  assert.ok(MAIN.includes('ACHIEVEMENTS.filter(') && MAIN.includes('a.test(S)'),
-    '成就表必须有统一消费点（checkAch 遍历全部 test），不能只声明不判定');
+  assert.ok(MAIN.includes('evaluateAchievements(S, ctx)'),
+    '成就表必须有统一消费点（checkAch 调注册表纯函数），不能只声明不判定');
+  assert.equal(new Set(ACHIEVEMENT_IDS).size, ACHIEVEMENT_IDS.length, '成就 id 唯一');
 });
 
-test('E3 新增 3 章 Wiki 与 2 档里程碑渲染 / 数值合法', async () => {
+test('E3 新增 4 章 Wiki 与 2 档里程碑渲染 / 数值合法', async () => {
   const { WIKI_SECTIONS } = await import('../src/data/wiki.js');
   const { BALANCE } = await import('../src/data/balance.js');
-  for (const id of ['schedule', 'watch', 'chronicle2']) {
+  for (const id of ['schedule', 'watch', 'chronicle2', 'resonance', 'cascade', 'chronicle3', 'longline']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec, `缺百科章节 ${id}`);
     const html = sec.body();
     assert.ok(typeof html === 'string' && html.length > 50, `${id} 内容过短`);
     assert.ok(!/undefined|NaN|Infinity/.test(html), `${id} 渲染出非法数值`);
   }
-  assert.equal(BALANCE.miles.length, 11);
+  assert.equal(BALANCE.miles.length, 13);
   assert.equal(BALANCE.miles[9].cps, 1e11);
   assert.equal(BALANCE.miles[10].cps, 1e12);
   assert.ok(BALANCE.miles[10].rp > BALANCE.miles[9].rp);
+  assert.equal(BALANCE.miles[11].cps, 1e13);
+  assert.equal(BALANCE.miles[12].cps, 1e14);
+  assert.ok(BALANCE.miles[12].rp > BALANCE.miles[11].rp);
 });

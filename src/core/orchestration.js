@@ -13,6 +13,7 @@
 //   dm → economy.vehicleRateMult() 的标准乘区
 //   四个键都必须有真实消费点；新增键若没接线，单测 v380 会直接失败。
 import { registerModifier } from './flowEngine.js';
+import { resonanceMult } from './resonance.js'; // v3.10.0：相位共鸣与四条管线同乘区、同口径
 
 export const ORCHESTRATION_KEYS = Object.freeze(['ep', 'rp', 'pt', 'dm']);
 export const ORCHESTRATION_KEY_LABELS = Object.freeze({
@@ -39,6 +40,11 @@ export const ORCHESTRATION_MODES = Object.freeze([
   { id: 'vigil', name: '值守编排', icon: '☾', short: '值守',
     desc: '把算力留给值守与维护：基础产出略降，蒸馏、孵化与探采同步提速。',
     effects: { ep: 0.94, rp: 1.18, pt: 1.18, dm: 1.20 } },
+  // v3.10.0 第 6 条（5→6，+20%）：面向「相位共鸣」的折中档——基础产出与蒸馏小幅提速，
+  // 孵化与探采让位；专供只想守一个相位叠层的玩家，与产能优先/值守编排形成三角取舍。
+  { id: 'cascade', name: '潮汐级联', icon: '≋', short: '级联',
+    desc: '把相位里攒下的算力接回主线：产出与蒸馏小幅提速，孵化、探采相应收窄。',
+    effects: { ep: 1.10, rp: 1.12, pt: 0.88, dm: 0.90 } },
 ]);
 
 const MODE_BY_ID = new Map(ORCHESTRATION_MODES.map(m => [m.id, m]));
@@ -99,7 +105,10 @@ export function orchestrationMult(key, S) {
   if (!orchestrationUnlocked(S)) return 1;
   const m = effectiveMode(S);
   const v = m && m.effects ? m.effects[key] : undefined;
-  return Number.isFinite(v) && v > 0 ? v : 1;
+  const base = Number.isFinite(v) && v > 0 ? v : 1;
+  // v3.10.0：相位共鸣与编排策略共用同一读侧入口，保证 CPS 显示 / 卡面倍率 / 真实入账同口径。
+  // 共鸣默认关闭，resonanceMult 恒为 1 —— 既有存档零数值漂移。
+  return base * resonanceMult(key, S);
 }
 
 /** 玩家操作入口：只允许合法 id；写入后由调用方置 dirty.orchestration。 */

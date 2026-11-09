@@ -383,6 +383,8 @@ export const BALANCE = {
     { cps: 1e9, rp: 60000 }, { cps: 1e10, rp: 200000 },
     // v3.9.0 里程碑扩充（9→11，+22.2%）：只追加更高门槛，既有 cps 键与奖励完全不变
     { cps: 1e11, rp: 600000 }, { cps: 1e12, rp: 2000000 },
+    // v3.10.0 里程碑扩充（11→13，+18.18%）：只追加更高门槛，既有 cps 键与奖励完全不变
+    { cps: 1e13, rp: 6e6 }, { cps: 1e14, rp: 2e7 },
   ],
   // 科技乘数压缩（v2.0 §1.3）
   techMult: {
@@ -482,6 +484,16 @@ export const BALANCE = {
     { id: 'rp_wage3',    name: '值守津贴',   cap: 8, base: 2400, growth: 1.80, fx: { key: 'wage',   v: -0.07 }, desc: '线程消耗 -7%/级' },
     { id: 'rp_ai4',      name: '拟我值守',   cap: 8, base: 2800, growth: 1.82, fx: { key: 'ai',     v: 0.09 }, desc: 'AI 助手效率 +9%/级' },
     { id: 'rp_dm3',      name: '星尘夜采',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'dm',     v: 0.13 }, desc: '载具 DM 采集 +13%/级' },
+    // v3.10.0 研究项扩充（46→55，+19.57%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
+    { id: 'rp_ep6',      name: '熵流共鸣',   cap: 8, base: 3400, growth: 1.84, fx: { key: 'ep',     v: 0.12 }, desc: '基础 EP 产出 +12%/级' },
+    { id: 'rp_thread5',  name: '群体合弦',   cap: 8, base: 3500, growth: 1.84, fx: { key: 'thread', v: 0.10 }, desc: '线程产出 +10%/级' },
+    { id: 'rp_global3',  name: '全域共鸣',   cap: 8, base: 3800, growth: 1.86, fx: { key: 'global', v: 0.07 }, desc: '全局产出 ×1.07/级' },
+    { id: 'rp_wage4',    name: '相位津贴',   cap: 8, base: 3200, growth: 1.84, fx: { key: 'wage',   v: -0.08 }, desc: '线程消耗 -8%/级' },
+    { id: 'rp_dm4',      name: '星尘共振',   cap: 8, base: 3400, growth: 1.84, fx: { key: 'dm',     v: 0.14 }, desc: '载具 DM 采集 +14%/级' },
+    { id: 'rp_rift5',    name: '裂隙共鸣',   cap: 6, base: 9800, growth: 1.94, fx: { key: 'rift',   v: 0.14 }, desc: '裂隙余烬 +14%/级' },
+    { id: 'rp_delve3',   name: '深潜回响',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'delve',  v: 0.14 }, desc: '深潜产出 +14%/级' },
+    { id: 'rp_ai5',      name: '拟我合弦',   cap: 8, base: 3600, growth: 1.86, fx: { key: 'ai',     v: 0.10 }, desc: 'AI 助手效率 +10%/级' },
+    { id: 'rp_cosmos3',  name: '星力共鸣',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'cosmos', v: 0.10 }, desc: '宇宙工程星力 +10%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

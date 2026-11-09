@@ -4,17 +4,10 @@
 // 浏览器中这些函数仍代理到真实 DOM；Node(测试) 下为 no-op 或自动确认。
 
 // ========== 脏检查渲染标记 ==========
-export const dirty = {
-  top: true, hero: true, shop: true, tech: true,
-  pets: true, prestige: true, projects: true,
-  offline: true, story: true, log: false,
-  rift: true, expedition: true,
-  tide: true, corruption: true, // v2.0 新增：潮汐卡片 / 腐化条
-  ai: true, // v1.3 A：AI 助手面板
-  relics: false, // v2.7.0：深渊遗物
-  storyline: false, achievements: false, // v3.2.4 反馈②：右列故事线/成就常驻面板（v3.2.1 三列布局后原 switchTab 渲染入口失效致恒空）
-  orchestration: true, // v3.8.0：效能编排卡（策略切换 / 潮汐排班）
-};
+// v3.10.0：初始键由 core/panelKeys.js 的面板清单派生，消除 v3.9.0 的「19 个初始键 ↔ 26 个注册面板」
+// 漂移（offline / log 两个幽灵键 + rp / religion / policy / delve / bazaar / riftTab 六个缺键）。
+import { createDirty } from './panelKeys.js';
+export const dirty = createDirty();
 
 // ========== 日志系统 ==========
 const logs = [];
