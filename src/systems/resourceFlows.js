@@ -111,7 +111,7 @@ registerFlow({
       if ((S.ep || 0) >= 50000) {
         S.ep -= 50000;
         const before = S.rp || 0;
-        S.rp = before + 0.01 * mult;
+        addRp(0.01 * mult); // v3.10.2 ④：满仓涓流改走统一入口，不再直写 S.rp 越过 rpCap
         bookFlow('ep', 'out', 50000);
         return { resource: 'rp', produced: (S.rp || 0) - before, epCost: 50000 };
       }
@@ -172,7 +172,7 @@ registerFlow({
       const take = Math.min(needClamped, S.ep);
       S.ep -= take;
       const before = S.pt || 0;
-      S.pt = Math.min(ptCap(), before + take * rate);
+      addPt(take * rate); // v3.10.2 ④：与 RP 同口径，统一走带上限钳制的入口
       bookFlow('ep', 'out', take);
       return { resource: 'pt', produced: (S.pt || 0) - before, epCost: take };
     }
@@ -183,7 +183,7 @@ registerFlow({
       if ((S.ep || 0) >= 50000) {
         S.ep -= 50000;
         const before = S.pt || 0;
-        S.pt = before + 0.01 * ptMult;
+        addPt(0.01 * ptMult); // v3.10.2 ④：满仓涓流改走统一入口，不再直写 S.pt 越过 ptCap
         bookFlow('ep', 'out', 50000);
         return { resource: 'pt', produced: (S.pt || 0) - before, epCost: 50000 };
       }

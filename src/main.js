@@ -1,5 +1,6 @@
 import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤：SAVE_KEY/SAVE_VERSION 供存档导出/导入
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
+import { fmtDepletionEta, epDepletionSec } from './core/format.js'; // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain, bulkCostCalc, // v3.6.4 ④：两条购买路径同口径 QA 钩子（unitCost 已在下方导入）
@@ -11,7 +12,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
-  corruptionCap, researchMult } from './modules/economy.js'; // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
+  corruptionCap, researchMult, clampRunResourceBalances } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -25,7 +26,7 @@ import { policyOpenGroups, policyMult, POLICY_GROUPS } from './data/policies.js'
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
 import { EXPAND_KEY, anchorShown, anchorDone, petsModuleUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
@@ -74,7 +75,7 @@ import './style.css';
 import { ACHIEVEMENTS } from './data/achievements.js';
 import { ACHIEVEMENT_IDS, evaluateAchievements, unlockAchievement, achievementProgress } from './core/achievementRegistry.js';
 // v3.10.0：状态生命周期清单 / 面板键清单的单一真源
-import { RESOURCE_DISCOVERY, shiftAbsoluteClocks, shiftProjectClocks } from './core/stateSchema.js';
+import { RESOURCE_DISCOVERY, shiftAbsoluteClocks, shiftProjectClocks, RUN_RUNTIME_KEYS, clampCappedResources } from './core/stateSchema.js';
 import { PANEL_KEYS, PANEL_DIRTY_ON_START } from './core/panelKeys.js';
 import { FRAME_DEPS_KEYS } from './systems/frameSystems.js';
 // v3.10.0：新玩法「相位共鸣」
@@ -485,11 +486,19 @@ function renderTop() {
   for (let i = 0; i < discStatIds.length; i++) {
     const el = document.getElementById(discStatIds[i]);
     if (!el || !el.parentElement) continue;
-    // v2.7.0：PT（异兽饼干）顶栏显示同即时门控（本局购入宠物乐园才亮出；转生后隐藏直至重购）
-    const shown = discAnchorKeys[i] === 'pt' ? anchorDone('pt', S) : anchorShown(discAnchorKeys[i], S);
+    // v2.7.0 / v3.10.2 ③：PT 与 FP 顶栏显示走即时门控（anchorDone：本局制、转生清空），
+    // 与「FP 相关研究项」的门控谓词严格同源，避免资源未解锁却出现对应研究升级。
+    const shown = (discAnchorKeys[i] === 'pt' || discAnchorKeys[i] === 'faith')
+      ? anchorDone(discAnchorKeys[i], S) : anchorShown(discAnchorKeys[i], S);
     el.parentElement.style.display = shown ? '' : 'none';
   }
   const cps = computeCps();
+  // v3.10.2 ②：净流为负（产出 < 消耗）时给警告标志与「预期 EP 耗尽时间」。
+  // 口径与顶栏展示值严格一致：computeCps() 与 totalDrainPerSec()，ETA = 当前 EP / 每秒净亏空。
+  const drain = totalDrainPerSec();
+  const drainWarn = drain > cps;
+  const etaSec = epDepletionSec(S.ep, cps, drain);
+  const etaTip = drainWarn ? `｜⚠ 净流为负：按当前产出/消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '';
   const now = Date.now();
   let buffTag = '';
   if (now < S.buffUntil) {
@@ -561,15 +570,20 @@ function renderTop() {
   // v2.8.22 ④：来源悬浮气泡（只留自定义 CSS 气泡，移除原生 title —— 双弹窗）；气泡含来源 + 加成明细
   if (hCps) {
     const st = hCps.closest('.stat');
-    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮（按分段曲线累加）
+    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}${etaTip}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮（按分段曲线累加）
+  }
+  const hDrainWarn = document.getElementById('h-drain-warn');
+  if (hDrainWarn) {
+    hDrainWarn.style.display = drainWarn ? '' : 'none';
+    hDrainWarn.setAttribute('aria-label', drainWarn ? `产出小于消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '');
   }
   if (hSalary) {
-    hSalary.textContent = fmt(totalDrainPerSec()) + '/s';
+    hSalary.textContent = fmt(drain) + '/s';
     const st2 = hSalary.closest('.stat');
     // v3.3.1 反馈⑪：消耗按实际扣减口径展示（休眠只扣保命成本、探采 EP 不足跳过、圣所关闭不扣）
     const wSt = (S.wageState || {}).state;
     const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `（休眠期仅扣保命成本 ×${wageKeepCostMult()}）` : '';
-    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
+    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${etaTip}`;
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
@@ -1076,7 +1090,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500，矩阵存储库首级 +400、之后每级 ×1.15 递增（EP 购买），达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 ×1.15）+ 产出基座（当前 EP 上限 ×25%）。因此没买仓库升级时上限也会随 EP 上限增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 3,000 再逐次扩容。达到上限后停止积累。', () => {});
   });
 }
 
@@ -2232,6 +2246,9 @@ function ensureStorylineRuntime() {
 function startApp() {
   ensureStorylineRuntime();
   ensureAbyssGaze(S.abyssGazeUnlocked); // v3.4.2：已解锁凝视深渊则重载后裂开常驻
+  // v3.10.2 ④：旧档上限回落兜底——rp / pt / dm 余额是隐式保留，而上限随本局升级变化。
+  // 加载即钳一次，避免「余额 31m / 上限 3,000」以及用超额 RP 绕过进度曲线购买。
+  clampRunResourceBalances();
 
   // v2.5 ⑥：暂停态重开——不结算普通离线（避免双重入账），改弹暂停恢复框结算暂停时长
   if (S.paused && S.pausedAt) {
@@ -2356,6 +2373,9 @@ if (typeof window !== 'undefined') {
     scheduleCustomized, setOrchestrationPhaseMode, resetOrchestrationSchedule,
     getStorylineEvents, getStorylinePets, validateEvent, eventPool,
     loadStoryline, maxProjects, corruptionCap, policyMult, researchMult,
+    // v3.10.2：反馈清单 QA 钩子（净流预估 / 资源门控 / 上限重置）
+    fmtDepletionEta, epDepletionSec, clampRunResourceBalances, researchResourceUnlocked,
+    RESEARCH_RES_ANCHORS, RUN_RUNTIME_KEYS, clampCappedResources, anchorDone,
     researchUpgCost, RP_GROUPS, UPGRADES, BALANCE, PETS, POLICY_GROUPS,
     // v3.10.0：成就注册表 / 状态清单 / 相位共鸣 QA 钩子
     ACHIEVEMENTS, ACHIEVEMENT_IDS, evaluateAchievements, achievementProgress,

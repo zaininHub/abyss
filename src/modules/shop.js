@@ -9,7 +9,7 @@ import { getBuildings, getTechs } from '../core/provider.js';
 import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增
 import { BALANCE } from '../data/balance.js';
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
-import { chainSplit, renderChainedGroups, anchorShown, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
+import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v3.4.6 反馈⑤：卡面产出与 tick 同口径（绑定加成封顶 ×2）
@@ -1551,6 +1551,16 @@ function bindFamilyDelegate(container) {
 
 
 // ========== v2.8.4：研究升级（研究点 tab · RP 购买 · 长线） ==========
+// v3.10.2 ③：研究项的资源门控——效果键 → 资源锚点。
+//  「FP 产出 +10%」这类升级在 FP 尚未解锁时不该出现在研究面板，也不能被直接调用购买入口绕过。
+//  谓词用 anchorDone（即时、本局制、转生清空），与顶栏 FP 显示严格同源；
+//  不用 anchorShown——它含跨转生持久标记，会在资源实际未解锁时误放行。
+//  新增同类资源只需在此加一行映射，渲染 / 购买 / 重建签名三处自动生效。
+export const RESEARCH_RES_ANCHORS = Object.freeze({ faith: 'faith' });
+export function researchResourceUnlocked(u, state = S) {
+  const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];
+  return !key || anchorDone(key, state);
+}
 export function researchUpgCost(id) {
   const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
   if (!u) return 0;
@@ -1560,6 +1570,7 @@ export function researchUpgCost(id) {
 export function buyResearchUpgrade(id) {
   const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
   if (!u) return { ok: false, reason: '未知研究' };
+  if (!researchResourceUnlocked(u)) return { ok: false, reason: '对应资源尚未解锁' };
   const lv = (S.rpTheories && S.rpTheories[id]) || 0;
   if (lv >= u.cap) return { ok: false, reason: '已达上限' };
   const cost = researchUpgCost(id);
@@ -1616,9 +1627,12 @@ function researchDeltaDesc(u, maxed) {
 }
 export function renderResearchUpgrades(container) {
   if (!container) return;
+  // v3.10.2 ③：门控状态纳入重建签名——FP 解锁当帧即刷新研究面板，不等 RP 变化。
+  const gateSig = Object.keys(RESEARCH_RES_ANCHORS)
+    .map(k => `${k}:${anchorDone(RESEARCH_RES_ANCHORS[k], S) ? 1 : 0}`).join(',');
   const sig = RP_GROUPS.map(g =>
     `${g.key}:${rpGroupShown(g) ? 1 : 0}:${rpFold[g.key] ? 1 : 0}:${g.ids.map(id => (S.rpTheories?.[id] || 0)).join('.')}`
-  ).join('|') + `:${Math.floor(S.rp || 0)}`; // v2.8.13：RP 变化即重建——灰态/可购判定不再滞后
+  ).join('|') + `:${Math.floor(S.rp || 0)}:${gateSig}`; // v2.8.13：RP 变化即重建；v3.10.2 ③：门控状态变化亦重建
   if (container._lastSig === sig) return; // 增量：内容未变不重建（v2.6.7 纪律）
   container._lastSig = sig;
   container.innerHTML = '';
@@ -1629,7 +1643,9 @@ export function renderResearchUpgrades(container) {
     title.className = 'rp-group-title';
     title.dataset.rpFold = g.key;
     title.innerHTML = `<span class="rp-fold-arrow">${rpFold[g.key] ? '▶' : '▼'}</span><b>${g.name}</b>`;
-    title.title = g.ids.map(id => (BALANCE.researchUpgs.find(u => u.id === id)?.name || id)).join(' / ');
+    title.title = g.ids.map(id => BALANCE.researchUpgs.find(u => u.id === id))
+      .filter(u => u && researchResourceUnlocked(u))
+      .map(u => u.name).join(' / ');
     frag.appendChild(title);
     if (rpFold[g.key]) continue; // 折叠：仅保留标题
     const grid = document.createElement('div');
@@ -1637,6 +1653,7 @@ export function renderResearchUpgrades(container) {
     for (const id of g.ids) {
       const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
       if (!u) continue;
+      if (!researchResourceUnlocked(u)) continue; // v3.10.2 ③：资源未解锁不显示对应研究项
       const lv = (S.rpTheories && S.rpTheories[u.id]) || 0;
       const maxed = lv >= u.cap;
       const cost = researchUpgCost(u.id);

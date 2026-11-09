@@ -45,7 +45,7 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 124, 'v3.9.0 的 123 字段 + resonance');
+  assert.equal(keys.length, 129, 'v3.10.1 的 124 字段 + 5 个本局运行时快照字段（v3.10.2 ④）');
 });
 
 test('A2 资源发现键 / 顶栏锚点 / 默认值三者同源', () => {

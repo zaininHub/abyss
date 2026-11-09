@@ -36,6 +36,8 @@ export const COMPAT_KEYS = Object.freeze([
   '_catClicks', '_lastActionAt', 'resDiscovered', 'abyssGazeUnlocked',
   // v3.10.0：新增状态字段一律在此声明即自动兜底，无需 bump SAVE_VERSION
   'resonance',
+  // v3.10.2 ④：本局运行时快照旧档缺省补齐（见 RUN_RUNTIME_KEYS）
+  '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）
@@ -59,6 +61,15 @@ export const RUN_RESET_KEYS = Object.freeze([
   'fuseLuckUntil', 'staffUnhappy', '_farewellBought', 'activeRift',
   'crossroad', 'crossroadLockedBy', 'policies', 'policyRerolls', 'vowPolicyBoost',
   'cosmos', 'resDiscovered',
+]);
+
+// ⑤-b 本局运行时快照：EP 上限「时间基座」与满仓涓流计时器。
+//    v3.10.2 反馈④：这些字段此前既不在跨局保留清单、也不在本局重置清单，导致「重置本局后
+//    仍带着上一局的过高 EP / RP 上限」。它们描述的是本局的结构性投入与计时进度，
+//    必须与 upgrades 一起清零，让 rpCap() 回到新档 3,000 再随扩容缓慢增长。
+//    默认值由 defaultState() 提供（与 RUN_RESET_KEYS 同一赋值路径），不在此复制数值。
+export const RUN_RUNTIME_KEYS = Object.freeze([
+  '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
 ]);
 
 // ⑥ 资源发现：顶栏统计条 id ↔ 锚点 key ↔ toast 文案，三处此前各自手写一份。
@@ -159,6 +170,9 @@ export function resetRunState(S, defs, opts = {}) {
   const prevDiscovered = S.resDiscovered;
   const prevFocus = S.focusLevel;
   for (const k of RUN_RESET_KEYS) S[k] = clone(defs[k]);
+  // v3.10.2 ④：本局运行时快照（EP 上限时间基座 / 涓流计时器）与 upgrades 一起归零。
+  // 不清会让「转生/轮回后 RP 上限仍停在上一局的千万级」，与「新局从 3,000 缓慢扩容」的预期相反。
+  for (const k of RUN_RUNTIME_KEYS) S[k] = clone(defs[k]);
   // 资源发现：只保留跨周期锚点，其余重新发现（与 v3.9.0 两份实现的逐字口径一致）
   S.resDiscovered = {
     ep: true,
@@ -170,14 +184,32 @@ export function resetRunState(S, defs, opts = {}) {
   S.tech = opts.keepAiCore ? { ai_core: true } : {};
   // legacy 天赋保留本局专注等级
   if (opts.keepFocus) S.focusLevel = prevFocus;
+  // 重置后上限回落，隐式保留的余额必须同步钳到新上限，避免「31m / 3,000」与超上限购买。
+  // clamp 由调用方注入（economy.clampRunResourceBalances），避免 stateSchema 反向依赖玩法模块。
+  if (typeof opts.clamp === 'function') opts.clamp(S);
   return S;
+}
+
+/**
+ * 纯函数：把余额钳到各自上限，返回被钳制的字段数。
+ * caps 由调用方在「重置完成后」计算，确保用的是新上限而非旧上限。
+ */
+export function clampCappedResources(S, caps) {
+  if (!S || !caps) return 0;
+  let n = 0;
+  for (const [key, cap] of Object.entries(caps)) {
+    if (!Number.isFinite(cap) || cap < 0) continue;
+    const v = S[key];
+    if (Number.isFinite(v) && v > cap) { S[key] = cap; n++; }
+  }
+  return n;
 }
 
 /** 审计用：全部被声明的顶层状态字段名（含路径首段），供单测与 defaultState() 全集比对。 */
 export function declaredFieldNames() {
   const out = new Set([
     ...CROSS_RUN_KEYS, ...COMPAT_KEYS, ...NESTED_DEFAULT_KEYS,
-    ...RUN_RESET_KEYS,
+    ...RUN_RESET_KEYS, ...RUN_RUNTIME_KEYS,
     ...ABSOLUTE_CLOCK_PATHS.map(p => p.split('.')[0]),
   ]);
   return [...out];

@@ -16,6 +16,10 @@ export function defaultState() {
     // 统计
     totalClicks: 0, totalBuys: 0,
     runEarned: 0, allTimeEp: 0,
+    // v3.10.2 ④：本局运行时快照（EP 上限时间基座 / 满仓涓流计时器）。
+    // 显式声明默认值，转生/轮回由 RUN_RUNTIME_KEYS 统一归零，避免跨局残留过高仓容。
+    _rpOverflowSeen: false, _epCapBasisCps: 0, _epCapBasisSig: '',
+    _atriumTrickle: 0, _ptTrickle: 0,
     // 线程
     cultists: [], staffUnhappy: 0,
     // 升级/建筑

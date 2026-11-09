@@ -1,6 +1,13 @@
-// v3.10.0 真实浏览器 30 天 mock 推演 + 可玩性 / 数值准确性 / 全功能 UI 准确性验收
+// v3.10.2 真实浏览器 30 天 mock 推演 + 可玩性 / 数值准确性 / 全功能 UI 准确性验收
 //
-// 与 v3.9.0 版相比的增强：
+// v3.10.2 反馈清单新增的 UI 验收（feedbackUI）：
+//   - 顶栏「产出/s → 消耗/s」位于最左；警告标志显隐与净流读侧一致；
+//   - 受控夹具压低产出 / 抬高消耗，实证 ⚠ 出现、产出与消耗两项悬浮均含预期 EP 耗尽时间、
+//     aria-label 同步；夹具用完整快照 + finally 恢复，不污染推演终态；
+//   - FP 资源门控：未解锁时研究面板 DOM 无 FP 卡片，解锁后三项齐全；
+//   - 顶栏 RP 余额未超上限（重置钳制）、任务面板不存在待领取的负面任务。
+//
+// 与 v3.9.0 版相比的增强（v3.10.0 基线）：
 //   - 新玩法「相位共鸣」：自动玩家在解锁后经产品真实入口开启共鸣、轮换焦点，
 //     长期推演中核对叠层 / 换相位减半 / 上限 20 / 四管线增益与代价 / CPS 同口径；
 //   - 抽象层：状态生命周期单一真源、成就注册表、面板键 / deps 清单在真实浏览器里
@@ -398,8 +405,66 @@ async function uiCheck(page) {
         orphanLines, clickOk, focusOk, textOk, rows: sm2.rows.map(r => ({ key: r.key, mult: r.mult })) };
     })();
 
+    // v3.10.2 反馈清单 UI：顶栏顺序 / 负净流告警与耗尽 ETA / FP 研究门控 / 余额钳制 / 负面任务
+    const feedbackUI = (() => {
+      const bar = document.querySelector('.topbar');
+      const stats = bar ? [...bar.children].filter(el => el.classList.contains('stat')) : [];
+      const firstTwo = [stats[0]?.querySelector('span')?.id, stats[1]?.querySelector('span')?.id];
+      const orderOk = firstTwo[0] === 'h-cps' && firstTwo[1] === 'h-salary';
+      const warn = document.getElementById('h-drain-warn');
+      const tipText = () => (stats[0]?.dataset?.tip || '') + '|' + (stats[1]?.dataset?.tip || '');
+      const cps0 = q.computeCps(), drain0 = q.totalDrainPerSec();
+      const restWarnOk = !!warn && ((warn.style.display !== 'none') === (drain0 > cps0));
+      const restTipOk = (drain0 > cps0) === tipText().includes('EP 预计');
+
+      // 受控夹具：压低产出、抬高消耗，实证「产出 < 消耗」时警告标志与悬浮 ETA 真的出现。
+      // 完整快照 + finally 恢复，不污染 30 天推演终态。
+      const snapshot = JSON.stringify(S);
+      let forced = { ok: false, cps: 0, drain: 0, warnShown: false, etaOk: false, ariaOk: false, eta: '' };
+      try {
+        S.buffMult = 0.001; S.buffUntil = Date.now() + 60000;
+        S.ep = 1e12;
+        S.ptAutoHatch = true; S.ptDistillOn = true; S.ptHatchLv = 20;
+        S.converterOn = { vehicles: false, atrium: false, hatch: true };
+        window.__gameDirty.top = true;
+        q.sim.render();
+        const cps1 = q.computeCps(), drain1 = q.totalDrainPerSec();
+        const eta = q.fmtDepletionEta(q.epDepletionSec(S.ep, cps1, drain1));
+        const tip = tipText();
+        forced = {
+          ok: drain1 > cps1, cps: cps1, drain: drain1, eta,
+          warnShown: !!warn && warn.style.display !== 'none',
+          etaOk: tip.includes('EP 预计') && tip.includes(eta) && tip.includes('后耗尽'),
+          ariaOk: !!warn && (warn.getAttribute('aria-label') || '').includes(eta),
+        };
+      } finally {
+        const saved = JSON.parse(snapshot);
+        for (const k of Object.keys(S)) delete S[k];
+        Object.assign(S, saved);
+        window.__gameDirty.top = true;
+        q.sim.render();
+      }
+
+      // FP 研究门控：资源未解锁时 DOM 不得出现 FP 卡片，解锁后三项齐全。
+      const list = document.getElementById('research-upgrade-list');
+      const domIds = [...(list?.querySelectorAll('[data-research]') || [])].map(el => el.dataset.research);
+      const fpIds = q.BALANCE.researchUpgs.filter(u => u.fx && u.fx.key === 'faith').map(u => u.id);
+      const fpUnlocked = q.anchorDone('faith', S);
+      const fpGateOk = fpUnlocked
+        ? fpIds.every(id => domIds.includes(id))
+        : fpIds.every(id => !domIds.includes(id));
+
+      const rpTxt = document.getElementById('h-rp')?.textContent || '';
+      const capOk = (S.rp || 0) <= q.rpCap() && !/NaN|undefined|Infinity/.test(rpTxt);
+      const pendingDebuff = (S.projects || [])
+        .filter(p => p.status === 'pending' && p.reward && p.reward.kind === 'debuff').length;
+      return { orderOk, firstTwo, restWarnOk, restTipOk, forced,
+        fpIds, fpUnlocked, fpGateOk, domCount: domIds.length, capOk, rpTxt,
+        pendingDebuff, runtimeKeys: q.RUN_RUNTIME_KEYS.length };
+    })();
+
     return {
-      tabs: res, epTxt, priceMatch, wikiOk, wikiSections, schedUI, resonanceUI,
+      tabs: res, epTxt, priceMatch, wikiOk, wikiSections, schedUI, resonanceUI, feedbackUI,
       researchGroups: q.RP_GROUPS.map(g => ({ key: g.key, n: g.ids.length })),
       researchTotal: q.BALANCE.researchUpgs.length,
       policyGroups: q.POLICY_GROUPS.length,
@@ -745,6 +810,24 @@ try {
   if (ui.achV390Unlocked.length >= needV390) ok('v3.9.0 新增成就在长期推演中真实达成',
     `${ui.achV390Unlocked.join(', ')}（${DAYS} 天门槛 ${needV390} 条）`);
   else bad('v3.9.0 新增成就不可达', JSON.stringify(ui.achV390Unlocked));
+  // v3.10.2 编号反馈清单：四条改动的浏览器侧 UI 验收
+  const fb = ui.feedbackUI || {};
+  if (fb.orderOk) ok('顶栏产出/s 与 消耗/s 位于最左', fb.firstTwo.join(' → '));
+  else bad('顶栏顺序不符', JSON.stringify(fb.firstTwo));
+  if (fb.restWarnOk && fb.restTipOk) ok('警告标志显隐与净流读侧一致，悬浮 ETA 按状态出现');
+  else bad('顶栏净流状态与 UI 不一致', JSON.stringify({ w: fb.restWarnOk, t: fb.restTipOk }));
+  if (fb.forced?.ok && fb.forced.warnShown && fb.forced.etaOk && fb.forced.ariaOk) {
+    ok('产出 < 消耗时显示 ⚠ 并在悬浮给出预期 EP 耗尽时间',
+      `cps ${fx(fb.forced.cps)} < 消耗 ${fx(fb.forced.drain)} / ETA ${fb.forced.eta}`);
+  } else bad('负净流告警或 ETA 未生效', JSON.stringify(fb.forced));
+  if (fb.fpGateOk) ok('FP 资源门控：研究面板与顶栏 FP 同源',
+    `FP ${fb.fpUnlocked ? '已' : '未'}解锁 / 面板 ${fb.domCount} 项 / FP 项 ${(fb.fpIds || []).length}`);
+  else bad('FP 研究项门控与资源解锁不一致', JSON.stringify(fb));
+  if (fb.capOk) ok('顶栏 RP 余额未超上限（重置钳制生效）', fb.rpTxt);
+  else bad('RP 余额超过上限', fb.rpTxt);
+  if (fb.pendingDebuff === 0) ok('任务面板不存在待领取的负面任务');
+  else bad('负面任务仍停在待领取状态', String(fb.pendingDebuff));
+
   const flowErrList = ui.flow.errors || [];
   if (flowErrList.length === 0) ok('资源流错误队列为空');
   else bad('资源流错误队列非空', JSON.stringify(flowErrList.slice(0, 2)));

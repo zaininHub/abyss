@@ -91,11 +91,20 @@ export function spawnProject() {
   }
 }
 
+// v3.10.2 ①：任务终结单一真源——累计完成数 + 终止状态。
+// 普通任务由 claimProject() 在玩家领取时调用；负面任务达成目标后由 tickProjects() 自动调用。
+// 两条路径共用，避免「领取计数」与「自动结束」各自记一套口径。
+function finishProject(p) {
+  p.status = 'claimed';
+  S.projectsDone = (S.projectsDone || 0) + 1;
+}
+
 // v2.0 P1 修复：tickProjects 返回本帧是否有状态变化（changed），
 // 由 main.js 主循环消费：changed === true 时置 dirty.projects 触发任务面板重绘。
 export function tickProjects() {
   const now = Date.now();
   let changed = false;
+  let autoDone = false; // 本帧是否有负面任务自动结束（需要落盘）
   const before = S.projects.length;
   for (const p of S.projects) {
     if (p.status !== 'active') continue;
@@ -111,8 +120,17 @@ export function tickProjects() {
     else if (p.type === 'buy_thread') p.progress = S.cultists.length - (p.threadsAt || 0);
 
     if (p.progress >= p.goal) {
-      p.status = 'pending'; p.pendingAt = now; changed = true;
-      if (p.reward.kind === 'debuff') { S.buffMult = 1; S.buffUntil = 0; }
+      if (p.reward.kind === 'debuff') {
+        // v3.10.2 ①：负面任务没有任何奖励可领，达成目标即自动结束并解除 DEBUFF。
+        // 旧行为会停在 pending 等玩家点「领取奖励」，玩家却只能领到一个「-20% 已结束」的空按钮。
+        S.buffMult = 1; S.buffUntil = 0;
+        finishProject(p);
+        autoDone = true;
+        if (logFn) logFn(`任务「${p.name}」已结束，产能限制解除`, 'good');
+      } else {
+        p.status = 'pending'; p.pendingAt = now;
+      }
+      changed = true;
     }
     if (now > p.deadline) {
       p.status = 'expired'; changed = true;
@@ -123,9 +141,17 @@ export function tickProjects() {
   }
   S.projects = S.projects.filter(p => {
     if (p.status === 'claimed' || p.status === 'expired') return false;
+    // v3.10.2 ① 旧档兼容：改造前遗留的 pending 负面任务一并自动终结，不再要求玩家点领取。
+    if (p.status === 'pending' && p.reward && p.reward.kind === 'debuff') {
+      S.buffMult = 1; S.buffUntil = 0;
+      finishProject(p);
+      autoDone = true;
+      return false;
+    }
     if (p.status === 'pending' && now - p.pendingAt > PENDING_EXPIRE) return false;
     return true;
   });
+  if (autoDone) save(S); // 与手动领取 claimProject() 同口径：终结即落盘
   if (S.projects.length !== before) changed = true;
   // v2.8.28：任务版无论任务状态如何（active 进行中 / pending 完成未领取）都占位——
   // 完成多个任务但未领取奖励时不再发放新任务，领取（claimed）或过期（expired）后才腾出位置。
@@ -151,12 +177,10 @@ export function claimProject(p) {
     else epGained = addEp(Math.min(r.amount * 100, epStorageCap()));
   }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }
-  p.status = 'claimed';
-  // v3.8.0 review 修复：领取成功才计入累计完成数。
-  // 此前只有 settlePause() 的暂停回程会 ++，在线正常游玩（达成目标 → 手动领取）永远为 0，
-  // 导致章节 25「番外 · 排班表」、政策 observe / orchestration、成就 projects50、
-  // 秩序线 15A 与「效能编排」解锁的任务路径全部永久不可达。此处作为计数唯一真源补齐。
-  S.projectsDone = (S.projectsDone || 0) + 1;
+  // v3.8.0 review 修复：领取成功才计入累计完成数（此前只有暂停回程会 ++，在线正常游玩
+  // 达成目标 → 手动领取永远为 0，章节 25 / 政策 observe / 成就 projects50 / 编排解锁全部不可达）。
+  // v3.10.2 ①：收敛到 finishProject()，与负面任务自动结束共用同一计数入口。
+  finishProject(p);
   save(S); // v2.8.28 修复：领取即落盘——消除 5s 节流保存窗口（领取后刷新不再丢失奖励）
   return { ok: true, epGained, amount: r.kind === 'ep' ? r.amount : 0 };
 }

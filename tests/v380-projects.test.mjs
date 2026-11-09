@@ -41,10 +41,15 @@ function reset() {
   S.orchestration = { mode: 'balanced', autoTide: false };
 }
 
-test('P1 源码守卫：在线领取计数写入在 claimProject 内，暂停回程不得绕过它', () => {
+test('P1 源码守卫：领取计数收敛到 finishProject，暂停回程不得绕过它', () => {
   const body = PROJECTS_SRC.slice(PROJECTS_SRC.indexOf('export function claimProject'));
-  assert.match(body, /S\.projectsDone\s*=\s*\(S\.projectsDone\s*\|\|\s*0\)\s*\+\s*1/,
-    'claimProject 必须显式自增累计完成数');
+  assert.match(body, /finishProject\(p\)/, 'claimProject 必须走共享终结入口');
+  // v3.10.2 ①：负面任务达标后由 tickProjects 自动调用同一入口，两条路径不得各记一套口径
+  const shared = PROJECTS_SRC.slice(PROJECTS_SRC.indexOf('function finishProject'),
+    PROJECTS_SRC.indexOf('// v2.0 P1 修复'));
+  assert.match(shared, /S\.projectsDone\s*=\s*\(S\.projectsDone\s*\|\|\s*0\)\s*\+\s*1/,
+    '累计完成数唯一真源在 finishProject');
+  assert.match(PROJECTS_SRC, /autoDone = true/, '负面任务自动结束复用同一入口');
   // v3.10.0 设计变更：暂停回程不再自行发奖 / 自行计数，改为冻结任务时钟，
   // 与 applyOffline()「离线期间任务冻结」严格同口径；计数唯一真源收敛到 claimProject()。
   const settle = MAIN_SRC.slice(MAIN_SRC.indexOf('function settlePause()'));

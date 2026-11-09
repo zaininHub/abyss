@@ -8,6 +8,7 @@ global.window = { addEventListener() {} };
 
 const { S } = await import('../src/state.js');
 const rc = await import('../src/modules/reincarn.js');
+const eco = await import('../src/modules/economy.js');
 
 function setup(extra = {}) {
   Object.assign(S, {
@@ -63,7 +64,10 @@ test('doReincarn：深度重置本局并保留跨周期资产', () => {
   assert.equal(S.abyssEcho, before.echo + r.gain, '回响应累计');
   assert.equal(S.reincarned, before.reincarned + 1, '轮回次数 +1');
   // 跨周期保留
-  assert.equal(S.rp, before.rp, 'RP 跨周期保留');
+  // v3.10.2 ④：RP 余额仍是跨周期保留，但本局扩容与产出基座归零后上限回落到新档值，
+  // 超限部分必须按新上限钳制，否则会出现「余额 31m / 上限 3,000」与超上限购买。
+  assert.equal(S.rp, Math.min(before.rp, eco.rpCap()), 'RP 跨周期保留并钳到重置后的新上限');
+  assert.ok(S.rp <= eco.rpCap(), '余额不得高于当前上限');
   assert.equal(S.es, before.es, 'ES 跨周期保留');
   assert.equal(S.delve.depth, before.delveDepth, '深潜层深保留');
   assert.equal(S.bazaar.trades, before.bazaarTrades, '集市笔数保留');

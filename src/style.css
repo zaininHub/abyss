@@ -72,6 +72,13 @@ body {
 
 .stat b { color: var(--accent); }
 
+/* v3.10.2 ②：顶栏「产出 < 消耗」警告标志。悬浮所在 stat 的气泡查看预期 EP 耗尽时间；
+   刻意不加原生 title，避免与 .stat[data-tip] 的自定义气泡双弹窗。 */
+.drain-warn {
+  color: var(--bad); font-size: 13px; line-height: 1; margin-left: 2px;
+  cursor: help; user-select: none;
+}
+
 .buff-tag {
   padding: 2px 8px;
   border-radius: 3px;

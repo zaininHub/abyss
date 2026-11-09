@@ -4,6 +4,8 @@ import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
+import { fmtLongDuration } from '../core/format.js'; // v3.10.2：长时段格式化单一真源（顶栏耗尽预估复用）
+export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改动
 
 // v3.6.0 方向⑤⑧：星际探索重构——
 //   出发消耗 EP 起步 M 量级、按数量级递增（1e6 → 1e11），时间按「天」计（1/2/4/7/14/30 天）；
@@ -44,13 +46,7 @@ export function galaxyDur(g) {
   const div = isColonized(g.id) ? (BALANCE.jump.colonizeTimeDiv) : 1;
   return (g.durDays * 86400) / (jumpMult() * div);
 }
-// v3.6.0 方向⑤：天/小时级航程的可读文案（fmtTime 只输出 H:MM:SS，24 小时被写成 "24:00:00"）
-export function fmtLongDuration(sec) {
-  sec = Math.max(0, Math.floor(sec));
-  if (sec >= 86400) { const d = sec / 86400; return `${Number.isInteger(d) ? d : d.toFixed(1)} 天`; }
-  if (sec >= 3600) { const h = sec / 3600; return `${Number.isInteger(h) ? h : h.toFixed(1)} 小时`; }
-  return fmtTime(sec);
-}
+// v3.10.2：fmtLongDuration 已下沉 core/format.js，本文件顶部 import 后 re-export。
 
 export function petCpsBonus() {
   // 出战异兽随队加成：每只 +10%（出战位上限 3）

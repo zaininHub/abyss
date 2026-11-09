@@ -8,7 +8,7 @@
 import { S, save, defaultState } from '../state.js';
 import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
-import { fmt } from './economy.js';
+import { fmt, clampRunResourceBalances } from './economy.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
 import { BALANCE } from '../data/balance.js';
@@ -73,7 +73,8 @@ export function doReincarn() {
   // v3.10.0：与晋升共用 core/stateSchema.resetRunState，差异只在下面两行显式表达。
   recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
-  resetRunState(S, defaultState(), {});
+  // v3.10.2 ④：与晋升同口径，重置后上限回落并钳制隐式保留的资源余额。
+  resetRunState(S, defaultState(), { clamp: clampRunResourceBalances });
   crewPush('深渊轮回：班组随本局一起被抹去', 'bad'); // v3.1.0 反馈③：班组流水
   // v2.9.0 优化③：轮回不再清除 collapsed/_collapseAt——转生不可脱离深渊（崩溃仅由「同归于尽」抉择结算）
   S.riftExpedition = null; // 轮回独有：裂隙远征随本局抹去（晋升保留）

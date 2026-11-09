@@ -2,7 +2,7 @@ import { S, defaultState } from '../state.js';
 import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
-import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp } from './economy.js';
+import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp, clampRunResourceBalances } from './economy.js';
 import { spawnProject } from './projects.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
@@ -29,7 +29,8 @@ export function doPrestige(talentId) {
   const keepAiCore = !!S.tech.ai_core;
   recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
-  resetRunState(S, defaultState(), { keepAiCore, keepFocus: talentId === 'legacy' });
+  // v3.10.2 ④：重置后上限回落到新档值，隐式保留的 RP/PT/DM 余额同步钳制。
+  resetRunState(S, defaultState(), { keepAiCore, keepFocus: talentId === 'legacy', clamp: clampRunResourceBalances });
   crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水
   // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
   let startEp = 0;

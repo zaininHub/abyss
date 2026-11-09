@@ -1,4 +1,5 @@
 import { S } from '../state.js';
+import { clampCappedResources } from '../core/stateSchema.js'; // v3.10.2 ④：上限回落后的余额钳制（纯函数）
 import { UPGRADES } from '../data/upgrades.js';
 import { ETERNALS, esCost as _esCost } from '../data/eternals.js';
 import { PETS, petBaseMult, petLevelMilestoneMult, petsStarving } from '../data/pets.js';
@@ -730,7 +731,8 @@ function vaultCap(base, per, lv) {
 }
 // v3.4.9 反馈⑥：RP/PT 仓容跟随 EP 上限（「产出基座」）——星图探索把 RP/TP 消耗抬到与 EP 同量级后，
 //   三仓库那点线性扩容（RP 满级约 4.3 万）根本装不下一次远征的 RP 报价，必须以 EP 上限为基座同步放大。
-//   取「仓库值」与「EP 上限 × 比例」中的较大者：老档不会掉容量，新档随产出自动抬高。
+//   v3.5.0 起口径是「仓库增量 + EP 上限 × 比例」相加（不再是早年的 max() 取较大者），
+//   所以没买仓库升级时上限也会随 EP 上限抬到千万级；新档 EP 上限 2,000 时 RP 上限恰为 3,000。
 function prodCapFloor(ratio) {
   const epCap = epStorageCap();
   return Math.round(Math.max(0, epCap) * ratio);
@@ -744,6 +746,14 @@ export function ptCap() { return Math.round(1000 + vaultCap(0, 200, S.upgrades &
 export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
 export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
 export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }
+
+// v3.10.2 ④：上限回落后的余额钳制。rp / pt / dm 的余额是「隐式保留」（既不在跨局保留清单，
+//   也不在本局重置清单），而它们的上限随本局 upgrades 变化。转生 / 轮回后上限回到新档值，
+//   若不钳制会显示「余额 31m / 上限 3,000」，且可用超额 RP 绕过进度曲线买光研究项。
+//   由 resetRunState 的 opts.clamp 注入，也在 startApp() 对旧档做一次性兜底。
+export function clampRunResourceBalances() {
+  return clampCappedResources(S, { rp: rpCap(), pt: ptCap(), dm: dmCap() });
+}
 
 export function prestigeNeed() {
   // v2.8.27：首升 1.5e8→3e9、增长指数 3.2→1.5——首轮 7-10 天转生、后续 3-5 天（模拟：cps×0.5+cost×3 下 13.5 模拟天）
