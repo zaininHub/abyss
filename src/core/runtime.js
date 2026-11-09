@@ -10,15 +10,39 @@ import { createDirty } from './panelKeys.js';
 export const dirty = createDirty();
 
 // ========== 日志系统 ==========
-const logs = [];
+// v3.10.4 ②：改为「最近 1 小时」时间窗口保留 + localStorage 缓存（刷新后恢复，即"缓存 1 小时"）。
+//   旧实现为内存数组上限 40、无持久化，刷新即丢。每条记 { t: 时间戳, h: HTML }，渲染时按 1h 过滤。
+const LOG_TTL = 3600 * 1000; // 1 小时
+const LOG_KEY = 'abyss_idle_v2_logcache';
+let logs = [];
+function loadLogCache() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(LOG_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(arr)) {
+      const now = Date.now();
+      logs = arr.filter(e => e && typeof e.t === 'number' && now - e.t < LOG_TTL);
+    }
+  } catch { /* 坏档忽略 */ }
+}
+function saveLogCache() {
+  if (typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(LOG_KEY, JSON.stringify(logs)); } catch { /* 容量超限忽略 */ }
+}
+loadLogCache();
 export function log(msg, cls) {
   const t = new Date();
   const hh = String(t.getHours()).padStart(2, '0'), mm = String(t.getMinutes()).padStart(2, '0');
   const clsHtml = cls === 'good' ? ' class="ev-good"' : cls === 'bad' ? ' class="ev-bad"' : '';
-  logs.unshift(`<div><span class="t mono">${hh}:${mm}</span><span${clsHtml}>${msg}</span></div>`);
-  if (logs.length > 40) logs.pop();
+  logs.unshift({ t: t.getTime(), h: `<div><span class="t mono">${hh}:${mm}</span><span${clsHtml}>${msg}</span></div>` });
+  // 时间窗口裁剪（1 小时）+ 安全硬上限（防止异常高频日志无限增长）
+  const cutoff = t.getTime() - LOG_TTL;
+  while (logs.length && logs[logs.length - 1].t < cutoff) logs.pop();
+  if (logs.length > 500) logs.length = 500;
+  saveLogCache();
   const el = (typeof document !== 'undefined') ? document.getElementById('log-content') : null;
-  if (el) el.innerHTML = logs.join('');
+  if (el) el.innerHTML = logs.map(e => e.h).join('');
 }
 
 // ========== toast 提示 ==========

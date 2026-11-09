@@ -9,7 +9,9 @@ import { S } from '../state.js';
 // 满级单件总价 ≈ 150×(1+1.85+3.42+6.33+11.7) ≈ 3.5K DM（旧 ≈ 1.1K），对齐「DM 长线沉淀」定位
 export const RELICS = [
   { id: 'tome',     name: '深渊古卷', desc: '全局产出 +8%/级',            effect: 0.08, cap: 5, base: 150, growth: 1.85, gate: () => true },
-  { id: 'prayer',   name: '永暗祷文', desc: 'FP 产出 +15%/级',           effect: 0.15, cap: 5, base: 240, growth: 1.85, gate: () => true },
+  // v3.10.4 ①：永暗祷文是 FP(信仰) 产出加成，FP 未解锁（宗教未解锁）前不应作为可购升级出现，
+  //   gate 由恒 true 改为「宗教已解锁」——与顶栏 FP / FP 研究项门控同源（religionUnlocked），避免「FP 没解锁却解锁 FP 相关升级」。
+  { id: 'prayer',   name: '永暗祷文', desc: 'FP 产出 +15%/级',           effect: 0.15, cap: 5, base: 240, growth: 1.85, gate: () => !!(S.religion && S.religion.unlocked), gateHint: '信仰解锁（FP 可用）后苏醒' },
   { id: 'compass',  name: '星渊罗盘', desc: '研究点转换效率 +10%/级',      effect: 0.10, cap: 5, base: 450, growth: 1.85, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
   { id: 'eye',      name: '虚空之眼', desc: '离线效率 +12%/级',            effect: 0.12, cap: 5, base: 360, growth: 1.85, gate: () => !!(S.resDiscovered && S.resDiscovered.rp) },
   { id: 'tentacle', name: '混沌触须', desc: 'AI 决策间隔 -10%/级', effect: 0.10, cap: 5, base: 600, growth: 1.85, gate: () => !!(S.tech && S.tech.ai_core) },

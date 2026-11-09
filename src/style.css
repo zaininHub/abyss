@@ -62,7 +62,12 @@ body {
   font-size: 12px;
   position: relative; /* v2.8.21 ⑦：来源悬浮气泡锚点 */
 }
-.stat[data-tip]:hover::after {
+/* v3.10.4 ③：统一悬浮气泡——.stat / .item / .btn 共用同一套 [data-tip] 样式，
+   政策等面板改用 data-tip 后与其它面板一致（不再用原生 title 或零散内联提示）。 */
+.item[data-tip], .btn[data-tip] { position: relative; }
+.stat[data-tip]:hover::after,
+.item[data-tip]:hover::after,
+.btn[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute; top: 100%; left: 0; z-index: 999;
   background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
@@ -337,6 +342,8 @@ body {
 #snap-list .item { cursor: default; }
 #snap-list .item .snap-use { cursor: pointer; }
 #snap-list .item .snap-del { cursor: pointer; }
+/* v3.10.4 ④：下拉存档列表按钮同样可点手型 */
+#save-list .item .snap-use, #save-list .item .snap-overwrite, #save-list .item .snap-export, #save-list .item .snap-del { cursor: pointer; }
 
 /* v2.3.2 §5.2：链提示样式（.chain-hint / .chain-next）随挂载废除一并移除 */
 /* v2.3.1 ⑤（rev18 9.3）：分组显示小标题（分组纯显示不拆链；组内可见 0 项整组不渲染） */
@@ -699,7 +706,7 @@ body {
 .log-panel { max-height: 240px; }
 
 .log-content {
-  max-height: 200px;
+  height: 200px; /* v3.10.4 ②：固定高度（替代 max-height），日志界面大小恒定，内容滚动 */
   overflow-y: auto;
   font-size: 11.5px;
   line-height: 1.6;
@@ -936,7 +943,7 @@ body.paused .pet-grid .pet-card {
   }
   /* 单屏下的紧凑化：日志面板收矮 */
   .log-panel { max-height: 190px; }
-  .log-content { max-height: 140px; }
+  .log-content { height: 140px; }
   .hero-click { padding: 12px; }
   .big { font-size: 30px; }
 }
@@ -1494,3 +1501,19 @@ body {
 }
 .save-menu:hover .save-menu-pop, .save-menu:focus-within .save-menu-pop { display: flex; }
 .save-menu-pop .btn { width: 100%; }
+
+/* v3.10.4 ④：下拉存档管理器（参考 KG）——直接展示所有存档列表，每条含 读取/覆盖/导出/删除 */
+.save-menu-pop { min-width: 280px; max-height: 72vh; overflow-y: auto; }
+.save-actions { display: flex; gap: 4px; }
+.save-actions .btn { width: auto; flex: 1; padding: 4px 6px; font-size: 11px; }
+.save-list-label { font-size: 11px; color: var(--text-3); margin: 6px 0 4px; }
+.save-list { display: flex; flex-direction: column; gap: 6px; }
+.save-empty { font-size: 12px; color: var(--text-2); padding: 8px; border: 1px dashed var(--border); border-radius: 5px; }
+.save-list .snap-row { flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 8px; }
+.save-list .snap-main .name { display: flex; justify-content: space-between; }
+.save-list .snap-sub { font-size: 10.5px; color: var(--text-3); }
+.save-list .snap-btns { display: flex; gap: 4px; }
+.save-list .snap-btns .btn { flex: 1; width: auto; padding: 3px 4px; font-size: 10px; }
+.save-sep { border: none; border-top: 1px dashed var(--border); margin: 8px 0; }
+.save-legacy { display: flex; flex-direction: column; gap: 4px; }
+.save-legacy .btn { width: 100%; font-size: 11px; padding: 3px 6px; }

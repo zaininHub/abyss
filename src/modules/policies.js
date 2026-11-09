@@ -69,7 +69,8 @@ export function renderPolicyPanel(container) {
       <div data-fold-body="${g.id}" style="display:none">`;
       for (const p of g.policies) {
         const isCur = chosen === p.id;
-        html += `<div class="item ${isCur ? 'policy-on' : 'cant'}" data-policy-group="${g.id}" data-policy="${p.id}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
+        // v3.10.4 ③：政策项改用统一 [data-tip] 气泡（与 .stat 同一套样式），悬浮即显完整说明
+        html += `<div class="item ${isCur ? 'policy-on' : 'cant'}" data-policy-group="${g.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
           <div class="name"><span>${isCur ? '✓ ' : ''}${p.name}</span><span class="count">${p.desc}</span></div>
         </div>`;
       }
@@ -83,7 +84,7 @@ export function renderPolicyPanel(container) {
     const chosen = null;
     for (const p of curGroup.policies) {
       const gate = p.unlock ? p.unlock() : true;
-      html += `<div class="item ${!gate ? 'cant' : ''}" data-policy-group="${curGroup.id}" data-policy="${p.id}" style="cursor:pointer;">
+      html += `<div class="item ${!gate ? 'cant' : ''}" data-policy-group="${curGroup.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;">
         <div class="name"><span>${p.name}</span><span class="count">${p.desc}</span></div>
         <div style="font-size:10.5px;color:var(--text-3)">${!gate ? (curGroup.id === 'deepen' ? '需先选定对应路线（深渊/秩序）' : '未满足前置') : '点击选定（选定后解锁下一组）'}</div>
       </div>`;

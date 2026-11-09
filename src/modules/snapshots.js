@@ -81,4 +81,31 @@ export function deleteSnapshot(id) {
   write(read().filter(x => x.id !== id));
 }
 
+// v3.10.4 ④：用当前进度覆盖指定槽位（列表「覆盖」按钮）
+export function overwriteSnapshot(id, dataStr) {
+  const list = read();
+  const idx = list.findIndex(x => x.id === id);
+  if (idx < 0) return { ok: false, reason: '快照不存在' };
+  const covered = list[idx].name;
+  list[idx] = { id: list[idx].id, name: list[idx].name, time: Date.now(), data: dataStr };
+  write(list);
+  return { ok: true, covered };
+}
+
+// v3.10.4 ④：外部存档作为新快照入列（最多 SNAP_MAX，已满则覆盖最早）
+export function importToSnapshot(dataStr, name) {
+  const list = read();
+  const snap = { id: 'snap_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name: name || '导入的存档', time: Date.now(), data: dataStr };
+  if (list.length < SNAP_MAX) {
+    list.push(snap);
+    write(list);
+    return { ok: true, covered: null, snap };
+  }
+  const idx = list.indexOf([...list].sort((a, b) => a.time - b.time)[0]);
+  const covered = list[idx] ? list[idx].name : null;
+  list[idx] = snap;
+  write(list);
+  return { ok: true, covered, snap };
+}
+
 export { fmtStamp };

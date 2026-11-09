@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.10.3</title>
+<title>深渊效能工作台 v3.10.4</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-XrgG-fgP.js"></script>
-  <link rel="stylesheet" href="./assets/index-DsZ13I9Y.css">
+  <script defer src="./assets/index-8H4d0lq4.js"></script>
+  <link rel="stylesheet" href="./assets/index-BtOjaBGb.css">
 </head>
 <body>
 <div id="app">
@@ -363,12 +363,24 @@
     <button class="btn" id="pauseBtn">暂停</button>
     <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
     <div class="save-menu">
-      <button class="btn" id="save-menu-btn" title="存档：导出 / 导入 / 快照管理（悬浮展开）">💾 存档</button>
-      <div class="save-menu-pop">
-        <button class="btn" id="export-btn">导出存档</button>
-        <button class="btn" id="import-btn">导入存档</button>
-        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-        <button class="btn" id="snap-btn">存档管理</button>
+      <!-- v3.10.4 ④：💾 存档改为下拉直接展示所有存档（参考 KG）；每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；
+           导入导出作为每条的功能；旧「存档管理」模态作为兼容入口保留于底部 .save-legacy -->
+      <button class="btn" id="save-menu-btn" title="存档管理：下拉直接展示所有存档">💾 存档</button>
+      <div class="save-menu-pop" id="save-pop">
+        <div class="save-actions">
+          <button class="btn" id="save-new" title="保存当前进度为新快照（最多 3 个，已满则覆盖最早）">+ 保存新档</button>
+          <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
+          <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
+        </div>
+        <div class="save-list-label">存档列表</div>
+        <div id="save-list" class="save-list"></div>
+        <hr class="save-sep">
+        <div class="save-legacy">
+          <button class="btn" id="export-btn">导出当前</button>
+          <button class="btn" id="import-btn">导入覆盖当前</button>
+          <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+          <button class="btn" id="snap-btn">存档管理（旧）</button>
+        </div>
       </div>
     </div>
   </div>

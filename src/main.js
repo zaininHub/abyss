@@ -16,7 +16,9 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
-import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, SNAP_MAX, fmtStamp } from './modules/snapshots.js';
+import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, overwriteSnapshot, importToSnapshot, SNAP_MAX, fmtStamp } from './modules/snapshots.js';
+// v3.10.4 ④：导入模式（'current' = 覆盖当前；'snapshot' = 导入为新快照）；模块级声明，供模块级的 importSave 读取
+let importMode = 'current';
 // v2.0：故事线管理器
 import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePackage } from './core/storylineManager.js';
 import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn } from './modules/projects.js';
@@ -1591,6 +1593,25 @@ function bindEvents() {
     }
   });
 
+  // v3.10.4 ④：存档管理简化为「💾 存档」下拉直接展示所有存档列表（参考 KG）。
+  //   每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；导入导出作为每条的功能。
+  importMode = 'current'; // 复位为默认（'current' = 旧「导入覆盖当前」；'snapshot' = 导入为新快照入列）
+  document.getElementById('save-new')?.addEventListener('click', () => { onSnapSave(); renderSaveList(); });
+  document.getElementById('clear-game')?.addEventListener('click', () => {
+    askConfirm('清档（删除当前游戏）', '将删除当前本地游戏，回到全新开局。\n存档快照保留，可逐个删除；此操作不可撤销，确定继续？', () => { doReset(); });
+  });
+  document.getElementById('import-btn2')?.addEventListener('click', () => {
+    importMode = 'snapshot';
+    document.getElementById('import-file')?.click();
+  });
+  const saveMenuEl = document.querySelector('.save-menu');
+  if (saveMenuEl) {
+    saveMenuEl.addEventListener('mouseenter', renderSaveList);
+    saveMenuEl.addEventListener('focusin', renderSaveList);
+  }
+  document.getElementById('save-list')?.addEventListener('click', onSaveListClick);
+  renderSaveList(); // 首屏预渲染（下拉展开时再刷新一次）
+
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）
 
   // v2.7.0：深渊遗物购买（事件委托）
@@ -1815,13 +1836,14 @@ function onSnapSave() {
   const r = saveSnapshot();
   if (r.ok) {
     renderSnapshotList();
+    renderSaveList();
     toast('快照已保存（' + listSnapshots().length + '/' + SNAP_MAX + '）');
     return;
   }
   if (r.needCover) {
     askConfirm('快照已满，覆盖最早的快照', `已保存 ${SNAP_MAX} 个快照。新快照将覆盖最早的「${r.needCover.name}（${fmtStamp(r.needCover.time)}）」，确定保存？`, () => {
       const res = coverOldest(r.snap);
-      if (res.ok) { renderSnapshotList(); toast(res.covered ? '已覆盖旧快照，新快照已保存' : '快照已保存'); }
+      if (res.ok) { renderSnapshotList(); renderSaveList(); toast(res.covered ? '已覆盖旧快照，新快照已保存' : '快照已保存'); }
       else toast('保存失败：本地存储不可用');
     });
   } else {
@@ -1829,16 +1851,103 @@ function onSnapSave() {
   }
 }
 
-// v2.5 ⑤：导入存档——校验 JSON + 版本字段，写回并刷新；原档自动备份到 abyss_idle_v2_bak
+// v3.10.4 ④：下拉存档列表渲染（与模态列表同源数据，但每条多 覆盖/导出 操作）
+function renderSaveList() {
+  const box = document.getElementById('save-list');
+  if (!box) return;
+  const snaps = listSnapshots();
+  box.innerHTML = '';
+  if (!snaps.length) {
+    box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 保存新档」生成（最多 ${SNAP_MAX} 个）。</div>`;
+    return;
+  }
+  for (const sn of snaps) {
+    const row = document.createElement('div');
+    row.className = 'item snap-row';
+    row.dataset.snap = sn.id;
+    row.dataset.name = sn.name;
+    row.dataset.time = sn.timeText;
+    const sm = sn.summary || {};
+    const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
+    row.innerHTML = `<div class="snap-main">
+        <div class="name"><span>${sn.slot}. ${sn.name}</span><span class="count mono">${sn.timeText}</span></div>
+        <div class="snap-sub">EP ${fmt(sm.ep || 0)} · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
+      </div>
+      <div class="snap-btns">
+        <button class="btn snap-use" title="用此存档覆盖当前进度">读取</button>
+        <button class="btn snap-overwrite" title="用当前进度覆盖此存档">覆盖</button>
+        <button class="btn snap-export" title="导出此存档为 JSON">导出</button>
+        <button class="btn snap-del" title="删除此存档">删除</button>
+      </div>`;
+    box.appendChild(row);
+  }
+}
+
+// v3.10.4 ④：下拉存档列表交互（读取/覆盖/导出/删除）
+function onSaveListClick(e) {
+  const li = e.target.closest('[data-snap]');
+  if (!li) return;
+  const id = li.dataset.snap;
+  const label = `${li.dataset.name}（${li.dataset.time}）`;
+  if (e.target.classList.contains('snap-use')) {
+    askConfirm('使用快照覆盖当前进度', `将用「${label}」覆盖当前本地游戏，当前进度将丢失。\n确定继续？`, () => {
+      const data = snapshotData(id);
+      if (!data) { toast('快照不存在'); return; }
+      const cur = localStorage.getItem(SAVE_KEY);
+      if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
+      localStorage.setItem(SAVE_KEY, data);
+      toast('已恢复快照，页面即将刷新');
+      setTimeout(() => location.reload(), 600);
+    });
+  } else if (e.target.classList.contains('snap-overwrite')) {
+    askConfirm('用当前进度覆盖该存档', `将用当前进度覆盖「${label}」。\n确定继续？`, () => {
+      const cur = localStorage.getItem(SAVE_KEY);
+      if (!cur) { toast('当前无存档'); return; }
+      const r = overwriteSnapshot(id, cur);
+      if (r.ok) { renderSaveList(); renderSnapshotList(); toast('已用当前进度覆盖该存档'); }
+      else toast(r.reason || '覆盖失败');
+    });
+  } else if (e.target.classList.contains('snap-export')) {
+    const data = snapshotData(id);
+    if (!data) { toast('快照不存在'); return; }
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `abyss_save_${id}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('存档已导出');
+  } else if (e.target.classList.contains('snap-del')) {
+    askConfirm('删除快照', `确定删除快照「${label}」？`, () => {
+      deleteSnapshot(id);
+      renderSaveList(); renderSnapshotList();
+      toast('快照已删除');
+    });
+  }
+}
+
+// v2.5 ⑤：导入存档——校验 JSON + 版本字段；按 importMode 决定「覆盖当前」或「作为新快照入列」
 function importSave(e) {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
+  const mode = importMode; // 捕获当前模式（文件选择为异步）
+  importMode = 'current'; // 用完即复位，避免影响后续旧「导入覆盖当前」
   const reader = new FileReader();
   reader.onload = () => {
     try {
       const data = JSON.parse(String(reader.result));
       if (!data || typeof data !== 'object' || data._version === undefined) {
         throw new Error('文件不是有效存档');
+      }
+      if (mode === 'snapshot') {
+        // v3.10.4 ④：导入为新快照（入下拉列表），二级确认
+        const sum = `EP ${fmt(data.ep || 0)} · 职级 ${data.prestige || 0}`;
+        askConfirm('导入存档为新快照', `导入外部存档（${sum}）将作为新快照保存至下拉列表。\n槽位已满时会覆盖最早的快照。确定？`, () => {
+          const r = importToSnapshot(JSON.stringify(data), '导入的存档');
+          if (r.ok) { renderSaveList(); renderSnapshotList(); toast(r.covered ? '已覆盖旧快照，新快照已保存' : '已保存为新快照'); }
+          else toast('保存失败：本地存储不可用');
+        });
+        return;
       }
       // v2.8.5 A4：导入 = 覆盖当前本地游戏，二次确认
       const sum = `EP ${fmt(data.ep || 0)} · 职级 ${data.prestige || 0} · 第 ${data.chapter || 1} 章`;
