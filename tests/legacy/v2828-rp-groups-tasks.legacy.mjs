@@ -1,0 +1,252 @@
+import { chromePath } from '../_chrome.mjs';
+// v2.8.28 回归：①研究升级分类+分批次解锁（参考科技树/升级商店）②任务版 pending 占位（最多 3 条）
+import test from 'node:test';
+import assert from 'node:assert';
+import puppeteer from 'puppeteer-core';
+import fs from 'node:fs';
+import { S } from '../../src/state.js';
+import { tickProjects } from '../../src/modules/projects.js';
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const BASE = 'file://' + process.cwd() + '/dist/index.html';
+
+// ===== T1 源码：任务版 pending 占位（完成未领取不发新任务） =====
+test('v2.8.28 ① 任务版：pending 完成未领取也占位——3 条（含 pending）不 spawn 第 4 条', () => {
+  Object.assign(S, {
+    ep: 0, runEarned: 0, earnedFull: 0, totalBuys: 0, totalClicks: 0, cultists: [],
+    _clickTutorialDone: true, buffMult: 1, buffUntil: 0,
+    projects: [
+      { type: 'earn_ep', name: 'A', desc: '', goal: 100, progress: 0, startsAt: Date.now(), deadline: Date.now() + 1e9, reward: { kind: 'ep', amount: 50 }, status: 'active', pendingAt: 0, earnedFullAt: 0, runEarnedAt: 0 },
+      { type: 'earn_ep', name: 'B', desc: '', goal: 100, progress: 0, startsAt: Date.now(), deadline: Date.now() + 1e9, reward: { kind: 'ep', amount: 50 }, status: 'active', pendingAt: 0, earnedFullAt: 0, runEarnedAt: 0 },
+      { type: 'earn_ep', name: 'C', desc: '', goal: 100, progress: 120, startsAt: Date.now(), deadline: Date.now() + 1e9, reward: { kind: 'ep', amount: 50 }, status: 'pending', pendingAt: Date.now(), earnedFullAt: 0, runEarnedAt: 0 },
+    ],
+  });
+  const origRandom = Math.random;
+  Math.random = () => 0.001; // 必中 spawn 分支（冷却已过）
+  try {
+    tickProjects(); // pending 任务完成度达标 → 仍占位；occupiedCount=3 ≥ maxProjects()=3 → 不 spawn
+    assert.equal(S.projects.length, 3, '3 条（含 pending）时不发放第 4 条');
+    // 领取 1 条（claimed → 移除）后腾位 → 可 spawn 第 4 条
+    const p = S.projects.find(x => x.status === 'pending');
+    p.status = 'claimed';
+    tickProjects();
+    assert.equal(S.projects.length, 3, '领取 1 条后腾位——补发至 3 条上限（不超 3）');
+  } finally {
+    Math.random = origRandom;
+  }
+});
+
+// ===== T2 源码：研究升级分类配置存在 =====
+test('v2.8.28 ② 研究升级：10 项按 3 类目分批次（产出强化→资源与消耗→深渊终局）', () => {
+  const src = fs.readFileSync(new URL('../../src/modules/shop.js', import.meta.url), 'utf8');
+  assert.ok(src.includes("key: 'prod'") && src.includes("key: 'res'") && src.includes("key: 'abyss'"), '3 类目定义存在');
+  assert.ok(src.includes('unlock: { prev: \'prod\', need: 4 }') && src.includes('unlock: { prev: \'res\', need: 4 }'), '批次解锁条件（累计 4 级）');
+  assert.ok(!src.includes('未显现'), 'v3.1.1 反馈②：未显现占位整体移除（未解锁批次不渲染）');
+  assert.ok(src.includes('data-rp-fold'), '类目折叠交互');
+});
+
+// ===== T3 浏览器：研究升级分类 + 批次揭示 + 折叠 =====
+test('v2.8.28 ② 浏览器：研究点分批次显示——批 1 可见、批 2/3 锁定、折叠生效', async () => {
+  const mk = (rpTheories = {}) => JSON.stringify({
+    _version: 6, chapter: '6', storyline: 'default', ep: 0, rp: 1000, es: 0, dm: 0,
+    upgrades: {}, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [],
+    religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false },
+    rpTheories, allTimeEp: 1e9, lastSeen: Date.now(), startTime: Date.now(),
+  });
+  const browser = await puppeteer.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
+  try {
+    // 批 1 可见 + 批 2/3 锁定
+    const p1 = await browser.newPage();
+    await p1.setViewport({ width: 1440, height: 900 });
+    await p1.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk());
+    await p1.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(1200);
+    await p1.evaluate(() => document.getElementById('btn-rp').click());
+    await sleep(400);
+    const r1 = await p1.evaluate(() => ({
+      titles: [...document.querySelectorAll('#research-upgrade-list .rp-group-title')].map(e => e.textContent.trim()),
+      locks: [...document.querySelectorAll('#research-upgrade-list .rp-group-lock')].map(e => e.textContent.trim()),
+      cards: document.querySelectorAll('#research-upgrade-list [data-research]').length,
+    }));
+    assert.equal(r1.titles.length, 1, '仅产出强化显现');
+    assert.ok(r1.titles[0].includes('产出强化'), '类目名产出强化');
+    assert.equal(r1.locks.length, 0, 'v3.1.1 反馈②：未显现批次不渲染（无锁定提示行）');
+    assert.equal(r1.cards, 4, '批 1 四张卡（熵减/矩阵/奇点/离线）');
+    // 折叠：点产出强化标题 → 网格收起
+    await p1.evaluate(() => document.querySelector('#research-upgrade-list .rp-group-title').click());
+    await sleep(200);
+    const folded = await p1.evaluate(() => document.querySelectorAll('#research-upgrade-list [data-research]').length);
+    assert.equal(folded, 0, '折叠后卡隐藏（仅标题）');
+    // 展开恢复
+    await p1.evaluate(() => document.querySelector('#research-upgrade-list .rp-group-title').click());
+    await sleep(200);
+    const unfolded = await p1.evaluate(() => document.querySelectorAll('#research-upgrade-list [data-research]').length);
+    assert.equal(unfolded, 4, '再点恢复 4 卡');
+    await p1.close();
+
+    // 批 1 满 4 级 → 批 2 揭示
+    const p2 = await browser.newPage();
+    await p2.setViewport({ width: 1440, height: 900 });
+    await p2.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk({ rp_entropy: 1, rp_matrix: 1, rp_singularity: 1, rp_offline: 1 }));
+    await p2.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(1200);
+    await p2.evaluate(() => document.getElementById('btn-rp').click());
+    await sleep(400);
+    const r2 = await p2.evaluate(() => ({
+      titles: [...document.querySelectorAll('#research-upgrade-list .rp-group-title')].map(e => e.textContent.trim()),
+      locks: [...document.querySelectorAll('#research-upgrade-list .rp-group-lock')].map(e => e.textContent.trim()),
+      cards: document.querySelectorAll('#research-upgrade-list [data-research]').length,
+    }));
+    assert.equal(r2.titles.length, 2, '批 2（资源与消耗）揭示');
+    assert.equal(r2.locks.length, 0, '未显现批次不渲染');
+    assert.equal(r2.cards, 8, '批 1+批 2 共 8 卡');
+    // 批 1+批 2 满 4 级 → 全部揭示（新档注入，避免 evaluateOnNewDocument 覆盖 reload 档）
+    const p3 = await browser.newPage();
+    await p3.setViewport({ width: 1440, height: 900 });
+    await p3.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk({ rp_entropy: 1, rp_matrix: 1, rp_singularity: 1, rp_offline: 1, rp_wage: 1, rp_storage: 1, rp_dm: 1, rp_faith: 1 }));
+    await p3.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(1200);
+    await p3.evaluate(() => document.getElementById('btn-rp').click());
+    await sleep(400);
+    const r3 = await p3.evaluate(() => ({
+      titles: document.querySelectorAll('#research-upgrade-list .rp-group-title').length,
+      locks: document.querySelectorAll('#research-upgrade-list .rp-group-lock').length,
+      cards: document.querySelectorAll('#research-upgrade-list [data-research]').length,
+    }));
+    await p3.close();
+    assert.equal(r3.titles, 3, '全部 3 类目显现');
+    assert.equal(r3.locks, 0, '无锁定');
+    assert.equal(r3.cards, 10, '10 项研究全可见');
+    await p2.close();
+  } finally {
+    await browser.close();
+  }
+});
+
+// ===== T6 v2.8.28 修复：RP 任务领取 → RP 到账 + 落盘（addRp 未导入曾导致领取抛异常） =====
+test('v2.8.28 修复 ⑥ 浏览器：RP 任务真实点击领取 → RP 到账并即时落盘', async () => {
+  const now = Date.now();
+  const mk = () => JSON.stringify({
+    _version: 6, chapter: '6', storyline: 'default', ep: 0, rp: 10, es: 0, dm: 0,
+    upgrades: { rp_vault: 1 }, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [], // v3.0.9 反馈②：RP 解锁 = 已购矩阵存储库（原仅溢出标记不再解锁）
+    religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: false, es: false, faith: false, pt: false, dm: false },
+    allTimeEp: 1e9, _clickTutorialDone: true, buffMult: 1, buffUntil: 0, _rpOverflowSeen: true,
+    projects: [{ type: 'earn_ep', name: 'RP任务', desc: '', goal: 100, progress: 120, startsAt: now, deadline: now + 1e10,
+      reward: { kind: 'rp', amount: 3 }, status: 'pending', pendingAt: now, earnedFullAt: 0, runEarnedAt: 0 }],
+    lastSeen: Date.now(), startTime: Date.now(),
+  });
+  const browser = await puppeteer.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900 });
+    await page.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk());
+    await page.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(2200);
+    await page.click('#projects button[data-claim]');
+    await sleep(1200);
+    const r = await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
+      return { rp: s.rp, st: (s.projects || []).map(x => x.status) };
+    });
+    assert.equal(r.rp, 13, 'RP 奖励 +3 到账并落盘');
+    assert.ok(r.st.includes('claimed'), 'RP 任务领取后状态即时落盘');
+    await page.close();
+  } finally {
+    await browser.close();
+  }
+});
+
+// ===== T7 v2.8.28 修复：资源仓库解锁链——EP 溢出解锁矩阵存储库，购买后才解锁研究点 =====
+test('v2.8.28 修复 ⑦ 浏览器：EP 溢出解锁矩阵存储库（可购），购入后研究点解锁', async () => {
+  const now = Date.now();
+  const mk = (over) => JSON.stringify({
+    _version: 6, chapter: '6', storyline: 'default', ep: 5000, rp: 0, es: 0, dm: 0,
+    upgrades: {}, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [],
+    religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: false, es: false, faith: false, pt: false, dm: false },
+    allTimeEp: 1e9, _clickTutorialDone: true, buffMult: 1, buffUntil: 0,
+    projects: [], lastSeen: Date.now(), startTime: Date.now(), ...over,
+  });
+  const browser = await puppeteer.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
+  try {
+    // 未溢出：研究点 tab 不显示
+    const p1 = await browser.newPage();
+    await p1.setViewport({ width: 1440, height: 900 });
+    await p1.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk({}));
+    await p1.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(2200);
+    const a = await p1.evaluate(() => getComputedStyle(document.getElementById('btn-rp')).display);
+    assert.equal(a, 'none', 'EP 未溢出时研究点 tab 不显示');
+    await p1.close();
+    // 已购矩阵存储库：研究点解锁
+    const p2 = await browser.newPage();
+    await p2.setViewport({ width: 1440, height: 900 });
+    await p2.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk({ upgrades: { rp_vault: 1 } }));
+    await p2.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(2500);
+    const b = await p2.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
+      return { rpBtn: getComputedStyle(document.getElementById('btn-rp')).display, rpDiscovered: !!(s.resDiscovered && s.resDiscovered.rp) };
+    });
+    assert.equal(b.rpBtn, 'block', '购入矩阵存储库后研究点 tab 解锁');
+    assert.ok(b.rpDiscovered, '购入矩阵存储库后 resDiscovered.rp 持久标记写入');
+    await p2.close();
+  } finally {
+    await browser.close();
+  }
+});
+
+// ===== T4 浏览器：任务版最多 3 条（pending 占位） =====
+test('v2.8.28 ① 浏览器：3 条任务（含完成未领取）时面板不新增第 4 条，领取后腾位', async () => {
+  const now = Date.now();
+  const mk = () => JSON.stringify({
+    _version: 6, chapter: '6', storyline: 'default', ep: 0, rp: 0, es: 0, dm: 0,
+    upgrades: {}, buildings: {}, tech: {}, ai: {}, milesDone: {}, cultists: [],
+    religion: { unlocked: false }, faith: 0, pets: {}, activePets: [], fusesDone: 0,
+    resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false },
+    allTimeEp: 1e9, _clickTutorialDone: true, buffMult: 1, buffUntil: 0,
+    projects: [
+      { type: 'earn_ep', name: '任务甲', desc: '', goal: 100, progress: 0, startsAt: now, deadline: now + 1e10, reward: { kind: 'ep', amount: 50 }, status: 'active', pendingAt: 0, earnedFullAt: 0, runEarnedAt: 0 },
+      { type: 'earn_ep', name: '任务乙', desc: '', goal: 100, progress: 0, startsAt: now, deadline: now + 1e10, reward: { kind: 'ep', amount: 50 }, status: 'active', pendingAt: 0, earnedFullAt: 0, runEarnedAt: 0 },
+      { type: 'earn_ep', name: '任务丙', desc: '', goal: 100, progress: 120, startsAt: now, deadline: now + 1e10, reward: { kind: 'ep', amount: 50 }, status: 'pending', pendingAt: now, earnedFullAt: 0, runEarnedAt: 0 },
+    ],
+    lastSeen: Date.now(), startTime: Date.now(),
+  });
+  const browser = await puppeteer.launch({ executablePath: chromePath(), args: ['--no-sandbox', '--disable-gpu'], headless: 'new' });
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900 });
+    await page.evaluateOnNewDocument((s) => localStorage.setItem('abyss_idle_v2', s), mk());
+    await page.goto(BASE, { waitUntil: 'networkidle0' });
+    await sleep(2500);
+    const r = await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
+      const cards = document.querySelectorAll('#projects .proj').length;
+      return { n: (s.projects || []).length, statuses: (s.projects || []).map(p => p.status), cards };
+    });
+    assert.ok(r.n <= 3, `任务数量 ≤ 3（实际 ${r.n}）`);
+    assert.ok(r.statuses.includes('pending'), '完成未领取的任务仍占位显示');
+    // v2.8.28 修复：真实点击领取 → 奖励落盘（存档即时更新，刷新不丢）+ 腾位补发不超 3 条
+    const rc = await page.evaluate(() => {
+      const btn = document.querySelector('#projects button[data-claim]');
+      if (!btn) return null;
+      btn.scrollIntoView({ block: 'center' });
+      const r = btn.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    if (rc) await page.mouse.click(rc.x, rc.y);
+    await sleep(1200);
+    const r2 = await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('abyss_idle_v2'));
+      return { n: (s.projects || []).length, statuses: (s.projects || []).map(x => x.status), ep: s.ep };
+    });
+    assert.ok(r2.statuses.includes('claimed'), '真实点击领取后存档即时落盘（status=claimed）');
+    assert.equal(r2.ep, 50, '领取奖励 EP 到账并落盘');
+    assert.ok(r2.n <= 3, '领取后仍不超过 3 条');
+    await page.close();
+  } finally {
+    await browser.close();
+  }
+});
