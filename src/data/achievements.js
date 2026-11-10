@@ -129,4 +129,28 @@ export const ACHIEVEMENTS = [
   { id: 'dm1b',            name: '深矿之主',   icon: '🜏', desc: '持有 1B DM', test: (s, ctx) => (s.dm || 0) >= 1e9 },
   { id: 'exped100',        name: '百次返航',   icon: '🛰️', desc: '累计完成 100 次星际探索', test: (s, ctx) => (s.expeditionsDone || 0) >= 100 },
   { id: 'thread100',       name: '百线程',     icon: '🧵', desc: '同时拥有 100 条产出线程', test: (s, ctx) => (s.cultists || []).length >= 100 },
+  // v3.11.0 成就扩充（115→135，+17.39%）：围绕「AI 助手消耗 / 动作台账 / 新章节 / 新内容上限」。
+  // 每条 test 源码互不相同（duplicateAchievementTests 逐字去重审计），且只读已持久化字段。
+  // 与既有 ai_assist（购入首位助手）区分：这里判定的是「助手真的替你做完了一件事」，
+  // 避免语义去重审计把两条完全相同的判定源码判为重复定义。
+  { id: 'assistant1',      name: '第一次代班',   icon: '🤖', desc: '本局首次执行任一自动化动作', test: (s, ctx) => Object.values(s.ai?.actionCounts || {}).some(n => (n || 0) > 0) },
+  { id: 'assistant10',     name: '十人班组',     icon: '🤖', desc: '同时拥有 10 名 AI 助手', test: (s, ctx) => (s.ai?.assistants || 0) >= 10 },
+  { id: 'assistant50',     name: '五十人轮值',   icon: '🤖', desc: '同时拥有 50 名 AI 助手', test: (s, ctx) => (s.ai?.assistants || 0) >= 50 },
+  { id: 'assistant_cap',   name: '补给满仓',     icon: '🤖', desc: '助手自动补给积攒至上限', test: (s, ctx) => (s.ai?.assistants || 0) >= 300 },
+  { id: 'action_upgrade10',name: '代班升级十次', icon: '📋', desc: '本局自动升级执行 10 次', test: (s, ctx) => (s.ai?.actionCounts?.upgrade || 0) >= 10 },
+  { id: 'action_hire10',   name: '代班招募十次', icon: '📋', desc: '本局自动招募执行 10 次', test: (s, ctx) => (s.ai?.actionCounts?.hire || 0) >= 10 },
+  { id: 'action_claim10',  name: '代班领取十次', icon: '📋', desc: '本局自动领取执行 10 次', test: (s, ctx) => (s.ai?.actionCounts?.claim || 0) >= 10 },
+  { id: 'action_build10',  name: '代班购建十次', icon: '📋', desc: '本局自动购建执行 10 次', test: (s, ctx) => (s.ai?.actionCounts?.build || 0) >= 10 },
+  { id: 'action_tech10',   name: '代班研究十次', icon: '📋', desc: '本局自动研究执行 10 次', test: (s, ctx) => (s.ai?.actionCounts?.tech || 0) >= 10 },
+  { id: 'action_total100', name: '百次代班',     icon: '📋', desc: '本局自动化动作累计 100 次', test: (s, ctx) => Object.values(s.ai?.actionCounts || {}).reduce((a, b) => a + (b || 0), 0) >= 100 },
+  { id: 'action_total1000',name: '千次代班',     icon: '📋', desc: '本局自动化动作累计 1000 次', test: (s, ctx) => Object.values(s.ai?.actionCounts || {}).reduce((a, b) => a + (b || 0), 0) >= 1000 },
+  { id: 'chapter39',       name: '第一次代班（章）', icon: '📖', desc: '剧情推进至番外·第一次代班', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 39 },
+  { id: 'chapter42',       name: '台账之章',     icon: '📖', desc: '剧情推进至番外·台账', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 42 },
+  { id: 'chapter46',       name: '仍在补货',     icon: '📖', desc: '剧情推进至番外·仍在补货', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 46 },
+  { id: 'research68',      name: '推演六十八级', icon: '🔬', desc: '研究升级累计投入 68 级', test: (s, ctx) => Object.values(s.rpTheories || {}).reduce((a, b) => a + (b || 0), 0) >= 68 },
+  { id: 'miles16',         name: '十六阶',       icon: '🚩', desc: '累计达成 16 档产能里程碑', test: (s, ctx) => Object.keys(s.milesDone || {}).length >= 16 },
+  { id: 'policy13',        name: '十三政同席',   icon: '⚖️', desc: '同时采用 13 项周期政策', test: (s, ctx) => Object.keys(s.policies || {}).length >= 13 },
+  { id: 'event400',        name: '见惯补货',     icon: '🎲', desc: '累计触发 400 次随机事件', test: (s, ctx) => (s.eventsSeen || 0) >= 400 },
+  { id: 'projects600',     name: '任务档案库',   icon: '📋', desc: '累计完成 600 个任务', test: (s, ctx) => (s.projectsDone || 0) >= 600 },
+  { id: 'es1m',            name: '百万永恒',     icon: '💎', desc: '持有 1M ES', test: (s, ctx) => (s.es || 0) >= 1e6 },
 ];

@@ -358,8 +358,8 @@ test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷
   provider._resetProvider();
   provider.setStoryline('default');
   const chs = provider.getChapters();
-  assert.equal(chs.length, 38);
-  for (const id of [33, 34, 35, 36, 37, 38]) {
+  assert.equal(chs.length, 46);
+  for (const id of [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46]) {
     assert.ok(chs.some(c => String(c.id) === String(id)), `第 ${id} 章未进入真实章节表`);
   }
   // v3.10.0 新增 6 章均带 minDays 5~7 的驻留门控；chapterEnteredAt 必须是真实的过去时间戳
@@ -370,7 +370,7 @@ test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷
     riftEmber: 1e9, tech: {}, buildings: {}, unlockedBuildings: {}, upgrades: {}, religion: {},
     wageState: { state: 'ok' }, resonance: { enabled: true, layers: 20, focus: 'rp' } };
   const cur = story.currentChapter(rich);
-  assert.equal(Number.parseInt(String(cur.id), 10), 38, `真实推进应能走完新增章节，实际 ${cur.id}`);
+  assert.equal(Number.parseInt(String(cur.id), 10), 46, `真实推进应能走完新增章节，实际 ${cur.id}`);
   provider._resetProvider();
 });
 
@@ -395,7 +395,7 @@ test('E3 新增 4 章 Wiki 与 2 档里程碑渲染 / 数值合法', async () =>
     assert.ok(typeof html === 'string' && html.length > 50, `${id} 内容过短`);
     assert.ok(!/undefined|NaN|Infinity/.test(html), `${id} 渲染出非法数值`);
   }
-  assert.equal(BALANCE.miles.length, 13);
+  assert.equal(BALANCE.miles.length, 16);
   assert.equal(BALANCE.miles[9].cps, 1e11);
   assert.equal(BALANCE.miles[10].cps, 1e12);
   assert.ok(BALANCE.miles[10].rp > BALANCE.miles[9].rp);

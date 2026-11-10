@@ -243,9 +243,20 @@ export const BALANCE = {
     interval: 5,
     // v3.10.5：助手由「编队/槽位/按类型分配」改为「一次性消耗品」——
     // 自动升级/自动招募/自动领取每执行一次消耗 1 名助手；无上限，靠购买价逐次递增限购。
+    // v3.11.0 数值完善：v3.10.5 的 ×1.5 复利使第 30 名报价达 2e6×1.5^30≈3.8e11，
+    // 而五项自动化每 5s 决策周期至多消耗 5 名，长期挂机必然「耗尽→买不起→永久停摆」。
+    // 故放缓为温和递增（仍保留限购），并新增按游戏时间的自动补给流（见 systems/resourceFlows.js）。
     assistants: {
       baseCost: 2e6,          // 第 1 名助手的购买价（EP）
-      costGrowth: 1.5,        // 每买 1 名，下 1 名价格 ×1.5（数量越多越贵，天然限购）
+      costGrowth: 1.12,       // 每买 1 名，下 1 名价格 ×1.12（温和递增，仍天然限购）
+      // 自动补给：每 intervalSec 游戏秒补 perTick × researchMult('ai') 名；
+      // cap 只限制「自动补给积攒量」，手动购买不受此限（沿用 v3.10.5 取消上限的口径）。
+      supply: {
+        intervalSec: 60,
+        perTick: 12,
+        cap: 300,
+        researchKey: 'ai',    // 「拟我协议」rp_ai 研究同时提升补给量（非死键）
+      },
     },
     reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
     defaultReserve: 0.3,
@@ -379,6 +390,8 @@ export const BALANCE = {
     { cps: 1e11, rp: 600000 }, { cps: 1e12, rp: 2000000 },
     // v3.10.0 里程碑扩充（11→13，+18.18%）：只追加更高门槛，既有 cps 键与奖励完全不变
     { cps: 1e13, rp: 6e6 }, { cps: 1e14, rp: 2e7 },
+    // v3.11.0 里程碑扩充（13→16，+23.08%）：继续只追加更高门槛，milesDone 的 cps 键不变
+    { cps: 1e15, rp: 6e7 }, { cps: 1e16, rp: 2e8 }, { cps: 1e17, rp: 6e8 },
   ],
   // 科技乘数压缩（v2.0 §1.3）
   techMult: {
@@ -492,6 +505,21 @@ export const BALANCE = {
     // 未购时 RP/PT 上限只靠各自仓库线性增长，解决「早期 RP/PT 上限就随 EP 涨到千万级」的问题。
     // fx.key='sync' 由 economy.syncUnlocked() 消费（researchMult('sync')>1 即已购），非死键。
     { id: 'rp_sync',     name: '星图同调',   cap: 1, base: 2000, growth: 1.5, fx: { key: 'sync', v: 1 }, requiresTech: 'deep_space', desc: '启用 RP/PT 上限随 EP 上限联动（产出基座）' },
+    // v3.11.0 研究项扩充（56→68，+21.43%）：沿用「高阶 ×4 + growth +0.10」口径，
+    // fx.key 全部复用既有 researchMult 消费点（无死升级），且不使用需资源门控的 faith 键。
+    // 4 组各 3 项，RP_GROUPS 已同步（否则玩家看不到也买不到）。
+    { id: 'rp_ep7',      name: '熵流补货',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'ep',     v: 0.13 }, desc: '基础 EP 产出 +13%/级' },
+    { id: 'rp_thread6',  name: '群体代班',   cap: 8, base: 4400, growth: 1.88, fx: { key: 'thread', v: 0.11 }, desc: '线程产出 +11%/级' },
+    { id: 'rp_global4',  name: '全域台账',   cap: 8, base: 4800, growth: 1.90, fx: { key: 'global', v: 0.08 }, desc: '全局产出 ×1.08/级' },
+    { id: 'rp_wage5',    name: '代班津贴',   cap: 8, base: 4000, growth: 1.88, fx: { key: 'wage',   v: -0.09 }, desc: '线程消耗 -9%/级' },
+    { id: 'rp_dm5',      name: '星尘补给',   cap: 8, base: 4300, growth: 1.88, fx: { key: 'dm',     v: 0.15 }, desc: '载具 DM 采集 +15%/级' },
+    { id: 'rp_storage2', name: '周转仓位',   cap: 8, base: 4100, growth: 1.88, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
+    { id: 'rp_rift6',    name: '裂隙值守',   cap: 6, base: 11200, growth: 1.96, fx: { key: 'rift',  v: 0.15 }, desc: '裂隙余烬 +15%/级' },
+    { id: 'rp_delve4',   name: '深潜补货',   cap: 8, base: 6200, growth: 1.94, fx: { key: 'delve', v: 0.15 }, desc: '深潜产出 +15%/级' },
+    { id: 'rp_rift7',    name: '裂隙台账',   cap: 6, base: 11800, growth: 1.96, fx: { key: 'rift',  v: 0.16 }, desc: '裂隙余烬 +16%/级' },
+    { id: 'rp_ai6',      name: '拟我代班',   cap: 8, base: 4500, growth: 1.90, fx: { key: 'ai',     v: 0.11 }, desc: 'AI 助手效率 +11%/级（摊薄购买价 / 提升补给）' },
+    { id: 'rp_ai7',      name: '拟我补给',   cap: 8, base: 4700, growth: 1.90, fx: { key: 'ai',     v: 0.12 }, desc: 'AI 助手效率 +12%/级' },
+    { id: 'rp_cosmos4',  name: '星力代班',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'cosmos', v: 0.11 }, desc: '宇宙工程星力 +11%/级' },
     // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
   ],
   corruption: {

@@ -108,6 +108,26 @@ export const POLICY_GROUPS = [
       { id: 'night_quiet', name: '静默长夜', effect: { delve: 0.22, global: -0.06 }, desc: '深潜产出 +22%，全局 -6%' },
     ],
   },
+  // v3.11.0 政策扩充（11→13 组、33→39 项，+18.18%）：效果键全部落在既有 policyMult 消费点，
+  // 解锁条件只依赖已持久化字段（S.ai / projectsDone / prestige），不引入死政策。
+  {
+    id: 'assistant_duty', name: '助手勤务', unlock: (S) => !!(S.ai && (S.ai.assistants || 0) > 0),
+    hint: '需至少拥有 1 名 AI 助手',
+    policies: [
+      { id: 'duty_output',  name: '代班产出', effect: { ep: 0.15, collab: 0.08 },    desc: 'EP 产出 +15%，协作 +8%' },
+      { id: 'duty_recruit', name: '代班招募', effect: { recruit: 0.24, ep: -0.07 },  desc: '招募 +24%，EP 产出 -7%' },
+      { id: 'duty_global',  name: '代班统筹', effect: { global: 0.08, thread: -0.06 }, desc: '全局 +8%，线程产出 -6%' },
+    ],
+  },
+  {
+    id: 'supply_law', name: '补给纪律', unlock: (S) => (S.projectsDone || 0) >= 180 || (S.prestige || 0) >= 10,
+    hint: '需完成 180 个任务或职级 ≥10',
+    policies: [
+      { id: 'supply_ember',  name: '余烬补给', effect: { ember: 0.22, delve: -0.07 }, desc: '余烬产出 +22%，深潜产出 -7%' },
+      { id: 'supply_thread', name: '线程补给', effect: { thread: 0.15, recruit: 0.10 }, desc: '线程产出 +15%，招募 +10%' },
+      { id: 'supply_quiet',  name: '静默补给', effect: { collab: 0.20, ep: -0.06 },  desc: '协作 +20%，EP 产出 -6%' },
+    ],
+  },
 ];
 
 export function groupByName(gid) { return POLICY_GROUPS.find(x => x.id === gid); }

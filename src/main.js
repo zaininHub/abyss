@@ -34,11 +34,17 @@ import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, 
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
-import { renderTech, refreshTechState, renderEternal } from './modules/tech.js';
+import { renderTech, refreshTechState, renderEternal, buyTech } from './modules/tech.js';
+import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { renderCrewPanel, crewPush, crewShown } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
-import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost, refreshAssistantAffordability } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测 // v3.7.5：编队按钮可购态快刷
+import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost, refreshAssistantAffordability,
+  assistantCount, assistantCost, assistantBuyState, buyAssistant, setAiSwitch, allOffActions,
+  actionCounts, totalActionCount, stalledActions, recordAction, actionAvailable,
+  activateAutoBuild, autoBuildActivable } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测 // v3.7.5：编队按钮可购态快刷 // v3.11.0：AI 自动化真实入口 QA 钩子
+import { AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_ASSISTANT_CONSUMER_IDS,
+  ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleAssistantDemand } from './core/aiActionRegistry.js'; // v3.11.0：自动化动作声明层 QA 钩子
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
@@ -2490,12 +2496,19 @@ if (typeof window !== 'undefined') {
     // v3.10.0：成就注册表 / 状态清单 / 相位共鸣 QA 钩子
     ACHIEVEMENTS, ACHIEVEMENT_IDS, evaluateAchievements, achievementProgress,
     RESOURCE_DISCOVERY, PANEL_KEYS, PANEL_DIRTY_ON_START, FRAME_DEPS_KEYS,
+    // v3.11.0：自动化动作声明层 / 助手消耗（30 天浏览器推演核对「声明→消费」与长期续航）
+    AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_ASSISTANT_CONSUMER_IDS,
+    ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleAssistantDemand,
+    assistantCount, assistantCost, assistantBuyState, actionCounts, totalActionCount,
+    stalledActions, actionAvailable, autoBuildActivable, getTechs, buyTech,
     RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
     resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
     setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus,
     // v3.7.0 30 天 mock 推演：自动玩家只调用产品真实入口，禁止直接写 S 伪造进度
     sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige, reincarnReady, doReincarn,
-      claimProject }, // v3.8.0：30 天推演自动玩家经产品真实入口领取任务，验证任务链路可达
+      claimProject,
+      // v3.11.0：AI 自动化的产品真实入口（推演不直接写 S 伪造进度）
+      buyAssistant, setAiSwitch, allOffActions, recordAction, activateAutoBuild }, // v3.8.0：30 天推演自动玩家经产品真实入口领取任务，验证任务链路可达
   };
 }
 

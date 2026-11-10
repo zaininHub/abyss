@@ -37,6 +37,9 @@ export default {
         { id: '18C', name: '不点名的晚祷', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 5000, minDays: 7, desc: 'FP 过五千，晚祷第一次不念任何名字。信徒们有点不安，你解释说：今晚不向谁祈求，也不替谁答谢，只是让这一夜平平安安地过去。散场后，那扇没有守卫的小门仍然开着。' },
         { id: '19C', name: '同声', cond: (S) => S.storyline === 'line_faith' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层叠满时，圣殿里所有还没开口的信徒一起停了半拍。不是沉默，是等同一声回响走完。你第一次觉得，人数和层数说的其实是同一件事。' },
         { id: '20C', name: '留一盏', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 1e5, minDays: 6, desc: '信仰过十万那夜，相位换了，层数减半。你没补，只在空下来的那半格里留了一盏灯。第二天有人问是不是忘了关，你说不是，是留给还没来的那一叠。' },
+        // v3.11.0 剧情扩充（16→18 章）
+        { id: '21C', name: '代班的祝福', cond: (S) => S.storyline === 'line_faith' && (S.faith || 0) >= 2e5, minDays: 6, desc: '信仰过二十万，圣所第一次为「代班」点灯。祷文里没写产出，也没写回报，只写了一句：有人替你站了这一班，愿你也替别人站一次。念完之后助手少了一名，灯还亮着。' },
+        { id: '22C', name: '不写理由的那一格', cond: (S) => S.storyline === 'line_faith' && (S.projectsDone || 0) >= 260, minDays: 7, desc: '第二百六十个任务归档，台账最底下多出一格，事由栏空着。有人想替你补一句「用于最不产出的那项动作」，你摇头：不写理由，才算真的给出去。那一格至今空着。' },
       ],
     },
     events: {
@@ -54,6 +57,9 @@ export default {
         { id: 'quiet_shrine', name: '静龛', lineOnly: true, type: 'rp', amount: 20, minCps: 1e6, rare: true, desc: '立即获得 20 RP' },
         { id: 'choir_echo', name: '唱诗回声', lineOnly: true, type: 'buff', mult: 1.85, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.85' },
         { id: 'holy_resonance', name: '圣所共振', lineOnly: true, type: 'rp', amount: 26, minCps: 1e6, rare: true, desc: '立即获得 26 RP' },
+        // v3.11.0 事件扩充（12→14）
+        { id: 'holy_duty', name: '代班祝祷', lineOnly: true, type: 'buff', mult: 1.7, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.7' },
+        { id: 'ledger_prayer', name: '台账祷文', lineOnly: true, type: 'rp', amount: 30, minCps: 1e6, rare: true, desc: '立即获得 30 RP' },
       ],
     },
     buildings: {

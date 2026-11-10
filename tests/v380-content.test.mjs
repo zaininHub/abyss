@@ -48,36 +48,36 @@ console.log('[E] 扩充幅度与全局唯一性');
 
 test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   const rows = [
-    ['主线章节', CHAPTERS.length, 32],
-    ['主事件', EVENTS.length, 52],
-    ['研究项', BALANCE.researchUpgs.length, 46],
-    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 27],
-    ['百科章节', WIKI_SECTIONS.length, 20],
-    ['里程碑', BALANCE.miles.length, 11],
+    ['主线章节', CHAPTERS.length, 38],
+    ['主事件', EVENTS.length, 62],
+    ['研究项', BALANCE.researchUpgs.length, 56],
+    ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33],
+    ['百科章节', WIKI_SECTIONS.length, 24],
+    ['里程碑', BALANCE.miles.length, 13],
   ];
   for (const [name, now, before] of rows) {
     const pct = (now - before) / before * 100;
     assert.ok(pct >= 10 && pct <= 30, `${name} 扩充 ${pct.toFixed(1)}% 超出 10~30%：${before}→${now}`);
     assert.ok(now > before, `${name} 未扩充`);
   }
-  assert.equal(CHAPTERS.length, 38);
-  assert.equal(EVENTS.length, 62);
-  assert.equal(BALANCE.researchUpgs.length, 56);
-  assert.equal(POLICY_GROUPS.length, 11);
-  assert.equal(WIKI_SECTIONS.length, 24);
-  assert.equal(BALANCE.miles.length, 13);
+  assert.equal(CHAPTERS.length, 46);
+  assert.equal(EVENTS.length, 74);
+  assert.equal(BALANCE.researchUpgs.length, 68);
+  assert.equal(POLICY_GROUPS.length, 13);
+  assert.equal(WIKI_SECTIONS.length, 29);
+  assert.equal(BALANCE.miles.length, 16);
 });
 
-test('E2 三线变体章节 14→16、事件 10→12，章节/事件 id 全局唯一', () => {
+test('E2 三线变体章节 16→18、事件 12→14，章节/事件 id 全局唯一', () => {
   for (const pkg of LINE_PKGS) {
-    assert.equal(pkg.data.chapters.append.length, 16, `${pkg.id} 章节数`);
-    assert.equal(pkg.data.events.append.length, 12, `${pkg.id} 事件数`);
+    assert.equal(pkg.data.chapters.append.length, 18, `${pkg.id} 章节数`);
+    assert.equal(pkg.data.events.append.length, 14, `${pkg.id} 事件数`);
   }
   const chIds = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(chIds.length, 86);
+  assert.equal(chIds.length, 100);
   assert.equal(new Set(chIds).size, chIds.length, '章节 id 撞号');
   const evIds = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(evIds.length, 98);
+  assert.equal(evIds.length, 116);
   assert.equal(new Set(evIds).size, evIds.length, '事件 id 撞号');
 });
 
@@ -108,7 +108,7 @@ test('E3 新增章节均有 minDays / 文案 / 可安全求值的 cond', () => {
 
 console.log('[F] 配置与消费点接线');
 
-test('F1 46 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消费点', () => {
+test('F1 68 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消费点', () => {
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内重复');
@@ -122,7 +122,7 @@ test('F1 46 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消
   }
 });
 
-test('F2 27 项政策 effect key 全部有 policyMult 消费点，新组 unlock 可安全求值', () => {
+test('F2 39 项政策 effect key 全部有 policyMult 消费点，新组 unlock 可安全求值', () => {
   const consumed = new Set([...ALL_SRC.matchAll(/policyMult\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)/g)].map(m => m[1]));
   const ids = [];
   for (const g of POLICY_GROUPS) {
@@ -136,7 +136,7 @@ test('F2 27 项政策 effect key 全部有 policyMult 消费点，新组 unlock 
     }
   }
   assert.equal(new Set(ids).size, ids.length, '政策 id 重复');
-  assert.equal(ids.length, 33);
+  assert.equal(ids.length, 39);
   const g = POLICY_GROUPS.find(x => x.id === 'orchestration');
   assert.ok(g, '缺「编排律令」组');
   assert.equal(g.policies.length, 4);
@@ -158,7 +158,7 @@ test('F3 全部事件数值在主表天花板内，且 type 都有 applyEvent �
     if (e.type === 'ep') assert.ok((e.amount || 0) <= 14400, `${e.id} 产出秒数越界`);
     if (e.type === 'debuff') assert.ok(e.mult >= 0.3 && e.mult < 1, `${e.id} debuff 倍率异常`);
   }
-  assert.equal(all.length, 98);
+  assert.equal(all.length, 116);
 });
 
 test('F4 里程碑只追加不重排，既有 cps 键与奖励完全不变', () => {

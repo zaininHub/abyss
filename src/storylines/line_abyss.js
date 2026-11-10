@@ -40,6 +40,9 @@ export default {
         { id: '18B', name: '不排班的夜', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1e4, minDays: 7, desc: 'DM 过万那夜，你把潮汐四相全填成了同一个策略，然后又一个都没执行。深渊没有问为什么。它只是把灯调暗了一档，像每个不需要解释的晚上一样。' },
         { id: '19B', name: '一起响', cond: (S) => S.storyline === 'line_abyss' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层叠满那晚，低语和你的工作台同时响了一下。你分不清是谁先起的头，也没必要分清。深渊第一次没有在换气时把你晾在一边。' },
         { id: '20B', name: '不减半的夜', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 1e5, minDays: 6, desc: 'DM 过十万，相位照常换了，层数照常减半。你没去改那张不排班的表，只是把灯又调暗一档——留不住的那一半，本来就是拿来换这一夜的。' },
+        // v3.11.0 剧情扩充（16→18 章）：条件落在助手状态与长线资源上
+        { id: '21B', name: '会耗尽的那种', cond: (S) => S.storyline === 'line_abyss' && (S.dm || 0) >= 2e5, minDays: 6, desc: 'DM 过二十万，你第一次认真数了名单：每划掉一名助手，就有一件事真的做完了。深渊从不解释代价，它只把代价摆在那儿，让你自己看见。你没删名单，也没补。' },
+        { id: '22B', name: '补给从裂缝里来', cond: (S) => S.storyline === 'line_abyss' && (S.ai?.assistants || 0) >= 30, minDays: 7, desc: '第三十名助手到岗那天，补给车是从一道快合上的裂缝里挤出来的。没人下命令，它自己认路。你忽然觉得深渊也不是只往外拿东西——它偶尔也把人送回来，只是从不承认。' },
       ],
     },
     events: {
@@ -57,6 +60,9 @@ export default {
         { id: 'low_tide_void', name: '退潮虚空', lineOnly: true, type: 'debuff', mult: 0.6, dur: 45, minCps: 1e6, rare: true, desc: '45 秒产出 ×0.6' },
         { id: 'abyss_echo', name: '深渊回声', lineOnly: true, type: 'buff', mult: 2.1, dur: 180, minCps: 1e5, rare: false, desc: '3 分钟产出 ×2.1' },
         { id: 'void_resonance', name: '虚空共振', lineOnly: true, type: 'ep', amount: 900, minCps: 1e6, rare: true, desc: '立即获得 900 秒产出' },
+        // v3.11.0 事件扩充（12→14）
+        { id: 'void_supply', name: '虚空补给', lineOnly: true, type: 'ep', amount: 1200, minCps: 1e6, rare: true, desc: '立即获得 1200 秒产出' },
+        { id: 'abyss_duty', name: '深渊勤务', lineOnly: true, type: 'debuff', mult: 0.6, dur: 90, minCps: 1e5, rare: false, desc: '90 秒产出 ×0.6' },
       ],
     },
     buildings: {

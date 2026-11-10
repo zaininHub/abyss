@@ -69,4 +69,18 @@ export const EVENTS = [
   {id:'resonant_core',name:'共鸣核心',desc:'4 分钟产出 ×1.9',minCps:1e5,type:'buff',mult:1.9,dur:240},
   {id:'ledger_echo',name:'台账回声',desc:'+36 RP',minCps:1e7,type:'rp',amount:36},
   {id:'cold_resonance',name:'冷共振',desc:'立即获得 3600 秒产出',minCps:1e7,type:'ep',amount:3600,rare:true},
+  // v3.11.0 事件扩充（62→74，+19.35%）：复用既有 13 类 type，不引入 applyEvent 新分支；
+  // 主题围绕「助手 / 自动化 / 补给 / 台账」，数值沿用后段事件的量级。
+  {id:'assist_shift',name:'助手换班',desc:'立即获得 2400 秒产出',minCps:1e5,type:'ep',amount:2400},
+  {id:'auto_audit',name:'自动化审计',desc:'3 分钟产出 ×1.7',minCps:1e5,type:'buff',mult:1.7,dur:180},
+  {id:'supply_truck',name:'补给车抵达',desc:'+42 RP',minCps:1e6,type:'rp',amount:42},
+  {id:'switch_drift',name:'开关漂移',desc:'75 秒产出 ×0.62',minCps:1e5,type:'debuff',mult:0.62,dur:75},
+  {id:'ledger_review',name:'台账复核',desc:'专注 +22',minCps:1e6,type:'focus',amount:22},
+  {id:'idle_hands',name:'空转的助手',desc:'立即获得 4200 秒产出',minCps:1e7,type:'ep',amount:4200,rare:true},
+  {id:'batch_confirm',name:'批量确认',desc:'90 秒点击 ×8',minCps:1e4,type:'clickbuff',mult:8,dur:90},
+  {id:'assist_cold_start',name:'助手冷启动',desc:'4 分钟产出 ×1.85',minCps:1e6,type:'buff',mult:1.85,dur:240},
+  {id:'stall_log',name:'停摆日志',desc:'60 秒产出 ×0.68',minCps:1e6,type:'debuff',mult:0.68,dur:60},
+  {id:'handover',name:'交接班',desc:'随机升级 +1',minCps:1e5,type:'freelevel'},
+  {id:'supply_echo',name:'补给回声',desc:'+48 RP',minCps:1e7,type:'rp',amount:48},
+  {id:'night_dispatch',name:'夜班调度',desc:'立即获得 5400 秒产出',minCps:1e7,type:'ep',amount:5400,rare:true},
 ];

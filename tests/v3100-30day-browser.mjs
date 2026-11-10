@@ -533,7 +533,7 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  if (bootState.panels === 26 && bootState.achievements === 115) {
+  if (bootState.panels === 26 && bootState.achievements === 135) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -553,7 +553,7 @@ try {
   else bad('终局数值异常', JSON.stringify({ ep: last.ep, cps: last.cps }));
   if (last.chapter !== '1') ok('故事线章节随进度推进', `至第 ${last.chapter} 章 / 晋升 ${last.prestige} 次`);
   else console.log(`  · 章节停留第 1 章：自动玩家仅晋升 ${last.prestige} 次，未达第 2 章门槛（设计如此，非缺陷）`);
-  if (last.storyEvents === 74 && last.linePets === 7) ok('故事线变体接线生效（62 主表 + 12 线专属事件 / 7 异兽）', `事件池 ${last.storyEvents}`);
+  if (last.storyEvents === 88 && last.linePets === 7) ok('故事线变体接线生效（74 主表 + 14 线专属事件 / 7 异兽）', `事件池 ${last.storyEvents}`);
   else bad('故事线变体数量不符', JSON.stringify({ ev: last.storyEvents, pet: last.linePets }));
   if (last.eventsSeen > 0) ok('新增事件池在 30 天内被真实触发', `累计 ${last.eventsSeen} 次随机事件`);
   else console.log('  · 推演期内未触发随机事件（随机性，非缺陷）');
@@ -758,9 +758,9 @@ try {
   if (ui.wikiOk) ok('Wiki（含 v3.10.0 四个新章节）渲染无 undefined / NaN');
   else bad('Wiki 渲染出现 undefined / NaN');
   const rTotal = ui.researchGroups.reduce((a, g) => a + g.n, 0);
-  if (rTotal === ui.researchTotal && ui.researchTotal === 56) ok('研究面板分组覆盖全部 56 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
+  if (rTotal === ui.researchTotal && ui.researchTotal === 68) ok('研究面板分组覆盖全部 68 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
   else bad('研究分组与配置不一致', `${rTotal} vs ${ui.researchTotal}`);
-  if (ui.policyGroups === 11 && ui.policyTotal === 33) ok('政策面板 11 组 33 项全部注册', `组 ${ui.policyGroups} / 项 ${ui.policyTotal}`);
+  if (ui.policyGroups === 13 && ui.policyTotal === 39) ok('政策面板 13 组 39 项全部注册', `组 ${ui.policyGroups} / 项 ${ui.policyTotal}`);
   else bad('政策数量不符', JSON.stringify({ g: ui.policyGroups, n: ui.policyTotal }));
   if (ui.priceMatch) ok('商店卡面可读取并与真实首购价关联', `${ui.priceMatch.id} = ${fx(ui.priceMatch.cost)} EP`);
   else console.log('  · 商店首卡当前无可购买入口（进度相关，非缺陷）');
@@ -800,7 +800,7 @@ try {
   if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
-  if (ui.achTotal === 115) ok('成就注册表 115 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  if (ui.achTotal === 135) ok('成就注册表 135 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
     ui.achV3100Unlocked.join(', '));

@@ -37,6 +37,9 @@ export default {
         { id: '18A', name: '空班次', cond: (S) => S.storyline === 'line_order' && (S.es || 0) >= 2000, minDays: 7, desc: '永恒碎片过两千，排班表上终于留出一个空班次。编译器问是不是漏填，你说不是——总得有一个格子，不归任何协议管，也不为任何指标负责。它一直空到现在。' },
         { id: '19A', name: '共鸣入约', cond: (S) => S.storyline === 'line_order' && (S.resonance?.layers || 0) >= 10, minDays: 6, desc: '第十层共鸣叠满时，你第一次把它写进协议：允许系统在同一相位里连续做同一件事，不要求每一秒都产出可量化的结果。评审栏空着，编译器也没有报错。' },
         { id: '20A', name: '注释之外', cond: (S) => S.storyline === 'line_order' && (S.projectsDone || 0) >= 200, minDays: 6, desc: '第二百个任务归档，你翻回最早那个没填的注释位。它还是空的，但周围已经长出了二十来条别的注释，全是别人写的。你把光标挪开，没有补。' },
+        // v3.11.0 剧情扩充（16→18 章）：条件落在助手状态与动作台账上，与主线口径同源
+        { id: '21A', name: '勤务条款', cond: (S) => S.storyline === 'line_order' && (S.ai?.assistants || 0) >= 1, minDays: 6, desc: '协议里第一次出现关于「代班」的条款：每替系统执行一次动作，就有一名助手从名单上划掉。写这条的时候你犹豫了很久，最后没有加豁免项——规则对谁都一样，包括写规则的人。' },
+        { id: '22A', name: '不用在场的签字', cond: (S) => S.storyline === 'line_order' && Object.values(S.ai?.actionCounts || {}).reduce((a, b) => a + (b || 0), 0) >= 50, minDays: 7, desc: '台账累计到第五十次，审批栏终于允许留空。编译器问谁来签字，你说不用——动作已经执行完了，记录本身就是签字。那一刻你忽然明白，秩序最后要放下的，是「必须在场」。' },
       ],
     },
     events: {
@@ -55,6 +58,9 @@ export default {
         { id: 'draft_archive', name: '草案归档', lineOnly: true, type: 'rp', amount: 22, minCps: 1e6, rare: true, desc: '立即获得 22 RP' },
         { id: 'protocol_echo', name: '协议回声', lineOnly: true, type: 'buff', mult: 1.8, dur: 240, minCps: 1e5, rare: false, desc: '4 分钟产出 ×1.8' },
         { id: 'axiom_lock', name: '公理锁定', lineOnly: true, type: 'rp', amount: 28, minCps: 1e6, rare: true, desc: '立即获得 28 RP' },
+        // v3.11.0 事件扩充（12→14）：复用既有 type，字段按 applyEvent 口径写全
+        { id: 'duty_rollcall', name: '勤务点名', lineOnly: true, type: 'buff', mult: 1.6, dur: 300, minCps: 1e5, rare: false, desc: '5 分钟产出 ×1.6' },
+        { id: 'ledger_audit', name: '台账审计', lineOnly: true, type: 'rp', amount: 32, minCps: 1e6, rare: true, desc: '立即获得 32 RP' },
       ],
     },
     buildings: {

@@ -986,6 +986,9 @@ body.paused .pet-grid .pet-card {
 /* ========== v1.3 模块 A：AI 助手面板 ========== */
 /* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
 #ai-card { padding: 8px 10px; }
+/* v3.11.0 反馈：浏览器实测 .ai-reserve-btn / .ai-rate-btn 仅 19px 高，点击目标偏小；
+   AI 面板内所有按钮统一 >=24x24，且不影响既有 padding 与卡面紧凑度。 */
+#ai-panel button { min-width: 24px; min-height: 24px; box-sizing: border-box; }
 /* v3.7.5 反馈：编队按钮 EP 不足 / 满编灰显（暗色 + 禁点，与全局 .btn:disabled 同口径） */
 #ai-panel [data-assist-buy]:disabled { opacity: .45; cursor: not-allowed; background: #14161c !important; color: #666 !important; border-color: #2a2e3a !important; }
 #code-rain {

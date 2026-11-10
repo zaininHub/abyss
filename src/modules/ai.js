@@ -1,12 +1,16 @@
-// v1.3 模块 A：AI 助手 MVP（三开关：自动升级 / 自动招募 / 自动领取 + 预留线）
+// v1.3 模块 A：AI 助手（基础三项 + 进阶两项自动化 + 预留线）
 // 解锁：科技树「AI 管理核心」（ai_core，里程碑 cps≥1e4 后可见，50 RP，跨晋升保留）
+// v3.11.0：动作元数据（开关 / 分组 / 助手单价 / 文案）下沉到 core/aiActionRegistry.js，
+//   本文件只保留执行器与 UI，助手守卫 / 扣费 / 台账 / 日志后缀由 tickAI 统一遍历处理。
 // 规范（设计 §5）：
-//   - 三开关默认全关，每开关独立可关；关闭后无新动作
-//   - 自动升级：每 5s 买「回本最短」产出项（payback = 成本 ÷ 边际 CPS 含全局乘数），EP ≥ 预留线才买
+//   - 各开关默认全关，独立可关；关闭后无新动作
+//   - 自动升级：每决策周期买「回本最短」产出项（payback = 成本 ÷ 边际 CPS 含全局乘数），EP ≥ 预留线才买
 //   - 自动招募：staffNetPerSec() > 0 且 EP ≥ staffCost×2（net<0 自然停）
 //   - 自动领取：任务 pending 即领（EP 类奖励走 addEp 上限口径，由 claimProject 内部处理）
+//   - 自动购建 / 自动研究：各自需额外解锁，同样按次消耗助手
+//   - 每一项自动化动作每执行一次消耗 1 名 AI 助手；不足即停摆并给出明确提示
 //   - 预留线：EP 上限的 10% / 30% / 50% 三档（默认 30%）
-//   - 所有动作走日志带 [AI] 前缀；面板顶部一键全关
+//   - 所有动作走日志带 [AI] 前缀；面板底部「一键全关」由注册表派生，覆盖全部开关
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
@@ -23,6 +27,13 @@ import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI
 import { rollProfession, aiSuggestedProfession } from './threadBinding.js'; // v3.3.0 ⑤：AI 招募与线程职业联动
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
 import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已购顺序登记）
+// v3.11.0：自动化动作声明层——「哪些动作消耗助手 / 开关 / 分组 / 一键全关」的单一真源。
+import {
+  AI_ACTIONS, AI_ACTION_GROUPS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS,
+  AI_ASSISTANT_CONSUMER_IDS, ALL_OFF_SWITCH_KEYS, actionById, actionsByGroup,
+  enabledActions, isAnyActionEnabled, emptyActionCounts, totalActionCount,
+  maxCycleAssistantDemand,
+} from '../core/aiActionRegistry.js';
 
 let logFn = null;
 let uiRefreshFn = null;
@@ -48,11 +59,53 @@ export function assistantCost() {
   // v3.10.5：「拟我协议」(rp_ai) 研究提升助手性价比——购买价 ÷ researchMult('ai')，数量递增仍然限购
   return Math.round(c.baseCost * Math.pow(c.costGrowth, n) / researchMult('ai'));
 }
-// 消耗 1 名助手（执行自动升级/招募/领取时调用）；不足则返回 false
-function consumeAssistant() {
-  if (assistantCount() <= 0) return false;
-  S.ai.assistants = assistantCount() - 1;
-  return true;
+// v3.11.0：统一扣费入口。执行器只报「实际执行了几次动作」，助手扣费 / 台账 / 日志
+// 全部由 tickAI 的注册表遍历统一处理，杜绝各分支手写「守卫 + 实扣 + 日志」漂移。
+function consumeAssistants(n) {
+  const have = assistantCount();
+  const take = Math.min(have, Math.max(0, Math.floor(n)));
+  if (take <= 0) return 0;
+  S.ai.assistants = have - take;
+  // 累计消耗台账：与动作台账严格一一对应（每项动作 assistantCost=1），
+  // 供 30 天推演核对「动作次数 == 消耗助手数」与「补给+购买-余额 == 消耗」双守恒。
+  S.ai.assistantsSpent = (S.ai.assistantsSpent || 0) + take;
+  return take;
+}
+
+// 本局动作台账（供面板 / 30 天推演核对「自动化是否真在跑」）；旧档无字段时惰性建槽。
+export function recordAction(id, n = 1) {
+  if (!actionById(id) || n <= 0) return;
+  if (!S.ai.actionCounts || typeof S.ai.actionCounts !== 'object') {
+    S.ai.actionCounts = emptyActionCounts();
+  } else {
+    // 兼容旧档 / 新增动作：补齐缺失槽位，避免 undefined + NaN
+    for (const k of AI_ACTION_IDS) if (S.ai.actionCounts[k] === undefined) S.ai.actionCounts[k] = 0;
+  }
+  S.ai.actionCounts[id] += n;
+}
+export function actionCounts() {
+  const base = emptyActionCounts();
+  const cur = (S.ai && S.ai.actionCounts) || {};
+  for (const k of AI_ACTION_IDS) base[k] = cur[k] || 0;
+  return base;
+}
+export { totalActionCount, maxCycleAssistantDemand, AI_ASSISTANT_CONSUMER_IDS };
+
+// 助手耗尽的停摆告警：v3.10.5 三个分支只是静默不动作（零日志零提示），
+// 玩家看到开关 ON 却什么都没发生。这里按 60s 真实时间节流，避免刷屏。
+const STALL_WARN_MS = 60 * 1000;
+export function stalledActions() {
+  if (!aiUnlocked()) return [];
+  if (!isAnyActionEnabled(S.ai)) return [];
+  if (assistantCount() > 0) return [];
+  return enabledActions(S.ai).filter(a => a.assistantCost > 0);
+}
+function warnIfStalled(stalled) {
+  if (!stalled.length) return;
+  const now = Date.now();
+  if (S.ai._stallWarnAt && now - S.ai._stallWarnAt < STALL_WARN_MS) return;
+  S.ai._stallWarnAt = now;
+  ailog(`助手耗尽：${stalled.map(a => a.name).join('、')} 已暂停——购买助手或等待补给后自动恢复`, 'warn');
 }
 
 // v2.5.5：全部资源点解锁判定（resDiscovered 十个锚点全 true）
@@ -137,6 +190,94 @@ function aiHireOne() {
   });
 }
 
+// ========== v3.11.0：执行器表（声明 → 求值 → 消费 三层中的「求值」层） ==========
+// 执行器只负责「本周期实际执行了几次动作 + 日志正文」，绝不碰助手扣费 / 台账 / 日志后缀；
+// 这些横切关注点统一由 tickAI 的注册表遍历处理。新增动作 = 注册表一行 + 这里一个执行器。
+// budget = 当前助手余额可负担的最大动作次数（assistantCost=0 时为 Infinity）。
+const ACTION_PREREQS = {
+  build: () => !!(S.ai && S.ai.autoBuildUnlocked && policyMult('aiCap') > 0),
+  tech: () => !!(S.tech && S.tech.auto_tech),
+};
+export function actionAvailable(id) {
+  const p = ACTION_PREREQS[id];
+  return p ? p() : true;
+}
+
+const EXECUTORS = {
+  // a. 自动升级：回本最短项，EP ≥ 预留线才买
+  upgrade(ctx, budget) {
+    if (budget < 1) return null;
+    const pick = bestPaybackItem();
+    if (!(pick && S.ep - pick.cost >= ctx.line && S.ep >= pick.cost)) return null;
+    S.ep -= pick.cost;
+    S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
+    S.totalBuys++;
+    aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
+    return { count: 1, messages: [{ text: `自动升级：购入 ${pick.u.name}（-${fmt(pick.cost)} EP）`, cls: 'good', units: 1 }] };
+  },
+  // b. 自动招募：净产出为正且 EP ≥ 2×招募成本；net<0 自然停止
+  hire(ctx, budget) {
+    if (budget < 1) return null;
+    const cost = staffCost();
+    if (!(staffNetPerSec() > 0 && S.ep >= cost * 2 && S.ep - cost >= ctx.line)) return null;
+    aiHireOne();
+    hiredFlag = true; // v2.7.2：招募发生 → main 刷新线程区（dirty.shop）
+    return { count: 1, messages: [{ text: `自动招募：+1 线程（-${fmt(cost)} EP）`, cls: 'good', units: 1 }] };
+  },
+  // c. 自动领取：每个 pending 任务一次动作，各自消耗 1 名助手；不超过 budget
+  claim(ctx, budget) {
+    if (budget < 1) return null;
+    const messages = [];
+    let count = 0;
+    for (const p of S.projects) {
+      if (count >= budget) break;
+      if (p.status !== 'pending') continue;
+      claimProject(p);
+      count++;
+      messages.push({ text: `自动领取：任务「${p.name}」奖励到账`, cls: 'good', units: 1 });
+    }
+    return count > 0 ? { count, messages } : null;
+  },
+  // d. 自动购建：严格限速（间隔硬下限 5s / 每决策周期至多 1 栋 / 受预留线约束）
+  build(ctx, budget) {
+    const rate = autoBuildRate();
+    S.ai.autoBuildTimer = (S.ai.autoBuildTimer || 0) + ctx.dt;
+    if (S.ai.autoBuildTimer < rate || budget < 1) return null;
+    S.ai.autoBuildTimer = 0;
+    const cands = V21_BUILDINGS
+      .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
+      .map(b => ({ b, cost: v21BuildingCost(b) }))
+      .sort((a, b2) => a.cost - b2.cost);
+    for (const { b, cost } of cands) {
+      if (S.ep < cost || S.ep - cost < ctx.line) continue;
+      S.ep -= cost;
+      S.buildings[b.id] = v21Level(b.id, S) + 1;
+      S.totalBuys = (S.totalBuys || 0) + 1;
+      const cap = capOf(b, S);
+      aiUiRefresh({ kind: 'building', b });
+      return { count: 1, messages: [{ text: `自动购建：${b.name} 升至 Lv.${v21Level(b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(cost)} EP）`, cls: 'good', units: 1 }] };
+    }
+    return null;
+  },
+  // e. 自动研究：每决策周期至多买 1 个最便宜可负担科技（RP 消耗）
+  tech(ctx, budget) {
+    if (budget < 1) return null;
+    const cands = (getTechs() || [])
+      .filter(t => t.autoTech && !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r))))
+      .map(t => ({ t, cost: techCostOf(t) }))
+      .sort((a2, b2) => a2.cost.rp - b2.cost.rp);
+    for (const { t, cost } of cands) {
+      if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
+      S.rp -= cost.rp;
+      S.ep -= cost.ep || 0;
+      S.tech[t.id] = true;
+      pushBoughtOrder(S, t.id);
+      return { count: 1, messages: [{ text: `自动研究：购入科技「${t.name}」（-${fmt(cost.rp)} RP${cost.ep ? ' -' + fmt(cost.ep) + ' EP' : ''}）`, cls: 'good', units: 1 }] };
+    }
+    return null;
+  },
+};
+
 // 返回本轮是否有动作（供脏标记）
 export function tickAI(dt) {
   if (!aiUnlocked()) return false;
@@ -148,7 +289,8 @@ export function tickAI(dt) {
   }
   const ai = S.ai;
   hiredFlag = false; // v2.7.2：每 tick 重置招募标志（main 消费后判定线程区刷新）
-  if (!ai || (!ai.autoUpgrade && !ai.autoHire && !ai.autoClaim && !ai.autoBuild && !ai.autoTech)) return false; // v2.8.22 ②：只开自动研究时也要进入决策（此前前置 return 吞掉 autoTech 分支 → 「自动研究开了没效果」真因）
+  // v3.11.0：开关总闸由注册表派生（此前手写 5 个 key，新增动作必漏）。
+  if (!isAnyActionEnabled(ai)) return false;
   ai.timer = (ai.timer || 0) + dt;
   // v2.6.0 深潜：拟态矩阵——决策间隔 -20%/级（下限 40% 原间隔）
   const matLv = (S.delve && S.delve.up && S.delve.up.matrix) || 0;
@@ -160,94 +302,27 @@ export function tickAI(dt) {
   ai.timer -= interval;
 
   let acted = false;
-  const line = reserveLine();
+  const ctx = { dt, line: reserveLine() };
+  const stalled = [];
 
-  // a. 自动升级：回本最短项，EP ≥ 预留线才买；每执行一次消耗 1 名 AI 助手
-  if (ai.autoUpgrade) {
-    const pick = bestPaybackItem();
-    if (pick && S.ep - pick.cost >= line && S.ep >= pick.cost && assistantCount() > 0) {
-      S.ep -= pick.cost;
-      S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
-      S.totalBuys++;
-      consumeAssistant();
-      aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
-      ailog(`自动升级：购入 ${pick.u.name}（-${fmt(pick.cost)} EP，消耗 1 名助手）`, 'good');
-      acted = true;
+  // v3.11.0：统一遍历注册表。助手守卫 / 扣费 / 台账 / 日志后缀只有这一处实现。
+  for (const a of AI_ACTIONS) {
+    if (!ai[a.switchKey] || !actionAvailable(a.id)) continue;
+    const cost = a.assistantCost;
+    const budget = cost > 0 ? Math.floor(assistantCount() / cost) : Infinity;
+    if (budget < 1) { stalled.push(a); continue; }
+    const result = EXECUTORS[a.id](ctx, budget);
+    if (!result || result.count <= 0) continue;
+    const spent = consumeAssistants(result.count * cost);
+    recordAction(a.id, result.count);
+    for (const m of result.messages) {
+      const units = m.units || 1;
+      const suffix = cost > 0 && spent > 0 ? `（消耗 ${units * cost} 名助手）` : '';
+      ailog(m.text + suffix, m.cls);
     }
+    acted = true;
   }
-
-  // b. 自动招募：净产出为正且 EP ≥ 2×招募成本；net<0 自然停止；每执行一次消耗 1 名 AI 助手
-  if (ai.autoHire) {
-    const cost = staffCost();
-    if (staffNetPerSec() > 0 && S.ep >= cost * 2 && S.ep - cost >= line && assistantCount() > 0) {
-      aiHireOne();
-      consumeAssistant();
-      hiredFlag = true; // v2.7.2：招募发生 → main 刷新线程区（dirty.shop）
-      ailog(`自动招募：+1 线程（-${fmt(cost)} EP，消耗 1 名助手）`, 'good');
-      acted = true;
-    }
-  }
-
-  // c. 自动领取：任务进入 pending 即领；每领取一个任务消耗 1 名 AI 助手
-  if (ai.autoClaim) {
-    for (const p of S.projects) {
-      if (p.status === 'pending' && assistantCount() > 0) {
-        claimProject(p);
-        consumeAssistant();
-        ailog(`自动领取：任务「${p.name}」奖励到账（消耗 1 名助手）`, 'good');
-        acted = true;
-      }
-    }
-  }
-
-  // v2.5.5 d. 自动购建：全部资源解锁激活后可用；严格限速——
-  // 间隔硬下限 5s（autoBuildRate() 已 clamp）、每决策周期至多 1 栋、只 EP 升级已解锁建筑（不花 RP）、
-  // 且受预留线约束（与手动购买共享预算，不把 EP 花到预留线以下）
-  if (ai.autoBuild && ai.autoBuildUnlocked && policyMult('aiCap') > 0) { // v2.8.6 B2a：自治协议——自动购建上限 -1（停购）
-    const rate = autoBuildRate();
-    ai.autoBuildTimer = (ai.autoBuildTimer || 0) + dt;
-    if (ai.autoBuildTimer >= rate) {
-      ai.autoBuildTimer = 0;
-      // 候选：已解锁（unlockedBuildings）未满级，按 EP 成本升序取最低；EP 扣后仍 ≥ 预留线才买
-      const cands = V21_BUILDINGS
-        .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
-        .map(b => ({ b, cost: v21BuildingCost(b) }))
-        .sort((a, b2) => a.cost - b2.cost);
-      for (const { b, cost } of cands) {
-        if (S.ep < cost || S.ep - cost < line) continue;
-        S.ep -= cost;
-        S.buildings[b.id] = v21Level(b.id, S) + 1;
-        S.totalBuys = (S.totalBuys || 0) + 1;
-        const cap = capOf(b, S);
-        aiUiRefresh({ kind: 'building', b }); // v2.6.6 ③：单卡原地刷新
-        ailog(`自动购建：${b.name} 升至 Lv.${v21Level(b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(cost)} EP）`, 'good');
-        acted = true;
-        break; // 每周期至多 1 栋（perTickMax）
-      }
-    }
-  }
-
-  // v2.8.4：自动研究（科技树 · RP 购买）——秩序线科技「自动研究」解锁开关；
-  // 每决策周期至多买 1 个最便宜可负担科技，RP 消耗，克制防抢资源
-  if (ai.autoTech && S.tech && S.tech.auto_tech) {
-    const cands = (getTechs() || [])
-      .filter(t => t.autoTech && !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r)))) // v2.8.22 ②：自动研究只买标记 autoTech 的基础产出相关科技（不做临时 buff 式购买）
-      .map(t => ({ t, cost: techCostOf(t) }))
-      .sort((a2, b2) => a2.cost.rp - b2.cost.rp); // v2.8.22 ②：按 RP 成本排序（cost 为多资源对象，此前按对象减法排序恒 NaN）
-    for (const { t, cost } of cands) {
-      // v2.8.22 ②：cost 为 {rp,ep,dm,es} 对象——此前 <cost/扣减用整个对象 → 永不购买或 RP 变 NaN（「自动研究开了没效果」真根因之一）
-      if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
-      S.rp -= cost.rp;
-      S.ep -= cost.ep || 0;
-      S.tech[t.id] = true;
-      pushBoughtOrder(S, t.id);
-      ailog(`自动研究：购入科技「${t.name}」（-${fmt(cost.rp)} RP${cost.ep ? ' -' + fmt(cost.ep) + ' EP' : ''}）`, 'good');
-      acted = true;
-      break; // 每周期至多 1 个
-    }
-  }
-  // v3.10.5：删除了 v3.6.0「助手按类型自动购买」——助手已改为一次性消耗品，
-  // 由上方 autoUpgrade/autoHire/autoClaim 直接消耗，不再有 per-type 分配购买。
+  warnIfStalled(stalled);
   return acted;
 }
 
@@ -298,9 +373,38 @@ export function assistantBuyState() {
   const disabled = !aiUnlocked() || !afford;
   const label = `购买助手（${fmt(cost)} EP）`;
   const title = !aiUnlocked() ? '需先研究「AI 管理核心」'
-    : afford ? `消耗 ${fmt(cost)} EP 购买 1 名 AI 助手（自动升级/招募/领取每执行一次消耗 1 名）`
+    : afford ? `消耗 ${fmt(cost)} EP 购买 1 名 AI 助手（每项自动化动作每执行一次消耗 1 名）`
       : `EP 不足：还需 ${fmt(Math.max(0, cost - (S.ep || 0)))} EP`;
   return { cost, afford, disabled, label, title, sig: `${disabled}|${label}|${title}` };
+}
+
+// v3.11.0：把「购买助手 / 切开关 / 一键全关」抽成产品真实入口。
+// UI 点击处理器与 30 天浏览器自动玩家共用同一函数，避免推演直接写 S 伪造进度。
+export function buyAssistant() {
+  const st = assistantBuyState();
+  if (!st.disabled) {
+    S.ep -= st.cost;
+    S.ai.assistants = assistantCount() + 1;
+    ailog('购入 AI 助手 +1（一次性消耗品）', 'good');
+    save(S);
+    return { ok: true, cost: st.cost, count: assistantCount() };
+  }
+  ailog(`购买助手失败：EP 不足（还需 ${fmt(Math.max(0, st.cost - (S.ep || 0)))} EP）`, 'bad');
+  return { ok: false, reason: st.title, cost: st.cost };
+}
+
+export function setAiSwitch(key, on) {
+  if (!AI_ACTION_SWITCH_KEYS.includes(key)) return false;
+  S.ai[key] = !!on;
+  save(S);
+  return true;
+}
+
+export function allOffActions() {
+  for (const k of ALL_OFF_SWITCH_KEYS) S.ai[k] = false;
+  ailog('一键全关：所有自动化已停止', 'bad');
+  save(S);
+  return true;
 }
 
 // v3.10.5：EP / 单价变动时原地维护可购态（纯属性切换，不重建面板）
@@ -317,16 +421,26 @@ export function refreshAssistantAffordability() {
 }
 
 // v3.10.5：助手区块（消耗品）——只显示数量 + 购买按钮，删除编队/槽位/按类型分配
+// v3.11.0：补上「助手耗尽停摆」的面板提示与动作台账，避免开关 ON 却静默无动作。
 function renderAssistantSection() {
   const n = assistantCount();
   const st = assistantBuyState();
-  return `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)">${n}</b> 名（每执行一次自动升级/招募/领取消耗 1 名）`;
+  const stalled = stalledActions();
+  const counts = actionCounts();
+  const supply = BALANCE.ai.assistants.supply;
+  const stallHtml = stalled.length
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 助手已耗尽：${stalled.map(a => a.name).join('、')} 暂停执行。购买助手或等待自动补给后恢复。</div>`
+    : '';
+  const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">本局已执行：${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' · ')}（合计 ${totalActionCount(counts)} 次）</div>`;
+  let head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（每项自动化动作每执行一次消耗 1 名）`;
   if (aiUnlocked()) {
-    return `</div><div style="margin-top:4px">`
+    return head + `</div>` + stallHtml
+      + `<div style="margin-top:4px">`
       + `<button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`
-      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}），数量越多越贵。</div>`;
+      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；每 ${supply.intervalSec / 60} 分钟自动补给 ${supply.perTick} 名（至多积攒 ${supply.cap} 名，购买不受此限）。</div>`
+      + ledgerHtml + `</div>`;
   }
-  return `</div>`;
+  return head + `</div>` + ledgerHtml;
 }
 
 // ========== 面板 ==========
@@ -339,7 +453,7 @@ export function renderAiPanel(container) {
   if (S.tech && S.tech.chaos_mind) {
     container.innerHTML = `
       <div style="font-size:13px;line-height:1.9;color:var(--text-2)">
-        <b style="color:var(--red,#f85149)">混沌心智已接管</b>：AI 自动化全面禁用，混沌直觉每 10 秒随机购入最便宜的未拥有升级（深渊行者科技线）。<b style="color:var(--warn,#c8a24a)">永久生效，不可取消</b>——勾选混沌心智后 AI 无法恢复，请谨慎选择。</div>`;
+        <b style="color:var(--red,#f85149)">混沌心智已接管</b>：AI 自动化全面禁用，混沌直觉每 10 秒随机购入最便宜的未拥有升级（深渊行者科技线）。<b style="color:var(--warn,#c8a24a)">永久生效，不可取消</b>——勾选混沌心智后 AI 无法恢复，请谨慎选择。<br>接管期间已购助手不再消耗，也不会退还。</div>`;
     return;
   }
   const line = reserveLine();
@@ -351,8 +465,11 @@ export function renderAiPanel(container) {
     </div>`;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
+  // v3.11.0：开关文案一律取注册表 desc（单一真源），不再在面板内联硬编码。
+  const autoTechAction = actionById('tech');
   // v2.8.4：自动研究开关（秩序线科技「自动研究」已购后显示；RP 购买科技树）
-  const autoTechHtml = (S.tech && S.tech.auto_tech) ? sw('autoTech', '自动研究', '每决策周期自动购买最便宜的已解锁科技（RP 消耗，至多 1 个/周期）') : '';
+  const autoTechHtml = (S.tech && S.tech.auto_tech)
+    ? sw(autoTechAction.switchKey, autoTechAction.name, autoTechAction.desc) : '';
   // v2.5.5：自动购建区块（全部资源点解锁后可激活）
   // v3.2.4 反馈④：未全解锁时整块不展示（原常驻展示「资源点 x/10」进度卡）；文案精简去冗余描述
   const AB = BALANCE.ai.aiAutoBuild;
@@ -378,25 +495,31 @@ export function renderAiPanel(container) {
     buildHtml += `
       <div class="ai-build-box">
         <div class="ai-build-title">自动购建（已激活）</div>
-        ${sw('autoBuild', '自动购建', `每 ${autoBuildRate()}s 购买 1 栋已解锁建筑（EP 成本最低优先，不低于预留线）`)}
+        ${sw(actionById('build').switchKey, actionById('build').name, `${actionById('build').desc}（当前间隔 ${autoBuildRate()}s）`)}
         <div class="ai-reserve-row" style="margin-top:4px">
           <span>购买间隔</span>${rateBtns}
         </div>
         <div style="font-size:11px;color:var(--text-2);margin-top:4px">下次购建倒计时 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>
       </div>`;
   }
+  // v3.11.0：分组横幅与开关列表均从注册表派生。旧版把「需消耗 AI 助手」横幅放在整张卡顶部，
+  // 把不消耗助手（当时）的进阶动作也框了进去；现在两组都明确写出各自口径，语义不再越界。
+  const groupBanner = (g) => `<div class="ai-group-title" data-ai-group="${g.key}" style="font-size:12px;color:var(--text-2);margin:2px 0 6px;padding:5px 8px;background:var(--row,#161b27);border-radius:6px;line-height:1.7">${g.key === 'basic' ? '🟢' : '🔧'} ${g.name} · ${g.hint}<br><span style="font-size:11px;color:var(--text-3,#6e7681)">${g.note}</span></div>`;
+  const basicActionsHtml = actionsByGroup('basic')
+    .map(a => sw(a.switchKey, a.name, a.desc)).join('');
+  const advancedGroup = AI_ACTION_GROUPS.find(g => g.key === 'advanced');
+  const advancedHtml = buildHtml.trim()
+    ? groupBanner(advancedGroup) + buildHtml : '';
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
-    <div style="font-size:12px;color:var(--text-2);margin:2px 0 6px;padding:4px 8px;background:var(--row,#161b27);border-radius:6px">🟢 基础自动化 · 需消耗 AI 助手（研究「AI 管理核心」即可用）</div>
+    ${groupBanner(AI_ACTION_GROUPS.find(g => g.key === 'basic'))}
     <div class="ai-desc">预留线：EP 上限的 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</div>
-    ${sw('autoUpgrade', '自动升级', '每 5s 购买回本时间最短的产出项（成本 ÷ 边际 CPS，含全局乘数）；EP 低于预留线时暂停；每执行一次消耗 1 名 AI 助手')}
-    ${sw('autoHire', '自动招募', '线程净产出为正且 EP ≥ 2×招募成本时自动招募；净产出为负自动停止；每执行一次消耗 1 名 AI 助手')}
-    ${sw('autoClaim', '自动领取', '任务完成进入待领取状态立即自动领取；每领取一个任务消耗 1 名 AI 助手')}
-    ${buildHtml}
+    ${basicActionsHtml}
+    ${advancedHtml}
     ${renderAssistantSection()}
     <div class="ai-reserve-row">
       <span>预留线</span>${reserveOpts}
-      <button class="btn" data-ai-alloff="1" title="关闭全部自动化开关">一键全关</button>
+      <button class="btn" data-ai-alloff="1" title="关闭全部自动化开关（含进阶动作）">一键全关</button>
     </div>`;
 
   if (!container.dataset.v13Delegated) {
@@ -404,9 +527,9 @@ export function renderAiPanel(container) {
     container.addEventListener('click', (e) => {
       const swEl = e.target.closest('[data-ai-switch]');
       if (swEl) {
-        const key = swEl.dataset.aiSwitch;
-        S.ai[key] = !S.ai[key]; // v2.8.21 ③：不再要求 key 预存在 S.ai（旧档无 autoTech 字段 → 点击无效）；固定开关集合安全
-        save(S); renderAiPanel(container);
+        // v2.8.21 ③：不再要求 key 预存在 S.ai（旧档无 autoTech 字段 → 点击无效）
+        setAiSwitch(swEl.dataset.aiSwitch, !S.ai[swEl.dataset.aiSwitch]);
+        renderAiPanel(container);
         return;
       }
       const rEl = e.target.closest('[data-ai-reserve]');
@@ -417,10 +540,10 @@ export function renderAiPanel(container) {
         return;
       }
       if (e.target.closest('[data-ai-alloff]')) {
-        S.ai.autoUpgrade = false; S.ai.autoHire = false; S.ai.autoClaim = false; S.ai.autoBuild = false;
-        ailog('一键全关：所有自动化已停止', 'bad');
-        save(S);
+        // v3.11.0：从注册表派生，修掉手写集合漏 autoTech 导致「日志说全停、自动研究还在跑」。
+        allOffActions();
         renderAiPanel(container);
+        return;
       }
       // v2.5.5：激活自动购建——二次确认（首次点击变确认态，再点执行）
       const actEl = e.target.closest('[data-ai-build-activate]');
@@ -446,12 +569,9 @@ export function renderAiPanel(container) {
       }
       const assistBuy = e.target.closest('[data-assist-buy]');
       if (assistBuy) {
-        const st = assistantBuyState();
-        if (!st.disabled) {
-          S.ep -= st.cost; S.ai.assistants = assistantCount() + 1;
-          ailog('购入 AI 助手 +1（一次性消耗品）', 'good');
-        } else ailog(`购买助手失败：EP 不足（还需 ${fmt(Math.max(0, st.cost - (S.ep || 0)))} EP）`, 'bad');
-        save(S); renderAiPanel(container); return;
+        buyAssistant();
+        renderAiPanel(container);
+        return;
       }
     });
   }

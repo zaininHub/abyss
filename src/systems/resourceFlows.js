@@ -17,7 +17,7 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   computeCps, epStorageCap, addEp, addRp, addPt, clickMult, isLazy,
-  hasTech, rpCap, rpEffScale, ptCap,
+  hasTech, rpCap, rpEffScale, ptCap, researchMult,
 } from '../modules/economy.js';
 import { converterEnabled, converterThreadBoost } from '../modules/threadBinding.js';
 import { petUpkeepTotalPerSec, petStarving } from '../modules/pets.js';
@@ -221,8 +221,32 @@ registerFlow({
   },
 });
 
+// ========== ⑨ AI 助手自动补给（v3.11.0） ==========
+// 背景：v3.10.5 把助手改成纯消耗品且只有「手动购买 ×1.5 复利」一条来源，
+// 长期挂机时五项自动化每决策周期就会耗尽助手并永久停摆（30 天推演此前零覆盖，未暴露）。
+// 本流按游戏时间稳定补货，构成「消耗 → 补给 → 再投入」的可持续闭环；
+// 补给量受「拟我协议」rp_ai 研究加成，cap 只限制自动积攒，手动购买仍无上限。
+registerFlow({
+  id: 'assistant:supply', phase: EP_AUX, order: 90, resource: 'assistants',
+  run({ S, dt }) {
+    if (!hasTech('ai_core') || !S.ai) return;
+    const cfg = BALANCE.ai.assistants.supply;
+    S.ai.supplyTimer = (S.ai.supplyTimer || 0) + dt;
+    if (S.ai.supplyTimer < cfg.intervalSec) return;
+    S.ai.supplyTimer -= cfg.intervalSec;
+    const have = S.ai.assistants || 0;
+    if (have >= cfg.cap) return;
+    const perTick = Math.max(1, Math.floor(cfg.perTick * researchMult(cfg.researchKey)));
+    const gained = Math.min(perTick, cfg.cap - have);
+    if (gained <= 0) return;
+    S.ai.assistants = have + gained;
+    return { resource: 'assistants', produced: gained };
+  },
+});
+
 // 供单测 / QA 校验「声明 → 消费」接线完整
 export const RESOURCE_FLOW_IDS = Object.freeze([
   'ep:main', 'ep:tentacle', 'ep:lazy', 'rp:atrium',
   'upgrades:produces', 'pt:hatch', 'fuel:burn', 'pt:upkeep',
+  'assistant:supply',
 ]);

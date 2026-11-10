@@ -162,12 +162,12 @@ test('A8 静态接线：各处不再内联手写清单', () => {
 
 console.log('[B] 成就注册表（纯函数可单测）');
 
-test('B1 115 条成就、id 唯一、无语义重复', () => {
-  assert.equal(ACHIEVEMENTS.length, 115);
-  assert.equal(reg.ACHIEVEMENT_IDS.length, 115);
-  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 115);
+test('B1 135 条成就、id 唯一、无语义重复', () => {
+  assert.equal(ACHIEVEMENTS.length, 135);
+  assert.equal(reg.ACHIEVEMENT_IDS.length, 135);
+  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 135);
   assert.deepEqual(reg.duplicateAchievementTests(), [], 'es1000/es1k 类重复不得回归');
-  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 113);
+  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 133); // 135 - 2 条手动点亮
   assert.ok(!reg.ACHIEVEMENT_IDS.includes('es1k') && !reg.ACHIEVEMENT_IDS.includes('vow'), '两条语义重复项已移除');
 });
 
@@ -404,13 +404,13 @@ test('E3 红包数值回归数据表单一真源', () => {
 });
 
 test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
-  assert.equal(CHAPTERS.length, 38);
-  assert.equal(EVENTS.length, 62);
-  assert.equal(BALANCE.researchUpgs.length, 56);
-  assert.equal(BALANCE.miles.length, 13);
-  assert.equal(WIKI_SECTIONS.length, 24);
-  assert.equal(POLICY_GROUPS.length, 11);
-  assert.equal(POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33);
+  assert.equal(CHAPTERS.length, 46);
+  assert.equal(EVENTS.length, 74);
+  assert.equal(BALANCE.researchUpgs.length, 68);
+  assert.equal(BALANCE.miles.length, 16);
+  assert.equal(WIKI_SECTIONS.length, 29);
+  assert.equal(POLICY_GROUPS.length, 13);
+  assert.equal(POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 39);
   assert.equal(orch.ORCHESTRATION_MODES.length, 6);
   const grouped = RP_GROUPS.flatMap(g => g.ids).sort();
   assert.deepEqual(grouped, BALANCE.researchUpgs.map(u => u.id).sort(),
