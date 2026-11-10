@@ -8,7 +8,8 @@
 //   - 自动招募：staffNetPerSec() > 0 且 EP ≥ staffCost×2（net<0 自然停）
 //   - 自动领取：任务 pending 即领（EP 类奖励走 addEp 上限口径，由 claimProject 内部处理）
 //   - 自动购建 / 自动研究：各自需额外解锁，开启后需 AI 助手编制
-//   - AI 助手是常驻班组工人，自动分配到开启的动作；每动作每周期执行次数 = 分配工人数（越多越强）；助手不足时低优先级动作挂起
+//   - AI 助手是常驻班组，采用「手动占编（绑定）」模型（对齐线程绑定到转化器岗位）：开启某动作默认占编 crewSize（1）名助手，
+//     其余留在空闲池；玩家可手动 +/− 调整占编数。每动作每周期执行次数 = 该动作「绑定」的助手数（越多越强）；关闭 / 解绑即释放占编，不消耗。
 //   - 预留线：EP 上限的 10% / 30% / 50% 三档（默认 30%）
 //   - 所有动作走日志带 [AI] 前缀；面板底部「一键全关」由注册表派生，覆盖全部开关
 import { S, save } from '../state.js';
@@ -49,10 +50,10 @@ const THREAD_IDS = ['cpu', 'gpu']; // v3.4.8 反馈⑦：消耗优化整组已�
 
 export function aiUnlocked() { return hasTech('ai_core'); }
 
-// v3.11.2：助手 = 常驻班组工人。自动升级/招募/领取等动作不再消耗助手，
-// 而是每决策周期按「分配到该动作的工人数」执行相应次数（越多越强）；
-// 助手总数 = 工人池，靠购买价逐次递增（baseCost × costGrowth^n）天然限购扩编。
-// 删除了 v3.10.5 的「消耗品 + 自动补给流」整套模型。
+// v3.11.3：助手 = 常驻班组，但采用「手动占编（绑定）」模型（对齐线程绑定到转化器岗位）：
+// 开启某动作时默认占编 crewSize（1）名助手，其余留在空闲池；玩家可手动 +/− 调整占编数。
+// 每动作每周期执行次数 = 该动作「绑定」的助手数（越多越强）；关闭或 − 解绑即释放占编回空闲池，不消耗。
+// 删除 v3.10.5 的「消耗品 + 自动补给流」，以及 v3.11.2 的「自动均分分配」（改由玩家显式绑定，见用户示例）。
 export function assistantCount() { return (S.ai && S.ai.assistants) || 0; }
 export function assistantCost() {
   const c = BALANCE.ai.assistants;
@@ -60,30 +61,36 @@ export function assistantCost() {
   // v3.10.5：「拟我协议」(rp_ai) 研究提升助手性价比——购买价 ÷ researchMult('ai')，数量递增仍然限购
   return Math.round(c.baseCost * Math.pow(c.costGrowth, n) / researchMult('ai'));
 }
-// v3.11.2：助手不再是消耗品。每决策周期按助手池自动分配编制到开启的动作（类似线程绑定岗位）。
-// 返回 { actionId: workers }；0 工人 = 该动作因编制不足挂起。
-export function assignAssistants() {
-  const N = assistantCount();
-  if (!aiUnlocked() || N <= 0) return {};
-  const enabled = AI_ACTIONS
-    .filter(a => S.ai[a.switchKey] && actionAvailable(a.id))
-    .map(a => a.id);
-  const M = enabled.length;
-  if (M === 0) return {};
-  const assigned = {};
-  if (N >= M) {
-    const base = Math.floor(N / M);
-    let rem = N % M;
-    for (const id of enabled) {
-      assigned[id] = base + (rem > 0 ? 1 : 0);
-      if (rem > 0) rem--;
-    }
-  } else {
-    // 人手不够：basic 组优先于 advanced，前 N 个动作各 1 名，其余挂起
-    const order = [...enabled].sort((a, b) => groupRankOf(a) - groupRankOf(b));
-    order.forEach((id, i) => { assigned[id] = i < N ? 1 : 0; });
+// v3.11.3：绑定（占编）模型。crew 存于 S.ai.crew[id] = 绑定到该动作的助手数。
+// 与线程绑定同理：绑定是常驻、不消耗；解绑即释放。
+export function crewOf(id) { return (S.ai.crew && S.ai.crew[id]) || 0; }
+export function crewBoundTotal() {
+  const c = S.ai.crew || {};
+  return AI_ACTION_IDS.reduce((n, id) => n + (c[id] || 0), 0);
+}
+export function crewIdle() { return Math.max(0, assistantCount() - crewBoundTotal()); }
+// 调整某动作占编数：clamp 到 [0, 当前 + 空闲]，不会超过总助手数也不会为负。
+export function setCrew(id, n) {
+  if (!actionById(id)) return false;
+  if (!S.ai.crew) S.ai.crew = {};
+  const cur = crewOf(id);
+  const max = cur + crewIdle();
+  const next = Math.max(0, Math.min(max, Math.round(n)));
+  S.ai.crew[id] = next;
+  save(S);
+  return true;
+}
+// 购买助手后自动补员：把新助手优先占编到「已开启但未占满 crewSize」的动作（每动作至多 crewSize）。
+function autoStaffEnabled() {
+  if (!S.ai.crew) S.ai.crew = {};
+  for (const a of AI_ACTIONS) {
+    if (!S.ai[a.switchKey] || !actionAvailable(a.id)) continue;
+    const cur = S.ai.crew[a.id] || 0;
+    if (cur >= crewSizeOf(a.id)) continue;
+    const give = Math.min(crewSizeOf(a.id) - cur, crewIdle());
+    if (give <= 0) break;
+    S.ai.crew[a.id] = cur + give;
   }
-  return assigned;
 }
 
 // 本局动作台账（供面板 / 30 天推演核对「自动化是否真在跑」）；旧档无字段时惰性建槽。
@@ -105,24 +112,20 @@ export function actionCounts() {
 }
 export { totalActionCount, maxCycleCrewDemand, AI_CREW_REQUIRED_IDS, crewSizeOf, groupRankOf };
 
-// 编制不足挂起：助手池不足以覆盖所有开启的动作时，低优先级动作被挂起（不执行）。
+// 已开启但未绑定助手的动作（占编 0 = 未生效，等待绑定 / 购买补员）。
 // 告警按 60s 真实时间节流，避免刷屏。
 const STALL_WARN_MS = 60 * 1000;
 export function stalledActions() {
   if (!aiUnlocked()) return [];
   if (!isAnyActionEnabled(S.ai)) return [];
-  const assigned = assignAssistants();
-  if (assistantCount() <= 0) {
-    return enabledActions(S.ai).filter(a => actionAvailable(a.id));
-  }
-  return enabledActions(S.ai).filter(a => actionAvailable(a.id) && (assigned[a.id] || 0) <= 0);
+  return enabledActions(S.ai).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
 }
 function warnIfStalled(stalled) {
   if (!stalled.length) return;
   const now = Date.now();
   if (S.ai._stallWarnAt && now - S.ai._stallWarnAt < STALL_WARN_MS) return;
   S.ai._stallWarnAt = now;
-  ailog(`助手耗尽：${stalled.map(a => a.name).join('、')} 已暂停——再购买助手即自动全开`, 'warn');
+  ailog(`已开启但未绑定助手：${stalled.map(a => a.name).join('、')} 暂不执行——点击 + 绑定或购买助手后自动补员`, 'warn');
 }
 
 // v2.5.5：全部资源点解锁判定（resDiscovered 十个锚点全 true）
@@ -336,12 +339,11 @@ export function tickAI(dt) {
   const ctx = { dt, line: reserveLine() };
   const stalled = [];
 
-  // v3.11.2：先按助手池分配编制，再统一遍历。助手是常驻班组（不消耗），
-  // 每个动作每周期执行次数 = 分配工人数；分配为 0 的动作（编制不足）挂起。
-  const assigned = assignAssistants();
+  // v3.11.3：每个动作的执行次数 = 其绑定的助手数（手动占编，常驻不消耗）。
+  // 绑定为 0 的已开启动作（待绑定 / 待补员）进入 stalled，不执行。
   for (const a of AI_ACTIONS) {
     if (!ai[a.switchKey] || !actionAvailable(a.id)) continue;
-    const workers = assigned[a.id] || 0;
+    const workers = crewOf(a.id);
     if (workers <= 0) { stalled.push(a); continue; }
     const result = EXECUTORS[a.id](ctx, workers);
     if (!result || result.count <= 0) continue;
@@ -393,14 +395,14 @@ function chaosIntuitionTick(dt) {
   return true;
 }
 
-// v3.10.5：助手购买可购态（一次性消耗品，无上限，价格逐次递增）
+// v3.11.3：助手购买可购态（常驻班组，购买即扩编；绑定后才执行，不消耗）
 export function assistantBuyState() {
   const cost = assistantCost();
   const afford = (S.ep || 0) >= cost;
   const disabled = !aiUnlocked() || !afford;
   const label = `购买助手（${fmt(cost)} EP）`;
   const title = !aiUnlocked() ? '需先研究「AI 管理核心」'
-    : afford ? `消耗 ${fmt(cost)} EP 扩编 1 名 AI 助手（常驻班组，自动分配到开启的自动化动作）`
+    : afford ? `消耗 ${fmt(cost)} EP 扩编 1 名 AI 助手（常驻班组，绑定到开启的自动化动作，不消耗）`
       : `EP 不足：还需 ${fmt(Math.max(0, cost - (S.ep || 0)))} EP`;
   return { cost, afford, disabled, label, title, sig: `${disabled}|${label}|${title}` };
 }
@@ -412,6 +414,7 @@ export function buyAssistant() {
   if (!st.disabled) {
     S.ep -= st.cost;
     S.ai.assistants = assistantCount() + 1;
+    autoStaffEnabled(); // v3.11.3：新助手优先占编到已开启但未占满的动作
     ailog('购入 AI 助手 +1（扩编自动化班组）', 'good');
     save(S);
     return { ok: true, cost: st.cost, count: assistantCount() };
@@ -422,7 +425,17 @@ export function buyAssistant() {
 
 export function setAiSwitch(key, on) {
   if (!AI_ACTION_SWITCH_KEYS.includes(key)) return false;
+  const a = AI_ACTIONS.find(x => x.switchKey === key);
   S.ai[key] = !!on;
+  if (!S.ai.crew) S.ai.crew = {};
+  if (on) {
+    // v3.11.3：开启时若尚未占编，则自动占编 crewSize（从空闲池；不足则 0 = 开启但未绑定，待补员）
+    if (!(S.ai.crew[a.id] > 0)) {
+      S.ai.crew[a.id] = Math.min(crewSizeOf(a.id), crewIdle());
+    }
+  } else {
+    S.ai.crew[a.id] = 0; // 关闭释放占编
+  }
   save(S);
   return true;
 }
@@ -447,27 +460,28 @@ export function refreshAssistantAffordability() {
   btn.title = st.title;
 }
 
-// v3.11.2：助手区块（常驻班组）——显示数量 + 购买按钮 + 编制不足提示 + 动作台账。
-// 不再有「耗尽停摆 / 自动补给」，改为「人手不足时低优先级动作挂起」。
+// v3.11.3：助手区块（绑定/占编）——显示总量 + 空闲池 + 本局台账 + 未绑定提示。
 function renderAssistantSection() {
   const n = assistantCount();
   const st = assistantBuyState();
-  const stalled = stalledActions();
+  const idle = crewIdle();
+  const bound = crewBoundTotal();
   const counts = actionCounts();
-  const onCount = enabledActions(S.ai).filter(a => actionAvailable(a.id)).length;
-  const stallHtml = stalled.length
-    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ AI 助手不足：当前 ${n} 名，开启 ${onCount} 个动作——${stalled.map(a => a.name).join('、')} 因编制不足暂停（再购买助手即可全开）。</div>`
+  const unstaffed = enabledActions(S.ai).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
+  const unstaffedHtml = unstaffed.length
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 + 绑定或购买助手后自动补员。</div>`
     : '';
   const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">本局已执行：${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' · ')}（合计 ${totalActionCount(counts)} 次）</div>`;
-  let head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（常驻班组：自动分配到开启的动作，每动作每周期执行次数 = 分配工人数）</div>`;
+  const head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（常驻班组）</div>`;
+  const crewInfo = `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">每动作每周期执行次数 = 绑定工人数 · 占编 ${bound} · 空闲 ${idle}</div>`;
   if (aiUnlocked()) {
-    return head + `</div>` + stallHtml
+    return head + crewInfo + `</div>` + unstaffedHtml
       + `<div style="margin-top:4px">`
       + `<button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`
-      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；购买即扩编，常驻不消耗。</div>`
+      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；购买即扩编，绑定后才执行，不消耗。</div>`
       + ledgerHtml + `</div>`;
   }
-  return head + `</div>` + ledgerHtml;
+  return head + crewInfo + `</div>` + ledgerHtml;
 }
 
 // ========== 面板 ==========
@@ -484,11 +498,25 @@ export function renderAiPanel(container) {
     return;
   }
   const line = reserveLine();
-  const sw = (key, name, desc) => `
-    <div class="ai-switch ${ai[key] ? 'on' : ''}" data-ai-switch="${key}" title="${desc}">
-      <span class="ai-switch-dot"></span>
-      <span class="ai-switch-name">${name}</span>
-      <span class="ai-switch-state">${ai[key] ? 'ON' : 'OFF'}</span>
+  // 每个动作 = 开关 + 占编步进器（绑定 / 解绑助手）
+  const crewRow = (id) => {
+    const n = crewOf(id); const idle = crewIdle();
+    return `<div class="ai-crew" data-ai-crew="${id}" style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--text-2)">
+      <span style="opacity:.8">占编</span>
+      <button class="btn ai-crew-btn" data-ai-crew-dec="${id}" ${n <= 0 ? 'disabled' : ''} title="解绑 1 名（释放回空闲池）">−</button>
+      <b data-ai-crew-count="${id}" style="min-width:16px;text-align:center">${n}</b>
+      <button class="btn ai-crew-btn" data-ai-crew-inc="${id}" ${idle <= 0 ? 'disabled' : ''} title="再绑定 1 名助手到本动作">＋</button>
+      <span style="color:var(--text-3,#6e7681)">空闲 ${idle}</span>
+    </div>`;
+  };
+  const sw = (key, name, desc, id) => `
+    <div class="ai-action" data-ai-action="${id}">
+      <div class="ai-switch ${ai[key] ? 'on' : ''}" data-ai-switch="${key}" title="${desc}">
+        <span class="ai-switch-dot"></span>
+        <span class="ai-switch-name">${name}</span>
+        <span class="ai-switch-state">${ai[key] ? 'ON' : 'OFF'}</span>
+      </div>
+      ${crewRow(id)}
     </div>`;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
@@ -496,7 +524,7 @@ export function renderAiPanel(container) {
   const autoTechAction = actionById('tech');
   // v2.8.4：自动研究开关（秩序线科技「自动研究」已购后显示；RP 购买科技树）
   const autoTechHtml = (S.tech && S.tech.auto_tech)
-    ? sw(autoTechAction.switchKey, autoTechAction.name, autoTechAction.desc) : '';
+    ? sw(autoTechAction.switchKey, autoTechAction.name, autoTechAction.desc, 'tech') : '';
   // v2.5.5：自动购建区块（全部资源点解锁后可激活）
   // v3.2.4 反馈④：未全解锁时整块不展示（原常驻展示「资源点 x/10」进度卡）；文案精简去冗余描述
   const AB = BALANCE.ai.aiAutoBuild;
@@ -522,7 +550,7 @@ export function renderAiPanel(container) {
     buildHtml += `
       <div class="ai-build-box">
         <div class="ai-build-title">自动购建（已激活）</div>
-        ${sw(actionById('build').switchKey, actionById('build').name, `${actionById('build').desc}（当前间隔 ${autoBuildRate()}s）`)}
+        ${sw(actionById('build').switchKey, actionById('build').name, `${actionById('build').desc}（当前间隔 ${autoBuildRate()}s）`, 'build')}
         <div class="ai-reserve-row" style="margin-top:4px">
           <span>购买间隔</span>${rateBtns}
         </div>
@@ -533,7 +561,7 @@ export function renderAiPanel(container) {
   // 把不消耗助手（当时）的进阶动作也框了进去；现在两组都明确写出各自口径，语义不再越界。
   const groupBanner = (g) => `<div class="ai-group-title" data-ai-group="${g.key}" style="font-size:12px;color:var(--text-2);margin:2px 0 6px;padding:5px 8px;background:var(--row,#161b27);border-radius:6px;line-height:1.7">${g.key === 'basic' ? '🟢' : '🔧'} ${g.name} · ${g.hint}<br><span style="font-size:11px;color:var(--text-3,#6e7681)">${g.note}</span></div>`;
   const basicActionsHtml = actionsByGroup('basic')
-    .map(a => sw(a.switchKey, a.name, a.desc)).join('');
+    .map(a => sw(a.switchKey, a.name, a.desc, a.id)).join('');
   const advancedGroup = AI_ACTION_GROUPS.find(g => g.key === 'advanced');
   const advancedHtml = buildHtml.trim()
     ? groupBanner(advancedGroup) + buildHtml : '';
@@ -556,6 +584,19 @@ export function renderAiPanel(container) {
       if (swEl) {
         // v2.8.21 ③：不再要求 key 预存在 S.ai（旧档无 autoTech 字段 → 点击无效）
         setAiSwitch(swEl.dataset.aiSwitch, !S.ai[swEl.dataset.aiSwitch]);
+        renderAiPanel(container);
+        return;
+      }
+      const crewInc = e.target.closest('[data-ai-crew-inc]');
+      if (crewInc) {
+        // v3.11.3：手动再绑定 1 名助手到该动作（clamp 由 setCrew 处理）
+        setCrew(crewInc.dataset.aiCrewInc, crewOf(crewInc.dataset.aiCrewInc) + 1);
+        renderAiPanel(container);
+        return;
+      }
+      const crewDec = e.target.closest('[data-ai-crew-dec]');
+      if (crewDec) {
+        setCrew(crewDec.dataset.aiCrewDec, crewOf(crewDec.dataset.aiCrewDec) - 1);
         renderAiPanel(container);
         return;
       }

@@ -53,7 +53,7 @@ function reset(over = {}) {
     autoBuild: false, autoTech: false,
     autoBuildUnlocked: true, autoBuildRate: 10, autoBuildTimer: 0,
     reserve: 0.1, timer: 0, assistants: 0,
-    actionCounts: {}, _stallWarnAt: 0,
+    crew: {}, actionCounts: {}, _stallWarnAt: 0,
   }, over);
   logs.length = 0;
 }
@@ -102,43 +102,50 @@ test('A4 双向审计：注册表 id ↔ ai.js EXECUTORS 执行器一一对应',
   assert.ok(!/if \(ai\.autoUpgrade\) \{/.test(AI_SRC), '不得再出现分支级硬编码开关');
 });
 
-test('A5 防回归：占编分配 / 一键全关只有单一实现，消耗模型已彻底移除', () => {
-  const assignCalls = [...AI_SRC.matchAll(/assignAssistants\(/g)].length;
-  assert.ok(assignCalls >= 2, '定义处 + tickAI + stalledActions 共用同一分配函数');
+test('A5 防回归：绑定（占编）模型是唯一实现，消耗 / 自动均分分配已彻底移除', () => {
+  assert.equal([...AI_SRC.matchAll(/assignAssistants\(/g)].length, 0, '自动均分分配函数已彻底删除');
   assert.equal([...AI_SRC.matchAll(/consumeAssistants\(/g)].length, 0, '消耗函数已彻底删除');
   assert.ok(!/\bconsumeAssistant\(\)/.test(AI_SRC), '不得再有旧的单数扣费分支');
   assert.ok(!/S\.ai\.autoUpgrade = false; S\.ai\.autoHire = false/.test(AI_SRC),
     '一键全关不得再内联手写开关集合');
   assert.match(AI_SRC, /allOffActions\(\);/, 'UI 点击消费产品入口');
   assert.match(MAIN_SRC, /AI_CREW_REQUIRED_IDS/, 'QA 钩子暴露占编者清单');
-  assert.match(MAIN_SRC, /assignAssistants/, 'QA 钩子暴露分配函数');
+  assert.match(MAIN_SRC, /setCrew/, 'QA 钩子暴露绑定函数');
+  assert.match(MAIN_SRC, /crewOf/, 'QA 钩子暴露占编读取');
 });
 
 test('A6 面板分组与开关文案消费注册表，不再内联硬编码', () => {
   assert.match(AI_SRC, /data-ai-group="\$\{g\.key\}"/, '分组横幅由注册表渲染');
   assert.match(AI_SRC, /actionsByGroup\('basic'\)/, '基础开关列表由注册表派生');
-  assert.match(AI_SRC, /sw\(a\.switchKey, a\.name, a\.desc\)/, '开关文案取注册表 desc');
+  assert.match(AI_SRC, /sw\(a\.switchKey, a\.name, a\.desc, a\.id\)/, '开关文案取注册表 desc（含占编步进器 id）');
   assert.ok(!AI_SRC.includes('每 5s 购买回本时间最短'),
     '旧「每 5s」文案已被会被 matrix/tentacle 缩短的「每决策周期」取代');
   assert.match(REG_SRC, /每决策周期/, '注册表文案口径准确');
 });
 
 // ============================================================
-console.log('[B] 编制分配矩阵 / 执行次数 = 分配工人数 / 台账 / 编制不足挂起');
+console.log('[B] 绑定（占编）矩阵 / 执行次数 = 绑定工人数 / 台账 / 未绑定挂起');
 // ============================================================
 
-test('B1 自动升级：5 名助手 + 仅 1 个开启动作 → 执行 5 次、助手不消耗、台账 +5', () => {
-  reset({ autoUpgrade: true, assistants: 5 });
+test('B1 自动升级：5 名助手，仅开启自动升级 → 自动占编 1、执行 1 次、助手不消耗、台账 +1', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoUpgrade', true);
+  assert.equal(AI.crewOf('upgrade'), 1, '开启自动占编 crewSize（1）');
+  assert.equal(AI.crewIdle(), 4, '其余 4 名留在空闲池');
   assert.equal(AI.tickAI(5), true);
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗助手');
-  assert.equal(AI.actionCounts().upgrade, 5, '执行次数 = 分配工人数');
-  assert.equal(AI.totalActionCount(AI.actionCounts()), 5);
+  assert.equal(AI.actionCounts().upgrade, 1, '执行次数 = 绑定工人数（1）');
+  assert.equal(AI.totalActionCount(AI.actionCounts()), 1);
   assert.ok(logs.some(l => l.m.includes('自动升级')), '日志写出动作名');
   assert.ok(!logs.some(l => l.m.includes('消耗 1 名助手')), '不再有「消耗助手」文案');
 });
 
-test('B2 自动领取：5 名助手 + 2 个 pending → 领 2 个、助手不消耗', () => {
-  reset({ autoClaim: true, assistants: 5 });
+test('B2 自动领取：绑定 2 名 → 领 2 个 pending、助手不消耗', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoClaim', true);
+  AI.setCrew('claim', 2);
+  assert.equal(AI.crewOf('claim'), 2, '可手动绑定 2 名（用户的「绑定2个」示例）');
+  assert.equal(AI.crewIdle(), 3);
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
     { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
@@ -146,73 +153,87 @@ test('B2 自动领取：5 名助手 + 2 个 pending → 领 2 个、助手不消
   ];
   assert.equal(AI.tickAI(5), true);
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
-  assert.equal(AI.actionCounts().claim, 2, '2 个 pending 各领 1 次（受 pending 数约束，非工人上限）');
+  assert.equal(AI.actionCounts().claim, 2, '绑定 2 名 → 领 2 个');
   assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2, 'active 任务不领');
 });
 
 test('B3 执行次数 = 工人数，但受真实条件上限约束（pending 不足时不会超领）', () => {
-  reset({ autoClaim: true, assistants: 5 });
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoClaim', true);
+  AI.setCrew('claim', 5);
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
     { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
   ];
   AI.tickAI(5);
   assert.equal(AI.assistantCount(), 5, '助手不消耗');
-  assert.equal(AI.actionCounts().claim, 2, '5 名工人但只有 2 个待领，按 pending 数截断');
+  assert.equal(AI.actionCounts().claim, 2, '绑定 5 名但只有 2 个待领，按 pending 数截断');
   assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2);
 });
 
-test('B4 自动招募：5 名助手 + 仅招募开启 → 招 5 条、助手不消耗', () => {
-  reset({ autoHire: true, assistants: 5 });
+test('B4 自动招募：绑定 2 名 → 招 2 条、助手不消耗', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoHire', true);
+  AI.setCrew('hire', 2);
   const before = S.cultists.length;
   assert.equal(AI.tickAI(5), true);
-  assert.equal(S.cultists.length, before + 5, '每工人招 1 条');
+  assert.equal(S.cultists.length, before + 2, '每绑定 1 名招 1 条');
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
-  assert.equal(AI.actionCounts().hire, 5);
+  assert.equal(AI.actionCounts().hire, 2);
 });
 
-test('B5 自动研究 / 自动购建（进阶动作）同样占编、不消耗，每周期执行 = 工人数', () => {
-  reset({ autoTech: true, assistants: 5 });
+test('B5 自动研究 / 自动购建（进阶动作）同样绑定、不消耗，每周期执行 = 绑定工人数', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoTech', true);
+  AI.setCrew('tech', 1);
   assert.equal(AI.tickAI(5), true, '自动研究应买到科技');
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
   assert.ok(AI.actionCounts().tech >= 1, '至少买到 1 个科技');
 
-  reset({ autoBuild: true, assistants: 5 });
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoBuild', true);
+  AI.setCrew('build', 1);
   assert.equal(AI.tickAI(60), true, '自动购建应买到已解锁建筑');
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
   assert.ok(AI.actionCounts().build >= 1, '至少购建 1 栋');
 });
 
-test('B6 编制不足：0 助手 + 2 开启动作 → 无执行、无消耗、台账不增，且有明确告警', () => {
-  reset({ autoUpgrade: true, autoClaim: true, assistants: 0 });
-  assert.equal(AI.tickAI(5), false, '无编制则不产生动作');
+test('B6 未绑定：开启动作但 0 助手（无占编） → 无执行、无消耗、台账不增，且有明确提示', () => {
+  reset({ assistants: 0 });
+  AI.setAiSwitch('autoUpgrade', true);
+  AI.setAiSwitch('autoClaim', true);
+  assert.equal(AI.crewOf('upgrade'), 0, '0 助手开启 → 占编 0（待补员）');
+  assert.equal(AI.tickAI(5), false, '无占编则不产生动作');
   assert.equal(AI.assistantCount(), 0);
   assert.equal(AI.totalActionCount(AI.actionCounts()), 0);
-  assert.ok(logs.some(l => l.m.includes('助手耗尽') && l.m.includes('自动升级')), '告警列出挂起动作');
-  assert.equal(AI.stalledActions().length, 2, '两个动作均因编制不足挂起');
+  assert.ok(logs.some(l => l.m.includes('未绑定助手') && l.m.includes('自动升级')), '告警列出未绑定动作');
+  assert.equal(AI.stalledActions().length, 2, '两个动作均因未绑定挂起');
 });
 
 test('B7 告警节流：60s 内不重复刷屏', () => {
-  reset({ autoUpgrade: true, assistants: 0 });
+  reset({ assistants: 0 });
+  AI.setAiSwitch('autoUpgrade', true);
   AI.tickAI(5);
-  const n = logs.filter(l => l.m.includes('助手耗尽')).length;
+  const n = logs.filter(l => l.m.includes('未绑定助手')).length;
   AI.tickAI(5);
-  assert.equal(logs.filter(l => l.m.includes('助手耗尽')).length, n, '节流生效');
+  assert.equal(logs.filter(l => l.m.includes('未绑定助手')).length, n, '节流生效');
 });
 
-test('B8 开关全关不执行；只开一个动作时其余台账保持 0', () => {
+test('B8 关闭开关释放占编：绑定后关闭 → 占编归零、空闲恢复', () => {
   reset({ assistants: 9 });
-  assert.equal(AI.tickAI(5), false);
-  assert.equal(AI.assistantCount(), 9);
-  reset({ autoUpgrade: true, assistants: 9 });
+  AI.setAiSwitch('autoUpgrade', true);
+  assert.equal(AI.crewOf('upgrade'), 1);
+  assert.equal(AI.crewIdle(), 8);
+  AI.setAiSwitch('autoUpgrade', false);
+  assert.equal(AI.crewOf('upgrade'), 0, '关闭释放占编');
+  assert.equal(AI.crewIdle(), 9, '空闲池恢复');
   AI.tickAI(5);
-  const c = AI.actionCounts();
-  assert.ok(c.upgrade >= 1, '开启动作执行（工人数 = 9）');
-  for (const id of ['hire', 'claim', 'build', 'tech']) assert.equal(c[id], 0);
+  assert.equal(AI.actionCounts().upgrade, 0, '关闭后不执行');
 });
 
 test('B9 混沌心智旁路不消耗助手（明确的边界口径）', () => {
-  reset({ autoUpgrade: true, assistants: 5 });
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoUpgrade', true);
   S.tech.chaos_mind = true;
   AI.tickAI(60);
   assert.equal(AI.assistantCount(), 5, '接管期间助手冻结不消耗');
@@ -220,7 +241,7 @@ test('B9 混沌心智旁路不消耗助手（明确的边界口径）', () => {
   S.tech.chaos_mind = false;
 });
 
-test('B10 maxCycleCrewDemand 随开启动作数线性变化', () => {
+test('B10 maxCycleCrewDemand 随开启动作数线性变化（= 全开默认占编总数）', () => {
   assert.equal(REG.maxCycleCrewDemand({ autoUpgrade: true }), 1);
   assert.equal(REG.maxCycleCrewDemand({ autoUpgrade: true, autoClaim: true }), 2);
   assert.equal(REG.maxCycleCrewDemand({}), 0);
@@ -334,13 +355,18 @@ test('E2 进阶动作（自动购建 / 自动研究）同样占编，口径统�
   }
 });
 
-test('E3 一次决策周期内助手数守恒：分配后总执行次数 = 总工人数，余额不变', () => {
-  reset({ autoUpgrade: true, autoHire: true, autoTech: true, assistants: 5 });
+test('E3 一次决策周期内：三个开启动作各自动占编 1，执行 1 次，余额不变', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoUpgrade', true);
+  AI.setAiSwitch('autoHire', true);
+  AI.setAiSwitch('autoTech', true);
+  assert.equal(AI.crewOf('upgrade'), 1);
+  assert.equal(AI.crewOf('hire'), 1);
+  assert.equal(AI.crewOf('tech'), 1);
+  assert.equal(AI.crewIdle(), 2, '开启 3 动作各占编 1，剩 2 空闲');
   AI.tickAI(5);
   const c = AI.actionCounts();
   const executed = AI.totalActionCount(c);
   assert.equal(AI.assistantCount(), 5, '常驻班组余额不变');
-  assert.ok(executed >= 3, '三个开启动作各至少分到 1 名工人并执行');
-  // 分配：5 工人 / 3 动作 → base 1 + 余数 2 顺补 → 合计执行 = 5（受真实条件约束可能略少）
-  assert.ok(executed <= 5, '执行总次数不超过分配总工人数');
+  assert.equal(executed, 3, '三个开启动作各自动占编 1 并执行 1 次');
 });

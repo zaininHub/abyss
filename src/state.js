@@ -94,9 +94,10 @@ export function defaultState() {
     // v1.3 模块 D：载具采集计时器
     vehCollectTimer: 0,
     // v1.3 模块 A：AI 助手（解锁后生效；默认全关，预留线默认 30%）
+    // v3.11.3：crew = 每个动作「绑定（占编）」的助手数；开启自动占编 crewSize，关闭/解绑释放，不消耗。
     ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: BALANCE.ai.defaultReserve, timer: 0,
         autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0,
-        autoTech: false, assistants: 0, actionCounts: {}, _stallWarnAt: 0 },
+        autoTech: false, assistants: 0, crew: {}, actionCounts: {}, _stallWarnAt: 0 },
     // v2.8.21 ③：自动研究开关默认字段；v3.10.5：alloc 改 assistants（助手=一次性消耗品，无编队/槽位/按类型分配）
     // v3.11.2：删除 assistantsSpent / supplyTimer（不再消耗 / 不再补给）；_stallWarnAt 复用于「编制不足」告警节流。
     // 随 NESTED_DEFAULT_KEYS 里的 'ai' 自动兜底旧档，SAVE_VERSION 保持 6。

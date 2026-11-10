@@ -55,7 +55,7 @@ const fx = (n, d = 2) => Number(n || 0).toLocaleString('en-US', { maximumFractio
 const mkSave = (storyline) => JSON.stringify({
   _version: 6, chapter: '1', storyline, ep: 0, rp: 0, es: 0, dm: 0, pt: 0,
   // v3.11.2：解锁 AI 管理核心，让 30 天推演真正跑 AI 自动化；助手是常驻班组（不消耗），
-  // 余额刻意从 0 开始（不伪造进度），靠 buyAssistant() 真实扩编，靠 assignAssistants() 分配到各动作。
+  // 余额刻意从 0 开始（不伪造进度），靠 buyAssistant() 真实扩编，靠 setAiSwitch / setCrew 绑定占编到各动作。
   upgrades: {}, buildings: {}, tech: { ai_core: true }, cultists: [], faith: 0,
   religion: null, prestige: 0, prestigePoints: 0, _rpOverflowSeen: false,
   resDiscovered: { ep: true, cps: true, run: true, tide: true },
@@ -181,7 +181,7 @@ async function boot(browser, storyline) {
             if (st.aiLedgerSamples.length < 240) {
               st.aiLedgerSamples.push({ t: window.__tickCount, assistants: q.assistantCount(),
                 total: q.totalActionCount(q.actionCounts()),
-                assigned: Object.values(q.assignAssistants()).reduce((n, w) => n + w, 0) });
+                bound: q.crewBoundTotal() });
             }
           } catch (e) { if (st.errors.length < 12) st.errors.push('ai:' + e.message); }
         }
@@ -272,10 +272,8 @@ async function boot(browser, storyline) {
         renderTicks: (q.systemStats().render || {}).ticks || 0,
         scheduleUnlocked: q.scheduleUnlocked(S2), schedule: q.orchestrationSchedule(S2),
         scheduleCustomized: q.scheduleCustomized(S2),
-        // v3.11.2：AI 助手（常驻班组）/ 动作台账逐日快照
-        ai: { assistants: q.assistantCount(), assigned: (() => {
-            const a = q.assignAssistants(); return Object.values(a).reduce((n, w) => n + w, 0);
-          })(),
+        // v3.11.3：AI 助手（常驻班组，手动绑定占编）/ 动作台账逐日快照
+        ai: { assistants: q.assistantCount(), bound: q.crewBoundTotal(), idle: q.crewIdle(),
           counts: q.actionCounts(), total: q.totalActionCount(q.actionCounts()),
           stalled: q.stalledActions().map(a => a.id),
           cost: q.assistantCost(),
@@ -596,7 +594,8 @@ async function uiCheck(page) {
         const sizeOk = sizes.length > 0 && sizes.every(s => s.w >= 24 && s.h >= 24);
         const stalled = q.stalledActions().length > 0;
         const anyOn = q.AI_ACTION_SWITCH_KEYS.some(k => !!S.ai[k]);
-        const stallConsistent = !!stall === (q.assistantCount() === 0 && anyOn);
+        // v3.11.3：绑定模型下「未绑定提示」与「存在开启但未绑定占编的动作」同源（不再等价于余额 0）
+        const stallConsistent = !!stall === (q.stalledActions().length > 0);
         // 一键全关：真实 DOM 点击，必须覆盖全部 5 个开关（含 autoTech）
         for (const k of q.AI_ACTION_SWITCH_KEYS) q.sim.setAiSwitch(k, true);
         window.__gameDirty.ai = true; q.sim.render();
@@ -990,8 +989,8 @@ try {
   if (fb.pendingDebuff === 0) ok('任务面板不存在待领取的负面任务');
   else bad('负面任务仍停在待领取状态', String(fb.pendingDebuff));
 
-  // ---- [4] AI 自动化 / 常驻班组 / 不消耗（v3.11.2） ----
-  console.log('\n[4] AI 自动化、常驻班组与数值守恒');
+  // ---- [4] AI 自动化 / 常驻班组（手动绑定）/ 不消耗（v3.11.3） ----
+  console.log('\n[4] AI 自动化、常驻班组（绑定）与数值守恒');
   const aiSt = last.stats || {};
   const aiAudit = await page.evaluate(() => {
     const S = window.S, q = window.__qa;
@@ -999,10 +998,11 @@ try {
       ids: [...q.AI_ACTION_IDS], crew: [...q.AI_CREW_REQUIRED_IDS],
       allOff: [...q.ALL_OFF_SWITCH_KEYS],
       assistants: q.assistantCount(),
+      boundTotal: q.crewBoundTotal(), idle: q.crewIdle(),
+      crewMap: (() => { const m = {}; for (const id of q.AI_ACTION_IDS) m[id] = q.crewOf(id); return m; })(),
       counts: q.actionCounts(), total: q.totalActionCount(q.actionCounts()),
       switchesOn: q.AI_ACTION_SWITCH_KEYS.filter(k => !!S.ai[k]),
       cost: q.assistantCost(),
-      assigned: Object.values(q.assignAssistants()).reduce((n, w) => n + w, 0),
     };
   });
   report.checks.ai = { ...aiAudit, stats: {
@@ -1020,6 +1020,13 @@ try {
   if (aiAudit.total > 0) ok('30 天推演中 AI 自动化真实执行',
     `累计 ${aiAudit.total} 次 / 分布 ${JSON.stringify(aiAudit.counts)}`);
   else bad('AI 自动化全程零执行（长期覆盖失效）');
+  // v3.11.3：绑定（占编）守恒——占编 + 空闲 = 助手总数，且常驻不消耗（非自动均分）。
+  if (aiAudit.boundTotal + aiAudit.idle === aiAudit.assistants)
+    ok('占编 + 空闲 = 助手总数（绑定守恒，常驻不消耗）',
+      `占编 ${aiAudit.boundTotal} + 空闲 ${aiAudit.idle} = ${aiAudit.assistants}`);
+  else bad('占编与空闲之和不等于助手总数', JSON.stringify({ bound: aiAudit.boundTotal, idle: aiAudit.idle, total: aiAudit.assistants }));
+  if (aiAudit.boundTotal >= 1) ok('30 天推演中 AI 动作均通过绑定占编生效（非自动均分）', `占编合计 ${aiAudit.boundTotal}`);
+  else bad('全程无动作被绑定占编');
   // v3.11.2：助手是常驻班组，不随动作消耗；余额只增不减（仅由购买扩编）。
   if (aiAudit.assistants === (aiSt.aiBuys || 0))
     ok('助手余额 = 累计购买数（全程零消耗，常驻班组守恒）',
@@ -1058,8 +1065,8 @@ try {
   else bad('AI 面板分组或开关缺项', JSON.stringify(A));
   if (A.hasLedger && A.crewHint && !A.badText) ok('助手区块含执行台账与常驻班组口径，无非法数值');
   else bad('助手区块 UI 文案异常', JSON.stringify({ l: A.hasLedger, c: A.crewHint, b: A.badText }));
-  if (A.stallConsistent) ok('停摆提示与助手读侧同源（开关 ON 但余额 0 才提示）');
-  else bad('停摆提示与读侧不一致', JSON.stringify({ s: A.stalled, h: A.hasStall }));
+  if (A.stallConsistent) ok('未绑定提示与占用读侧同源（开启但未绑定占编的动作才提示）');
+  else bad('未绑定提示与读侧不一致', JSON.stringify({ s: A.stalled, h: A.hasStall }));
   if (A.orphans === 0) ok('AI 面板窄卡无孤字换行（getClientRects）');
   else bad('AI 面板出现孤字换行', JSON.stringify(A.orphanDetails || A.orphans));
   if (A.sizeOk) ok('AI 面板全部按钮点击目标 ≥24×24', `${A.buttonCount} 个按钮`);

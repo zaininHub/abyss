@@ -464,7 +464,7 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   S.allTimeEp = 1e9; // 保证候选项全部解锁可见
   const cap = epStorageCap();
   // 1) 自动升级受预留线拦截：EP 低于预留线不买（助手充足，仅验证预留线）
-  S.ai = { autoUpgrade: true, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5 };
+  S.ai = { autoUpgrade: true, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5, crew: { upgrade: 5 } };
   const line = cap * 0.3;
   S.ep = line - 1; // 高于任何便宜项成本，但低于预留线+成本
   const upg0 = { ...(S.upgrades) };
@@ -485,7 +485,7 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   S.upgrades = {}; S.ep = 1e9;
   S.cultists = [{ id: 1, name: 't', output: 0.01, mood: '正常', moodTimer: 60 }];
   S.lazySince = Date.now() - 120000; // 怠工 ≥60s → lazyCostMult ×2.5 → 薪资 > 产出
-  S.ai = { autoUpgrade: false, autoHire: true, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5 };
+  S.ai = { autoUpgrade: false, autoHire: true, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5, crew: { hire: 5 } };
   tickAI(5);
   assert.equal(S.cultists.length, 1, 'net<0 不应招募');
   S.lazySince = 0;

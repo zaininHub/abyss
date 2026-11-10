@@ -170,6 +170,7 @@ test('v3.11.2 ④ AI：有助手时自动升级买入且不消耗助手', () => 
   seedAiBase();
   S.ai.autoUpgrade = true;
   S.ai.assistants = 3;
+  S.ai.crew = { upgrade: 3 };
   const before = S.totalBuys || 0;
   const acted = tickAI(10);
   assert.equal(acted, true, '有助手（有编制）时 tickAI 返回 true');
