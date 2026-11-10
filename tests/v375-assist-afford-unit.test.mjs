@@ -1,7 +1,7 @@
 // v3.7.5 反馈 · AI 助手「购买」价格不足未灰显（纯 Node 单测）
-// v3.10.5：助手由「编队/8 槽」改为「一次性消耗品」——无上限，价格逐次递增（baseCost × costGrowth^n）。
-//   assistantBuyState() 单一真源 + refreshAssistantAffordability() 挂 300ms 快刷链的机制保留，
-//   断言改为新模型（无满编，disabled 仅取决于 aiUnlocked 与 EP 是否够）。
+// v3.11.2：助手是常驻班组（购买即扩编、不随动作消耗），本测试只覆盖「购买」侧的定价与灰显逻辑：
+//   assistantCost() 价格随数量递增（baseCost × costGrowth^n）、assistantBuyState() 单一真源 +
+//   refreshAssistantAffordability() 挂 300ms 快刷链的机制保留，disabled 仅取决于 aiUnlocked 与 EP 是否够。
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';

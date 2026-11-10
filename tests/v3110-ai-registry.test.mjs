@@ -1,12 +1,11 @@
-// v3.11.0 专项单测：自动化动作声明层 + 「自动升级/领取/招募消耗 AI 助手」+ 续航补给
+// v3.11.2 专项单测：自动化动作声明层 + 「AI 助手是常驻班组、不消耗」模型反转
 //
 // 覆盖：
 //   [A] 注册表双向审计（声明 ↔ tickAI 执行器 / 一键全关 / 面板渲染）
-//   [B] 五项动作的助手消耗矩阵、预算上限、台账、静默停摆修复
+//   [B] 编制分配矩阵、执行次数 = 分配工人数、台账、编制不足挂起告警
 //   [C] 产品真实入口（购买助手 / 切开关 / 一键全关）与旧档兼容
-//   [D] 助手自动补给流（解锁门控 / 周期 / 上限 / 研究加成 / 清单接线）
-//   [E] 状态清单与存档版本（不 bump SAVE_VERSION）
-//   [F] 用户明确需求：三项基础动作每次消耗 1 名助手，进阶两项同样消耗
+//   [D] 状态清单与存档版本（不 bump SAVE_VERSION）
+//   [E] 用户明确需求：AI 助手是常驻班组，自动分配到开启动作，每动作每周期执行次数 = 分配工人数，不消耗
 import test from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
@@ -29,11 +28,8 @@ const { S } = await import('../src/state.js');
 const { defaultState, SAVE_VERSION } = await import('../src/state.js');
 const REG = await import('../src/core/aiActionRegistry.js');
 const AI = await import('../src/modules/ai.js');
-const ECON = await import('../src/modules/economy.js');
 const { BALANCE } = await import('../src/data/balance.js');
 const { V21_BUILDINGS } = await import('../src/data/buildings.js');
-const FLOW = await import('../src/core/flowEngine.js');
-const { RESOURCE_FLOW_IDS } = await import('../src/systems/resourceFlows.js');
 const { NESTED_DEFAULT_KEYS } = await import('../src/core/stateSchema.js');
 
 const logs = [];
@@ -56,14 +52,14 @@ function reset(over = {}) {
     autoUpgrade: false, autoHire: false, autoClaim: false,
     autoBuild: false, autoTech: false,
     autoBuildUnlocked: true, autoBuildRate: 10, autoBuildTimer: 0,
-    reserve: 0.1, timer: 0, assistants: 0, supplyTimer: 0,
+    reserve: 0.1, timer: 0, assistants: 0,
     actionCounts: {}, _stallWarnAt: 0,
   }, over);
   logs.length = 0;
 }
 
 // ============================================================
-console.log('[A] 自动化动作注册表：声明 → 消费 双向审计');
+console.log('[A] 自动化动作注册表：声明 → 占编 双向审计');
 // ============================================================
 
 test('A1 注册表结构完整：id / 开关 / 分组唯一且互相对应', () => {
@@ -74,19 +70,19 @@ test('A1 注册表结构完整：id / 开关 / 分组唯一且互相对应', () 
   for (const a of REG.AI_ACTIONS) {
     assert.ok(a.id && a.switchKey && a.name && a.desc, `${a.id} 字段完整`);
     assert.ok(REG.AI_ACTION_GROUP_KEYS.includes(a.group), `${a.id} 分组已声明`);
-    assert.equal(typeof a.assistantCost, 'number', `${a.id} 助手单价必须显式声明（禁止靠「没写」隐式表达）`);
-    assert.ok(Number.isFinite(a.assistantCost) && a.assistantCost >= 0);
+    assert.equal(typeof a.crewSize, 'number', `${a.id} 占编基准必须显式声明（禁止靠「没写」隐式表达）`);
+    assert.ok(Number.isFinite(a.crewSize) && a.crewSize >= 1, `${a.id} 占编基准须 ≥ 1`);
     assert.equal(REG.actionById(a.id), a);
-    assert.equal(REG.assistantCostOf(a.id), a.assistantCost);
+    assert.equal(REG.crewSizeOf(a.id), a.crewSize);
   }
   assert.equal(REG.actionById('__ghost__'), null);
-  assert.equal(REG.assistantCostOf('__ghost__'), 0);
+  assert.equal(REG.crewSizeOf('__ghost__'), 0);
 });
 
-test('A2 AI_ASSISTANT_CONSUMER_IDS ↔ assistantCost>0 严格对齐', () => {
-  const derived = REG.AI_ACTIONS.filter(a => a.assistantCost > 0).map(a => a.id);
-  assert.deepEqual([...REG.AI_ASSISTANT_CONSUMER_IDS], derived);
-  assert.equal(REG.AI_ASSISTANT_CONSUMER_IDS.length, 5, '五项动作全部消耗助手');
+test('A2 AI_CREW_REQUIRED_IDS ↔ crewSize>0 严格对齐', () => {
+  const derived = REG.AI_ACTIONS.filter(a => a.crewSize > 0).map(a => a.id);
+  assert.deepEqual([...REG.AI_CREW_REQUIRED_IDS], derived);
+  assert.equal(REG.AI_CREW_REQUIRED_IDS.length, 5, '五项动作全部需占编');
 });
 
 test('A3 ALL_OFF_SWITCH_KEYS 覆盖全部开关（含 autoTech，修 v3.10.5 漏项）', () => {
@@ -98,7 +94,7 @@ test('A3 ALL_OFF_SWITCH_KEYS 覆盖全部开关（含 autoTech，修 v3.10.5 漏
 });
 
 test('A4 双向审计：注册表 id ↔ ai.js EXECUTORS 执行器一一对应', () => {
-  const execKeys = [...AI_SRC.matchAll(/^  (\w+)\(ctx, budget\) \{/gm)].map(m => m[1]);
+  const execKeys = [...AI_SRC.matchAll(/^  (\w+)\(ctx, workers\) \{/gm)].map(m => m[1]);
   assert.deepEqual(execKeys.sort(), [...REG.AI_ACTION_IDS].sort(),
     '每个声明动作都要有执行器，且不得有孤儿执行器');
   // tickAI 必须遍历注册表，而不是手写 5 个 if 分支
@@ -106,14 +102,16 @@ test('A4 双向审计：注册表 id ↔ ai.js EXECUTORS 执行器一一对应',
   assert.ok(!/if \(ai\.autoUpgrade\) \{/.test(AI_SRC), '不得再出现分支级硬编码开关');
 });
 
-test('A5 防回归：助手守卫/扣费/一键全关只有单一实现', () => {
-  const calls = [...AI_SRC.matchAll(/consumeAssistants\(/g)].length;
-  assert.equal(calls, 2, '只有定义处 + tickAI 统一调用处');
+test('A5 防回归：占编分配 / 一键全关只有单一实现，消耗模型已彻底移除', () => {
+  const assignCalls = [...AI_SRC.matchAll(/assignAssistants\(/g)].length;
+  assert.ok(assignCalls >= 2, '定义处 + tickAI + stalledActions 共用同一分配函数');
+  assert.equal([...AI_SRC.matchAll(/consumeAssistants\(/g)].length, 0, '消耗函数已彻底删除');
   assert.ok(!/\bconsumeAssistant\(\)/.test(AI_SRC), '不得再有旧的单数扣费分支');
   assert.ok(!/S\.ai\.autoUpgrade = false; S\.ai\.autoHire = false/.test(AI_SRC),
     '一键全关不得再内联手写开关集合');
   assert.match(AI_SRC, /allOffActions\(\);/, 'UI 点击消费产品入口');
-  assert.match(MAIN_SRC, /AI_ASSISTANT_CONSUMER_IDS/, 'QA 钩子暴露消耗者清单');
+  assert.match(MAIN_SRC, /AI_CREW_REQUIRED_IDS/, 'QA 钩子暴露占编者清单');
+  assert.match(MAIN_SRC, /assignAssistants/, 'QA 钩子暴露分配函数');
 });
 
 test('A6 面板分组与开关文案消费注册表，不再内联硬编码', () => {
@@ -126,72 +124,72 @@ test('A6 面板分组与开关文案消费注册表，不再内联硬编码', ()
 });
 
 // ============================================================
-console.log('[B] 助手消耗矩阵 / 预算 / 台账 / 停摆告警');
+console.log('[B] 编制分配矩阵 / 执行次数 = 分配工人数 / 台账 / 编制不足挂起');
 // ============================================================
 
-test('B1 自动升级：执行一次消耗 1 名助手，台账 +1，日志带消耗后缀', () => {
+test('B1 自动升级：5 名助手 + 仅 1 个开启动作 → 执行 5 次、助手不消耗、台账 +5', () => {
   reset({ autoUpgrade: true, assistants: 5 });
   assert.equal(AI.tickAI(5), true);
-  assert.equal(AI.assistantCount(), 4);
-  assert.equal(AI.actionCounts().upgrade, 1);
-  assert.equal(AI.totalActionCount(AI.actionCounts()), 1);
-  assert.ok(logs.some(l => l.m.includes('消耗 1 名助手')), '日志明确写出消耗');
+  assert.equal(AI.assistantCount(), 5, '常驻班组不消耗助手');
+  assert.equal(AI.actionCounts().upgrade, 5, '执行次数 = 分配工人数');
+  assert.equal(AI.totalActionCount(AI.actionCounts()), 5);
+  assert.ok(logs.some(l => l.m.includes('自动升级')), '日志写出动作名');
+  assert.ok(!logs.some(l => l.m.includes('消耗 1 名助手')), '不再有「消耗助手」文案');
 });
 
-test('B2 自动领取：每个 pending 任务各消耗 1 名（用户明确需求）', () => {
+test('B2 自动领取：5 名助手 + 2 个 pending → 领 2 个、助手不消耗', () => {
   reset({ autoClaim: true, assistants: 5 });
-  // reset() 会清空 projects，夹具必须在 reset 之后注入
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
     { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
     { status: 'active', name: '未达标', reward: { kind: 'ep', amount: 1 } },
   ];
   assert.equal(AI.tickAI(5), true);
-  assert.equal(AI.assistantCount(), 3, '两个 pending 各扣 1 名');
-  assert.equal(AI.actionCounts().claim, 2);
+  assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
+  assert.equal(AI.actionCounts().claim, 2, '2 个 pending 各领 1 次（受 pending 数约束，非工人上限）');
   assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2, 'active 任务不领');
 });
 
-test('B3 预算上限：只有 1 名助手时 2 个 pending 只领 1 个，不透支', () => {
-  reset({ autoClaim: true, assistants: 1 });
+test('B3 执行次数 = 工人数，但受真实条件上限约束（pending 不足时不会超领）', () => {
+  reset({ autoClaim: true, assistants: 5 });
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
     { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
   ];
   AI.tickAI(5);
-  assert.equal(AI.assistantCount(), 0);
-  assert.equal(AI.actionCounts().claim, 1);
-  assert.equal(S.projects.filter(p => p.status === 'claimed').length, 1);
+  assert.equal(AI.assistantCount(), 5, '助手不消耗');
+  assert.equal(AI.actionCounts().claim, 2, '5 名工人但只有 2 个待领，按 pending 数截断');
+  assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2);
 });
 
-test('B4 自动招募：执行一次消耗 1 名助手、台账 +1', () => {
+test('B4 自动招募：5 名助手 + 仅招募开启 → 招 5 条、助手不消耗', () => {
   reset({ autoHire: true, assistants: 5 });
   const before = S.cultists.length;
   assert.equal(AI.tickAI(5), true);
-  assert.equal(S.cultists.length, before + 1);
-  assert.equal(AI.assistantCount(), 4);
-  assert.equal(AI.actionCounts().hire, 1);
+  assert.equal(S.cultists.length, before + 5, '每工人招 1 条');
+  assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
+  assert.equal(AI.actionCounts().hire, 5);
 });
 
-test('B5 自动研究 / 自动购建（进阶动作）同样消耗助手', () => {
+test('B5 自动研究 / 自动购建（进阶动作）同样占编、不消耗，每周期执行 = 工人数', () => {
   reset({ autoTech: true, assistants: 5 });
-  assert.equal(AI.tickAI(5), true, '自动研究应买到 offline1');
-  assert.equal(AI.assistantCount(), 4);
-  assert.equal(AI.actionCounts().tech, 1);
+  assert.equal(AI.tickAI(5), true, '自动研究应买到科技');
+  assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
+  assert.ok(AI.actionCounts().tech >= 1, '至少买到 1 个科技');
 
   reset({ autoBuild: true, assistants: 5 });
   assert.equal(AI.tickAI(60), true, '自动购建应买到已解锁建筑');
-  assert.equal(AI.assistantCount(), 4);
-  assert.equal(AI.actionCounts().build, 1);
+  assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
+  assert.ok(AI.actionCounts().build >= 1, '至少购建 1 栋');
 });
 
-test('B6 助手耗尽：无动作、无扣费、台账不增，且有明确告警（修静默停摆）', () => {
+test('B6 编制不足：0 助手 + 2 开启动作 → 无执行、无消耗、台账不增，且有明确告警', () => {
   reset({ autoUpgrade: true, autoClaim: true, assistants: 0 });
-  assert.equal(AI.tickAI(5), false);
+  assert.equal(AI.tickAI(5), false, '无编制则不产生动作');
   assert.equal(AI.assistantCount(), 0);
   assert.equal(AI.totalActionCount(AI.actionCounts()), 0);
-  assert.ok(logs.some(l => l.m.includes('助手耗尽') && l.m.includes('自动升级')), '告警列出停摆动作');
-  assert.equal(AI.stalledActions().length, 2);
+  assert.ok(logs.some(l => l.m.includes('助手耗尽') && l.m.includes('自动升级')), '告警列出挂起动作');
+  assert.equal(AI.stalledActions().length, 2, '两个动作均因编制不足挂起');
 });
 
 test('B7 告警节流：60s 内不重复刷屏', () => {
@@ -202,14 +200,14 @@ test('B7 告警节流：60s 内不重复刷屏', () => {
   assert.equal(logs.filter(l => l.m.includes('助手耗尽')).length, n, '节流生效');
 });
 
-test('B8 开关全关不消耗助手；只开一个动作时其余台账保持 0', () => {
+test('B8 开关全关不执行；只开一个动作时其余台账保持 0', () => {
   reset({ assistants: 9 });
   assert.equal(AI.tickAI(5), false);
   assert.equal(AI.assistantCount(), 9);
   reset({ autoUpgrade: true, assistants: 9 });
   AI.tickAI(5);
   const c = AI.actionCounts();
-  assert.equal(c.upgrade, 1);
+  assert.ok(c.upgrade >= 1, '开启动作执行（工人数 = 9）');
   for (const id of ['hire', 'claim', 'build', 'tech']) assert.equal(c[id], 0);
 });
 
@@ -218,15 +216,15 @@ test('B9 混沌心智旁路不消耗助手（明确的边界口径）', () => {
   S.tech.chaos_mind = true;
   AI.tickAI(60);
   assert.equal(AI.assistantCount(), 5, '接管期间助手冻结不消耗');
-  assert.equal(AI.totalActionCount(AI.actionCounts()), 0);
+  assert.equal(AI.totalActionCount(AI.actionCounts()), 0, '混沌直觉走独立路径，不写动作台账');
   S.tech.chaos_mind = false;
 });
 
-test('B10 maxCycleAssistantDemand 随开启动作数线性变化', () => {
-  assert.equal(REG.maxCycleAssistantDemand({ autoUpgrade: true }), 1);
-  assert.equal(REG.maxCycleAssistantDemand({ autoUpgrade: true, autoClaim: true }), 2);
-  assert.equal(REG.maxCycleAssistantDemand({}), 0);
-  assert.equal(REG.maxCycleAssistantDemand(null), 0);
+test('B10 maxCycleCrewDemand 随开启动作数线性变化', () => {
+  assert.equal(REG.maxCycleCrewDemand({ autoUpgrade: true }), 1);
+  assert.equal(REG.maxCycleCrewDemand({ autoUpgrade: true, autoClaim: true }), 2);
+  assert.equal(REG.maxCycleCrewDemand({}), 0);
+  assert.equal(REG.maxCycleCrewDemand(null), 0);
 });
 
 // ============================================================
@@ -238,7 +236,7 @@ test('C1 buyAssistant：扣 EP + 助手 +1；EP 不足返回 ok:false', () => {
   const ep0 = S.ep;
   const r = AI.buyAssistant();
   assert.equal(r.ok, true);
-  assert.equal(AI.assistantCount(), 4);
+  assert.equal(AI.assistantCount(), 4, '购买即扩编 1 名');
   assert.ok(S.ep < ep0);
   S.ep = 0;
   const r2 = AI.buyAssistant();
@@ -269,7 +267,7 @@ test('C4 助手定价温和递增、无数量上限', () => {
   S.ai.assistants = 40;
   const c40 = AI.assistantCost();
   assert.ok(c40 > c0 && c40 < c0 * 1e5, '递增但不会指数爆炸到不可购买');
-  assert.equal(AI.assistantCount(), 40, '购买数量不受 8 槽上限约束');
+  assert.equal(AI.assistantCount(), 40, '购买数量不受上限约束');
 });
 
 test('C5 旧档无 actionCounts 时惰性建槽，不产生 undefined/NaN', () => {
@@ -291,115 +289,58 @@ test('C6 actionCounts / totalActionCount / emptyActionCounts 五槽齐全', () =
 });
 
 // ============================================================
-console.log('[D] 助手自动补给流');
+console.log('[D] 状态清单 / 存档版本');
 // ============================================================
 
-function runAux(dt) {
-  FLOW.runFlows({ S, dt, now: Date.now() }, FLOW.FLOW_PHASES.EP_AUX);
-}
-
-test('D1 未解锁 ai_core 不补给', () => {
-  reset({ assistants: 0, supplyTimer: 0 });
-  S.tech.ai_core = false;
-  runAux(60);
-  assert.equal(AI.assistantCount(), 0);
-  S.tech.ai_core = true;
-});
-
-test('D2 每 intervalSec 补 perTick 名，且提前调用不提前发放', () => {
-  reset({ assistants: 0, supplyTimer: 0 });
-  const cfg = BALANCE.ai.assistants.supply;
-  runAux(cfg.intervalSec - 1);
-  assert.equal(AI.assistantCount(), 0, '未到周期不发放');
-  runAux(1);
-  assert.equal(AI.assistantCount(), cfg.perTick);
-  runAux(cfg.intervalSec);
-  assert.equal(AI.assistantCount(), cfg.perTick * 2);
-});
-
-test('D3 自动补给受 cap 限制，但手动购买超过 cap 不被钳回', () => {
-  reset({ assistants: 0, supplyTimer: 0 });
-  const cfg = BALANCE.ai.assistants.supply;
-  S.ai.assistants = cfg.cap - 1;
-  runAux(cfg.intervalSec);
-  assert.equal(AI.assistantCount(), cfg.cap, '补给只补到 cap');
-  S.ai.assistants = cfg.cap + 50;
-  runAux(cfg.intervalSec);
-  assert.equal(AI.assistantCount(), cfg.cap + 50, '手动购买无上限，补给不钳余额');
-});
-
-test('D4 「拟我协议」researchMult(ai) 放大补给量（非死键）', () => {
-  reset({ assistants: 0, supplyTimer: 0 });
-  S.rpTheories = { rp_ai: 5 }; // rpTheories 在 S 上，不在 S.ai 内
-  const cfg = BALANCE.ai.assistants.supply;
-  const expect = Math.max(1, Math.floor(cfg.perTick * ECON.researchMult(cfg.researchKey)));
-  assert.ok(ECON.researchMult('ai') > 1);
-  runAux(cfg.intervalSec);
-  assert.equal(AI.assistantCount(), expect);
-  assert.ok(expect > cfg.perTick, '研究等级确实提升补给');
-});
-
-test('D5 RESOURCE_FLOW_IDS ↔ allFlows 双向对齐，补给流在 EP_AUX', () => {
-  assert.ok(RESOURCE_FLOW_IDS.includes('assistant:supply'));
-  assert.equal(RESOURCE_FLOW_IDS.length, 9);
-  const all = FLOW.allFlows();
-  assert.equal(all.length, RESOURCE_FLOW_IDS.length);
-  const f = all.find(x => x.id === 'assistant:supply');
-  assert.ok(f, '流已注册');
-  assert.equal(f.phase, FLOW.FLOW_PHASES.EP_AUX);
-  for (const id of RESOURCE_FLOW_IDS) assert.ok(all.some(x => x.id === id), `缺流 ${id}`);
-  assert.match(BAL_SRC, /supply: \{/, '补给参数在 balance 单一真源');
-});
-
-// ============================================================
-console.log('[E] 状态清单 / 存档版本');
-// ============================================================
-
-test('E1 defaultState().ai 补齐三个新字段，嵌套清单含 ai', () => {
+test('D1 defaultState().ai 补齐字段，嵌套清单含 ai（不再有 supplyTimer）', () => {
   const def = defaultState();
-  for (const k of ['supplyTimer', 'actionCounts', '_stallWarnAt', 'assistants']) {
+  for (const k of ['actionCounts', '_stallWarnAt', 'assistants']) {
     assert.ok(Object.prototype.hasOwnProperty.call(def.ai, k), `缺默认字段 ${k}`);
   }
+  assert.ok(!('supplyTimer' in def.ai), 'v3.11.2 已删除 supplyTimer');
   assert.ok(NESTED_DEFAULT_KEYS.includes('ai'), '旧档由嵌套补齐清单兜底');
 });
 
-test('E2 SAVE_VERSION 保持 6（仅新增字段，无存档结构变更）', () => {
+test('D2 SAVE_VERSION 保持 6（仅删字段，无存档结构变更）', () => {
   assert.equal(SAVE_VERSION, 6);
 });
 
-test('E3 面板源码：停摆提示与台账 DOM 均由读侧派生，无 undefined 风险', () => {
-  assert.match(AI_SRC, /data-ai-stall/, '助手耗尽提示存在');
+test('D3 面板源码：编制不足提示与台账 DOM 均由读侧派生，无 undefined 风险', () => {
+  assert.match(AI_SRC, /data-ai-stall/, '编制不足提示存在');
   assert.match(AI_SRC, /data-ai-ledger/, '本局动作台账存在');
-  assert.match(AI_SRC, /stalledActions\(\)/, '停摆提示由派生谓词驱动');
+  assert.match(AI_SRC, /stalledActions\(\)/, '编制不足提示由派生谓词驱动');
   assert.match(AI_SRC, /actionCounts\(\)/, '台账读侧容错');
-  assert.match(AI_SRC, /supply\.intervalSec/, '补给说明读配置而非硬编码');
+  assert.match(AI_SRC, /常驻班组/, '面板文案表达常驻班组模型');
+  assert.ok(!AI_SRC.includes('supply.intervalSec'), '已无自动补给文案残留');
 });
 
 // ============================================================
-console.log('[F] 用户明确需求');
+console.log('[E] 用户明确需求');
 // ============================================================
 
-test('F1 自动升级 / 自动招募 / 自动领取：每执行一次消耗 1 名助手', () => {
+test('E1 自动升级 / 自动招募 / 自动领取：占编、常驻、每周期执行次数 = 分配工人数', () => {
   for (const id of ['upgrade', 'hire', 'claim']) {
-    assert.equal(REG.assistantCostOf(id), 1, `${id} 助手单价必须为 1`);
+    assert.equal(REG.crewSizeOf(id), 1, `${id} 占编基准必须为 1`);
   }
-  // 三项基础动作同属 basic 分组
   for (const id of ['upgrade', 'hire', 'claim']) {
     assert.equal(REG.actionById(id).group, 'basic');
   }
 });
 
-test('F2 进阶动作（自动购建 / 自动研究）同样消耗助手，口径统一', () => {
+test('E2 进阶动作（自动购建 / 自动研究）同样占编，口径统一', () => {
   for (const id of ['build', 'tech']) {
-    assert.equal(REG.assistantCostOf(id), 1, `${id} 也应消耗 1 名助手`);
+    assert.equal(REG.crewSizeOf(id), 1, `${id} 也应占编 1`);
     assert.equal(REG.actionById(id).group, 'advanced');
   }
 });
 
-test('F3 五项动作在一次决策周期内各自最多消耗 1 名（claim 按任务数）', () => {
-  reset({ autoUpgrade: true, autoHire: true, autoTech: true, assistants: 30 });
+test('E3 一次决策周期内助手数守恒：分配后总执行次数 = 总工人数，余额不变', () => {
+  reset({ autoUpgrade: true, autoHire: true, autoTech: true, assistants: 5 });
   AI.tickAI(5);
   const c = AI.actionCounts();
-  assert.ok(c.upgrade <= 1 && c.hire <= 1 && c.tech <= 1);
-  assert.equal(AI.assistantCount(), 30 - AI.totalActionCount(c), '扣费与台账严格守恒');
+  const executed = AI.totalActionCount(c);
+  assert.equal(AI.assistantCount(), 5, '常驻班组余额不变');
+  assert.ok(executed >= 3, '三个开启动作各至少分到 1 名工人并执行');
+  // 分配：5 工人 / 3 动作 → base 1 + 余数 2 顺补 → 合计执行 = 5（受真实条件约束可能略少）
+  assert.ok(executed <= 5, '执行总次数不超过分配总工人数');
 });

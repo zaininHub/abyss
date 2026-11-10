@@ -96,10 +96,10 @@ export function defaultState() {
     // v1.3 模块 A：AI 助手（解锁后生效；默认全关，预留线默认 30%）
     ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: BALANCE.ai.defaultReserve, timer: 0,
         autoBuild: false, autoBuildUnlocked: false, autoBuildRate: BALANCE.ai.aiAutoBuild.defaultRate, autoBuildTimer: 0,
-        autoTech: false, assistants: 0, assistantsSpent: 0, supplyTimer: 0, actionCounts: {}, _stallWarnAt: 0 },
+        autoTech: false, assistants: 0, actionCounts: {}, _stallWarnAt: 0 },
     // v2.8.21 ③：自动研究开关默认字段；v3.10.5：alloc 改 assistants（助手=一次性消耗品，无编队/槽位/按类型分配）
-    // v3.11.0：supplyTimer / actionCounts / assistantsSpent / _stallWarnAt（补给计时 / 动作台账 / 累计消耗 / 告警节流）。
-    // 三者随 NESTED_DEFAULT_KEYS 里的 'ai' 自动兜底旧档，SAVE_VERSION 保持 6。
+    // v3.11.2：删除 assistantsSpent / supplyTimer（不再消耗 / 不再补给）；_stallWarnAt 复用于「编制不足」告警节流。
+    // 随 NESTED_DEFAULT_KEYS 里的 'ai' 自动兜底旧档，SAVE_VERSION 保持 6。
     // v1.3 模块 E：一次性条目购入顺序（已升级区按此倒序展示）
     boughtOrder: [],
     // v2.0 故事线

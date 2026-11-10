@@ -40,11 +40,11 @@ import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; //
 import { renderCrewPanel, crewPush, crewShown } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost, refreshAssistantAffordability,
-  assistantCount, assistantCost, assistantBuyState, buyAssistant, setAiSwitch, allOffActions,
+  assistantCount, assistantCost, assistantBuyState, buyAssistant, setAiSwitch, allOffActions, assignAssistants,
   actionCounts, totalActionCount, stalledActions, recordAction, actionAvailable,
   activateAutoBuild, autoBuildActivable } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测 // v3.7.5：编队按钮可购态快刷 // v3.11.0：AI 自动化真实入口 QA 钩子
-import { AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_ASSISTANT_CONSUMER_IDS,
-  ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleAssistantDemand } from './core/aiActionRegistry.js'; // v3.11.0：自动化动作声明层 QA 钩子
+import { AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_CREW_REQUIRED_IDS,
+  ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleCrewDemand, crewSizeOf, groupRankOf } from './core/aiActionRegistry.js'; // v3.11.0：自动化动作声明层 QA 钩子；v3.11.2：消耗→常驻班组，重命名派生清单
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
@@ -2496,9 +2496,9 @@ if (typeof window !== 'undefined') {
     // v3.10.0：成就注册表 / 状态清单 / 相位共鸣 QA 钩子
     ACHIEVEMENTS, ACHIEVEMENT_IDS, evaluateAchievements, achievementProgress,
     RESOURCE_DISCOVERY, PANEL_KEYS, PANEL_DIRTY_ON_START, FRAME_DEPS_KEYS,
-    // v3.11.0：自动化动作声明层 / 助手消耗（30 天浏览器推演核对「声明→消费」与长期续航）
-    AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_ASSISTANT_CONSUMER_IDS,
-    ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleAssistantDemand,
+    // v3.11.0：自动化动作声明层 / 助手占编（30 天浏览器推演核对「声明→占编」与长期续航）
+    AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_CREW_REQUIRED_IDS,
+    ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleCrewDemand, crewSizeOf, groupRankOf, assignAssistants,
     assistantCount, assistantCost, assistantBuyState, actionCounts, totalActionCount,
     stalledActions, actionAvailable, autoBuildActivable, getTechs, buyTech,
     RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,

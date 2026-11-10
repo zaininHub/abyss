@@ -42,12 +42,12 @@ const safeCtx = () => ({ S: { upgrades: {}, ep: 0, runEarned: 0, allTimeEp: 0, e
 
 console.log('[A] 资源流声明与阶段调度');
 
-// v3.11.0：新增第 9 条流 assistant:supply（AI 助手自动补给）。
-// 数量基线逐轮换（8→9），并保留「与 RESOURCE_FLOW_IDS 清单逐字对齐」的双向审计。
-test('A1 9 条流全部注册，阶段分布与声明清单一致', () => {
+// v3.11.2：v3.11.0 加入的第 9 条流 assistant:supply（AI 助手自动补给）已随「消耗模型反转」彻底删除。
+// 数量基线回到 8 条，并保留「与 RESOURCE_FLOW_IDS 清单逐字对齐」的双向审计。
+test('A1 8 条流全部注册，阶段分布与声明清单一致', () => {
   const all = flow.allFlows();
   assert.equal(all.length, RESOURCE_FLOW_IDS.length, '流数量与声明清单不符');
-  assert.equal(all.length, 9);
+  assert.equal(all.length, 8);
   assert.equal(new Set(all.map(f => f.id)).size, all.length, '流 id 不重复');
   for (const id of RESOURCE_FLOW_IDS) assert.ok(all.some(f => f.id === id), `缺流 ${id}`);
   for (const f of all) assert.ok(flow.FLOW_PHASE_ORDER.includes(f.phase), `${f.id} 阶段非法`);
@@ -58,7 +58,7 @@ test('A2 EP 主产出是 EP_PRODUCE 阶段唯一且第一条（后续流都吃�
   assert.equal(produce.length, 1);
   assert.equal(produce[0].id, 'ep:main');
   const aux = flow.flowsOfPhase(P.EP_AUX).map(f => f.id);
-  assert.deepEqual(aux, ['ep:tentacle', 'ep:lazy', 'rp:atrium', 'assistant:supply'], 'EP_AUX 顺序应为 触手→懒惰→蒸馏→助手补给');
+  assert.deepEqual(aux, ['ep:tentacle', 'ep:lazy', 'rp:atrium'], 'EP_AUX 顺序应为 触手→懒惰→蒸馏');
   const conv = flow.flowsOfPhase(P.CONVERTERS).map(f => f.id);
   assert.deepEqual(conv, ['pt:hatch', 'fuel:burn', 'pt:upkeep'], 'CONVERTERS 顺序应为 孵化→燃料→维持');
 });

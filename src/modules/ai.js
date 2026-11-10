@@ -1,14 +1,14 @@
 // v1.3 模块 A：AI 助手（基础三项 + 进阶两项自动化 + 预留线）
 // 解锁：科技树「AI 管理核心」（ai_core，里程碑 cps≥1e4 后可见，50 RP，跨晋升保留）
 // v3.11.0：动作元数据（开关 / 分组 / 助手单价 / 文案）下沉到 core/aiActionRegistry.js，
-//   本文件只保留执行器与 UI，助手守卫 / 扣费 / 台账 / 日志后缀由 tickAI 统一遍历处理。
+//   本文件只保留执行器与 UI，助手占编 / 分配 / 台账 / 日志由 tickAI 统一遍历处理。
 // 规范（设计 §5）：
 //   - 各开关默认全关，独立可关；关闭后无新动作
 //   - 自动升级：每决策周期买「回本最短」产出项（payback = 成本 ÷ 边际 CPS 含全局乘数），EP ≥ 预留线才买
 //   - 自动招募：staffNetPerSec() > 0 且 EP ≥ staffCost×2（net<0 自然停）
 //   - 自动领取：任务 pending 即领（EP 类奖励走 addEp 上限口径，由 claimProject 内部处理）
-//   - 自动购建 / 自动研究：各自需额外解锁，同样按次消耗助手
-//   - 每一项自动化动作每执行一次消耗 1 名 AI 助手；不足即停摆并给出明确提示
+//   - 自动购建 / 自动研究：各自需额外解锁，开启后需 AI 助手编制
+//   - AI 助手是常驻班组工人，自动分配到开启的动作；每动作每周期执行次数 = 分配工人数（越多越强）；助手不足时低优先级动作挂起
 //   - 预留线：EP 上限的 10% / 30% / 50% 三档（默认 30%）
 //   - 所有动作走日志带 [AI] 前缀；面板底部「一键全关」由注册表派生，覆盖全部开关
 import { S, save } from '../state.js';
@@ -30,9 +30,9 @@ import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已�
 // v3.11.0：自动化动作声明层——「哪些动作消耗助手 / 开关 / 分组 / 一键全关」的单一真源。
 import {
   AI_ACTIONS, AI_ACTION_GROUPS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS,
-  AI_ASSISTANT_CONSUMER_IDS, ALL_OFF_SWITCH_KEYS, actionById, actionsByGroup,
+  AI_CREW_REQUIRED_IDS, ALL_OFF_SWITCH_KEYS, actionById, actionsByGroup,
   enabledActions, isAnyActionEnabled, emptyActionCounts, totalActionCount,
-  maxCycleAssistantDemand,
+  maxCycleCrewDemand, crewSizeOf, groupRankOf,
 } from '../core/aiActionRegistry.js';
 
 let logFn = null;
@@ -49,9 +49,10 @@ const THREAD_IDS = ['cpu', 'gpu']; // v3.4.8 反馈⑦：消耗优化整组已�
 
 export function aiUnlocked() { return hasTech('ai_core'); }
 
-// v3.10.5：助手 = 一次性消耗品。自动升级/招募/领取每执行一次消耗 1 名助手；
-// 无数量上限，靠购买价逐次递增（baseCost × costGrowth^n）天然限购。
-// 删除了 v3.6.0 的「编队/槽位/按类型分配」整套模型。
+// v3.11.2：助手 = 常驻班组工人。自动升级/招募/领取等动作不再消耗助手，
+// 而是每决策周期按「分配到该动作的工人数」执行相应次数（越多越强）；
+// 助手总数 = 工人池，靠购买价逐次递增（baseCost × costGrowth^n）天然限购扩编。
+// 删除了 v3.10.5 的「消耗品 + 自动补给流」整套模型。
 export function assistantCount() { return (S.ai && S.ai.assistants) || 0; }
 export function assistantCost() {
   const c = BALANCE.ai.assistants;
@@ -59,17 +60,30 @@ export function assistantCost() {
   // v3.10.5：「拟我协议」(rp_ai) 研究提升助手性价比——购买价 ÷ researchMult('ai')，数量递增仍然限购
   return Math.round(c.baseCost * Math.pow(c.costGrowth, n) / researchMult('ai'));
 }
-// v3.11.0：统一扣费入口。执行器只报「实际执行了几次动作」，助手扣费 / 台账 / 日志
-// 全部由 tickAI 的注册表遍历统一处理，杜绝各分支手写「守卫 + 实扣 + 日志」漂移。
-function consumeAssistants(n) {
-  const have = assistantCount();
-  const take = Math.min(have, Math.max(0, Math.floor(n)));
-  if (take <= 0) return 0;
-  S.ai.assistants = have - take;
-  // 累计消耗台账：与动作台账严格一一对应（每项动作 assistantCost=1），
-  // 供 30 天推演核对「动作次数 == 消耗助手数」与「补给+购买-余额 == 消耗」双守恒。
-  S.ai.assistantsSpent = (S.ai.assistantsSpent || 0) + take;
-  return take;
+// v3.11.2：助手不再是消耗品。每决策周期按助手池自动分配编制到开启的动作（类似线程绑定岗位）。
+// 返回 { actionId: workers }；0 工人 = 该动作因编制不足挂起。
+export function assignAssistants() {
+  const N = assistantCount();
+  if (!aiUnlocked() || N <= 0) return {};
+  const enabled = AI_ACTIONS
+    .filter(a => S.ai[a.switchKey] && actionAvailable(a.id))
+    .map(a => a.id);
+  const M = enabled.length;
+  if (M === 0) return {};
+  const assigned = {};
+  if (N >= M) {
+    const base = Math.floor(N / M);
+    let rem = N % M;
+    for (const id of enabled) {
+      assigned[id] = base + (rem > 0 ? 1 : 0);
+      if (rem > 0) rem--;
+    }
+  } else {
+    // 人手不够：basic 组优先于 advanced，前 N 个动作各 1 名，其余挂起
+    const order = [...enabled].sort((a, b) => groupRankOf(a) - groupRankOf(b));
+    order.forEach((id, i) => { assigned[id] = i < N ? 1 : 0; });
+  }
+  return assigned;
 }
 
 // 本局动作台账（供面板 / 30 天推演核对「自动化是否真在跑」）；旧档无字段时惰性建槽。
@@ -89,23 +103,26 @@ export function actionCounts() {
   for (const k of AI_ACTION_IDS) base[k] = cur[k] || 0;
   return base;
 }
-export { totalActionCount, maxCycleAssistantDemand, AI_ASSISTANT_CONSUMER_IDS };
+export { totalActionCount, maxCycleCrewDemand, AI_CREW_REQUIRED_IDS, crewSizeOf, groupRankOf };
 
-// 助手耗尽的停摆告警：v3.10.5 三个分支只是静默不动作（零日志零提示），
-// 玩家看到开关 ON 却什么都没发生。这里按 60s 真实时间节流，避免刷屏。
+// 编制不足挂起：助手池不足以覆盖所有开启的动作时，低优先级动作被挂起（不执行）。
+// 告警按 60s 真实时间节流，避免刷屏。
 const STALL_WARN_MS = 60 * 1000;
 export function stalledActions() {
   if (!aiUnlocked()) return [];
   if (!isAnyActionEnabled(S.ai)) return [];
-  if (assistantCount() > 0) return [];
-  return enabledActions(S.ai).filter(a => a.assistantCost > 0);
+  const assigned = assignAssistants();
+  if (assistantCount() <= 0) {
+    return enabledActions(S.ai).filter(a => actionAvailable(a.id));
+  }
+  return enabledActions(S.ai).filter(a => actionAvailable(a.id) && (assigned[a.id] || 0) <= 0);
 }
 function warnIfStalled(stalled) {
   if (!stalled.length) return;
   const now = Date.now();
   if (S.ai._stallWarnAt && now - S.ai._stallWarnAt < STALL_WARN_MS) return;
   S.ai._stallWarnAt = now;
-  ailog(`助手耗尽：${stalled.map(a => a.name).join('、')} 已暂停——购买助手或等待补给后自动恢复`, 'warn');
+  ailog(`助手耗尽：${stalled.map(a => a.name).join('、')} 已暂停——再购买助手即自动全开`, 'warn');
 }
 
 // v2.5.5：全部资源点解锁判定（resDiscovered 十个锚点全 true）
@@ -203,78 +220,92 @@ export function actionAvailable(id) {
   return p ? p() : true;
 }
 
+// v3.11.2：执行器接收「分配到本动作的工人数 workers」，每周期执行 workers 次
+// （越多越强，对标班组「线程越多产出越高」）。执行器只负责「本周期实际执行了几次 + 日志正文」，
+// 占编 / 分配 / 台账 / 日志由 tickAI 统一处理。新增动作 = 注册表一行 + 这里一个执行器。
 const EXECUTORS = {
-  // a. 自动升级：回本最短项，EP ≥ 预留线才买
-  upgrade(ctx, budget) {
-    if (budget < 1) return null;
-    const pick = bestPaybackItem();
-    if (!(pick && S.ep - pick.cost >= ctx.line && S.ep >= pick.cost)) return null;
-    S.ep -= pick.cost;
-    S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
-    S.totalBuys++;
-    aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
-    return { count: 1, messages: [{ text: `自动升级：购入 ${pick.u.name}（-${fmt(pick.cost)} EP）`, cls: 'good', units: 1 }] };
-  },
-  // b. 自动招募：净产出为正且 EP ≥ 2×招募成本；net<0 自然停止
-  hire(ctx, budget) {
-    if (budget < 1) return null;
-    const cost = staffCost();
-    if (!(staffNetPerSec() > 0 && S.ep >= cost * 2 && S.ep - cost >= ctx.line)) return null;
-    aiHireOne();
-    hiredFlag = true; // v2.7.2：招募发生 → main 刷新线程区（dirty.shop）
-    return { count: 1, messages: [{ text: `自动招募：+1 线程（-${fmt(cost)} EP）`, cls: 'good', units: 1 }] };
-  },
-  // c. 自动领取：每个 pending 任务一次动作，各自消耗 1 名助手；不超过 budget
-  claim(ctx, budget) {
-    if (budget < 1) return null;
-    const messages = [];
-    let count = 0;
-    for (const p of S.projects) {
-      if (count >= budget) break;
-      if (p.status !== 'pending') continue;
-      claimProject(p);
+  // a. 自动升级：回本最短项，EP ≥ 预留线才买；每工人买 1 次
+  upgrade(ctx, workers) {
+    let count = 0; const messages = [];
+    for (let i = 0; i < workers; i++) {
+      const pick = bestPaybackItem();
+      if (!(pick && S.ep - pick.cost >= ctx.line && S.ep >= pick.cost)) break;
+      S.ep -= pick.cost;
+      S.upgrades[pick.u.id] = (S.upgrades[pick.u.id] || 0) + 1;
+      S.totalBuys++;
+      aiUiRefresh({ kind: 'upgrade', u: pick.u }); // v2.6.6 ③：单卡原地刷新
       count++;
-      messages.push({ text: `自动领取：任务「${p.name}」奖励到账`, cls: 'good', units: 1 });
+      messages.push({ text: `自动升级：购入 ${pick.u.name}（-${fmt(pick.cost)} EP）`, cls: 'good' });
     }
     return count > 0 ? { count, messages } : null;
   },
-  // d. 自动购建：严格限速（间隔硬下限 5s / 每决策周期至多 1 栋 / 受预留线约束）
-  build(ctx, budget) {
+  // b. 自动招募：净产出为正且 EP ≥ 2×招募成本；net<0 自然停止；每工人招 1 条
+  hire(ctx, workers) {
+    let count = 0; const messages = [];
+    for (let i = 0; i < workers; i++) {
+      const cost = staffCost();
+      if (!(staffNetPerSec() > 0 && S.ep >= cost * 2 && S.ep - cost >= ctx.line)) break;
+      aiHireOne();
+      hiredFlag = true; // v2.7.2：招募发生 → main 刷新线程区（dirty.shop）
+      count++;
+      messages.push({ text: `自动招募：+1 线程（-${fmt(cost)} EP）`, cls: 'good' });
+    }
+    return count > 0 ? { count, messages } : null;
+  },
+  // c. 自动领取：每工人领取 1 个 pending 任务（不超过 pending 数量）
+  claim(ctx, workers) {
+    const messages = []; let count = 0;
+    for (const p of S.projects) {
+      if (count >= workers) break;
+      if (p.status !== 'pending') continue;
+      claimProject(p);
+      count++;
+      messages.push({ text: `自动领取：任务「${p.name}」奖励到账`, cls: 'good' });
+    }
+    return count > 0 ? { count, messages } : null;
+  },
+  // d. 自动购建：严格限速（间隔硬下限 5s）；到达间隔时一次购建最多 workers 栋（成本升序）
+  build(ctx, workers) {
     const rate = autoBuildRate();
     S.ai.autoBuildTimer = (S.ai.autoBuildTimer || 0) + ctx.dt;
-    if (S.ai.autoBuildTimer < rate || budget < 1) return null;
+    if (S.ai.autoBuildTimer < rate) return null;
     S.ai.autoBuildTimer = 0;
     const cands = V21_BUILDINGS
       .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
       .map(b => ({ b, cost: v21BuildingCost(b) }))
       .sort((a, b2) => a.cost - b2.cost);
+    let built = 0; const messages = [];
     for (const { b, cost } of cands) {
+      if (built >= workers) break;
       if (S.ep < cost || S.ep - cost < ctx.line) continue;
       S.ep -= cost;
       S.buildings[b.id] = v21Level(b.id, S) + 1;
       S.totalBuys = (S.totalBuys || 0) + 1;
       const cap = capOf(b, S);
       aiUiRefresh({ kind: 'building', b });
-      return { count: 1, messages: [{ text: `自动购建：${b.name} 升至 Lv.${v21Level(b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(cost)} EP）`, cls: 'good', units: 1 }] };
+      built++;
+      messages.push({ text: `自动购建：${b.name} 升至 Lv.${v21Level(b.id, S)}/${isFinite(cap) ? cap : '∞'}（-${fmt(cost)} EP）`, cls: 'good' });
     }
-    return null;
+    return built > 0 ? { count: built, messages } : null;
   },
-  // e. 自动研究：每决策周期至多买 1 个最便宜可负担科技（RP 消耗）
-  tech(ctx, budget) {
-    if (budget < 1) return null;
+  // e. 自动研究：每周期购买最多 workers 个最便宜可负担科技（RP 消耗）
+  tech(ctx, workers) {
     const cands = (getTechs() || [])
       .filter(t => t.autoTech && !hasTech(t.id) && (!t.req || t.req.every(r => hasTech(r))))
       .map(t => ({ t, cost: techCostOf(t) }))
       .sort((a2, b2) => a2.cost.rp - b2.cost.rp);
+    let bought = 0; const messages = [];
     for (const { t, cost } of cands) {
+      if (bought >= workers) break;
       if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
       S.rp -= cost.rp;
       S.ep -= cost.ep || 0;
       S.tech[t.id] = true;
       pushBoughtOrder(S, t.id);
-      return { count: 1, messages: [{ text: `自动研究：购入科技「${t.name}」（-${fmt(cost.rp)} RP${cost.ep ? ' -' + fmt(cost.ep) + ' EP' : ''}）`, cls: 'good', units: 1 }] };
+      bought++;
+      messages.push({ text: `自动研究：购入科技「${t.name}」（-${fmt(cost.rp)} RP${cost.ep ? ' -' + fmt(cost.ep) + ' EP' : ''}）`, cls: 'good' });
     }
-    return null;
+    return bought > 0 ? { count: bought, messages } : null;
   },
 };
 
@@ -305,21 +336,17 @@ export function tickAI(dt) {
   const ctx = { dt, line: reserveLine() };
   const stalled = [];
 
-  // v3.11.0：统一遍历注册表。助手守卫 / 扣费 / 台账 / 日志后缀只有这一处实现。
+  // v3.11.2：先按助手池分配编制，再统一遍历。助手是常驻班组（不消耗），
+  // 每个动作每周期执行次数 = 分配工人数；分配为 0 的动作（编制不足）挂起。
+  const assigned = assignAssistants();
   for (const a of AI_ACTIONS) {
     if (!ai[a.switchKey] || !actionAvailable(a.id)) continue;
-    const cost = a.assistantCost;
-    const budget = cost > 0 ? Math.floor(assistantCount() / cost) : Infinity;
-    if (budget < 1) { stalled.push(a); continue; }
-    const result = EXECUTORS[a.id](ctx, budget);
+    const workers = assigned[a.id] || 0;
+    if (workers <= 0) { stalled.push(a); continue; }
+    const result = EXECUTORS[a.id](ctx, workers);
     if (!result || result.count <= 0) continue;
-    const spent = consumeAssistants(result.count * cost);
     recordAction(a.id, result.count);
-    for (const m of result.messages) {
-      const units = m.units || 1;
-      const suffix = cost > 0 && spent > 0 ? `（消耗 ${units * cost} 名助手）` : '';
-      ailog(m.text + suffix, m.cls);
-    }
+    for (const m of result.messages) ailog(m.text, m.cls);
     acted = true;
   }
   warnIfStalled(stalled);
@@ -373,7 +400,7 @@ export function assistantBuyState() {
   const disabled = !aiUnlocked() || !afford;
   const label = `购买助手（${fmt(cost)} EP）`;
   const title = !aiUnlocked() ? '需先研究「AI 管理核心」'
-    : afford ? `消耗 ${fmt(cost)} EP 购买 1 名 AI 助手（每项自动化动作每执行一次消耗 1 名）`
+    : afford ? `消耗 ${fmt(cost)} EP 扩编 1 名 AI 助手（常驻班组，自动分配到开启的自动化动作）`
       : `EP 不足：还需 ${fmt(Math.max(0, cost - (S.ep || 0)))} EP`;
   return { cost, afford, disabled, label, title, sig: `${disabled}|${label}|${title}` };
 }
@@ -385,7 +412,7 @@ export function buyAssistant() {
   if (!st.disabled) {
     S.ep -= st.cost;
     S.ai.assistants = assistantCount() + 1;
-    ailog('购入 AI 助手 +1（一次性消耗品）', 'good');
+    ailog('购入 AI 助手 +1（扩编自动化班组）', 'good');
     save(S);
     return { ok: true, cost: st.cost, count: assistantCount() };
   }
@@ -420,24 +447,24 @@ export function refreshAssistantAffordability() {
   btn.title = st.title;
 }
 
-// v3.10.5：助手区块（消耗品）——只显示数量 + 购买按钮，删除编队/槽位/按类型分配
-// v3.11.0：补上「助手耗尽停摆」的面板提示与动作台账，避免开关 ON 却静默无动作。
+// v3.11.2：助手区块（常驻班组）——显示数量 + 购买按钮 + 编制不足提示 + 动作台账。
+// 不再有「耗尽停摆 / 自动补给」，改为「人手不足时低优先级动作挂起」。
 function renderAssistantSection() {
   const n = assistantCount();
   const st = assistantBuyState();
   const stalled = stalledActions();
   const counts = actionCounts();
-  const supply = BALANCE.ai.assistants.supply;
+  const onCount = enabledActions(S.ai).filter(a => actionAvailable(a.id)).length;
   const stallHtml = stalled.length
-    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 助手已耗尽：${stalled.map(a => a.name).join('、')} 暂停执行。购买助手或等待自动补给后恢复。</div>`
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ AI 助手不足：当前 ${n} 名，开启 ${onCount} 个动作——${stalled.map(a => a.name).join('、')} 因编制不足暂停（再购买助手即可全开）。</div>`
     : '';
   const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">本局已执行：${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' · ')}（合计 ${totalActionCount(counts)} 次）</div>`;
-  let head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（每项自动化动作每执行一次消耗 1 名）`;
+  let head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（常驻班组：自动分配到开启的动作，每动作每周期执行次数 = 分配工人数）</div>`;
   if (aiUnlocked()) {
     return head + `</div>` + stallHtml
       + `<div style="margin-top:4px">`
       + `<button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`
-      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；每 ${supply.intervalSec / 60} 分钟自动补给 ${supply.perTick} 名（至多积攒 ${supply.cap} 名，购买不受此限）。</div>`
+      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；购买即扩编，常驻不消耗。</div>`
       + ledgerHtml + `</div>`;
   }
   return head + `</div>` + ledgerHtml;

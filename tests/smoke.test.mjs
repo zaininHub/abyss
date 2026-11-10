@@ -470,15 +470,15 @@ t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作�
   const upg0 = { ...(S.upgrades) };
   assert.equal(tickAI(5), false, '低于预留线不应有动作');
   assert.deepEqual(S.upgrades, upg0, '不应发生购买');
-  // 2) 自动升级正常执行：EP 充足时买到回本最短项（每执行一次消耗 1 名助手）
+  // 2) 自动升级正常执行：EP 充足时买到回本最短项（常驻班组，每执行次数 = 分配工人数，不消耗助手）
   S.ep = cap; S.ai.timer = 0;
   const before = S.ep;
   const acted = tickAI(5);
   assert.equal(acted, true, 'EP 充足应执行购买');
   const bought = Object.keys(S.upgrades).filter(k => (S.upgrades[k] || 0) > (upg0[k] || 0));
   assert.ok(bought.length > 0, '应有购入记录');
-  assert.ok(S.ep < before, 'EP 应扣减');
-  assert.equal(S.ai.assistants, 4, '自动升级消耗 1 名助手');
+  assert.ok(S.ep < before, 'EP 应扣减（购买消耗 EP，而非消耗助手）');
+  assert.equal(S.ai.assistants, 5, '自动升级不消耗助手（常驻班组）');
   // 3) 自动招募 net<0 停止
   // v3.4.8 反馈⑥：薪资已改为「产出 × 2/3」→ 常态下净收益恒为正，只有怠工态（薪资 ×2.5）才会净亏；
   //   这里用怠工标记构造 net<0 场景，验证守卫仍然生效

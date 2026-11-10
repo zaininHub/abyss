@@ -158,23 +158,23 @@ function seedAiBase() {
     starCps: 0, ep: 1e9, allTimeEp: 1e9, upgrades: {}, totalBuys: 0, colonies: {},
   });
 }
-test('v3.10.5 ④ AI：无助手时自动升级/招募/领取不执行（消耗型）', () => {
+test('v3.11.2 ④ AI：无助手时自动升级/招募/领取不执行（常驻班组，无编制则挂起）', () => {
   seedAiBase();
   S.ai.autoUpgrade = true;
   const before = S.totalBuys || 0;
   const acted = tickAI(10);
-  assert.equal(acted, false, '无助手时自动升级不应动作');
-  assert.equal(S.totalBuys || 0, before, '无助手时不应购入任何升级');
+  assert.equal(acted, false, '无助手（无编制）时自动升级不应动作');
+  assert.equal(S.totalBuys || 0, before, '无编制时不应购入任何升级');
 });
-test('v3.10.5 ④ AI：有助手时自动升级消耗助手并买入', () => {
+test('v3.11.2 ④ AI：有助手时自动升级买入且不消耗助手', () => {
   seedAiBase();
   S.ai.autoUpgrade = true;
   S.ai.assistants = 3;
   const before = S.totalBuys || 0;
   const acted = tickAI(10);
-  assert.equal(acted, true, '有助手时 tickAI 返回 true');
+  assert.equal(acted, true, '有助手（有编制）时 tickAI 返回 true');
   assert.ok((S.totalBuys || 0) > before, '至少自动购入 1 个升级项');
-  assert.ok((S.ai.assistants || 0) < 3, '自动升级后助手数减少（消耗 1 名）');
+  assert.equal(S.ai.assistants || 0, 3, '自动升级不消耗助手（常驻班组）');
 });
 test('v3.10.5 ④ AI：无开关 → tickAI 返回 false（不动作）', () => {
   seedAiBase();
