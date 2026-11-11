@@ -1,9 +1,38 @@
+# ===== 依赖 =====
 node_modules/
-# 浏览器测试截图目录（如存在）
+
+# ===== 构建产物 =====
+# 注意：dist/ 由本项目有意纳入版本控制（浏览器回归测试通过
+# `git checkout HEAD -- dist` 读取构建产物），因此【不要】在此忽略 dist/。
+dist/_shot-*.png
+
+# ===== 日志 =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 编辑器 / IDE / OS =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+.idea/
+.vscode/
+*.sublime-*
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.*
+!.env.example
+
+# ===== 覆盖率 / 缓存 =====
+coverage/
+.cache/
+
+# ===== 浏览器测试截图与产物（按需忽略） =====
 tests/EV/
 tests/*.png
 tests/playthrough-shots/
-dist/_shot-*.png
-# 浏览器测试自检截图不入库（v270-relics 曾写入 dist）
-*.log
-.DS_Store
