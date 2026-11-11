@@ -277,48 +277,38 @@ function renderStorylinePanel() {
   if (completed.length > 0) {
     html += `<div style="margin-top:12px;color:var(--text-2);font-size:11px">已完成：${completed.map(id => getStorylinePackage(id)?.name || id).join('、')}</div>`;
   }
-  // v2.7.3 ⑥：故事线图鉴——仅显示已解锁路线（当前路线 + 已完成路线）
+  // v3.12.3 反馈①：故事线只记录「已解锁的章节」，并按分支树结构展示；
+  // 原「历史周期走向（政策选择）」整块移除——故事线只记故事，不记政策。
   const ALL_LINES = ['line_abyss', 'line_order', 'line_faith'];
   const unlockedLines = ALL_LINES.filter(id => id === current || completed.includes(id));
   if (unlockedLines.length > 0) {
-    html += `<div style="margin-top:14px"><div style="color:var(--accent);font-size:11px;margin-bottom:6px">故事线图鉴（仅显示已解锁路线，章节解锁即亮起）</div>`;
+    html += `<div class="sl-forest">`;
     for (const id of unlockedLines) {
       const pkg = getStorylinePackage(id);
       if (!pkg) continue;
-      html += `<div class="codex-line"><div class="codex-line-name">${pkg.name}</div>`;
-      if (pkg.desc) html += `<div class="codex-desc">${pkg.desc}</div>`;
-      const chs = (pkg.data && pkg.data.chapters && pkg.data.chapters.append) || []; // v3.0.3 第六批⑥：修复路径——章节数据在 pkg.data.chapters 下（原 pkg.chapters 恒 undefined 致剧情从不渲染）
-      if (chs.length > 0) {
-        html += `<div class="codex-chs">`;
-        // v2.8.5 A3：解锁判定 = 持久化已进入（chaptersUnlocked）优先，其次即时 cond（未写入前的兼容）
-        const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
-        let prevOk = true; // v3.0.3 第三批⑥：故事线解锁的是剧情——前章解锁后本章顺次可见
-        for (const ch of chs) {
-          let ok = false;
-          try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
-          const code = chapterCode(ch.id);
-          // v3.7.0：新编码 + 旧档数字双向兼容（历史已进入 → 永久点亮）
-          if (seenChs.includes(code) || seenChs.includes(chapterSeq(ch.id))) ok = true;
-          if (prevOk) ok = true; // 前一章可见 → 本章剧情顺次解锁（cond 节奏仍作用于后续）
-          html += `<div class="codex-ch${ok ? ' on' : ' locked'}"><span class="codex-ch-name">${ok ? '✓' : '🔒'} ${ch.name}</span>`;
-          if (ok && ch.desc) html += `<div class="codex-ch-desc">${ch.desc}</div>`;
-          html += `</div>`;
-          prevOk = ok;
-        }
-        html += `</div>`;
+      const chs = (pkg.data && pkg.data.chapters && pkg.data.chapters.append) || []; // 章节数据在 pkg.data.chapters 下
+      const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
+      const nodes = [];
+      let prevOk = true; // 前章解锁 → 本章剧情顺次可见
+      for (const ch of chs) {
+        let ok = false;
+        try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
+        const code = chapterCode(ch.id);
+        if (seenChs.includes(code) || seenChs.includes(chapterSeq(ch.id))) ok = true;
+        if (prevOk) ok = true;
+        if (ok) nodes.push(ch);
+        prevOk = ok;
       }
-      html += `</div>`;
-    }
-    html += `</div>`;
-  }
-  // v2.8.6 B2a：历史政策走向（跨周期记录，展示每次游戏周期的不同选择）
-  const runs = S.policyRuns || [];
-  if (runs.length > 0) {
-    html += `<div style="margin-top:14px"><div style="color:var(--accent);font-size:11px;margin-bottom:6px">历史周期走向（政策选择）</div>`;
-    for (let i = runs.length - 1; i >= 0; i--) {
-      const run = runs[i];
-      const lineName = run.storyline === 'line_abyss' ? '深渊线' : run.storyline === 'line_order' ? '秩序线' : run.storyline === 'line_faith' ? '信仰线' : '默认线';
-      html += `<div class="codex-line" style="padding:4px 6px;margin-bottom:4px"><div class="codex-line-name" style="font-size:10.5px">周期 ${i + 1} · ${lineName}</div><div style="font-size:10.5px;color:var(--text-2)">${run.picks.join(' / ') || '（本轮未选政策）'}</div></div>`;
+      if (!nodes.length) continue;
+      html += `<div class="sl-line"><div class="sl-line-name">${pkg.name}${id === current ? '<span class="sl-cur">当前</span>' : ''}</div>`;
+      html += `<div class="sl-tree">`;
+      nodes.forEach((ch, i) => {
+        const last = i === nodes.length - 1;
+        html += `<div class="sl-node${last ? ' last' : ''}"><div class="sl-ch-name">${ch.name}</div>`;
+        if (ch.desc) html += `<div class="sl-ch-desc">${ch.desc}</div>`;
+        html += `</div>`;
+      });
+      html += `</div></div>`;
     }
     html += `</div>`;
   }
@@ -517,7 +507,8 @@ function renderTop() {
   const drain = totalDrainPerSec();
   const drainWarn = drain > cps;
   const etaSec = epDepletionSec(S.ep, cps, drain);
-  const etaTip = drainWarn ? `｜⚠ 净流为负：按当前产出/消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '';
+  // v3.12.3 反馈⑧：EP 耗尽预警不再并入「产出 / 消耗」两处气泡文案——
+  // 改由消耗侧独立的 ❗ 承载（自带悬浮），气泡只陈述各自的来源与加成。
   const now = Date.now();
   let buffTag = '';
   if (now < S.buffUntil) {
@@ -577,6 +568,14 @@ function renderTop() {
     hReincarn.textContent = n;
     reincarnStat.title = `轮回 ${n} 次 · 深渊回响 ${echo} · 全局产出 +${(echo * 5).toFixed(0)}%（每点回响 +5%，跨轮回保留）`;
   }
+  // v3.12.3 反馈⑥：回响数值在顶栏独立显示（原只藏在「轮回」的气泡里，玩家看不到余额）
+  const hEcho = document.getElementById('h-echo');
+  const echoStat = document.getElementById('echo-stat');
+  if (hEcho && echoStat) {
+    const echo = S.abyssEcho || 0;
+    echoStat.style.display = (echo > 0 || (S.reincarned || 0) > 0) ? '' : 'none';
+    hEcho.textContent = fmt(echo);
+  }
   // v2.8.4 ②：湮灭残片（崩溃转生 +1，>0 才显示）
   const hSpl = document.getElementById('h-splinter');
   const splStat = document.getElementById('splinter-stat');
@@ -589,12 +588,15 @@ function renderTop() {
   // v2.8.22 ④：来源悬浮气泡（只留自定义 CSS 气泡，移除原生 title —— 双弹窗）；气泡含来源 + 加成明细
   if (hCps) {
     const st = hCps.closest('.stat');
-    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}${etaTip}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮（按分段曲线累加）
+    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮（按分段曲线累加）
   }
   const hDrainWarn = document.getElementById('h-drain-warn');
   if (hDrainWarn) {
     hDrainWarn.style.display = drainWarn ? '' : 'none';
-    hDrainWarn.setAttribute('aria-label', drainWarn ? `产出小于消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '');
+    // v3.12.3 反馈⑧：感叹号自己带气泡（挂在元素上而不是父项），悬浮只讲「还剩多久耗尽」
+    const warnTip = drainWarn ? `净流为负：按当前产出/消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '';
+    if (warnTip) hDrainWarn.dataset.tip = warnTip; else hDrainWarn.removeAttribute('data-tip');
+    hDrainWarn.setAttribute('aria-label', warnTip);
   }
   if (hSalary) {
     hSalary.textContent = fmt(drain) + '/s';
@@ -602,7 +604,7 @@ function renderTop() {
     // v3.3.1 反馈⑪：消耗按实际扣减口径展示（休眠只扣保命成本、探采 EP 不足跳过、圣所关闭不扣）
     const wSt = (S.wageState || {}).state;
     const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `（休眠期仅扣保命成本 ×${wageKeepCostMult()}）` : '';
-    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${etaTip}`;
+    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   if (hRank) hRank.textContent = S.prestigePoints;
@@ -753,6 +755,9 @@ function renderHero() {
     }
     staffStatus.textContent = txt;
     staffStatus.style.color = color;
+    // v3.12.3 反馈③：问号说明框只在「满薪」状态显示（其余四态由整块悬浮说明承载）
+    const wageMark = document.getElementById('wage-help-mark');
+    if (wageMark) wageMark.style.display = (txt === '满薪') ? '' : 'none';
     // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块 [data-tip]，整行悬浮 / 点击均可触发。
     const wageZone = document.getElementById('wage-help-zone');
     const wageTip = `线程薪资四态（当前：${w.state}）\n` +
@@ -773,7 +778,7 @@ function renderHero() {
     const curOut = staffOutputPerSec();
     const avgOut = n > 0 ? curOut / n : (base + jit / 2); // 实际单线程产出（mood/加成一致口径）
     const nextSalary = Math.min(0.5 * Math.pow(BALANCE.thread.salaryBase, n), perCap);
-    staffPrevEl.textContent = `下一线程：产出 +${avgOut.toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
+    staffPrevEl.textContent = `NEXT：产出 +${avgOut.toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
     staffPrevEl.style.color = S.ep < staffCost() ? 'var(--warn,#c8a24a)' : 'var(--text-2)';
   }
   if (hireBtn) {
@@ -945,18 +950,9 @@ function switchTab(id) {
   if (id === 'reincarn') dirty.reincarn = true;
 }
 
-// v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性），点击提示解锁路径
+// v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性）
+// v3.12.3 反馈③：锁定态不再挂任何解锁条件文案（title / toast 全部移除，只表达「不可用」）
 const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市', 'btn-reincarn': '轮回' };
-const TAB_LOCK_HINTS = {
-  'btn-expedition': '星图未解锁：完成首次远征准备（或研究科技「深空探测」）后开放',
-  'btn-relics': '遗物未解锁：触发首次深渊裂隙并发现 DM 后开放',
-  'btn-religion': '宗教未解锁：存储扩建 ≥3 级后可唤醒信仰',
-  'btn-policy': '政策未解锁：达成对应政策开放条件后出现',
-  'btn-delve': '深潜未解锁：ES≥3 + DM 已发现 + 宗教已信奉',
-  'btn-rift-tab': '裂隙未解锁：班组 ≥15 条线程后开放',
-  'btn-bazaar': '集市未解锁：完成首次晋升后可用职级点开启',
-  'btn-reincarn': '轮回未解锁：完成首次晋升后可用职级点开启',
-};
 function setTabLocked(btn, locked) {
   if (!btn) return;
   const base = TAB_LABELS[btn.id] || btn.textContent;
@@ -964,7 +960,9 @@ function setTabLocked(btn, locked) {
     if (btn.dataset.locked !== '1') {
       btn.dataset.locked = '1';
       btn.textContent = '???';
-      btn.title = '🔒 ' + (TAB_LOCK_HINTS[btn.id] || '尚未解锁');
+      // v3.12.3 反馈③：未解锁大模块只表达「不可用」——不再给出解锁条件提示
+      // （「？？？」仍是未知，写着条件等于把探索感直接剧透掉）
+      btn.removeAttribute('title');
       btn.classList.add('tab-locked');
     }
     btn.style.display = '';
@@ -1000,15 +998,8 @@ function refreshTabVisibility() {
   const riftBtn = document.getElementById('btn-rift-tab');
   setTabLocked(riftBtn, !(S._riftSeen || (S.riftsSealed || 0) > 0));
   // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
-  // v3.6.2 反馈②：解锁门槛改为线程数——不足 15 条时提示门槛与当前进度，达标后才显示倒计时
-  if (riftBtn && riftBtn.dataset.locked === '1') {
-    if (!riftThreadsReady()) {
-      const n = (S.cultists || []).length, need = (BALANCE.rift && BALANCE.rift.threadUnlock) || 15;
-      riftBtn.title = `🔒 裂隙未解锁：班组需 ${need} 条线程（当前 ${n}）`;
-    } else {
-      riftBtn.title = `🔒 裂隙未解锁：约 ${fmtEta(riftEtaSec())} 后首次出现（后台挂机同样计时）`;
-    }
-  }
+  // v3.12.3 反馈③：统一不再提示解锁条件——锁定态只保留「不可用」
+  if (riftBtn && riftBtn.dataset.locked === '1') riftBtn.removeAttribute('title');
   // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
   setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
   // v2.8.6 B2a：政策——有开放政策组才开放
@@ -1154,14 +1145,10 @@ function updateTabLocks() {
       ? petsModuleUnlocked(S)
       : isStageUnlocked(stage, S) && (!anchorKey || anchorDone(anchorKey, S));
     if (!unlocked) {
-      if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」与解锁提示）
+      if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」）
       btn.classList.add('tab-locked');
-      btn.textContent = '🔒 ???';
-      btn.title = id === 'btn-pets'
-        ? '异兽将在解锁 PT 后开放'
-        : (anchorKey && isStageUnlocked(stage, S) && !anchorDone(anchorKey, S)
-          ? `${label} 将在解锁对应资源后开放`
-          : `${label} 将在 ${stage} 阶段解锁`);
+      btn.textContent = '???';
+      btn.removeAttribute('title'); // v3.12.3 反馈③：锁定态不提示解锁条件
       btn.disabled = true;
     } else {
       if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：锁定态由 setTabLocked 管，勿覆盖其文案
@@ -1429,6 +1416,12 @@ function bindEvents() {
       applySl();
     });
     applySl();
+    // v3.12.3 反馈④：顶栏「📜 故事线」——展开面板并滚到可见处（收起状态点一下就能看）
+    document.getElementById('story-btn')?.addEventListener('click', () => {
+      localStorage.setItem('abyss_story_collapsed', '0');
+      applySl();
+      try { slPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { /* 老浏览器忽略 */ }
+    });
   }
   // v3.3.1 反馈⑨：成就面板同样支持点击标题收起/展开（键独立记忆）
   const achPanel = document.getElementById('tab-achievement');
@@ -1504,7 +1497,8 @@ function bindEvents() {
   document.getElementById('btn-prestige')?.addEventListener('click', () => switchTab('prestige'));
   document.getElementById('btn-achievement')?.addEventListener('click', () => switchTab('achievement'));
   document.getElementById('btn-offline')?.addEventListener('click', () => switchTab('offline'));
-  // v2.7.1：触手交互动画——点击拍打 + 日志反馈（hover 蠕动走 CSS）
+  // v3.12.3 反馈⑥：触手连击——深渊里 5 秒内连点触手 5 次，扣 1% EP 并发放成就（日记不展示逐次计数）
+  let tentacleTaps = [];
   document.getElementById('tentacle-tap-zone')?.addEventListener('click', () => {
     const deco = document.getElementById('tentacle-deco');
     if (!deco) return;
@@ -1513,7 +1507,19 @@ function bindEvents() {
     deco.classList.add('tap');
     clearTimeout(S._tentacleTapTimer);
     S._tentacleTapTimer = setTimeout(() => deco.classList.remove('tap'), 600);
-    log('触手回应了你的触碰', 'good');
+    // 触手有了真正的「交互」：连击触发深渊回应（日志只在结算时写一条，不展示逐次计数）
+    const now = Date.now();
+    tentacleTaps = tentacleTaps.filter(t => now - t < 5000);
+    tentacleTaps.push(now);
+    if (tentacleTaps.length >= 5 && !(S.achievements && S.achievements.tentacle_combo)) {
+      tentacleTaps = [];
+      const lost = (S.ep || 0) * 0.01;
+      S.ep = Math.max(0, (S.ep || 0) - lost);
+      unlockAchievement(S, 'tentacle_combo');
+      log(`深渊回应了你的执念：触手连击收走了 ${fmt(lost)} EP`, 'bad');
+      if (toast) toast('🐙 深渊连击！-1% EP');
+      dirty.achievements = true; dirty.top = true; dirty.hero = true;
+    }
   });
   // v3.12.2：深渊凝视点击交互——点一下「凝视深渊」给出反馈（视觉在 abyssGaze.js）
   setGazeInteract(() => {
@@ -1526,15 +1532,11 @@ function bindEvents() {
   bindReligionPanel(document.getElementById('religion-panel')); // v2.5.7：宗教面板事件委托
   bindQuickSwitches(); // v3.2.2 反馈①：自动转化快捷开关事件委托
   bindOrchestrationPanel(); // v3.8.0：效能编排策略切换 / 潮汐排班事件委托
-  // v3.3.3 反馈⑨：锁定态（???）tab 点击不切换——捕获阶段拦截并提示解锁路径
+  // v3.3.3 反馈⑨：锁定态（???）tab 点击不切换
+  // v3.12.3 反馈③：也不再 toast 解锁路径——未解锁模块点击表现为纯粹的「无反应」
   document.querySelector('.tabs')?.addEventListener('click', (e) => {
     const b = e.target.closest('button');
-    if (b && b.dataset && b.dataset.locked === '1') {
-      e.stopPropagation();
-      // v3.3.9 反馈④：提示走统一文案表（原 b.title 被清空时只弹「🔒 尚未解锁」，信息量为零）
-      const hint = b.title || TAB_LOCK_HINTS[b.id] || '尚未解锁';
-      toast(hint.startsWith('🔒') ? hint : '🔒 ' + hint);
-    }
+    if (b && b.dataset && b.dataset.locked === '1') e.stopPropagation();
   }, true);
   bindPolicyPanel(document.getElementById('policy-panel'));
   _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',');
@@ -2366,9 +2368,14 @@ function renderAchievementPanel(container) {
   const defs = ACHIEVEMENTS;
   const got = defs.filter(d => S.achievements[d.id]);
   const n = got.length;
-  let html = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0;color:var(--purple)">🏆 深渊成就 <span style="font-size:12px;font-weight:400;color:var(--text-2)">已解锁 ${n}/${defs.length} · 只显示已达成项</span></h3>
-    <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">成就跨转生保留，达成即时点亮。未达成的成就不会显示——深渊只记录已发生的奇迹。</p>`;
+  // v3.12.3 反馈⑦：成就面板只保留「已解锁 N/总数」计数（由静态 #achievement-h3 常驻承载，
+  // 它同时是收起开关，不在这里再产出嵌套面板 / 标题 / 说明段落）
+  let html = '';
+  const achH3 = document.getElementById('achievement-h3');
+  if (achH3) {
+    const collapsed = document.getElementById('tab-achievement')?.classList.contains('sl-collapsed');
+    achH3.innerHTML = `已解锁 <b style="color:var(--purple)">${n}/${defs.length}</b> <span class="sl-ind" style="color:var(--text-3)">${collapsed ? '▸' : '▾'}</span>`;
+  }
   if (n === 0) {
     html += `<div style="font-size:13px;color:var(--text-3);padding:18px 0;text-align:center">尚未解锁任何成就——一切才刚刚开始。</div>`;
   } else {
@@ -2394,7 +2401,6 @@ function renderAchievementPanel(container) {
       </div>`;
     }
   }
-  html += '</div>';
   container.innerHTML = html;
   // v3.3.3 反馈⑩：分页按钮事件委托（容器级，重建不丢）
   if (!container._achDelegated) {

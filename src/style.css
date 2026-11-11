@@ -200,10 +200,13 @@ body {
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  transition: background .15s;
+  transition: background .15s, transform .09s ease, box-shadow .09s ease;
 }
 
 .btn:hover { background: #30363d; }
+
+/* v3.12.3：点击反馈更顺滑（轻微缩放 + 阴影），避免生硬跳变 */
+.btn:active { transform: scale(0.95); box-shadow: 0 0 0 2px rgba(168,85,247,.25); }
 
 .btn:disabled { opacity: 0.4; cursor: not-allowed; background: #14161c !important; color: #555 !important; border-color: #2a2e3a !important; } /* v2.6.4 ④：未达标按钮整体暗色 */
 
@@ -245,6 +248,11 @@ body {
   flex-wrap: wrap;
   font-size: 12px;
 }
+
+/* v3.12.3：NEXT（下一线程）与「招募线程」同行展示，长文本省略不挤压按钮 */
+.next-recruit { display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.next-recruit #staff-preview { flex: 1; min-width: 0; }
+.next-recruit #hire-btn { flex: 0 0 auto; }
 
 .hero-cost { margin-left: auto; }
 
@@ -423,10 +431,49 @@ body {
 .policy-foot, .dealer-meta { font-size: 10.5px !important; color: var(--text-3) !important; line-height: 1.6; }
 .dealer-cost { font-size: 11px !important; line-height: 1.6; }
 
+/* ========== v3.12.3 反馈②：深渊集市重做 ========== */
+/* 集市等级单独一行（含进度条） */
+.bz-tier { margin: 2px 0 10px; }
+.bz-tier-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 12px; color: var(--text-2); margin-bottom: 4px;
+}
+.bz-tier-num { font-size: 11px; color: var(--text-3); font-family: monospace; }
+.bz-tier-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
+.bz-tier-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
+/* 刷新行：EP 刷新是常规主按钮，回响刷新用紫色边框区分（不同资源、不同代价） */
+.bz-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.bz-actions .btn { flex: 1; min-height: 28px; }
+.bz-btn-echo { border-color: rgba(168,85,247,.65) !important; color: #d8b4fe !important; background: rgba(168,85,247,.12) !important; }
+.bz-btn-echo:hover:not(.disabled) { background: rgba(168,85,247,.2) !important; }
+/* 二次确认：独立一行拨动开关（与两个刷新按钮分开） */
+.bz-confirm {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin: 0 0 10px; padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 11.5px; color: var(--text-2); cursor: pointer; user-select: none;
+}
+.bz-confirm:hover { border-color: var(--accent); }
+.bz-switch {
+  position: relative; width: 30px; height: 16px; border-radius: 999px;
+  background: rgba(255,255,255,.12); transition: background .15s; flex: 0 0 auto;
+}
+.bz-switch i {
+  position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--text-3); transition: transform .15s, background .15s;
+}
+.bz-switch.on { background: rgba(63,185,80,.35); }
+.bz-switch.on i { transform: translateX(14px); background: var(--good, #3fb950); }
+.bz-quality { font-size: 10.5px !important; font-weight: 600; letter-spacing: .2px; }
+
 /* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面） */
 .ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
 .ai-action { background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
 .ai-action-locked { border-style: dashed; opacity: .78; }
+/* v3.12.3 反馈⑦：动作卡改为「名称 + 占编步进器」，占编 > 0 时左缘亮起表示正在执行 */
+.ai-action-name { font-size: 12px; color: var(--text-1); font-weight: 600; }
+.ai-action.on { border-color: rgba(80,220,140,.45); box-shadow: inset 2px 0 0 var(--good); }
+.ai-action .ai-crew-btn { padding: 0 8px; font-size: 13px; line-height: 1; }
 .ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); margin-top: 8px; }
 .ai-assistant-note { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
@@ -846,6 +893,7 @@ body {
   right: 12px;
   display: flex;
   flex-wrap: wrap; /* v3.6.3 反馈⑤：窄屏允许换行，绝不横向溢出视口 */
+  align-items: center; /* v3.12.3：眼睛与三个按钮垂直居中对齐 */
   justify-content: flex-end;
   max-width: calc(100vw - 24px);
   gap: 6px;
@@ -855,6 +903,11 @@ body {
 .sys-btns .btn {
   font-size: 11px;
   padding: 4px 10px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 /* v3.6.3 反馈⑤：小屏时按钮组固定顶栏上方，不再压住/漂出顶栏资源行 */
@@ -1228,12 +1281,26 @@ body {
 .relic-card { transition: border-color .15s, box-shadow .15s; }
 .relic-card:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
 
-/* v2.7.3 ⑥ 故事线图鉴 */
+/* v2.7.3 ⑥ 故事线图鉴（v3.12.3 反馈①：改为树形结构，只渲染已解锁章节） */
 .codex-line { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; background: rgba(255,255,255,.02); }
 .codex-line-name { color: var(--accent); font-size: 12px; font-weight: 600; margin-bottom: 3px; }
 .codex-desc { color: var(--text-2); font-size: 11px; margin-bottom: 6px; line-height: 1.5; }
 .codex-chs { display: flex; flex-direction: column; gap: 3px; }
 .codex-ch { padding: 4px 6px; border-left: 2px solid var(--border); font-size: 11px; }
+
+/* v3.12.3 反馈①：故事线树（分支主线 → 已解锁章节逐级挂在主干上） */
+.sl-forest { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.sl-line-name { color: var(--accent); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.sl-cur { font-size: 10px; font-weight: 400; color: var(--text-3); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; }
+.sl-tree { margin: 6px 0 0 4px; padding-left: 14px; border-left: 1px solid var(--border); }
+.sl-node { position: relative; padding: 3px 0; }
+.sl-node::before {
+  content: ''; position: absolute; left: -14px; top: 12px;
+  width: 10px; height: 1px; background: var(--border);
+}
+.sl-node.last::before { box-shadow: 0 0 0 0 transparent; background: var(--border); }
+.sl-node .sl-ch-name { font-size: 11.5px; color: var(--text-1); line-height: 1.5; }
+.sl-node .sl-ch-desc { font-size: 10.5px; color: var(--text-2); line-height: 1.6; margin-top: 1px; }
 
 /* v3.2.4 反馈①：故事线面板收起态（点击标题切换，状态记 localStorage） */
 #tab-storyline.sl-collapsed #storyline-panel,

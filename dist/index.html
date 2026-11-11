@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.2</title>
+<title>深渊效能工作台 v3.12.3</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-B15TNjZt.js"></script>
-  <link rel="stylesheet" href="./assets/index-BZGJ5cam.css">
+  <script defer src="./assets/index-CZglIUCa.js"></script>
+  <link rel="stylesheet" href="./assets/index-COS4eBmP.css">
 </head>
 <body>
 <div id="app">
   <!-- 顶部栏（v2.1 P1：全部图标配文字标签 + hover 说明，hover 覆盖率 100%） -->
   <div class="topbar">
     <div class="stat" id="h-output-stat"><b>产出/s</b><span id="h-cps">0</span></div> <!-- v2.8.30 ⑤：原生 title 已移除（双弹窗）· v3.10.2 ②：产出/消耗置于顶栏最左 -->
-    <div class="stat" id="h-drain-stat"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span><span id="h-drain-warn" class="drain-warn" style="display:none" aria-label="">⚠</span></div> <!-- v3.10.2 ②：净流为负时显示警告，悬浮本项看 EP 耗尽预估 -->
+    <div class="stat" id="h-drain-stat"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span><span id="h-drain-warn" class="drain-warn" style="display:none" aria-label="">❗</span></div> <!-- v3.12.3 反馈⑧：EP 耗尽预警独立成感叹号（自带悬浮），不再写进消耗气泡 -->
     <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「备用粮仓/存储节点」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
     <div class="stat" title="本局累计获得 EP：从上次晋升（转生）起计算，晋升收益按此结算；晋升后清零。"><b>本局</b><span id="h-run">0</span></div>
     <div class="stat" title="职级（晋升点数）：晋升获得的永久点数，每点全局产出 +10%。"><b>职级</b><span id="h-rank">0</span></div>
@@ -28,6 +28,8 @@
     <div class="stat" id="vs-stat" style="display:none" title="VS（虚空碎片）：深潜中产出，跨转生保留，用于深潜升级树。"><b>🌑VS</b><span id="h-vs">0</span></div>
     <div class="stat" id="splinter-stat" title="湮灭残片：被深渊吞噬（崩溃）后强制转生获得 ×1。暂无消费用途，仅作保留（跨转生累计）。" style="display:none"><b>🧩湮灭残片</b><span id="h-splinter">0</span></div>
     <div class="stat" id="reincarn-stat" title="轮回：终极循环，结算深渊回响（全局 +5%/点）。鼠标悬停查看加成明细。" style="display:none"><b>♻️轮回</b><span id="h-reincarn">0</span></div>
+    <!-- v3.12.3 反馈⑥：回响数值独立成项（原只在「轮回」气泡里） -->
+    <div class="stat" id="echo-stat" title="深渊回响：轮回结算获得，跨轮回保留，每点全局产出 +5%。集市回响刷新、部分特殊升级消耗它。" style="display:none"><b>🔮回响</b><span id="h-echo">0</span></div>
     <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
     <!-- v2.0 潮汐状态 -->
     <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
@@ -90,7 +92,7 @@
 
       <!-- 成就（原 tab-achievement，常驻左一列）；v3.3.1 反馈⑨：可收起；v3.3.3 反馈⑩：一页 10 条分页 -->
       <div class="panel" id="tab-achievement">
-        <h3 id="achievement-h3" style="cursor:pointer;user-select:none" title="点击收起 / 展开">成就 <span class="sl-ind" style="color:var(--text-3)">▾</span></h3>
+        <h3 id="achievement-h3" style="cursor:pointer;user-select:none;font-size:14px;color:var(--text-1)" title="点击收起 / 展开">已解锁 <b style="color:var(--purple)">0/136</b> <span class="sl-ind" style="color:var(--text-3)">▾</span></h3>
         <div id="achievement-panel"></div>
       </div>
     </div>
@@ -105,9 +107,11 @@
         <!-- v3.12.0 反馈⑯：薪资四态说明由窄 span 扩成「整块」触发——悬浮整行显气泡、点击整行弹完整说明 -->
         <div class="hero-row wage-help-zone" id="wage-help-zone" data-tip="线程薪资四态 · 点击整块查看完整规则">
           <span>线程: <b id="staff-count">0</b></span>
-          <span class="wage-help"><span id="staff-status">运行中</span><span class="wage-help-mark" aria-hidden="true">?</span></span>
-          <span id="staff-preview" style="font-size:11px;color:var(--text-2)"></span>
-          <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
+          <span class="wage-help"><span id="staff-status">运行中</span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
+          <span class="next-recruit">
+            <span id="staff-preview" style="font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+            <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
+          </span>
         </div>
         <div id="focus-bar" class="focus-bar">
           <span>专注等级: <b id="focus-lv">0</b></span>
@@ -385,7 +389,9 @@
   </div>
 
   <!-- 系统按钮（v3.2.1 反馈⑤：导入/导出/存档管理收进一个存档图标，悬浮展示） -->
+  <!-- v3.12.3 反馈④：暂停 / Wiki / 存档 / 故事线 与深渊之眼同处一行；眼睛由 abyssGaze.js prepend 到行首 -->
   <div class="sys-btns">
+    <button class="btn" id="story-btn" title="故事线：只记录已解锁的章节">📜 故事线</button>
     <button class="btn" id="pauseBtn">暂停</button>
     <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
     <div class="save-menu">

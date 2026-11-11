@@ -1,15 +1,25 @@
-// v3.0.0 大模块：深渊集市——资源兑换 + 汇率波动 + 库存限购 + 集市等级（跨周期）
+// v3.0.0 大模块：深渊集市——资源兑换 + 汇率波动 + 品质限购 + 集市等级（跨周期）
 // 参考 Kittens Game 贸易/资源转换（多余资源换稀缺资源、汇率波动、限购），
 // 解决本作中期痛点：EP 顶到存储上限没处花、RP/DM/信仰/余烬/虚空碎片彼此孤立无兑换通道。
+//
+// v3.12.3 反馈② 重做：
+//   · 汇率与库存改为 30 分钟整体刷新（每次刷新重掷摊位 / 品质 / 汇率并补满库存）；
+//   · 每次只上架 3~8 个摊位，每件商品带 6 档品质（库存 / 价格 / 稀有度不同）；
+//   · 集市等级单独一行，等级抬高汇率波动下限与高品质概率；
+//   · 回响刷新按钮需在升级商店购买「回响账簿」后出现，且与 EP 刷新视觉区分；
+//   · 二次确认改为独立拨动开关；
+//   · 交付的资源未解锁时该摊位灰显并标「未解锁」，不可购买。
 import { S, save } from '../state.js';
 import { fmt, epStorageCap, addRp, addDm, addPt, researchMult } from './economy.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：汇率倍率 → 带符号百分比
 import { policyMult } from '../data/policies.js';
 import { faithCap } from '../data/religions.js';
 import { delveUnlocked } from './delve.js';
+import { anchorDone, anchorShown } from './disclosure.js';
 import { moduleBuyState, buyModuleUnlock, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：集市改为职级点买断
 import {
-  BAZAAR, RES_LABEL, dealerById, bazaarTier, bazaarNextTierNeed, rollRate, bazaarRefreshEpCost,
+  BAZAAR, QUALITY, qualityOf, RES_LABEL, dealerById, bazaarTier, bazaarNextTierNeed,
+  rollRate, rollQuality, rollDealerCount, bazaarRefreshEpCost,
 } from '../data/bazaar.js';
 
 let logFn = null;
@@ -24,17 +34,16 @@ export function ensureBazaar() {
   const b = S.bazaar;
   if (b.trades === undefined) b.trades = 0;
   if (b.refreshCount === undefined) b.refreshCount = 0;
-  if (b.shuffleTimer === undefined) b.shuffleTimer = 0;
-  if (b.regenTimer === undefined) b.regenTimer = 0;
+  if (b.marketTimer === undefined) b.marketTimer = 0;
+  // v3.12.3：旧档的 shuffleTimer / regenTimer 不再使用（两套计时器已合并为市场整体刷新）
   if (!b.rates || typeof b.rates !== 'object') b.rates = {};
   if (!b.stock || typeof b.stock !== 'object') b.stock = {};
+  if (!b.quality || typeof b.quality !== 'object') b.quality = {};
+  if (!Array.isArray(b.lineup)) b.lineup = [];
   if (!b.events || typeof b.events !== 'object') b.events = { hot: null, cold: null }; // v3.0.3 反馈②：每轮随机特惠/涨价商人
   if (b.skipConfirm === undefined) b.skipConfirm = false; // v3.0.3 反馈③：二次确认可关
-  const tier = bazaarTier(b.trades);
-  for (const d of BAZAAR.dealers) {
-    if (!(b.rates[d.id] > 0)) b.rates[d.id] = rollRate(tier);
-    if (b.stock[d.id] === undefined) b.stock[d.id] = bazaarStockMax(d);
-  }
+  // 旧档 / 首次开张没有摊位 → 立刻摇一次市场
+  if (b.lineup.length === 0) rollMarket();
   return b;
 }
 
@@ -47,19 +56,30 @@ export function unlockBazaar() {
   const r = buyModuleUnlock('bazaar');
   if (r.ok) {
     ensureBazaar();
-    blog(`深渊集市开张：消耗 ${r.cost} PP，六位商人常驻矩阵夹层，汇率每 45 秒波动一次`, 'good');
+    blog('深渊集市开张：消耗 PP，摊位每 30 分钟换一批', 'good');
     if (toastFn) toastFn('🏪 深渊集市开张：富余资源可以在这里换稀缺资源了');
   }
   return r;
 }
 
+// 回响刷新按钮的解锁态（升级商店一次性购买「回响账簿」）
+export function echoRefreshUnlocked() {
+  return ((S.upgrades || {})[BAZAAR.echoUpgradeId] || 0) > 0;
+}
+
 // ========== 读侧 ==========
 export function bazaarTrades() { return (S.bazaar && S.bazaar.trades) || 0; }
 export function bazaarTierNow() { return bazaarTier(bazaarTrades()); }
-// 库存上限 = 商人基础 + 政策（自由贸易 +2 —— 允许 0 或负，负向不跌破 0）
+// 库存上限 = 品质库存 + 政策（自由贸易 +2 —— 允许 0 或负，负向不跌破 0）
 export function bazaarStockMax(d) {
   const bonus = policyMult('bazaarStock') - 1;
-  return Math.max(0, (d.stock || 0) + Math.round(bonus));
+  const base = qualityOf(qualityOfDealer(d.id)).stock;
+  return Math.max(0, base + Math.round(bonus));
+}
+export function qualityOfDealer(id) {
+  // 刻意不调 ensureBazaar：本函数被 rollMarket 内部（补库存）调用，再进 ensureBazaar 会成环。
+  const b = S.bazaar || {};
+  return (b.quality && b.quality[id]) || 1;
 }
 export function bazaarRateOf(id) {
   ensureBazaar();
@@ -70,36 +90,64 @@ export function bazaarStockOf(id) {
   ensureBazaar();
   return S.bazaar.stock[id] || 0;
 }
+// 本次上架的摊位（顺序稳定，仅供展示遍历）
+export function bazaarLineup() {
+  ensureBazaar();
+  return S.bazaar.lineup.map(dealerById).filter(Boolean);
+}
 
-// v3.0.3 反馈②：每轮随机「特惠/涨价」商人——手动刷新与定时波动时重掷，让「哪类商品涨价」显性随机
+// v3.0.3 反馈②：每轮随机「特惠/涨价」商人——在市场刷新时重掷，让「哪类商品涨价」显性随机
 export function rollMarketEvents() {
   ensureBazaar();
-  const tier = bazaarTierNow();
-  const pool = BAZAAR.dealers.filter(d => tier >= d.tier);
-  if (pool.length < 2) { S.bazaar.events = { hot: null, cold: null }; return; }
-  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  S.bazaar.events = { hot: shuffled[0].id, cold: shuffled[1].id };
+  const ids = S.bazaar.lineup;
+  if (ids.length < 2) { S.bazaar.events = { hot: null, cold: null }; return; }
+  const shuffled = ids.slice().sort(() => Math.random() - 0.5);
+  S.bazaar.events = { hot: shuffled[0], cold: shuffled[1] };
 }
 export function marketEventOf(id) {
   const ev = (S.bazaar && S.bazaar.events) || {};
   return ev.hot === id ? 1.2 : ev.cold === id ? 0.8 : 1;
 }
 
-// 本批报价：{ give, get, mult }（give = 支付量，get = 获得量，已含汇率与政策）
+// 市场整体刷新：选摊位（3~8）→ 逐件摇品质 → 重掷汇率 → 补满库存 → 重抽特惠/涨价
+export function rollMarket() {
+  if (!S.bazaar) S.bazaar = {};
+  const b = S.bazaar;
+  const tier = bazaarTier(b.trades || 0);
+  if (!b.quality) b.quality = {};
+  if (!b.rates) b.rates = {};
+  if (!b.stock) b.stock = {};
+  // 摊位候选：只看当前等级已开放的商人
+  const pool = BAZAAR.dealers.filter(d => tier >= d.tier);
+  const n = Math.min(pool.length, rollDealerCount(tier));
+  const picked = pool.slice().sort(() => Math.random() - 0.5).slice(0, n);
+  b.lineup = picked.map(d => d.id);
+  // 品质与汇率只为本次上架的摊位重掷；库存按新品质补满
+  for (const d of picked) {
+    b.quality[d.id] = rollQuality(tier);
+    b.rates[d.id] = rollRate(tier);
+    b.stock[d.id] = bazaarStockMax(d);
+  }
+  rollMarketEvents();
+}
+
+// v3.12.3：本批报价 —— 已含汇率、政策、特惠事件与品质倍率。
 export function lotOf(id) {
   const d = dealerById(id);
   if (!d) return null;
   ensureBazaar();
   const cap = epStorageCap();
   const tier = bazaarTierNow();
-  const mult = bazaarRateOf(id) * policyMult('bazaarRate') * marketEventOf(id) * researchMult('bazaar'); // v3.12.0 反馈⑩：集市协议 // v3.0.3 反馈②：特惠/涨跌事件并入汇率
+  const q = qualityOf(qualityOfDealer(id));
+  const mult = bazaarRateOf(id) * policyMult('bazaarRate') * marketEventOf(id) * researchMult('bazaar');
   let give = d.give, get = d.get;
   if (d.capRatio === 'give') give = Math.round(cap * d.give);
   if (d.capRatio === 'get') get = cap * d.get;
-  get = get * mult * policyMult('bazaarGain');
+  give = give * q.priceMult;            // 品质越高单价越贵
+  get = get * q.gainMult * mult * policyMult('bazaarGain'); // 品质越高产出越多
   if (d.to !== 'ep') get = Math.max(1, Math.round(get));
   else get = Math.round(get);
-  return { give: Math.round(give), get, mult, tier };
+  return { give: Math.round(give), get, mult, tier, q };
 }
 
 function resOf(key) {
@@ -114,6 +162,19 @@ function resOf(key) {
     default: return 0;
   }
 }
+// 资源是否已被玩家解锁（未解锁的商品不能买：灰显 + 「未解锁」）
+export function resUnlocked(key) {
+  switch (key) {
+    case 'ep': return true;
+    case 'rp': return anchorDone('rp', S);
+    case 'faith': return anchorDone('faith', S);
+    case 'pt': return anchorDone('pt', S);
+    case 'dm': return anchorShown('dm', S);
+    case 'ember': return !!S._riftSeen;
+    case 'vs': return delveUnlocked();
+    default: return false;
+  }
+}
 function spendRes(key, n) {
   switch (key) {
     case 'ep': S.ep = Math.max(0, (S.ep || 0) - n); break;
@@ -121,7 +182,6 @@ function spendRes(key, n) {
     case 'dm': S.dm = Math.max(0, (S.dm || 0) - n); break;
     case 'faith': S.faith = Math.max(0, (S.faith || 0) - n); break;
     case 'ember': S.riftEmber = Math.max(0, (S.riftEmber || 0) - n); break;
-    case 'vs': S.vs = Math.max(0, (S.vs || 0) - n); break;
     case 'pt': S.pt = Math.max(0, (S.pt || 0) - n); break;
     default: break;
   }
@@ -147,7 +207,9 @@ export function trade(id) {
   ensureBazaar();
   const tier = bazaarTierNow();
   if (tier < d.tier) return { ok: false, reason: `「${d.name}」需集市等级 Lv.${d.tier}（当前 Lv.${tier}）` };
-  if (d.to === 'vs' && !delveUnlocked()) return { ok: false, reason: '虚空商行只在深潜解锁后才收货（VS 尚未发现）' };
+  if (!S.bazaar.lineup.includes(id)) return { ok: false, reason: `「${d.name}」本轮未上架——等下一批或手动刷新` };
+  // v3.12.3 反馈②：交付的资源未解锁 → 直接拒绝（卡面已灰显）
+  if (!resUnlocked(d.to)) return { ok: false, reason: `${RES_LABEL[d.to]} 尚未解锁——这一通道暂时对你无效` };
   const stock = bazaarStockOf(id);
   if (stock <= 0) return { ok: false, reason: `「${d.name}」本轮库存已空——等补货或手动刷新` };
   const lot = lotOf(id);
@@ -158,11 +220,11 @@ export function trade(id) {
   S.bazaar.stock[id] = stock - 1;
   S.bazaar.trades = (S.bazaar.trades || 0) + 1;
   save(S);
-  blog(`与「${d.name}」成交：-${fmt(lot.give)} ${RES_LABEL[d.from]} → +${fmt(lot.get)} ${RES_LABEL[d.to]}（汇率 ${fmtMultDelta(lot.mult)}）`, 'good');
+  blog(`与「${d.name}」成交：-${fmt(lot.give)} ${RES_LABEL[d.from]} → +${fmt(lot.get)} ${RES_LABEL[d.to]}（汇率 ${fmtMultDelta(lot.mult)} · ${lot.q.name}）`, 'good');
   return { ok: true, give: lot.give, get: lot.get, mult: lot.mult };
 }
 
-// ========== 手动刷新（重掷汇率 + 满库存） ==========
+// ========== 手动刷新（重掷摊位 / 汇率 / 品质 + 满库存） ==========
 export function bazaarRefreshCost() {
   ensureBazaar();
   // v3.0.0：周期政策「自由贸易 +50% 刷新成本 / 垄断协议 -40%」接入刷新计价
@@ -172,6 +234,7 @@ export function refreshBazaar(useEcho = false) {
   if (!bazaarUnlocked()) return { ok: false, reason: '集市未解锁' };
   ensureBazaar();
   if (useEcho) {
+    if (!echoRefreshUnlocked()) return { ok: false, reason: '回响刷新需在升级商店购买「回响账簿」' };
     if ((S.abyssEcho || 0) < BAZAAR.echoRefresh) return { ok: false, reason: `回响不足：需 ${BAZAAR.echoRefresh} 点` };
     S.abyssEcho -= BAZAAR.echoRefresh;
   } else {
@@ -180,55 +243,33 @@ export function refreshBazaar(useEcho = false) {
     S.ep -= cost;
     S.bazaar.refreshCount = (S.bazaar.refreshCount || 0) + 1;
   }
-  restock(true);
-  rollMarketEvents(); // v3.0.3 反馈②：手动刷新同时随机刷新特惠/涨价类型
+  S.bazaar.marketTimer = 0;
+  rollMarket();
   save(S);
-  blog(`集市刷新（${useEcho ? `-${BAZAAR.echoRefresh} 回响` : '消耗 EP'}）：汇率重掷，库存补满，特惠/涨价商人重抽`, 'good');
+  blog(`集市刷新（${useEcho ? `-${BAZAAR.echoRefresh} 回响` : '消耗 EP'}）：换一批摊位，汇率与品质重掷，库存补满`, 'good');
   return { ok: true };
 }
 
-function restock(reroll) {
-  ensureBazaar();
-  const tier = bazaarTierNow();
-  for (const d of BAZAAR.dealers) {
-    if (reroll) S.bazaar.rates[d.id] = rollRate(tier);
-    S.bazaar.stock[d.id] = bazaarStockMax(d);
-  }
-}
-
-// ========== 主循环：汇率波动 + 库存自然恢复 ==========
+// ========== 主循环：30 分钟整体刷新 ==========
 export function tickBazaar(dt) {
-  if (!bazaarUnlocked()) return;
+  if (!bazaarUnlocked()) return false;
   ensureBazaar();
   let changed = false;
-  S.bazaar.shuffleTimer = (S.bazaar.shuffleTimer || 0) + dt;
-  if (S.bazaar.shuffleTimer >= BAZAAR.shuffleSec) {
-    S.bazaar.shuffleTimer = 0;
-    const tier = bazaarTierNow();
-    for (const d of BAZAAR.dealers) S.bazaar.rates[d.id] = rollRate(tier);
-    rollMarketEvents(); // v3.0.3 反馈②：定时波动同步重抽特惠/涨价类型
-    changed = true;
-  }
-  S.bazaar.regenTimer = (S.bazaar.regenTimer || 0) + dt;
-  if (S.bazaar.regenTimer >= BAZAAR.stockRegenSec) {
-    S.bazaar.regenTimer = 0;
-      for (const d of BAZAAR.dealers) {
-      const mx = bazaarStockMax(d);
-      if ((S.bazaar.stock[d.id] || 0) < mx) S.bazaar.stock[d.id] = (S.bazaar.stock[d.id] || 0) + 1;
-    }
+  S.bazaar.marketTimer = (S.bazaar.marketTimer || 0) + dt;
+  if (S.bazaar.marketTimer >= BAZAAR.marketRefreshSec) {
+    S.bazaar.marketTimer = 0;
+    rollMarket();
     changed = true;
   }
   return changed;
 }
 
-// 每轮（晋升/轮回）重置本局状态：库存/汇率/刷新次数归位，成交笔数与等级跨周期保留
+// 每轮（晋升/轮回）重置本局状态：摊位/品质/汇率/刷新次数归位，成交笔数与等级跨周期保留
 export function resetBazaarRun() {
   if (!S.bazaar) return;
   S.bazaar.refreshCount = 0;
-  S.bazaar.shuffleTimer = 0;
-  S.bazaar.regenTimer = 0;
-  restock(true);
-  rollMarketEvents(); // v3.0.3 反馈②：每轮特惠/涨价商人重抽
+  S.bazaar.marketTimer = 0;
+  rollMarket();
 }
 
 // ========== 面板 ==========
@@ -248,31 +289,39 @@ export function renderBazaarPanel(container) {
   const trades = bazaarTrades();
   const need = bazaarNextTierNeed(trades);
   const refreshCost = bazaarRefreshCost();
+  const epOk = (S.ep || 0) >= refreshCost;
+  const echoOn = echoRefreshUnlocked();
+  const echoOk = (S.abyssEcho || 0) >= BAZAAR.echoRefresh;
+  // v3.12.3 反馈②：集市等级单独一行（含进度）+ 两个刷新按钮 + 独立的「二次确认」拨动开关。
+  // 文案只陈述自身状态，不写玩法长句（原「6 位商人常驻 / 汇率每 45s 波动 / 库存每 30s +1」整段已删）。
+  const tierPct = need === null ? 100 : Math.min(100, (trades / need) * 100);
   let html = `
-    <div class="religion-desc">深渊集市：${BAZAAR.dealers.length} 位商人常驻，汇率每 ${BAZAAR.shuffleSec}s 波动 ±${BAZAAR.volatility * 100}%，库存每 ${BAZAAR.stockRegenSec}s 自然 +1。累计成交 ${trades} 笔 → <b style="color:var(--accent)">集市等级 Lv.${tier}</b>${need !== null ? `（下一级需 ${need} 笔）` : '（已满级）'}。等级抬高汇率波动下限，不消除波动。</div>
-    <div class="off-stat"><span>刷新汇率 + 补满库存</span><b style="color:var(--cyan)">${fmt(refreshCost)} EP</b></div>
-    <div class="off-stat"><span>或消耗回响刷新</span><b>${BAZAAR.echoRefresh} 点（当前 ${S.abyssEcho || 0}）</b></div>
-    <div style="display:flex;gap:8px;margin:8px 0 12px">
-      <button class="btn ${(S.ep || 0) >= refreshCost ? '' : 'disabled'}" data-bazaar-refresh="1" style="flex:1">刷新（EP）</button>
-      <button class="btn ${(S.abyssEcho || 0) >= BAZAAR.echoRefresh ? '' : 'disabled'}" data-bazaar-refresh-echo="1" style="flex:1">刷新（回响）</button>
-      <button class="btn" data-bazaar-confirm-toggle="1" style="flex:1" title="开启后购买需点击两次确认；关闭后单击直接成交">二次确认：${S.bazaar.skipConfirm === true ? '关' : '开'}</button>
+    <div class="bz-tier">
+      <div class="bz-tier-head"><span>集市等级 <b style="color:var(--accent)">Lv.${tier}</b></span><span class="bz-tier-num">${trades} 笔${need === null ? '' : ` / ${need} 笔`}</span></div>
+      <div class="bz-tier-bar"><i style="width:${tierPct}%"></i></div>
+    </div>
+    <div class="bz-actions">
+      <button class="btn bz-btn-ep ${epOk ? '' : 'disabled'}" data-bazaar-refresh="1" ${epOk ? '' : 'disabled'} title="重掷摊位与汇率，库存补满">刷新 ${fmt(refreshCost)} EP</button>
+      ${echoOn ? `<button class="btn bz-btn-echo ${echoOk ? '' : 'disabled'}" data-bazaar-refresh-echo="1" ${echoOk ? '' : 'disabled'} title="用 1 点深渊回响刷新（不消耗 EP）">✨ 回响刷新 ${BAZAAR.echoRefresh}</button>` : ''}
+    </div>
+    <div class="bz-confirm" data-bazaar-confirm-toggle="1" role="switch" aria-checked="${S.bazaar.skipConfirm !== true}" title="开启后购买需再点一次确认">
+      <span>二次确认</span>
+      <span class="bz-switch ${S.bazaar.skipConfirm === true ? '' : 'on'}"><i></i></span>
     </div>`;
   html += `<div class="shop-grid" style="margin-top:4px">`;
-  for (const d of BAZAAR.dealers) {
-    const lockedByTier = tier < d.tier;
-    const lockedByVs = d.to === 'vs' && !delveUnlocked();
+  for (const d of bazaarLineup()) {
     const stock = bazaarStockOf(d.id);
     const mx = bazaarStockMax(d);
     const lot = lotOf(d.id);
     const rate = bazaarRateOf(d.id);
+    const q = qualityOf(qualityOfDealer(d.id));
     const good = rate >= 1.08, bad = rate <= 0.92;
     const rateColor = good ? 'var(--green,#2ea043)' : bad ? 'var(--red,#f85149)' : 'var(--text-1)';
-    const canTrade = !lockedByTier && !lockedByVs && stock > 0 && resOf(d.from) >= (lot ? lot.give : Infinity);
+    const toLocked = !resUnlocked(d.to);
+    const canTrade = !toLocked && stock > 0 && resOf(d.from) >= (lot ? lot.give : Infinity);
     const evTag = marketEventOf(d.id) > 1 ? '<span style="font-size:10.5px;color:var(--green,#3fb950)"> 🔥特惠</span>'
       : marketEventOf(d.id) < 1 ? '<span style="font-size:10.5px;color:var(--red,#f85149)"> 📈涨价</span>' : '';
-    // v3.12.0 反馈④：与升级商店同一套 name / desc / cost 卡面；状态用文字角标显式区分。
-    const state = lockedByTier ? `<span class="dealer-state dealer-state-lock">🔒 需 Lv.${d.tier}</span>`
-      : lockedByVs ? '<span class="dealer-state dealer-state-lock">🔒 需深潜</span>'
+    const state = toLocked ? '<span class="dealer-state dealer-state-lock">未解锁</span>'
       : stock <= 0 ? '<span class="dealer-state dealer-state-lock">库存已空</span>'
       : canTrade ? '<span class="dealer-state dealer-state-ok">可成交</span>'
       : '<span class="dealer-state dealer-state-bad">资源不足</span>';
@@ -280,9 +329,9 @@ export function renderBazaarPanel(container) {
     html += `
       <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;">
         <div class="name"><span>${d.icon} ${d.name}${evTag}</span><span class="count">${state}</span></div>
-        <div class="desc">${d.desc}</div>
+        <div class="desc bz-quality" style="color:${q.color}">${q.name}品质 · 库存 ${stock}/${mx}</div>
         <div class="cost mono dealer-cost">- ${fmt(lot ? lot.give : 0)} ${RES_LABEL[d.from]} → + ${fmt(lot ? lot.get : 0)} ${RES_LABEL[d.to]}</div>
-        <div class="desc dealer-meta" style="margin-bottom:0">库存 ${stock}/${mx} · 汇率 <b style="color:${rateColor}">${rateSigned}</b>${good ? ' ↑优' : bad ? ' ↓劣' : ''}</div>
+        <div class="desc dealer-meta" style="margin-bottom:0">汇率 <b style="color:${rateColor}">${rateSigned}</b>${good ? ' ↑优' : bad ? ' ↓劣' : ''}</div>
       </div>`;
   }
   html += `</div>`;
@@ -312,7 +361,7 @@ export function bindBazaarPanel(container) {
       renderBazaarPanel(container);
       return;
     }
-    if (e.target.closest('[data-bazaar-confirm-toggle]')) { // v3.0.3 反馈③：二次确认开关（存档持久化）
+    if (e.target.closest('[data-bazaar-confirm-toggle]')) { // 二次确认拨动开关（存档持久化）
       S.bazaar.skipConfirm = S.bazaar.skipConfirm === true ? false : true;
       save(S);
       renderBazaarPanel(container);
@@ -322,7 +371,7 @@ export function bindBazaarPanel(container) {
     if (el) {
       const did = el.dataset.bazaarDealer;
       const now = Date.now();
-      // v3.0.3 反馈③：skipConfirm 开启 → 单击直接成交
+      // 二次确认关闭 → 单击直接成交
       if (S.bazaar.skipConfirm === true) {
         const r = trade(did);
         if (!r.ok && toastFn) toastFn(r.reason);

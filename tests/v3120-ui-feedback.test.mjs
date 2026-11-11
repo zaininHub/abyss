@@ -114,7 +114,7 @@ test('C1 反馈①：线程强化全量常驻且显示 Lv.N/max', () => {
   assert.ok(cpu && gpu && cpu.maxLevel > 0 && gpu.maxLevel > 0, 'CPU / GPU 应有等级上限');
 });
 
-test('C2 反馈②：全部注册动作可见且统一占编步进器', () => {
+test('C2 反馈②（v3.12.3 起改为「按解锁进度渲染」）：动作卡统一占编步进器', () => {
   assert.ok(AI_ACTIONS.length > 0);
   for (const a of AI_ACTIONS) {
     assert.ok(a.id && a.switchKey && a.name && typeof a.crewSize === 'number', `动作字段完整：${a.id}`);
@@ -122,10 +122,12 @@ test('C2 反馈②：全部注册动作可见且统一占编步进器', () => {
   }
   assert.ok(actionsByGroup('basic').length > 0 && actionsByGroup('advanced').length > 0, '两组都有动作');
   const ai = src('src/modules/ai.js');
-  for (const kw of [
-    'lockedCard(', 'data-ai-crew-inc', 'data-ai-crew-dec', 'ai-action-locked',
-    'ai-action-grid', "actionsByGroup('basic')", "AI_ACTION_GROUPS.find(g => g.key === 'advanced')",
-  ]) assert.ok(ai.includes(kw), `AI 面板应含 ${kw}`);
+  for (const kw of ['data-ai-crew-inc', 'data-ai-crew-dec', 'ai-action-grid', 'actionCard(', "actionsByGroup('basic')"]) {
+    assert.ok(ai.includes(kw), `AI 面板应含 ${kw}`);
+  }
+  // v3.12.3 反馈⑨：进阶动作未解锁时整卡不渲染（旧 lockedCard / 锁定文案已删除）
+  assert.ok(!ai.includes('lockedCard('), '不再渲染未解锁卡');
+  assert.ok(!ai.includes('ai-lock-hint'), '不再显示锁定提示文案');
 });
 
 test('C3 反馈④：政策 / 集市与升级商店共用 shop-grid 与状态角标', () => {

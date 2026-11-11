@@ -12,6 +12,7 @@ import { fmt, clampRunResourceBalances } from './economy.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态每轮重置
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
 import { BALANCE } from '../data/balance.js';
+import { crossRunUpgradeSubset } from '../data/upgrades.js'; // v3.12.3 反馈⑤：DM 计价升级跨轮回保留
 import { toast, dirty, askConfirm } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { spawnProject } from './projects.js';
 import { moduleUnlocked, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：轮回改为职级点买断的独立大模块
@@ -77,7 +78,10 @@ export function doReincarn() {
   recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
   // v3.10.2 ④：与晋升同口径，重置后上限回落并钳制隐式保留的资源余额。
+  // v3.12.3 反馈⑤：DM 计价升级（深渊科技 / 净化节点）与晋升同样跨轮回保留。
+  const keepUpgrades = crossRunUpgradeSubset(S.upgrades);
   resetRunState(S, defaultState(), { clamp: clampRunResourceBalances });
+  S.upgrades = keepUpgrades;
   crewPush('深渊轮回：班组随本局一起被抹去', 'bad'); // v3.1.0 反馈③：班组流水
   // v2.9.0 优化③：轮回不再清除 collapsed/_collapseAt——转生不可脱离深渊（崩溃仅由「同归于尽」抉择结算）
   S.riftExpedition = null; // 轮回独有：裂隙远征随本局抹去（晋升保留）

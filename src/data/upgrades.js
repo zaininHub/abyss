@@ -102,6 +102,9 @@ export const UPGRADES = [
   ...B.corruption.purifiers.map(p => ({
     id: p.id, name: p.name, base: p.base, cps: 0, cat: 'purifier', maxLevel: 3, dmCost: p.dmCost || false, desc: p.desc, // v2.8.21 ⑥：净化节点限购 3 级、DM 消耗（不耗 EP）
   })),
+  // v3.12.3 反馈②：集市「回响刷新」按钮的解锁件——一次性 EP 购买，只在集市开张后出现在升级商店
+  { id: 'bazaar_echo', name: '回响账簿', base: 60000000.0, growth: 1.0, cps: 0, cat: 'bazaar', maxLevel: 1,
+    desc: '解锁深渊集市的「回响刷新」（消耗 1 点深渊回响重掷摊位与汇率，不消耗 EP）' },
 ];
 
 export function upgradeCost(u, count, costMultFn) {
@@ -120,4 +123,15 @@ export function isUpgradeUnlocked(u, S) {
   if (u.cat === 'dm') return true; // DM 科技单独判断
   const owned = S.upgrades[u.id] || 0;
   return owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
+}
+
+// v3.12.3 反馈⑤：花「跨转生货币」买的升级必须跨转生保留。
+//   深渊科技（cat:'dm'，DM 购买）与净化节点（cat:'purifier'，DM 购买）的计价货币 DM 本身就是
+//   跨转生资产（不在本局重置清单里），一旦连升级一起清零，玩家会看到「DM 还在、买到的节点没了」。
+//   晋升 / 轮回两条路径共用本函数，避免两份清单漂移。
+export function crossRunUpgradeSubset(owned = {}) {
+  const keep = new Set(UPGRADES.filter(u => u.cat === 'dm' || u.cat === 'purifier').map(u => u.id));
+  const out = {};
+  for (const [id, n] of Object.entries(owned || {})) if (keep.has(id) && n > 0) out[id] = n;
+  return out;
 }

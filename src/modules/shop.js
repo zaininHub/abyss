@@ -178,7 +178,8 @@ export function renderShop(container) {
   // v2.8.2 反馈④：RP 相关升级（组 F 加成 + 灵感蒸馏塔）移入研究点 tab，主商店不再渲染
   const RP_FAMILY_IDS = ['exp_bench', 'rp_distiller', 'deep_lab', 'theory_desk', 'legend_institute', 'rp_distill'];
   const items = UPGRADES.filter(u => !VEHICLE_IDS.includes(u.id) && !DM_SKIP.includes(u.id) && !THREAD_IDS.includes(u.id) && !RP_FAMILY_IDS.includes(u.id)
-    && u.cat !== 'purifier' && u.id !== 'atrium'); // v2.8.30 ⑤：灵感工坊移入研究点（自动蒸馏）（v2.8.22 移遗物后 filter 仍保留有熵减协议时渲染 → 兜底组「存储与资源建筑」重复出现）
+    && u.cat !== 'purifier' && u.id !== 'atrium' // v2.8.30 ⑤：灵感工坊移入研究点（自动蒸馏）（v2.8.22 移遗物后 filter 仍保留有熵减协议时渲染 → 兜底组「存储与资源建筑」重复出现）
+    && (u.cat !== 'bazaar' || !!(S.bazaar && S.bazaar.unlocked))); // v3.12.3 反馈②：回响账簿只在集市开张后出现在升级商店
   // v2.3.1 缺陷⑦修复：链序改定义序（与 eternal v2.3 修复同口径）。
   // 原 v1.3 E「已解锁按成本升序」在 v2.3 渐进披露链下失效：已购项成本上浮后
   // 与未购项按成本交错，chainSplit 的已购前缀 p 判定失真 → 链提示挂错对象
@@ -203,12 +204,17 @@ export function renderShop(container) {
   shopContainer._chain = {
     ids: new Set(split.visible.map(u => u.id)),
     split,
-    groups: [{ title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat }, { title: '存储与资源建筑', test: u => u.cat !== 'purifier' }], // v2.8.22 ⑥
+    groups: [
+      { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
+      { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②
+      { title: '存储与资源建筑', test: u => u.cat !== 'purifier' },
+    ], // v2.8.22 ⑥
   };
   // v2.3.1 ⑤（rev18 9.3 分组表）：基础产出在前、存储与资源建筑在后；分组纯显示不拆链
   // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
   renderChainedGroups(container, split, [
     { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
+    { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
     { title: '存储与资源建筑', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });
 
@@ -222,6 +228,7 @@ export function renderShop(container) {
       for (const [sid, sel] of shopItemEls) { const su = UPGRADES.find(x => x.id === sid); if (su && sel) updateShopItem(su); }
       // v2.8.22 ①：购买后全相关面板置脏——线程/科技/遗物/腐化即时重算灰显（资源变化跨面板同步）
       dirty.tech = true; dirty.relics = true; dirty.corruption = true; dirty.hero = true;
+      dirty.bazaar = true; // v3.12.3 反馈②：购买「回响账簿」后集市要立刻出现回响刷新按钮
       if (!wasOwned) refreshShopChain(); // v2.6.7：p 推进 → 增量揭示后续链卡（原整面板重入 → hover 闪烁根因）
       save(S); // v2.7.1：购买即持久化，消除 5s 节流保存窗口（点击后立即刷新不再丢购买）
     } else {
@@ -541,7 +548,7 @@ function vaultDesc(u) {
   if (partsFn) {
     const p = partsFn();
     if (p.floor > 0) s += ` · 产出基座 ${fmt(p.floor)}（EP 上限 +${Math.round(p.ratio * 100)}%）`;
-    else if (p.ratio > 0) s += ' · 产出基座未启用（需研究「星图同调」）'; // v3.10.5 ③：联动已门控
+    // v3.12.3：去除「产出基座未启用（需研究「星图同调」）」后半段——未启用时不再补缀说明
   }
   return s;
 }

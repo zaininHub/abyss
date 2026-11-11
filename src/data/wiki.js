@@ -6,7 +6,7 @@ import { BALANCE } from './balance.js';
 import { MOOD_MULT } from './threads.js'; // v3.6.3 ⑥：心情倍率文案改读数据源，消除硬编码漂移
 import { PRAISE, SECRET_SANCTUMS, RELIGIONS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
 import { POLICY_GROUPS } from './policies.js';
-import { BAZAAR, RES_LABEL } from './bazaar.js'; // v3.0.0：深渊集市
+import { BAZAAR, QUALITY, RES_LABEL } from './bazaar.js'; // v3.0.0：深渊集市；v3.12.3：品质 6 档
 import { DELVE } from './delve.js'; // v3.7.0：深潜段落改读数据源，消除硬编码漂移
 import { fmt, corruptionCap } from '../modules/economy.js';
 import { delveDepth } from '../modules/delve.js';
@@ -139,16 +139,20 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'bazaar', name: '深渊集市', unlock: 'bazaar', body: () => `
     <h4>深渊集市（v3.0.0 大模块）</h4>
-    <p>解锁：职级 ≥ 1 且已发现研究点（RP）。六位商人常驻矩阵夹层，做<b>单向资源兑换</b>——把富余的换成稀缺的。</p>
-    <table class="wiki-tbl"><tr><th>商人</th><th>兑换</th><th>库存</th><th>等级门槛</th></tr>
-      ${BAZAAR.dealers.map(d => `<tr><td>${d.icon} ${d.name}</td><td>${RES_LABEL[d.from]} → ${RES_LABEL[d.to]}</td><td>${d.stock}</td><td>${d.tier > 0 ? 'Lv.' + d.tier : '—'}</td></tr>`).join('')}
+    <p>解锁：首次晋升后在职级点商店买断。矩阵夹层里做<b>单向资源兑换</b>——把富余的换成稀缺的。每次上架 ${BAZAAR.minDealers}~${BAZAAR.maxDealers} 个摊位，每 ${Math.round(BAZAAR.marketRefreshSec / 60)} 分钟整批换新。</p>
+    <table class="wiki-tbl"><tr><th>商人</th><th>兑换</th><th>等级门槛</th></tr>
+      ${BAZAAR.dealers.map(d => `<tr><td>${d.icon} ${d.name}</td><td>${RES_LABEL[d.from]} → ${RES_LABEL[d.to]}</td><td>${d.tier > 0 ? 'Lv.' + d.tier : '—'}</td></tr>`).join('')}
     </table>
-    <h4>汇率波动（每 ${BAZAAR.shuffleSec}s）</h4>
-    <p>每位商人有独立汇率倍率，区间 [${(1 - BAZAAR.volatility).toFixed(2)} + 0.05×等级, ${(1 + BAZAAR.volatility).toFixed(2)}]，作用在<b>每批所得</b>上（×1.20 = 多得 20%）。集市等级只抬高波动下限，<b>永不消除波动</b>。</p>
-    <h4>库存与刷新</h4>
-    <p>每批成交消耗 1 点库存；库存每 ${BAZAAR.stockRegenSec}s 自然 +1（至上限）。手动刷新立即补满库存并重掷汇率：EP 成本 = 存储上限 × ${(BAZAAR.refreshEpRatio * 100).toFixed(0)}% × ${BAZAAR.refreshGrowth}^本轮刷新次数，或消耗 ${BAZAAR.echoRefresh} 点回响（不计入刷新次数）。随机事件：🔥特惠 ×1.2 / 📈涨价 ×0.8；二次确认可在设置关闭。</p>
+    <h4>商品品质（6 档）</h4>
+    <p>${QUALITY.map(q => `${q.name}（库存 ${q.stock}）`).join(' / ')}——品质越高，库存越少、单价越贵，但单位产出越高。集市等级抬高高品质权重。</p>
+    <h4>汇率波动</h4>
+    <p>每个摊位有独立汇率倍率，区间 [${(1 - BAZAAR.volatility).toFixed(2)} + 0.05×等级, ${(1 + BAZAAR.volatility).toFixed(2)}]，作用在<b>每批所得</b>上（×1.20 = 多得 20%）。集市等级只抬高波动下限，<b>永不消除波动</b>。</p>
+    <h4>刷新</h4>
+    <p>手动刷新换一批摊位并重掷汇率/品质、补满库存：EP 成本 = 存储上限 × ${(BAZAAR.refreshEpRatio * 100).toFixed(0)}% × ${BAZAAR.refreshGrowth}^本轮刷新次数；购买升级「回响账簿」后多出一个回响刷新按钮（消耗 ${BAZAAR.echoRefresh} 点回响，不消耗 EP）。随机事件：🔥特惠 ×1.2 / 📈涨价 ×0.8；「二次确认」是独立拨动开关。</p>
     <h4>集市等级（跨周期保留）</h4>
-    <p>按累计成交笔数升级：${BAZAAR.tiers.map((n, i) => `Lv.${i}（${n} 笔）`).join(' / ')}。等级抬高汇率波动下限并解锁高阶商人（典当核心 Lv.1 / 余烬掮客 Lv.1 / 虚空商行 Lv.2）。<b>成交笔数与等级跨周期保留，库存/汇率/刷新次数每轮重置</b>。</p>
+    <p>按累计成交笔数升级：${BAZAAR.tiers.map((n, i) => `Lv.${i}（${n} 笔）`).join(' / ')}。等级抬高汇率波动下限、提高高品质概率、解锁高阶商人。<b>成交笔数与等级跨周期保留，摊位/库存/汇率/刷新次数每轮重置</b>。</p>
+    <h4>未解锁资源</h4>
+    <p>商品「交付给你」的资源若尚未解锁（如没开深潜却撞到虚空商行），该摊位灰显并标「未解锁」，不可购买。</p>
   ` },
   { id: 'prestige', name: '晋升与轮回', unlock: 'prestige', body: () => `
     <h4>晋升转生（第一层循环）</h4>
@@ -315,8 +319,10 @@ export const WIKI_SECTIONS = [
   { id: 'ledger', name: '动作台账与未绑定', unlock: null, body: () => `
     <h4>本局记了什么</h4>
     <p>AI 面板底部按动作列出本局执行次数：升级、招募、领取、购建、研究各一行，并给出合计。台账只描述「真的跑过了多少次」，不参与任何数值结算；它是判断自动化是否生效最快的一处读侧，也是长期推演核对执行次数的依据。</p>
-    <h4>未绑定时的表现</h4>
-    <p>某个动作开关已开、但占编（绑定）助手为 0 时，该动作暂不执行，面板出现提示、日志给出一条节流告警（不会每帧刷屏），动作计数保持不变。点击该动作行的 + 绑定助手，或购买助手后由系统自动补员到已开启动作，即可生效；关闭开关会立即释放占编回空闲池，不需要重开。</p>
+    <h4>占编就是开关</h4>
+    <p>面板上每个动作只有「名称 + − 数字 +」：数字是该动作绑定的助手数，<b>绑了就是开启，绑 0 就是关闭</b>——没有额外的 ON/OFF 开关。0 名助手时三项基础动作自然全关，不会刷任何「待补员」提示。进阶两项（自动研究 / 自动购建）在真正解锁之前整张卡都不出现，解锁后自动带入同款步进器。</p>
+    <h4>一键全关</h4>
+    <p>「一键全关」会把所有动作的占编清零（不是只关一个开关），随后用 ＋ 重新绑定即可恢复。</p>
     <h4>混沌心智的边界</h4>
     <p>勾选混沌心智后 AI 自动化被永久接管，助手编制既不再变动也不退还，面板会明确写出这一点。接管不可取消，决定之前请留意已购助手的数量。</p>
   ` },

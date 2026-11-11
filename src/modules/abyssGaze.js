@@ -40,18 +40,8 @@ function buildEyeSvg() {
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     </defs>
 
-    <!-- 胶囊仪器框：外框 + 内高光细线 -->
-    <rect x="1" y="1" width="218" height="54" rx="27" fill="url(#ag-frame)" stroke="#4c1d95" stroke-width="1"/>
-    <rect x="3.5" y="3.5" width="213" height="49" rx="24.5" fill="none" stroke="#a855f7" stroke-width=".6" opacity=".3"/>
-
-    <!-- 两端仪器刻度 -->
-    <g stroke="#7c3aed" stroke-width="1" opacity=".5">
-      <line x1="17" y1="22" x2="17" y2="34"/><line x1="23" y1="25" x2="23" y2="31"/>
-      <line x1="203" y1="22" x2="203" y2="34"/><line x1="197" y1="25" x2="197" y2="31"/>
-    </g>
-    <circle class="ag-beacon" cx="32" cy="28" r="2.1" fill="#a855f7"/>
-    <circle class="ag-beacon ag-beacon-2" cx="188" cy="28" r="2.1" fill="#4dd0e1"/>
-
+    <!-- v3.12.3 反馈④：去掉胶囊仪器框 / 两端刻度 / 状态点——只留眼睛本身（无背景、无边框），
+         眼裂在 220×56 的 viewBox 内水平垂直居中，与三个系统按钮同处一行 -->
     <!-- 眼后幽光 -->
     <ellipse class="ag-halo" cx="110" cy="28" rx="80" ry="25" fill="url(#ag-halo)"/>
 

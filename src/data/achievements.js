@@ -55,6 +55,7 @@ export const ACHIEVEMENTS = [
   { id: 'bazaar_t5', name: '星际巨贾', icon: '🛰️', desc: '在深渊集市累计完成 500 笔交易', test: (s, ctx) => (s.bazaar && s.bazaar.trades) >= 500 },
   { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' },
   { id: 'gaze_abyss', name: '同归于尽', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' },
+  { id: 'tentacle_combo', name: '深渊连击', icon: '🐙', desc: '深渊之中 5 秒内连点触手 5 次——深渊收走了 1% EP' },
   // v3.6.0 成就扩充（方向②）：覆盖星际/宗教/政策/裂隙/AI/剧情/长线
   { id: 'exped1',    name: '初次远征',   icon: '🛰️', desc: '完成首次星际探索，星图在眼前展开', test: (s, ctx) => (s.expeditionsDone || 0) >= 1 },
   { id: 'exped10',   name: '星海旅人',   icon: '🛰️', desc: '累计完成 10 次星际探索', test: (s, ctx) => (s.expeditionsDone || 0) >= 10 },

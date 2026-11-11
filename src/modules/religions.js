@@ -384,7 +384,7 @@ export function renderReligionPanel(container) {
     </div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 本级 -${fmt(templeEpPerUnit() * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / Math.max(1, templeEpPerUnit())).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
-      <span>Lv.${templeLv}（无上限）</span>
+      <span>Lv.${templeLv} 无上限</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰；等级不设上限，消耗随等级递增">${`建造 / 升级（${fmt(tCost)} EP）`}</button>
       ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"

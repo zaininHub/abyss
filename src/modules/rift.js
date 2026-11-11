@@ -511,6 +511,12 @@ export function renderRift(container) {
       if (riftSig !== 'hud') { riftSig = 'hud'; container.innerHTML = ''; }
       return;
     }
+    // v3.12.3：深入裂隙进行中（riftExpedition 真值）= 裂隙当前就在眼前，不显示「下一次裂隙」倒计时，
+    // 否则会出现「下一次裂隙 0 秒后出现」的自相矛盾文案（已有裂隙在深入，无需再等下一道）
+    if (S.riftExpedition) {
+      if (riftSig !== 'delving') { riftSig = 'delving'; container.innerHTML = ''; }
+      return;
+    }
     if (riftSig !== 'eta') {
       // v3.4.9 反馈⑦：深渊吞噬期（倒计时/抉择/崩溃/腐化满额）裂隙不再刷新——挂卡不显示倒计时，
       // 否则会出现「下一次裂隙 0 秒后出现」这种自相矛盾的文案
@@ -592,7 +598,7 @@ export function renderRiftPanel(container) {
   // v3.4.9 反馈⑦：进入深渊（倒计时/抉择/崩溃/腐化满额）后裂隙停止刷新，整行隐藏——
   // 此前仍显示「下一次裂隙 0 秒后出现」，与「不会再出裂隙」的事实矛盾
   const abyssLocked = !!(S.collapsed || S._collapseAt || S._collapseChoicePending
-    || (S.corruption || 0) >= (BALANCE.corruption.max || 100));
+    || (S.corruption || 0) >= (BALANCE.corruption.max || 100) || S.riftExpedition);
   const etaLabel = S.activeRift ? '当前裂隙' : '下次裂隙';
   const etaText = S.activeRift
     ? `进行中 · 剩余 ${fmtEta(Math.max(0, Math.ceil((S.activeRift.expiresAt - Date.now()) / 1000)))}`

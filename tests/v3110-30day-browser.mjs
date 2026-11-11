@@ -157,8 +157,12 @@ async function boot(browser, storyline) {
           // v3.11.0：AI 自动化长期覆盖——五项开关常开（只在被关掉时经产品入口补开），
           // 余额偏低且 EP 可负担时买 1 名助手；逐分钟采样台账用于守恒与可玩性评估。
           try {
-            for (const k of q.AI_ACTION_SWITCH_KEYS) {
-              if (!S.ai[k]) { sim.setAiSwitch(k, true); st.aiSwitchToggles++; }
+            // v3.12.3 反馈⑦：面板取消 ON/OFF 开关，「占编 > 0」即开启——
+            // 自动玩家改走同一产品入口 setCrew 绑定 1 名助手（不再直接写开关）。
+            for (const id of q.AI_ACTION_IDS) {
+              if (q.crewOf(id) > 0 || q.crewIdle() <= 0) continue;
+              if (!q.actionAvailable(id)) continue;
+              q.setCrew(id, 1); st.aiSwitchToggles++;
             }
             // 进阶动作不是默认解锁：经产品真实入口激活自动购建 / 购买「自动研究」科技，
             // 让 30 天长期推演真实覆盖到进阶自动化，而不是只跑基础三项。
@@ -484,7 +488,9 @@ async function uiCheck(page) {
         forced = {
           ok: drain1 > cps1, cps: cps1, drain: drain1, eta,
           warnShown: !!warn && warn.style.display !== 'none',
-          etaOk: tip.includes('EP 预计') && tip.includes(eta) && tip.includes('后耗尽'),
+          // v3.12.3 反馈⑧：ETA 不再写进产出/消耗气泡，改由消耗侧 ❗ 自己的 data-tip 承载
+          etaOk: (warn?.dataset?.tip || '').includes('EP 预计') && (warn?.dataset?.tip || '').includes(eta)
+            && (warn?.dataset?.tip || '').includes('后耗尽') && !tip.includes('EP 预计'),
           ariaOk: !!warn && (warn.getAttribute('aria-label') || '').includes(eta),
         };
       } finally {
@@ -564,6 +570,7 @@ async function uiCheck(page) {
       const savedAutoTech = !!(S.tech && S.tech.auto_tech);
       const savedAutoBuild = !!(S.ai && S.ai.autoBuildUnlocked);
       const savedCardDisplay = card ? card.style.display : null;
+      const savedCrew = Object.fromEntries(q.AI_ACTION_IDS.map(id => [id, q.crewOf(id)]));
       try {
         if (card) card.style.display = '';
         // 让进阶组（自动研究 + 自动购建）在夹具中可见，验证两个分组横幅与 5 张开关的接线。
@@ -572,8 +579,11 @@ async function uiCheck(page) {
         S.ai.autoBuildUnlocked = true;
         window.__gameDirty.ai = true; q.sim.render();
         const text = panel.innerText || '';
+        // v3.12.3：分组横幅与 ON/OFF 开关已删除；改为断言「动作卡 + 占编步进器」
         const groups = [...panel.querySelectorAll('[data-ai-group]')].map(g => g.dataset.aiGroup);
         const switches = [...panel.querySelectorAll('[data-ai-switch]')].map(s => s.dataset.aiSwitch);
+        const cards = [...panel.querySelectorAll('[data-ai-action]')].map(c => c.dataset.aiAction);
+        const steppers = [...panel.querySelectorAll('[data-ai-crew-inc]')].map(b => b.dataset.aiCrewInc);
         const ledger = panel.querySelector('[data-ai-ledger]');
         const stall = panel.querySelector('[data-ai-stall]');
         const countEl = panel.querySelector('[data-ai-assistant-count]');
@@ -597,7 +607,7 @@ async function uiCheck(page) {
         // v3.11.3：绑定模型下「未绑定提示」与「存在开启但未绑定占编的动作」同源（不再等价于余额 0）
         const stallConsistent = !!stall === (q.stalledActions().length > 0);
         // 一键全关：真实 DOM 点击，必须覆盖全部 5 个开关（含 autoTech）
-        for (const k of q.AI_ACTION_SWITCH_KEYS) q.sim.setAiSwitch(k, true);
+        for (const id of q.AI_ACTION_IDS) q.setCrew(id, 1);
         window.__gameDirty.ai = true; q.sim.render();
         const offBtn = panel.querySelector('[data-ai-alloff]');
         let allOffOk = false;
@@ -605,7 +615,7 @@ async function uiCheck(page) {
           offBtn.click();
           allOffOk = q.ALL_OFF_SWITCH_KEYS.every(k => !S.ai[k]);
         }
-        return { ok: true, groups, switches, hasLedger: !!ledger, hasStall: !!stall,
+        return { ok: true, groups, switches, cards, steppers, hasLedger: !!ledger, hasStall: !!stall,
           stalled, stallConsistent, countText: countEl ? countEl.textContent : '',
           orphans, orphanDetails, sizeOk, sizes: sizes.slice(0, 10), buttonCount: btns.length,
           allOffOk,           badText: /undefined|NaN|Infinity/.test(text),
@@ -614,6 +624,7 @@ async function uiCheck(page) {
           ids: [...q.AI_ACTION_IDS], crew: [...q.AI_CREW_REQUIRED_IDS] };
       } finally {
         for (const k of q.AI_ACTION_SWITCH_KEYS) q.sim.setAiSwitch(k, savedSwitches[k]);
+        for (const id of q.AI_ACTION_IDS) q.setCrew(id, savedCrew[id] || 0);
         S.tech.auto_tech = savedAutoTech;
         S.ai.autoBuildUnlocked = savedAutoBuild;
         if (card && savedCardDisplay !== null) card.style.display = savedCardDisplay;
@@ -691,7 +702,7 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  if (bootState.panels === 27 && bootState.achievements === 135) {
+  if (bootState.panels === 27 && bootState.achievements === 136) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -958,7 +969,7 @@ try {
   if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
-  if (ui.achTotal === 135) ok('成就注册表 135 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  if (ui.achTotal === 136) ok('成就注册表 136 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
     ui.achV3100Unlocked.join(', '));
@@ -1087,10 +1098,10 @@ try {
     ok('自动化中期可用、末段满编且真实执行（v3.12.0 助手稀缺口径）', stallDetail);
   } else bad('自动化供给未达可玩性底线', stallDetail);
   const A = ui.aiUI || {};
-  if (A.ok && A.groups && A.groups.includes('basic') && A.groups.includes('advanced') && A.switches && A.switches.length === 5)
-    ok('AI 面板两组横幅 + 5 张开关由注册表完整渲染',
-      `${A.groups.join('/')} / ${A.switches.join(',')}`);
-  else bad('AI 面板分组或开关缺项', JSON.stringify(A));
+  if (A.ok && A.cards && A.cards.length === 5 && A.switches && A.switches.length === 0 && A.steppers && A.steppers.length === 5)
+    ok('AI 面板 5 张动作卡 + 占编步进器由注册表完整渲染（无 ON/OFF 开关）',
+      `${A.cards.join(',')}`);
+  else bad('AI 面板动作卡或步进器缺项', JSON.stringify({ cards: A.cards, switches: A.switches, steppers: A.steppers }));
   if (A.hasLedger && A.crewHint && !A.badText) ok('助手区块含执行台账与常驻班组口径，无非法数值');
   else bad('助手区块 UI 文案异常', JSON.stringify({ l: A.hasLedger, c: A.crewHint, b: A.badText }));
   if (A.stallConsistent) ok('未绑定提示与占用读侧同源（开启但未绑定占编的动作才提示）');
@@ -1099,7 +1110,7 @@ try {
   else bad('AI 面板出现孤字换行', JSON.stringify(A.orphanDetails || A.orphans));
   if (A.sizeOk) ok('AI 面板全部按钮点击目标 ≥24×24', `${A.buttonCount} 个按钮`);
   else bad('AI 面板按钮点击目标过小', JSON.stringify(A.sizes));
-  if (A.allOffOk) ok('一键全关真实 DOM 点击关闭全部 5 个开关（含 autoTech）',
+  if (A.allOffOk) ok('一键全关真实 DOM 点击关闭全部 5 个动作（占编一并清零）',
     (aiAudit.allOff || []).join(','));
   else bad('一键全关漏项', JSON.stringify(aiAudit.allOff));
 

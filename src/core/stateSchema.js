@@ -178,11 +178,14 @@ export function resetRunState(S, defs, opts = {}) {
   // 不清会让「转生/轮回后 RP 上限仍停在上一局的千万级」，与「新局从 3,000 缓慢扩容」的预期相反。
   for (const k of RUN_RUNTIME_KEYS) S[k] = clone(defs[k]);
   // 资源发现：只保留跨周期锚点，其余重新发现（与 v3.9.0 两份实现的逐字口径一致）
+  // v3.12.3 反馈⑤：DM 一旦发现即永久保留——它由深渊裂隙给出、且 DM 本身是跨转生资产，
+  //   若晋升后 dm 锚点回落 false，遗物页 / 深渊商店 / 净化节点会整块变回「???」（用户实报）。
   S.resDiscovered = {
     ep: true,
     es: !!(prevDiscovered && prevDiscovered.es),
     faith: !!(prevDiscovered && prevDiscovered.faith),
     rp: !!(prevDiscovered && prevDiscovered.rp),
+    dm: !!(prevDiscovered && prevDiscovered.dm),
   };
   // 晋升保留 AI 管理核心科技，轮回不保留
   S.tech = opts.keepAiCore ? { ai_core: true } : {};

@@ -533,7 +533,7 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  if (bootState.panels === 26 && bootState.achievements === 135) {
+  if (bootState.panels === 26 && bootState.achievements === 136) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -800,7 +800,7 @@ try {
   if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
-  if (ui.achTotal === 135) ok('成就注册表 135 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  if (ui.achTotal === 136) ok('成就注册表 136 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
     ui.achV3100Unlocked.join(', '));

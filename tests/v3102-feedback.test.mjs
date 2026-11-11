@@ -164,14 +164,16 @@ test('B2 结构：产出/s 与 消耗/s 位于 topbar 最左，警告标志存�
   assert.ok(readSrc('style.css').includes('.drain-warn'), '警告标志有样式');
 });
 
-test('B3 接线：renderTop 用同一组展示值算净流，ETA 进入两项气泡与 aria-label', () => {
+test('B3 接线：renderTop 用同一组展示值算净流，ETA 由消耗侧感叹号独立承载', () => {
   assert.ok(MAIN.includes('const drain = totalDrainPerSec();'));
   assert.ok(MAIN.includes('const drainWarn = drain > cps;'));
   assert.ok(MAIN.includes('const etaSec = epDepletionSec(S.ep, cps, drain);'));
   assert.ok(MAIN.includes('hSalary.textContent = fmt(drain) + \'/s\''), '消耗显示与告警同口径');
   assert.ok(MAIN.includes("hDrainWarn.style.display = drainWarn ? '' : 'none'"));
-  assert.equal((MAIN.match(/\$\{etaTip\}/g) || []).length, 2, '产出/消耗两项悬浮都追加耗尽预估');
+  // v3.12.3 反馈⑧：耗尽预估不再写进产出/消耗两项气泡，改由 ❗ 自己的 data-tip 承载
+  assert.equal((MAIN.match(/\$\{etaTip\}/g) || []).length, 0, '两项气泡不再追加耗尽预估');
   assert.ok(MAIN.includes('EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽'));
+  assert.ok(MAIN.includes('hDrainWarn.dataset.tip = warnTip'), '感叹号自带悬浮气泡');
   assert.ok(MAIN.includes("setAttribute('aria-label'"), '警告标志有无障碍说明');
 });
 

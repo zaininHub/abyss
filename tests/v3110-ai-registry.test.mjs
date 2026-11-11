@@ -114,10 +114,13 @@ test('A5 防回归：绑定（占编）模型是唯一实现，消耗 / 自动�
   assert.match(MAIN_SRC, /crewOf/, 'QA 钩子暴露占编读取');
 });
 
-test('A6 面板分组与开关文案消费注册表，不再内联硬编码', () => {
-  assert.match(AI_SRC, /data-ai-group="\$\{g\.key\}"/, '分组横幅由注册表渲染');
-  assert.match(AI_SRC, /actionsByGroup\('basic'\)/, '基础开关列表由注册表派生');
-  assert.match(AI_SRC, /sw\(a\.switchKey, a\.name, a\.desc, a\.id\)/, '开关文案取注册表 desc（含占编步进器 id）');
+test('A6 面板文案消费注册表，不再内联硬编码', () => {
+  assert.match(AI_SRC, /actionsByGroup\('basic'\)/, '基础动作列表由注册表派生');
+  assert.match(AI_SRC, /actionCard\(a\)/, '动作卡只由注册表条目生成（名称 + 占编步进器）');
+  assert.match(AI_SRC, /a\.desc/, '卡面 title 文案取注册表 desc');
+  // v3.12.3 反馈⑦⑨：分组横幅与 ON/OFF 开关整段删除（基础组不再有说明、进阶组不再有横幅）
+  assert.ok(!AI_SRC.includes('data-ai-group='), '分组横幅已移除');
+  assert.ok(!AI_SRC.includes('data-ai-switch='), '基础三项不再渲染开关');
   assert.ok(!AI_SRC.includes('每 5s 购买回本时间最短'),
     '旧「每 5s」文案已被会被 matrix/tentacle 缩短的「每决策周期」取代');
   assert.match(REG_SRC, /每决策周期/, '注册表文案口径准确');
@@ -198,25 +201,27 @@ test('B5 自动研究 / 自动购建（进阶动作）同样绑定、不消耗�
   assert.ok(AI.actionCounts().build >= 1, '至少购建 1 栋');
 });
 
-test('B6 未绑定：开启动作但 0 助手（无占编） → 无执行、无消耗、台账不增，且有明确提示', () => {
+// v3.12.3 反馈⑦：面板取消 ON/OFF 开关后，「开启但没绑定」不再是正常中间态——
+// 0 助手 = 全关。旧档残留开关为 true 时也必须静默（不执行、不告警、不刷屏）。
+test('B6 0 助手：即使旧档开关为 true 也不执行、不告警', () => {
   reset({ assistants: 0 });
   AI.setAiSwitch('autoUpgrade', true);
   AI.setAiSwitch('autoClaim', true);
-  assert.equal(AI.crewOf('upgrade'), 0, '0 助手开启 → 占编 0（待补员）');
+  assert.equal(AI.crewOf('upgrade'), 0, '0 助手时占编恒为 0');
   assert.equal(AI.tickAI(5), false, '无占编则不产生动作');
   assert.equal(AI.assistantCount(), 0);
   assert.equal(AI.totalActionCount(AI.actionCounts()), 0);
-  assert.ok(logs.some(l => l.m.includes('未绑定助手') && l.m.includes('自动升级')), '告警列出未绑定动作');
-  assert.equal(AI.stalledActions().length, 2, '两个动作均因未绑定挂起');
+  assert.equal(AI.stalledActions().length, 0, '0 助手不进入「未绑定」清单');
+  assert.ok(!logs.some(l => l.m.includes('未绑定助手')), '0 助手不刷补员告警');
 });
 
-test('B7 告警节流：60s 内不重复刷屏', () => {
-  reset({ assistants: 0 });
-  AI.setAiSwitch('autoUpgrade', true);
-  AI.tickAI(5);
-  const n = logs.filter(l => l.m.includes('未绑定助手')).length;
-  AI.tickAI(5);
-  assert.equal(logs.filter(l => l.m.includes('未绑定助手')).length, n, '节流生效');
+test('B7 占编驱动开关：绑定 > 0 即开启，解绑即关闭', () => {
+  reset({ assistants: 2 });
+  AI.setCrew('upgrade', 1);
+  assert.equal(AI.crewOf('upgrade'), 1);
+  assert.equal(AI.tickAI(5), true, '绑定 1 名即执行');
+  AI.setCrew('upgrade', 0);
+  assert.equal(AI.tickAI(5), false, '解绑后不再执行');
 });
 
 test('B8 关闭开关释放占编：绑定后关闭 → 占编归零、空闲恢复', () => {

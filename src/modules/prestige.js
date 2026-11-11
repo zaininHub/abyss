@@ -2,6 +2,7 @@ import { S, defaultState } from '../state.js';
 import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
+import { crossRunUpgradeSubset } from '../data/upgrades.js'; // v3.12.3 反馈⑤：DM 计价升级跨转生保留
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp, clampRunResourceBalances } from './economy.js';
 import { spawnProject } from './projects.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
@@ -28,8 +29,11 @@ export function doPrestige(talentId) {
   // v3.12.0 反馈⑪：科技树不再保留 AI 管理核心（keepAiCore 选项仅保留给历史轮回路径兼容）
   recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
+  // v3.12.3 反馈⑤：DM 计价的升级（深渊科技 / 净化节点）跨转生保留——DM 本身不清零，升级也不该清零。
+  const keepUpgrades = crossRunUpgradeSubset(S.upgrades);
   // v3.10.2 ④：重置后上限回落到新档值，隐式保留的 RP/PT/DM 余额同步钳制。
   resetRunState(S, defaultState(), { keepFocus: talentId === 'legacy', clamp: clampRunResourceBalances });
+  S.upgrades = keepUpgrades;
   // v3.12.0 反馈⑪：本次晋升的 RP 奖励在重置之后发放（否则会被清零），仍受新上限约束。
   addRp(rpg);
   // v3.12.0 反馈⑫：晋升推动故事线——驻留计时回拨，让「条件已满足」的下一章立即推进，
@@ -118,7 +122,13 @@ export function renderPrestige(container) {
   const note = container.querySelector('#prg-note');
   if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `转生将获得 ${reward}；职级点 / ES / 成就 / 宗教 / 深潜 / 回响 / 永恒保留，AI 助手 / 升级 / 科技 / 研究点 / RP / 裂隙余烬归零。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
   const td = container.querySelector('#talent-display');
-  if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
+  if (td) {
+    // v3.12.3 反馈⑩：本局天赋同时展示名称与效果（原只有名字，玩家看不到自己这一局拿到了什么）
+    const t = S.runTalent ? TALENTS.find(x => x.id === S.runTalent) : null;
+    td.innerHTML = t
+      ? `本局天赋：<b style="color:var(--purple)">${t.name}</b><span style="color:var(--text-2)"> —— ${t.desc}</span>`
+      : '';
+  }
 }
 
 export function renderTalentModal(container) {
