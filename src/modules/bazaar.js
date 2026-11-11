@@ -18,7 +18,7 @@ import { delveUnlocked } from './delve.js';
 import { anchorDone, anchorShown } from './disclosure.js';
 import { moduleBuyState, buyModuleUnlock, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：集市改为职级点买断
 import {
-  BAZAAR, QUALITY, qualityOf, RES_LABEL, dealerById, bazaarTier, bazaarNextTierNeed,
+  BAZAAR, QUALITY, qualityOf, RES_LABEL, RES_SHORT, dealerById, bazaarTier, bazaarNextTierNeed,
   rollRate, rollQuality, rollDealerCount, bazaarRefreshEpCost,
 } from '../data/bazaar.js';
 
@@ -308,7 +308,7 @@ export function renderBazaarPanel(container) {
       <span>二次确认</span>
       <span class="bz-switch ${S.bazaar.skipConfirm === true ? '' : 'on'}"><i></i></span>
     </div>`;
-  html += `<div class="shop-grid" style="margin-top:4px">`;
+  html += `<div class="shop-grid bz-grid" style="margin-top:4px">`;
   for (const d of bazaarLineup()) {
     const stock = bazaarStockOf(d.id);
     const mx = bazaarStockMax(d);
@@ -327,10 +327,10 @@ export function renderBazaarPanel(container) {
       : '<span class="dealer-state dealer-state-bad">资源不足</span>';
     const rateSigned = fmtMultDelta(rate);
     html += `
-      <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;">
-        <div class="name"><span>${d.icon} ${d.name}${evTag}</span><span class="count">${state}</span></div>
+      <div class="item bz-card ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;">
+        <div class="name"><span class="bz-name">${d.icon} ${d.name}${evTag}</span><span class="count">${state}</span></div>
         <div class="desc bz-quality" style="color:${q.color}">${q.name}品质 · 库存 ${stock}/${mx}</div>
-        <div class="cost mono dealer-cost">- ${fmt(lot ? lot.give : 0)} ${RES_LABEL[d.from]} → + ${fmt(lot ? lot.get : 0)} ${RES_LABEL[d.to]}</div>
+        <div class="cost mono dealer-cost">−${fmt(lot ? lot.give : 0)} ${RES_SHORT[d.from]} → +${fmt(lot ? lot.get : 0)} ${RES_SHORT[d.to]}</div>
         <div class="desc dealer-meta" style="margin-bottom:0">汇率 <b style="color:${rateColor}">${rateSigned}</b>${good ? ' ↑优' : bad ? ' ↓劣' : ''}</div>
       </div>`;
   }

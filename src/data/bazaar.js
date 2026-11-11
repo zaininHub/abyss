@@ -53,6 +53,10 @@ export function qualityOf(q) { return QUALITY[Math.max(0, Math.min(QUALITY.lengt
 export const RES_LABEL = {
   ep: '⚡ EP', rp: '🔬 RP', dm: '🌀 DM', faith: '🙏 FP', ember: '🕯️ 余烬', vs: '🌑 VS', pt: '🍪 PT',
 };
+// v3.12.3：卡面成本行用短标签（带 emoji 的长标签在窄卡里必然折行，出现「EP」孤行）
+export const RES_SHORT = {
+  ep: 'EP', rp: 'RP', dm: 'DM', faith: 'FP', ember: '余烬', vs: 'VS', pt: 'PT',
+};
 
 export function dealerById(id) { return BAZAAR.dealers.find(d => d.id === id) || null; }
 

@@ -241,11 +241,12 @@ try {
 
   // ②
   const b = R.item2;
-  const want = ['upgrade', 'hire', 'claim', 'tech', 'build'];
-  if (want.every(id => b.actionIds.includes(id)) && b.groups.includes('basic') && b.groups.includes('advanced')
-      && b.allSteppers && b.hasLedger && b.crewHint)
-    ok('② 五项自动化动作全部可见（含未解锁的进阶锁定卡）且统一占编步进器',
-      `${b.actionIds.join(',')} / ${b.groups.join(',')} / 锁定提示 ${b.lockedHints.length} 条`);
+  // v3.12.3 ⑦⑨：分组横幅与锁定卡下线——未解锁的动作不再渲染，面板只剩真实可用的动作卡 + 统一占编步进器
+  const want = ['upgrade', 'hire', 'claim'];
+  if (want.every(id => b.actionIds.includes(id)) && b.actionIds.length <= 5
+      && !b.groups.length && !b.lockedHints.length && b.allSteppers && b.hasLedger && b.crewHint)
+    ok('② 可用自动化动作按注册表渲染（未解锁不展示、无锁定卡）且统一占编步进器',
+      `${b.actionIds.join(',')} / 分组横幅 ${b.groups.length} / 锁定提示 ${b.lockedHints.length} 条`);
   else bad('② AI 面板结构异常', JSON.stringify(b));
 
   // ④
@@ -259,9 +260,10 @@ try {
   // ⑭
   const d = R.item14;
   const h = parseFloat(d.decoH), gh = parseFloat(d.gazeH);
-  // v3.12.1 ②③：凝视上移为 HUD 徽记（不再 56px 同高），许愿池改浮窗后右侧留白全部回收
+  // v3.12.1 ②③：凝视上移为 HUD 徽记（不再 56px 同高，且已改为可点击彩蛋 pointer-events:auto），
+  // 许愿池改浮窗后右侧留白全部回收
   if (d.cssVar === '56px' && h === 56 && gh > 0 && d.decoPointer === 'none'
-      && d.gazePointer === 'none' && d.appPadRight === '8px' && d.tapZone)
+      && d.gazePointer === 'auto' && d.appPadRight === '8px' && d.tapZone)
     ok('⑭ 触手独占 56px 底部条带、凝视上移、四列铺满',
       `触手 ${d.decoH}×${d.decoW} / 凝视 ${d.gazeH} / padding-right ${d.appPadRight} / bottom ${d.appPadBottom}`);
   else bad('⑭ 底部动画或页面宽度异常', JSON.stringify(d));

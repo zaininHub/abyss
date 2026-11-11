@@ -155,8 +155,21 @@ const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySe
       hasClip: !!el?.querySelector('clipPath'),
     };
   });
-  if (eye.inSysBtns && eye.viewBox === '0 0 220 56' && eye.hasFrame && eye.hasPupil && eye.hasIris && eye.hasBeacon >= 2 && eye.hasClip) ok('② 凝视 UI 重做：横向胶囊仪器框 + 刻度/状态点 + 眼裂裁切 + 竖瞳扫视', JSON.stringify(eye));
-  else bad('② 凝视视觉结构不完整', JSON.stringify(eye));
+  if (eye.inSysBtns && eye.viewBox === '0 0 220 56' && !eye.hasFrame && !eye.hasBeacon && eye.hasPupil && eye.hasIris && eye.hasClip) ok('② 凝视 UI：无胶囊外框/状态点，只留眼裂裁切 + 竖瞳扫视', JSON.stringify(eye));
+  else bad('② 凝视视觉结构不符合 v3.12.3 设计（去边框、眼睛单体）', JSON.stringify(eye));
+
+  // v3.12.4 ④：按钮行是 fixed 覆盖层，顶栏必须让出等宽空白——任何资源项都不得落在按钮底下
+  const noOverlap = await page.evaluate(() => {
+    const sys = document.querySelector('.sys-btns').getBoundingClientRect();
+    const bad = [...document.querySelector('.topbar').children].filter(e => {
+      const b = e.getBoundingClientRect();
+      if (!b.width || !b.height) return false;
+      return b.right > sys.x + 0.5 && b.left < sys.right - 0.5 && b.bottom > sys.top + 0.5 && b.top < sys.bottom - 0.5;
+    }).map(e => e.id || e.className);
+    return { n: bad.length, bad, gap: Math.round(sys.x - Math.max(...[...document.querySelector('.topbar').children].filter(e => { const b = e.getBoundingClientRect(); return b.height && b.top < sys.bottom; }).map(e => e.getBoundingClientRect().right))) };
+  });
+  if (!noOverlap.n) ok('④ 顶栏资源项不被按钮行压住', `最小间距 ${noOverlap.gap}px`);
+  else bad('④ 顶栏资源项被按钮行覆盖', JSON.stringify(noOverlap));
   if (!errs.length) ok('② 凝视无页面异常');
   else bad('② 页面异常', errs.join(' | '));
   await page.close();

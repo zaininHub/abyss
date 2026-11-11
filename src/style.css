@@ -17,6 +17,9 @@
   --bad: #f85149;
   --warn: #d29922;
   --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条高度（触手）；v3.12.1 ② 凝视已上移到系统按钮行，不再占底部条带 */
+  /* v3.12.4 反馈④：系统按钮行实测宽度（main.js 的 syncSysBtnsWidth 写入），顶栏据此留右侧空白。
+     默认值只求首帧不塌陷，一帧后即被实测值覆盖。 */
+  --sys-btns-w: 420px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -464,7 +467,13 @@ body {
 }
 .bz-switch.on { background: rgba(63,185,80,.35); }
 .bz-switch.on i { transform: translateX(14px); background: var(--good, #3fb950); }
+/* 商品品质 6 档：卡面短标签 + 紧凑网格（1080px 标签在窄卡里必然折出「EP」孤行） */
 .bz-quality { font-size: 10.5px !important; font-weight: 600; letter-spacing: .2px; }
+.bz-grid { grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
+.bz-card .name { gap: 6px; }
+.bz-card .bz-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bz-card .name .count { flex: 0 0 auto; }
+.bz-card .dealer-cost { white-space: nowrap; }
 
 /* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面） */
 .ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
@@ -908,6 +917,17 @@ body {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+}
+
+/* v3.12.4 反馈④：按钮行是 fixed 覆盖层，顶栏按它的实测宽度让出右侧空白，
+   潮汐/增益等资源项不再被眼睛压住。≤899px 由 padding-top 整行让位，无需右侧留白。 */
+@media (min-width: 900px) {
+  .topbar { padding-right: calc(var(--sys-btns-w) + 20px); }
+}
+
+/* v3.12.4 ④：中等屏按钮略收一档，减少顶栏为按钮行让出的右侧空白（配合徽记缩到 104px） */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .sys-btns .btn { font-size: 10.5px; padding: 3px 8px; }
 }
 
 /* v3.6.3 反馈⑤：小屏时按钮组固定顶栏上方，不再压住/漂出顶栏资源行 */

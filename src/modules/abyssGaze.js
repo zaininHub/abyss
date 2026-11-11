@@ -72,8 +72,9 @@ function buildOverlay() {
   wrap.id = 'abyss-gaze-crack'; // 沿用旧 id：存档/测试/ensureAbyssGaze 均以此为锚点
   wrap.className = 'abyss-gaze-hud';
   wrap.setAttribute('aria-hidden', 'true');
+  // v3.12.4 ④：尺寸移出内联样式——内联声明会压过下面的窄屏媒体查询（此前 ≤899px 的缩小规则形同虚设）。
   wrap.style.cssText = 'position:relative;flex:0 0 auto;align-self:center;' +
-    'width:132px;height:34px;pointer-events:auto;cursor:pointer;' +
+    'pointer-events:auto;cursor:pointer;' +
     'opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
   // 点击交互：点一下「凝视深渊」——视觉反馈（.gazing）+ 回调汇报（log/toast）。
@@ -117,6 +118,12 @@ function buildOverlay() {
       #abyss-gaze-crack .ag-eye, #abyss-gaze-crack .ag-iris, #abyss-gaze-crack .ag-iris-glow,
       #abyss-gaze-crack .ag-halo, #abyss-gaze-crack .ag-beacon { animation: none; }
       #abyss-gaze-crack { transition: none; }
+    }
+    /* v3.12.4 ④：徽记尺寸（原为内联，已移出以便媒体查询生效） */
+    #abyss-gaze-crack { width: 132px; height: 34px; }
+    /* 中等屏：徽记收一档，给顶栏资源行腾出横向空间 */
+    @media (max-width: 1199px) {
+      #abyss-gaze-crack { width: 104px; height: 28px; }
     }
     /* 窄屏：系统按钮组换行时徽记同步缩小，不与按钮抢行高 */
     @media (max-width: 899px) {
