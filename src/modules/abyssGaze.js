@@ -1,59 +1,77 @@
-// v3.4.2：凝视深渊彩蛋视觉层（v3.4.5 反馈② 重做：屏幕底部中央一只左右打量你的眼睛）
-// 独立模块（不依赖 main / rift，避免环形引用）：底部中央浮现一只竖瞳巨眼，
-// 瞳孔缓慢左右扫视（带停顿）、偶尔眨眼、虹膜呼吸发光。纯装饰（pointer-events:none、不阻挡操作）。
-let mounted = false;
+// v3.4.2：凝视深渊彩蛋视觉层；v3.12.1 反馈② 重做为顶部「深渊之眼」HUD 徽记。
+// 旧版把眼睛固定在屏幕底部中央（bottom:0 / 56px），与 v3.12.0 新增的全宽底部触手条带
+// 完全重叠（实测 97×56 满重叠）。现在改为挂载到 .sys-btns 行首作为 flex 子项：
+//   · 彻底离开底部，触手效果原样保留；
+//   · 作为 flex 子项随按钮组一起响应式换行，无需魔法坐标；
+//   · pointer-events:none、无 z-index，纯装饰，绝不接收点击或遮挡系统按钮。
+// 视觉：胶囊仪器框 + 刻度/状态点 + 杏仁眼裂内发光竖瞳（扫视/眨眼/呼吸光晕）。
+// 动效只动 transform / opacity，prefers-reduced-motion 全量降级。
 
 function buildEyeSvg() {
   return `
-  <svg id="abyss-gaze-svg" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet"
-       style="display:block;width:100%;height:100%;overflow:visible">
+  <svg id="abyss-gaze-svg" viewBox="0 0 220 56" preserveAspectRatio="xMidYMid meet"
+       style="display:block;width:100%;height:100%;overflow:visible" aria-hidden="true">
     <defs>
+      <linearGradient id="ag-frame" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1d1030"/>
+        <stop offset="100%" stop-color="#080312"/>
+      </linearGradient>
       <radialGradient id="ag-iris" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="#f5d0fe"/>
-        <stop offset="38%" stop-color="#c084fc"/>
-        <stop offset="72%" stop-color="#7c3aed"/>
+        <stop offset="34%" stop-color="#c084fc"/>
+        <stop offset="70%" stop-color="#7c3aed"/>
         <stop offset="100%" stop-color="#2a1046"/>
       </radialGradient>
-      <linearGradient id="ag-lid" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#08030f"/>
-        <stop offset="100%" stop-color="#1b0b2e"/>
-      </linearGradient>
       <radialGradient id="ag-halo" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#a855f7" stop-opacity="0.34"/>
-        <stop offset="70%" stop-color="#7c3aed" stop-opacity="0.10"/>
+        <stop offset="0%" stop-color="#a855f7" stop-opacity=".42"/>
+        <stop offset="65%" stop-color="#7c3aed" stop-opacity=".12"/>
         <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
       </radialGradient>
+      <linearGradient id="ag-lid" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0b0418"/>
+        <stop offset="100%" stop-color="#20103a"/>
+      </linearGradient>
       <clipPath id="ag-clip">
-        <!-- 杏仁形眼裂：上下眼睑围出的开口 -->
-        <path d="M22,78 C70,26 190,26 238,78 C190,128 70,128 22,78 Z"/>
+        <!-- 杏仁形眼裂 -->
+        <path d="M46,28 C78,6 142,6 174,28 C142,50 78,50 46,28 Z"/>
       </clipPath>
-      <filter id="ag-glow"><feGaussianBlur stdDeviation="3.2" result="b"/>
+      <filter id="ag-glow"><feGaussianBlur stdDeviation="2" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     </defs>
 
-    <!-- 外圈幽光 -->
-    <ellipse class="ag-halo" cx="130" cy="78" rx="126" ry="74" fill="url(#ag-halo)"/>
+    <!-- 胶囊仪器框：外框 + 内高光细线 -->
+    <rect x="1" y="1" width="218" height="54" rx="27" fill="url(#ag-frame)" stroke="#4c1d95" stroke-width="1"/>
+    <rect x="3.5" y="3.5" width="213" height="49" rx="24.5" fill="none" stroke="#a855f7" stroke-width=".6" opacity=".3"/>
+
+    <!-- 两端仪器刻度 -->
+    <g stroke="#7c3aed" stroke-width="1" opacity=".5">
+      <line x1="17" y1="22" x2="17" y2="34"/><line x1="23" y1="25" x2="23" y2="31"/>
+      <line x1="203" y1="22" x2="203" y2="34"/><line x1="197" y1="25" x2="197" y2="31"/>
+    </g>
+    <circle class="ag-beacon" cx="32" cy="28" r="2.1" fill="#a855f7"/>
+    <circle class="ag-beacon ag-beacon-2" cx="188" cy="28" r="2.1" fill="#4dd0e1"/>
+
+    <!-- 眼后幽光 -->
+    <ellipse class="ag-halo" cx="110" cy="28" rx="80" ry="25" fill="url(#ag-halo)"/>
 
     <g class="ag-eye">
-      <!-- 眼裂内的暗部（巩膜为深渊黑，只有虹膜发光） -->
       <g clip-path="url(#ag-clip)">
-        <rect x="16" y="20" width="228" height="116" fill="#07020d"/>
-        <ellipse cx="130" cy="84" rx="86" ry="52" fill="#160a26" opacity="0.85"/>
+        <rect x="44" y="4" width="132" height="48" fill="#060210"/>
+        <ellipse cx="110" cy="28" rx="52" ry="21" fill="#170b2b" opacity=".85"/>
         <!-- 虹膜 + 竖瞳（左右扫视） -->
         <g class="ag-iris">
-          <circle class="ag-iris-glow" cx="130" cy="78" r="34" fill="url(#ag-iris)" filter="url(#ag-glow)"/>
-          <ellipse class="ag-pupil" cx="130" cy="78" rx="7.5" ry="21" fill="#04010a"/>
-          <circle class="ag-shine" cx="118" cy="66" r="4.2" fill="#fdf4ff" opacity="0.9"/>
-          <circle cx="142" cy="90" r="2.2" fill="#fdf4ff" opacity="0.42"/>
+          <circle class="ag-iris-glow" cx="110" cy="28" r="18" fill="url(#ag-iris)" filter="url(#ag-glow)"/>
+          <ellipse class="ag-pupil" cx="110" cy="28" rx="4.2" ry="11.5" fill="#04010a"/>
+          <circle cx="103" cy="21.5" r="2.4" fill="#fdf4ff" opacity=".9"/>
+          <circle cx="117" cy="34" r="1.3" fill="#fdf4ff" opacity=".4"/>
         </g>
-        <!-- 眼裂上下缘的湿润反光 -->
-        <path d="M24,78 C72,30 188,30 236,78" fill="none" stroke="#c4b5fd" stroke-width="1.6" opacity="0.5"/>
-        <path d="M24,78 C72,126 188,126 236,78" fill="none" stroke="#7c3aed" stroke-width="1.4" opacity="0.55"/>
+        <!-- 眼裂上下缘湿润反光 -->
+        <path d="M48,28 C80,8 140,8 172,28" fill="none" stroke="#c4b5fd" stroke-width="1.1" opacity=".5"/>
+        <path d="M48,28 C80,48 140,48 172,28" fill="none" stroke="#7c3aed" stroke-width="1" opacity=".55"/>
       </g>
-
-      <!-- 上下眼睑（深色厚边，压住眼裂边缘 → 像正盯着你） -->
-      <path class="ag-lid ag-lid-top" d="M18,80 C66,18 194,18 242,80 C196,44 64,44 18,80 Z" fill="url(#ag-lid)" stroke="#3b1d6e" stroke-width="1.4"/>
-      <path class="ag-lid ag-lid-bot" d="M18,80 C66,132 194,132 242,80 C196,114 64,114 18,80 Z" fill="url(#ag-lid)" stroke="#2a1046" stroke-width="1.2"/>
+      <!-- 上下眼睑 -->
+      <path class="ag-lid ag-lid-top" d="M44,29 C76,2 144,2 176,29 C144,12 76,12 44,29 Z" fill="url(#ag-lid)" stroke="#4c1d95" stroke-width="1"/>
+      <path class="ag-lid ag-lid-bot" d="M44,27 C76,54 144,54 176,27 C144,44 76,44 44,27 Z" fill="url(#ag-lid)" stroke="#2a1046" stroke-width=".9"/>
     </g>
   </svg>`;
 }
@@ -61,12 +79,10 @@ function buildEyeSvg() {
 function buildOverlay() {
   const wrap = document.createElement('div');
   wrap.id = 'abyss-gaze-crack'; // 沿用旧 id：存档/测试/ensureAbyssGaze 均以此为锚点
+  wrap.className = 'abyss-gaze-hud';
   wrap.setAttribute('aria-hidden', 'true');
-  // v3.4.6 反馈⑨：缩小并压到最底层——不遮挡任何 UI（z-index 1、pointer-events:none），
-  // 位置贴底与宠物浮标齐平（v3.4.7 反馈④：宠物中心 ≈ bottom 12px + 15px = 27px；
-  // 眼睛改 bottom:0 + 高 56px → 视觉中心 28px，与宠物图标水平对齐）
-  wrap.style.cssText = 'position:fixed;left:50%;bottom:0;transform:translateX(-50%);' +
-    'width:min(9.7vw,97px);height:var(--bottom-deco-h,56px);pointer-events:none;z-index:1;' +
+  wrap.style.cssText = 'position:relative;flex:0 0 auto;align-self:center;' +
+    'width:132px;height:34px;pointer-events:none;' +
     'opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
   const isDark = !document.documentElement.classList.contains('light');
@@ -75,19 +91,29 @@ function buildOverlay() {
   style.textContent = `
     /* 左右打量：左 → 停顿 → 中间 → 停顿 → 右，循环 */
     @keyframes ag-scan {
-      0%, 6%   { transform: translateX(-15px); }
+      0%, 6%   { transform: translateX(-7px); }
       26%, 40% { transform: translateX(0px); }
-      60%, 74% { transform: translateX(15px); }
-      94%,100% { transform: translateX(-15px); }
+      60%, 74% { transform: translateX(7px); }
+      94%,100% { transform: translateX(-7px); }
     }
-    /* 眨眼：偶尔合眼（压扁整只眼） */
-    @keyframes ag-blink { 0%, 91%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.05); } 97% { transform: scaleY(1); } }
+    @keyframes ag-blink { 0%, 91%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.06); } 97% { transform: scaleY(1); } }
     @keyframes ag-pulse { 0%,100% { opacity: .74; } 50% { opacity: 1; } }
+    @keyframes ag-breathe { 0%,100% { opacity: .5; } 50% { opacity: .95; } }
+    @keyframes ag-beacon { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
     #abyss-gaze-crack .ag-eye { transform-box: fill-box; transform-origin: center; animation: ag-blink 7.6s ease-in-out infinite; }
     #abyss-gaze-crack .ag-iris { animation: ag-scan 11s ease-in-out infinite; }
     #abyss-gaze-crack .ag-iris-glow { animation: ag-pulse 4.2s ease-in-out infinite; }
+    #abyss-gaze-crack .ag-halo { animation: ag-breathe 5.4s ease-in-out infinite; }
+    #abyss-gaze-crack .ag-beacon { animation: ag-beacon 3.1s ease-in-out infinite; }
+    #abyss-gaze-crack .ag-beacon-2 { animation-delay: 1.5s; }
     @media (prefers-reduced-motion: reduce) {
-      #abyss-gaze-crack .ag-eye, #abyss-gaze-crack .ag-iris, #abyss-gaze-crack .ag-iris-glow { animation: none; }
+      #abyss-gaze-crack .ag-eye, #abyss-gaze-crack .ag-iris, #abyss-gaze-crack .ag-iris-glow,
+      #abyss-gaze-crack .ag-halo, #abyss-gaze-crack .ag-beacon { animation: none; }
+      #abyss-gaze-crack { transition: none; }
+    }
+    /* 窄屏：系统按钮组换行时徽记同步缩小，不与按钮抢行高 */
+    @media (max-width: 899px) {
+      #abyss-gaze-crack { width: 96px; height: 26px; }
     }
   `;
   wrap.appendChild(style);
@@ -99,15 +125,19 @@ export function showAbyssGaze() {
   let el = document.getElementById('abyss-gaze-crack');
   if (!el) {
     el = buildOverlay();
-    document.body.appendChild(el);
+    // v3.12.1 ②：挂到系统按钮行首，离开底部触手条带。
+    // 轻量 DOM 桩（纯 Node 单测）只实现 getElementById/createElement，故做能力检测后回退。
+    const host = typeof document.querySelector === 'function' ? document.querySelector('.sys-btns') : null;
+    if (host && typeof host.prepend === 'function') host.prepend(el);
+    else document.body.appendChild(el);
   }
-  // 下一帧淡入（首购/重载均生效）
-  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  el.style.display = '';
+  requestAnimationFrame(() => { el.style.opacity = '1'; }); // 下一帧淡入（首购/重载均生效）
 }
 
 export function hideAbyssGaze() {
   const el = document.getElementById('abyss-gaze-crack');
-  if (el) { el.style.opacity = '0'; }
+  if (el) { el.style.opacity = '0'; el.style.display = 'none'; } // flex 子项需真正移除占位
 }
 
 // 启动 / 重载时若已解锁则确保常驻

@@ -259,9 +259,10 @@ try {
   // ⑭
   const d = R.item14;
   const h = parseFloat(d.decoH), gh = parseFloat(d.gazeH);
-  if (d.cssVar === '56px' && h === 56 && gh === 56 && d.decoPointer === 'none'
-      && d.gazePointer === 'none' && d.appPadRight === '112px' && d.tapZone)
-    ok('⑭ 触手与凝视同为 56px 底部条带、pointer-events:none、页面右侧留白收窄',
+  // v3.12.1 ②③：凝视上移为 HUD 徽记（不再 56px 同高），许愿池改浮窗后右侧留白全部回收
+  if (d.cssVar === '56px' && h === 56 && gh > 0 && d.decoPointer === 'none'
+      && d.gazePointer === 'none' && d.appPadRight === '8px' && d.tapZone)
+    ok('⑭ 触手独占 56px 底部条带、凝视上移、四列铺满',
       `触手 ${d.decoH}×${d.decoW} / 凝视 ${d.gazeH} / padding-right ${d.appPadRight} / bottom ${d.appPadBottom}`);
   else bad('⑭ 底部动画或页面宽度异常', JSON.stringify(d));
 

@@ -1193,6 +1193,10 @@ function updateTabLocks() {
 // （纯 SVG + CSS keyframes，无外部图片依赖，任何环境均可渲染）
 let wishCoolUntil = 0;
 const WISH_COST = 100, WISH_CHANCE = 0.0001, WISH_REWARD = 100000;
+// v3.12.1 反馈③：dock 位置 / 收起态是纯 UI 偏好，用独立 localStorage key 持久化，
+//   不写进游戏存档 S（不随转生/清档清空，也不污染 SAVE_VERSION）。
+const WISH_DOCK_KEY = 'abyss_wish_dock_v1';
+const WISH_DOCK_W = 140;
 const WISH_WELL_SVG = `<svg class="wish-svg" viewBox="0 0 120 132" width="96" height="106" aria-hidden="true">
   <defs>
     <radialGradient id="wish-water-g" cx="50%" cy="42%" r="65%">
@@ -1215,21 +1219,114 @@ const WISH_WELL_SVG = `<svg class="wish-svg" viewBox="0 0 120 132" width="96" he
 </svg>
 <span class="wish-coin"></span>
 <span class="wish-label">许愿池</span>`;
+function readWishDockState() {
+  try {
+    const v = JSON.parse(localStorage.getItem(WISH_DOCK_KEY) || 'null');
+    if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) return { x: v.x, y: v.y, collapsed: !!v.collapsed };
+  } catch { /* 隐私模式 / 旧值损坏：回落默认位置 */ }
+  return null;
+}
+function writeWishDockState(dock) {
+  try {
+    localStorage.setItem(WISH_DOCK_KEY, JSON.stringify({
+      x: parseFloat(dock.style.left) || 0,
+      y: parseFloat(dock.style.top) || 0,
+      collapsed: dock.dataset.collapsed === 'true',
+    }));
+  } catch { /* localStorage 不可写时仅本次会话生效 */ }
+}
+function clampWishPos(x, y) {
+  // 至少留 40px 在视口内，保证折叠把手永远可点
+  return {
+    x: Math.max(0, Math.min(x, Math.max(0, window.innerWidth - 40))),
+    y: Math.max(0, Math.min(y, Math.max(0, window.innerHeight - 40))),
+  };
+}
+function applyWishCollapsed(dock, collapsed) {
+  dock.dataset.collapsed = collapsed ? 'true' : 'false';
+  const btn = dock.querySelector('.wish-toggle');
+  if (btn) {
+    btn.textContent = collapsed ? '‹' : '›';
+    btn.setAttribute('aria-label', collapsed ? '展开许愿池' : '收起许愿池');
+    btn.title = collapsed ? '展开许愿池' : '收起到屏幕边缘';
+  }
+  // 收起只动 transform（项目动效纪律）：把 dock 右移，仅露左端 30px 的折叠按钮
+  const left = parseFloat(dock.style.left) || 0;
+  dock.style.setProperty('--wish-shift', `${Math.max(0, window.innerWidth - 30 - left)}px`);
+  writeWishDockState(dock);
+}
+function initWishDock(dock) {
+  const st = readWishDockState();
+  const p = clampWishPos(st ? st.x : window.innerWidth - WISH_DOCK_W - 14,
+                         st ? st.y : Math.round(window.innerHeight * 0.36));
+  dock.style.left = p.x + 'px';
+  dock.style.top = p.y + 'px';
+  applyWishCollapsed(dock, st ? st.collapsed : false);
+
+  const bar = dock.querySelector('.wish-dock-bar');
+  bar.querySelector('.wish-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    applyWishCollapsed(dock, dock.dataset.collapsed !== 'true');
+  });
+
+  // 自由拖动：只从标题栏发起；折叠按钮点击与收起态不触发
+  let drag = null;
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.wish-toggle') || dock.dataset.collapsed === 'true') return;
+    drag = { px: e.clientX, py: e.clientY,
+             left: parseFloat(dock.style.left) || 0, top: parseFloat(dock.style.top) || 0 };
+    try { bar.setPointerCapture(e.pointerId); } catch { /* 非指针环境忽略 */ }
+    dock.classList.add('wish-dragging');
+  });
+  bar.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const n = clampWishPos(drag.left + e.clientX - drag.px, drag.top + e.clientY - drag.py);
+    dock.style.left = n.x + 'px';
+    dock.style.top = n.y + 'px';
+  });
+  const endDrag = (e) => {
+    if (!drag) return;
+    drag = null;
+    dock.classList.remove('wish-dragging');
+    try { bar.releasePointerCapture(e.pointerId); } catch { /* 已释放 */ }
+    writeWishDockState(dock);
+  };
+  bar.addEventListener('pointerup', endDrag);
+  bar.addEventListener('pointercancel', endDrag);
+
+  // 视口变化：位置钳回视口并重新计算贴边位移（只绑一次）
+  if (!initWishDock._resizeBound) {
+    initWishDock._resizeBound = true;
+    window.addEventListener('resize', () => {
+      const d = document.getElementById('wish-dock');
+      if (!d) return;
+      const n = clampWishPos(parseFloat(d.style.left) || 0, parseFloat(d.style.top) || 0);
+      d.style.left = n.x + 'px'; d.style.top = n.y + 'px';
+      if (d.dataset.collapsed === 'true') d.style.setProperty('--wish-shift', `${Math.max(0, window.innerWidth - 30 - n.x)}px`);
+      writeWishDockState(d);
+    });
+  }
+}
 function ensureWishWell() {
-  let w = document.getElementById('wish-well');
   // v3.0.3：许愿池从研究升级移入通用设施——检查 S.buildings.wish_well（兼容旧档 S.rpTheories.wish_well）
   const owned = ((S.buildings && S.buildings.wish_well) || (S.rpTheories && S.rpTheories.wish_well) || 0) > 0;
-  if (!owned) { if (w) w.remove(); return; }
-  if (!w) {
-    w = document.createElement('button');
-    w.id = 'wish-well';
-    w.className = 'wish-well';
-    w.title = '许愿池：投一枚硬币（100 EP）——万一呢？'; // v3.2.3 反馈②：悬浮文案同步精简
-    w.innerHTML = WISH_WELL_SVG;
-    w.addEventListener('click', onWishToss);
-    document.body.appendChild(w);
+  let dock = document.getElementById('wish-dock');
+  if (!owned) { if (dock) dock.remove(); return; }
+  if (!dock) {
+    dock = document.createElement('div');
+    dock.id = 'wish-dock';
+    dock.className = 'wish-dock';
+    dock.innerHTML = `<div class="wish-dock-bar">
+        <button class="wish-toggle" type="button" aria-label="收起许愿池" title="收起到屏幕边缘">›</button>
+        <span class="wish-grip" aria-hidden="true">⠿</span>
+        <span class="wish-dock-title">许愿池</span>
+      </div>
+      <button id="wish-well" class="wish-well" title="许愿池：投一枚硬币（100 EP）——万一呢？">${WISH_WELL_SVG}</button>`;
+    document.body.appendChild(dock);
+    dock.querySelector('#wish-well').addEventListener('click', onWishToss);
+    initWishDock(dock);
   }
-  w.style.display = '';
+  dock.style.display = '';
 }
 function onWishToss() {
   const w = document.getElementById('wish-well');
@@ -1638,8 +1735,28 @@ function bindEvents() {
   });
   const saveMenuEl = document.querySelector('.save-menu');
   if (saveMenuEl) {
-    saveMenuEl.addEventListener('mouseenter', renderSaveList);
-    saveMenuEl.addEventListener('focusin', renderSaveList);
+    // v3.12.1 反馈①：鼠标路径的开合完全交给 CSS :hover（移开即收、点击不再常驻）。
+    //   键盘路径另用 .kbd-open 类维持展开：若只靠 :focus-visible 选择器，焦点从按钮
+    //   移向菜单项的瞬间 pop 会变 display:none，菜单项被踢出 Tab 序列，键盘用户进不了下拉。
+    //   focusout 延后一帧再判定，Tab 进入菜单内部时保持展开。
+    const saveBtn = document.getElementById('save-menu-btn');
+    const setSaveOpen = (open) => saveBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    saveMenuEl.addEventListener('mouseenter', () => { renderSaveList(); setSaveOpen(true); });
+    // 鼠标点击按钮会留下 activeElement，不能据此判定「仍展开」；只有真正的键盘路径
+    // （.kbd-open）才在移开鼠标后保持展开，否则 aria-expanded 会与视觉不一致。
+    saveMenuEl.addEventListener('mouseleave', () => { if (!saveMenuEl.classList.contains('kbd-open')) setSaveOpen(false); });
+    saveMenuEl.addEventListener('focusin', (e) => {
+      renderSaveList(); setSaveOpen(true);
+      if (e.target.matches(':focus-visible')) saveMenuEl.classList.add('kbd-open');
+    });
+    saveMenuEl.addEventListener('focusout', () => {
+      requestAnimationFrame(() => {
+        if (!saveMenuEl.contains(document.activeElement)) {
+          saveMenuEl.classList.remove('kbd-open');
+          setSaveOpen(false);
+        }
+      });
+    });
   }
   document.getElementById('save-list')?.addEventListener('click', onSaveListClick);
   renderSaveList(); // 首屏预渲染（下拉展开时再刷新一次）

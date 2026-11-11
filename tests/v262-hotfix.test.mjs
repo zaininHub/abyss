@@ -21,7 +21,8 @@ const gaze = readFileSync(new URL('../src/modules/abyssGaze.js', import.meta.url
 rec('V1 横向低矮卷须 + 渐变三层描边', html.includes('viewBox="0 0 1200 56"') && html.includes('id="td-grad-a"') && css.includes('.td-base') && css.includes('.td-mid-a') && css.includes('.td-glow'), '');
 rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
 rec('V1 深色描边层 + non-scaling-stroke（横向拉伸不变粗）', html.includes('class="td-base"') && css.includes('stroke: #1b0733; stroke-width: 16;') && css.includes('vector-effect: non-scaling-stroke'), '');
-rec('V1 与深渊凝视同为 56px 底部条带且不阻挡页面', css.includes('--bottom-deco-h: 56px') && css.includes('pointer-events: none') && gaze.includes('var(--bottom-deco-h,56px)') && html.includes('tentacle-tap-zone'), '');
+// v3.12.1 反馈②：凝视上移到系统按钮行（HUD 徽记），56px 底部条带由触手独占；旧「同高」断言已过期
+rec('V1 触手独占 56px 底部条带，凝视已上移且不阻挡页面', css.includes('--bottom-deco-h: 56px') && css.includes('pointer-events: none') && gaze.includes('.sys-btns') && gaze.includes('position:relative') && html.includes('tentacle-tap-zone'), '');
 
 // ===== ② AI 激活按钮 =====
 rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP

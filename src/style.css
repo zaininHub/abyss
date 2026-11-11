@@ -16,7 +16,7 @@
   --good: #3fb950;
   --bad: #f85149;
   --warn: #d29922;
-  --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条统一高度（触手 / 深渊凝视） */
+  --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条高度（触手）；v3.12.1 ② 凝视已上移到系统按钮行，不再占底部条带 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -401,6 +401,9 @@ body {
   color: var(--text-2);
   font-size: 11px;
   margin-bottom: 4px;
+  /* v3.12.1 ③：四列铺满后卡片宽度变化，窄卡说明出现 24px 孤行（getClientRects 验收）；
+     balance 让两行均衡，不改字号/文案即可消除孤字；不支持的浏览器自然回退。 */
+  text-wrap: balance;
 }
 
 .shop-grid .item .cost {
@@ -957,9 +960,9 @@ body.paused .pet-grid .pet-card {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* v3.12.0 反馈⑭：触手移到底部条带后，右侧浮动栏只需留给许愿池（148px → 112px），
-       回收的 36px 与左侧 4px 一并让给四列；底部 62px 与 56px 装饰条对齐且留 6px 余量。 */
-    padding: 10px 112px 62px 8px;
+    /* v3.12.1 反馈③：许愿池改为可拖动 / 可收起的顶层浮窗，不再需要右侧固定留白，
+       原 112px 全部回收给四列 → 页面平铺满视口宽度；底部 62px 仍为 56px 触手条带 + 6px 余量。 */
+    padding: 10px 8px 62px 8px;
   }
   .topbar { flex: 0 0 auto; }
   .ch-bar { flex: 0 0 auto; }
@@ -1098,8 +1101,9 @@ body.paused .pet-grid .pet-card {
 }
 .proj { user-select: none; }
 
-/* v3.12.0 反馈⑭：触手与「深渊凝视」同为 56px 底部条带——全宽平铺在页面预留的底部空白内，
-   pointer-events:none 不阻挡上方四列；形态改为横向低矮卷须，不再占右侧浮动栏。 */
+/* v3.12.0 反馈⑭：触手为 56px 全宽底部条带——平铺在页面预留的底部空白内，
+   pointer-events:none 不阻挡上方四列；形态为横向低矮卷须。
+   v3.12.1 反馈②：深渊凝视已上移到 .sys-btns 行首（HUD 徽记），底部条带只归触手独占。 */
 .tentacle-deco {
   position: fixed; left: 0; right: 0; bottom: 0;
   width: 100%; height: var(--bottom-deco-h, 56px);
@@ -1287,23 +1291,62 @@ body {
 .rp-group-title b { color: var(--text-1); font-weight: 600; }
 .rp-group-lock { font-size: 12px; color: var(--text-3); padding: 8px 0; margin-top: 8px; border-top: 1px dashed var(--border); opacity: 0.85; }
 
-/* ========== v2.9.0：许愿池（SVG 许愿井 + 投币/涟漪/中奖金光动效） ========== */
+/* ========== v2.9.0：许愿池（SVG 许愿井 + 投币/涟漪/中奖金光动效） ==========
+   v3.12.1 反馈③：改为顶层浮窗 dock —— 标题栏可拖动、可一键收起到屏幕边缘，
+   #app 不再预留右侧 112px，四列铺满视口。层级 150：高于页面内容/顶栏/toast，
+   低于 .modal(200)，确认弹窗不会被浮窗压住。 */
+.wish-dock {
+  position: fixed;
+  z-index: 150;
+  width: 140px;
+  display: flex; flex-direction: column; align-items: stretch;
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, .5));
+  touch-action: none; /* 触屏拖动不触发页面滚动 */
+  transition: transform .28s cubic-bezier(.16, 1, .3, 1);
+}
+.wish-dock-bar {
+  display: flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 6px;
+  background: rgba(22, 27, 34, .94);
+  border: 1px solid var(--border); border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  cursor: grab; user-select: none;
+}
+.wish-dock.wish-dragging .wish-dock-bar { cursor: grabbing; border-color: var(--cyan); }
+.wish-toggle {
+  flex: 0 0 auto; width: 24px; height: 24px; line-height: 1;
+  display: grid; place-items: center;
+  background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-2); font-size: 14px; font-family: inherit; cursor: pointer;
+}
+.wish-toggle:hover { color: var(--cyan); border-color: var(--cyan); }
+.wish-grip { color: var(--text-3); font-size: 11px; letter-spacing: -2px; }
+.wish-dock-title { flex: 1; font-size: 11px; color: var(--cyan); letter-spacing: 2px; white-space: nowrap; }
+/* 收起：只露左端 30px 的折叠按钮（按钮位于标题栏最左，故仍可点击展开） */
+.wish-dock[data-collapsed="true"] { transform: translateX(var(--wish-shift, 110px)); }
+.wish-dock[data-collapsed="true"] .wish-well,
+.wish-dock[data-collapsed="true"] .wish-grip,
+.wish-dock[data-collapsed="true"] .wish-dock-title { display: none; }
+.wish-dock[data-collapsed="true"] .wish-dock-bar {
+  height: 34px; padding: 0; justify-content: flex-start;
+  border-bottom: 1px solid var(--border); border-radius: 10px 0 0 10px;
+}
+.wish-dock[data-collapsed="true"] .wish-toggle { margin-left: 3px; }
+
 .wish-well {
-  /* v3.4.1 反馈①：移入右侧浮动栏（#app padding-right 132px），不再压在第四列内容上 */
-  position: fixed; right: 14px; top: 36%; z-index: 200;
+  /* v3.12.1 ③：由 fixed 改为 dock 内的 relative 卡片（同时作为 .wish-coin 的定位上下文） */
+  position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 10px 10px 8px;
   background: rgba(22, 27, 34, .92);
-  border: 1px solid var(--border); border-radius: 12px;
+  border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px;
   cursor: pointer; font-family: inherit;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, .5), 0 0 0 1px rgba(77, 208, 225, .08);
-  transition: border-color .2s, box-shadow .2s, transform .2s;
-  animation: wishBob 4s ease-in-out infinite;
+  box-shadow: 0 0 0 1px rgba(77, 208, 225, .08);
+  transition: border-color .2s, box-shadow .2s;
 }
 .wish-well:hover:not(:disabled) {
   border-color: var(--cyan);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, .5), 0 0 16px rgba(57, 197, 207, .35);
-  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(57, 197, 207, .35);
 }
 .wish-well:disabled { cursor: wait; }
 .wish-well .wish-svg { display: block; }
@@ -1324,11 +1367,11 @@ body {
 .wish-well.splash .wish-ripple { animation: wishRipple .9s ease-out forwards; }
 .wish-well.splash .wish-ripple-2 { animation: wishRipple .9s .18s ease-out forwards; }
 /* 中奖：井水转金 + 三圈涟漪 + 整井金光脉冲 */
-.wish-well.win { animation: wishBob 4s ease-in-out infinite, wishWinGlow 1.6s ease-out; border-color: var(--yellow); }
+.wish-well.win { animation: wishWinGlow 1.6s ease-out; border-color: var(--yellow); }
 .wish-well.win .wish-ripple { animation: wishRipple 1.1s ease-out forwards; border-color: var(--yellow); }
 .wish-well.win .wish-ripple-2 { animation: wishRipple 1.1s .22s ease-out forwards; border-color: #ffe9a8; }
 .wish-well.win .wish-water { animation: wishWinWater 1.6s ease-out; }
-@keyframes wishBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+/* v3.12.1 ③：去掉常驻 bob 浮动——标题栏与卡片需稳定对齐；改为水面/涟漪/中奖金光承担生命感 */
 @keyframes wishWater { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 @keyframes wishToss {
   0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
@@ -1441,6 +1484,7 @@ body {
   .wish-water, .wish-well.win::after, .wish-well, .pet-float .pet-item, .farewell-gift {
     animation: none !important;
   }
+  .wish-dock { transition: none !important; } /* v3.12.1 ③：收起/展开动画同样降级 */
   .pet-grid .pet-card:hover { transform: none; }
 }
 
@@ -1539,7 +1583,25 @@ body {
   box-shadow: 0 6px 18px rgba(0,0,0,.45);
   z-index: 60;
 }
-.save-menu:hover .save-menu-pop, .save-menu:focus-within .save-menu-pop { display: flex; }
+/* v3.12.1 反馈①：纯 hover 展开、移开即收。
+   旧实现有两处硬伤：top:calc(100% + 6px) 留下 6px「hover 断档」，鼠标一离开按钮菜单就收，
+   根本走不进下拉；用户只能点一下靠 :focus-within 让菜单常驻才能操作。
+   ① 透明桥接伪元素盖住断档（放在 .save-menu 上而非 pop 内，避免被 pop 的 overflow-y:auto 裁掉）；
+      鼠标在按钮上时桥可接收指针，下移即命中桥 → .save-menu:hover 保持 → 平滑进入菜单。
+   ② 去掉 :focus-within 常驻；键盘导航改由 JS 维护 .kbd-open 类（见 main.js）——
+      纯 :has(:focus-visible) 在焦点从按钮移向菜单项的瞬间会让 pop 变 display:none，
+      把菜单项踢出 Tab 序列，键盘用户根本进不了下拉（实测 Tab 后焦点掉回 BODY）。 */
+.save-menu::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 100%;
+  width: 280px; max-width: calc(100vw - 16px); /* 与下拉同宽右对齐，横向移动也不掉出 hover 区 */
+  height: 8px;
+  pointer-events: none;
+}
+.save-menu:hover::after { pointer-events: auto; }
+.save-menu:hover .save-menu-pop,
+.save-menu.kbd-open .save-menu-pop { display: flex; }
 .save-menu-pop .btn { width: 100%; }
 
 /* v3.10.4 ④：下拉存档管理器（参考 KG）——直接展示所有存档列表，每条含 读取/覆盖/导出/删除 */

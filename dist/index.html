@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.0</title>
+<title>深渊效能工作台 v3.12.1</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-B3QKaPQz.js"></script>
-  <link rel="stylesheet" href="./assets/index-D23pRwBK.css">
+  <script defer src="./assets/index-zEUdoHC4.js"></script>
+  <link rel="stylesheet" href="./assets/index-BZGJ5cam.css">
 </head>
 <body>
 <div id="app">
@@ -391,7 +391,8 @@
     <div class="save-menu">
       <!-- v3.10.4 ④：💾 存档改为下拉直接展示所有存档（参考 KG）；每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；
            导入导出作为每条的功能；旧「存档管理」模态作为兼容入口保留于底部 .save-legacy -->
-      <button class="btn" id="save-menu-btn" title="存档管理：下拉直接展示所有存档">💾 存档</button>
+      <!-- v3.12.1 反馈①：悬停即展开、移开即收；去掉原生 title 避免 tooltip 与下拉同时弹出 -->
+      <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
       <div class="save-menu-pop" id="save-pop">
         <div class="save-actions">
           <button class="btn" id="save-new" title="保存当前进度为新快照（最多 3 个，已满则覆盖最早）">+ 保存新档</button>

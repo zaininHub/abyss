@@ -142,16 +142,18 @@ test('C3 反馈④：政策 / 集市与升级商店共用 shop-grid 与状态角
   assert.ok(css.includes('.policy-state') && css.includes('.dealer-state'), '角标样式应存在');
 });
 
-test('C4 反馈⑭：底部装饰条统一高度、不阻挡、页面加宽', () => {
+test('C4 底部装饰 / 页面宽度（v3.12.0 ⑭ + v3.12.1 ②③ 随设计更新）', () => {
   const css = src('src/style.css');
   const html = src('index.html');
   const gaze = src('src/modules/abyssGaze.js');
-  assert.ok(css.includes('--bottom-deco-h: 56px'), '统一高度变量');
+  assert.ok(css.includes('--bottom-deco-h: 56px'), '底部条带高度变量');
   assert.ok(css.includes('.tentacle-deco {') && css.includes('pointer-events: none'), '触手不阻挡');
-  assert.ok(gaze.includes('var(--bottom-deco-h,56px)'), '凝视与触手同高');
+  // v3.12.1 ②：凝视不再与触手同高，改为挂到系统按钮行的 HUD 徽记
+  assert.ok(gaze.includes('.sys-btns') && gaze.includes('position:relative'), '凝视上移、离开底部条带');
   assert.ok(html.includes('viewBox="0 0 1200 56"'), '触手改横向低矮形态');
   assert.ok(html.includes('tentacle-tap-zone'), '点击彩蛋迁移到不遮挡的专用热区');
-  assert.ok(css.includes('padding: 10px 112px 62px 8px'), '右侧浮动栏留白已回收给四列');
+  // v3.12.1 ③：许愿池改可收起/可拖动浮窗，右侧 112px 留白全部回收
+  assert.ok(css.includes('padding: 10px 8px 62px 8px'), '四列铺满视口宽度');
 });
 
 test('C5 反馈⑯：薪资四态说明整块触发', () => {
