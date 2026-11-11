@@ -17,12 +17,16 @@ const schema = readFileSync(new URL('../src/core/stateSchema.js', import.meta.ur
 // ===== ① 触手 =====
 // v3.12.0 反馈⑭：触手由「右下角竖立章鱼触手」改为「56px 横向低矮卷须底部条带」，
 // 旧断言（贝塞尔折点 / 描边色值 / steps(6) 六帧抽摆）编码旧形态，改校验新形态不变量。
+// v3.12.7 ①：横向卷须认不出是触手 → 重画为「从底边升起的章鱼臂」：
+//   四段递减粗细 + 吸盘 + 竖向渐变；旧「td-base / td-mid-* 三层横向描边」断言按设计变更替换。
 const gaze = readFileSync(new URL('../src/modules/abyssGaze.js', import.meta.url), 'utf8');
-rec('V1 横向低矮卷须 + 渐变三层描边', html.includes('viewBox="0 0 1200 56"') && html.includes('id="td-grad-a"') && css.includes('.td-base') && css.includes('.td-mid-a') && css.includes('.td-glow'), '');
+rec('V1 章鱼臂：四段递减粗细的臂 + 沿线吸盘', html.includes('viewBox="0 0 1200 56"') && html.includes('class="td-arm-1"') && html.includes('class="td-arm-4"') && html.includes('class="td-suck"') && css.includes('.td-arm-1 { stroke: url(#td-grad-arm); stroke-width: 26; }') && css.includes('.td-arm-4 { stroke: #c4b5fd; stroke-width: 4.5; }'), '');
 rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
-rec('V1 深色描边层 + non-scaling-stroke（横向拉伸不变粗）', html.includes('class="td-base"') && css.includes('stroke: #1b0733; stroke-width: 16;') && css.includes('vector-effect: non-scaling-stroke'), '');
+rec('V1 竖向渐变着色臂身（底暗紫 → 尖端亮紫）', html.includes('id="td-grad-arm"') && html.includes('gradientUnits="userSpaceOnUse"') && css.includes('.td-suck { fill: rgba(240, 219, 255, .5); }'), '');
 // v3.12.1 反馈②：凝视上移到系统按钮行（HUD 徽记），56px 底部条带由触手独占；旧「同高」断言已过期
 rec('V1 触手独占 56px 底部条带，凝视已上移且不阻挡页面', css.includes('--bottom-deco-h: 56px') && css.includes('pointer-events: none') && gaze.includes('.sys-btns') && gaze.includes('position:relative') && html.includes('tentacle-tap-zone'), '');
+// v3.12.7 ①：点击热区必须与触手同宽，否则「点触手没反应」
+rec('V1 触手点击热区铺满底部条带', css.includes('.tentacle-tap-zone {') && /\.tentacle-tap-zone \{[^}]*width: 100%/.test(css), '');
 
 // ===== ② AI 激活按钮 =====
 rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP

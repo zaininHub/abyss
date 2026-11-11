@@ -70,6 +70,9 @@ try {
 
     // ② AI 面板：五个注册动作全可见、每个都有占编步进器、两组横幅
     const ai = document.getElementById('ai-panel');
+    // v3.12.7 ⑤：助手行（4/N + 购买）已并入 #ai-card 标题行，跨容器查询
+    const aiCard = document.getElementById('ai-card');
+    const aiScope = aiCard || ai;
     const actions = [...(ai ? ai.querySelectorAll('[data-ai-action]') : [])];
     const item2 = {
       actionIds: actions.map(a => a.dataset.aiAction),
@@ -80,7 +83,7 @@ try {
       // v3.12.5 反馈④：台账不占版面，改为助手行 data-tip；「常驻班组」说明移入 Wiki
       hasLedger: !!ai?.querySelector('[data-ai-ledger]'),
       crewHint: /常驻班组/.test(txt(ai)),
-      headTip: ai?.querySelector('[data-ai-head]')?.dataset.tip || '',
+      headTip: aiScope?.querySelector('[data-ai-head]')?.dataset.tip || '',
     };
 
     // ④ 政策 / 集市：升级商店同款 shop-grid + 文字状态角标

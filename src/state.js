@@ -44,7 +44,7 @@ export function defaultState() {
     // 任务版
     projects: [], projectsDone: 0,
     // 探索/宗教
-    expeditions: [], expeditionsDone: 0, starMiles: {}, // v2.8.5：星际里程碑已领取记录
+    expeditions: [], expeditionsDone: 0, galaxyDone: {}, // v3.12.7 ⑦：按星系的探索回数（深空殖民入口门槛；星际里程碑已并入成就）
     cosmos: { lv: {} }, // v3.0.3 后续反馈④：宇宙探索工程等级（本局制，晋升/轮回重置）
     chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
     devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）

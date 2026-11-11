@@ -466,7 +466,8 @@ async function uiCheck(page) {
       const firstTwo = [stats[0]?.querySelector('span')?.id, stats[1]?.querySelector('span')?.id];
       const orderOk = firstTwo[0] === 'h-cps' && firstTwo[1] === 'h-salary';
       const warn = document.getElementById('h-drain-warn');
-      const tipText = () => (stats[0]?.dataset?.tip || '') + '|' + (stats[1]?.dataset?.tip || '');
+      // v3.12.7 ④：EP 耗尽 ETA 已从「消耗/s」气泡移到感叹号自身的气泡，读侧一并纳入
+      const tipText = () => [stats[0], stats[1], warn].map(el => (el && el.dataset ? el.dataset.tip : '') || '').join('|');
       const cps0 = q.computeCps(), drain0 = q.totalDrainPerSec();
       const restWarnOk = !!warn && ((warn.style.display !== 'none') === (drain0 > cps0));
       const restTipOk = (drain0 > cps0) === tipText().includes('EP 预计');
@@ -488,9 +489,12 @@ async function uiCheck(page) {
         forced = {
           ok: drain1 > cps1, cps: cps1, drain: drain1, eta,
           warnShown: !!warn && warn.style.display !== 'none',
-          // v3.12.3 反馈⑧：ETA 不再写进产出/消耗气泡，改由消耗侧 ❗ 自己的 data-tip 承载
+          // v3.12.3 反馈⑧：ETA 不再写进产出/消耗气泡，改由消耗侧 ❗ 自己的 data-tip 承载。
+          //   v3.12.7 ④：tipText() 已纳入 warn 自身气泡，此处「生产/消耗两个 stat 气泡不含 ETA」
+          //   的判定必须排除 warn，否则自相矛盾恒 false。
           etaOk: (warn?.dataset?.tip || '').includes('EP 预计') && (warn?.dataset?.tip || '').includes(eta)
-            && (warn?.dataset?.tip || '').includes('后耗尽') && !tip.includes('EP 预计'),
+            && (warn?.dataset?.tip || '').includes('后耗尽')
+            && ![stats[0], stats[1]].map(el => (el && el.dataset ? el.dataset.tip : '') || '').join('|').includes('EP 预计'),
           ariaOk: !!warn && (warn.getAttribute('aria-label') || '').includes(eta),
         };
       } finally {
@@ -586,10 +590,12 @@ async function uiCheck(page) {
         const steppers = [...panel.querySelectorAll('[data-ai-crew-inc]')].map(b => b.dataset.aiCrewInc);
         const ledger = panel.querySelector('[data-ai-ledger]');
         // v3.12.5 反馈④：台账不再独占一行，改为助手行的 data-tip
-        const headEl = panel.querySelector('[data-ai-head]');
+        // v3.12.7 ⑤：助手行（4/N + 购买）已并入面板标题 <h3>，查询范围放宽到 #ai-card
+        const scope = card || panel;
+        const headEl = scope.querySelector('[data-ai-head]');
         const headTip = (headEl && headEl.dataset.tip) || '';
         const stall = panel.querySelector('[data-ai-stall]');
-        const countEl = panel.querySelector('[data-ai-assistant-count]');
+        const countEl = scope.querySelector('[data-ai-assistant-count]');
         // 孤字换行：inline 元素换行会返回多个矩形，末矩形过窄即孤字（v3.9.0 同范式）
         let orphans = 0;
         const orphanDetails = [];
@@ -602,26 +608,26 @@ async function uiCheck(page) {
               rects: rects.length, lastW: +rects[rects.length - 1].width.toFixed(1) });
           }
         }
-        const btns = [...panel.querySelectorAll('button')];
+        const btns = [...scope.querySelectorAll('button')];
         const sizes = btns.map(b => { const r = b.getBoundingClientRect(); return { w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; });
         const sizeOk = sizes.length > 0 && sizes.every(s => s.w >= 24 && s.h >= 24);
         const stalled = q.stalledActions().length > 0;
         const anyOn = q.AI_ACTION_SWITCH_KEYS.some(k => !!S.ai[k]);
         // v3.11.3：绑定模型下「未绑定提示」与「存在开启但未绑定占编的动作」同源（不再等价于余额 0）
         const stallConsistent = !!stall === (q.stalledActions().length > 0);
-        // 一键全关：真实 DOM 点击，必须覆盖全部 5 个开关（含 autoTech）
+        // v3.12.7 ⑩：面板上的「一键全关」按钮已移除（占编 − 到 0 即关闭）。
+        //   现在断言两件事：① 按钮确实不在 DOM 里；② allOffActions() 作为注册表派生实现仍然
+        //   覆盖全部 5 个开关（含 autoTech），供自动化 / QA 使用。
         for (const id of q.AI_ACTION_IDS) q.setCrew(id, 1);
         window.__gameDirty.ai = true; q.sim.render();
         const offBtn = panel.querySelector('[data-ai-alloff]');
-        let allOffOk = false;
-        if (offBtn) {
-          offBtn.click();
-          allOffOk = q.ALL_OFF_SWITCH_KEYS.every(k => !S.ai[k]);
-        }
+        const noAllOffBtn = !offBtn;
+        q.sim.allOffActions();
+        const allOffOk = !noAllOffBtn ? false : q.ALL_OFF_SWITCH_KEYS.every(k => !S.ai[k]);
         return { ok: true, groups, switches, cards, steppers, hasLedger: !!ledger, hasStall: !!stall,
           stalled, stallConsistent, countText: countEl ? countEl.textContent : '',
           orphans, orphanDetails, sizeOk, sizes: sizes.slice(0, 10), buttonCount: btns.length,
-          allOffOk,           badText: /undefined|NaN|Infinity/.test(text),
+          allOffOk, noAllOffBtn, badText: /undefined|NaN|Infinity/.test(text),
           crewHint: /常驻班组|每动作每周期执行次数/.test(text),
           headTip,
           ledgerText: ledger ? (ledger.innerText || '').slice(0, 160) : '',
@@ -706,7 +712,8 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  if (bootState.panels === 27 && bootState.achievements === 136) {
+  // v3.12.7：成就基线 136 → 140（凝视成就 + 3 条殖民地成就）
+  if (bootState.panels === 27 && bootState.achievements === 140) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -973,7 +980,8 @@ try {
   if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
-  if (ui.achTotal === 136) ok('成就注册表 136 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  // v3.12.7：成就总数基线上移至 140（136 + 凝视成就 + 3 条殖民地成就）
+  if (ui.achTotal === 140) ok('成就注册表 140 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
     ui.achV3100Unlocked.join(', '));
@@ -1116,9 +1124,9 @@ try {
   else bad('AI 面板出现孤字换行', JSON.stringify(A.orphanDetails || A.orphans));
   if (A.sizeOk) ok('AI 面板全部按钮点击目标 ≥24×24', `${A.buttonCount} 个按钮`);
   else bad('AI 面板按钮点击目标过小', JSON.stringify(A.sizes));
-  if (A.allOffOk) ok('一键全关真实 DOM 点击关闭全部 5 个动作（占编一并清零）',
+  if (A.allOffOk && A.noAllOffBtn) ok('一键全关按钮已移除，allOffActions() 仍覆盖全部 5 个动作',
     (aiAudit.allOff || []).join(','));
-  else bad('一键全关漏项', JSON.stringify(aiAudit.allOff));
+  else bad('一键全关清理不彻底', JSON.stringify({ btn: A.noAllOffBtn, ok: A.allOffOk, off: aiAudit.allOff }));
 
   const flowErrList = ui.flow.errors || [];
   if (flowErrList.length === 0) ok('资源流错误队列为空');

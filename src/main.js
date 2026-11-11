@@ -237,9 +237,9 @@ function bindOrchestrationPanel() {
   });
 }
 
-function renderStorylinePanel() {
-  const el = document.getElementById('storyline-panel');
-  if (!el) return;
+// v3.12.7 ③：故事线正文抽成纯模板函数——右列窄卡与放大弹窗共用同一份树，
+//   避免「弹窗里是另一套渲染」的两头维护。
+function storylineBodyHtml() {
   const current = getCurrentStoryline();
   const completed = S.storylinesCompleted || [];
   const crossById = (BALANCE.crossroadBuildings || []).find(b => b.id === S.crossroadLockedBy);
@@ -312,7 +312,22 @@ function renderStorylinePanel() {
     }
     html += `</div>`;
   }
-  el.innerHTML = html;
+  return html;
+}
+
+// 放大弹窗打开时才刷新内容（关闭态不做无谓重渲染）
+function renderStorylineModal() {
+  const m = document.getElementById('sl-modal');
+  const body = document.getElementById('sl-modal-body');
+  if (!m || !body || m.style.display !== 'flex') return;
+  body.innerHTML = storylineBodyHtml();
+}
+
+function renderStorylinePanel() {
+  const el = document.getElementById('storyline-panel');
+  if (!el) return;
+  el.innerHTML = storylineBodyHtml();
+  renderStorylineModal();
   // v2.7.5 ⑤：命运的岔路口移入故事线 tab（原在建筑区）——状态/立誓跟随故事线叙事
   // v3.2.4：岔路口卡改由 dirty.shop 周期渲染（render() 内已有调用点），此处仅状态切换/首空时重建，
   // 避免 2s 兜底刷新每帧重建立誓按钮（v2.7.5 ① 同款「慢速点击丢失」风险）
@@ -1417,6 +1432,19 @@ function bindEvents() {
     });
     applySl();
   }
+  // v3.12.7 ③：故事线放大弹窗——标题栏 ⤢ 打开（点击不能顺带切换收起态），点遮罩 / × 关闭
+  const slZoom = document.getElementById('storyline-zoom');
+  const slModal = document.getElementById('sl-modal');
+  const slModalBody = document.getElementById('sl-modal-body');
+  if (slZoom && slModal && slModalBody) {
+    slZoom.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      slModalBody.innerHTML = storylineBodyHtml();
+      slModal.style.display = 'flex';
+    });
+    document.getElementById('sl-modal-x')?.addEventListener('click', () => { slModal.style.display = 'none'; });
+    slModal.addEventListener('click', (ev) => { if (ev.target === slModal) slModal.style.display = 'none'; });
+  }
   // v3.3.1 反馈⑨：成就面板同样支持点击标题收起/展开（键独立记忆）
   const achPanel = document.getElementById('tab-achievement');
   const achH3 = document.getElementById('achievement-h3');
@@ -1516,9 +1544,31 @@ function bindEvents() {
     }
   });
   // v3.12.2：深渊凝视点击交互——点一下「凝视深渊」给出反馈（视觉在 abyssGaze.js）
+  // v3.12.7 ②：连击口径与触手一致——5 秒内点 5 次，深渊收走 20% EP 并点亮成就。
+  //   日志只写结算那一条（不记逐次计数），平时点击只给一个轻提示，避免刷屏。
+  let gazeTaps = [];
   setGazeInteract(() => {
-    log('你凝视着深渊，深渊也在凝视着你……', 'good');
-    try { toast('👁 凝视深渊'); } catch (_) { /* 早期 toast 未就绪 */ }
+    const now = Date.now();
+    gazeTaps = gazeTaps.filter(t => now - t < 5000);
+    gazeTaps.push(now);
+    const done = S.achievements && S.achievements.gaze_stare;
+    if (gazeTaps.length < 5) {
+      try { toast('👁 凝视深渊'); } catch (_) { /* 早期 toast 未就绪 */ }
+      return;
+    }
+    gazeTaps = [];
+    if (done) { // 已点亮过：只保留「它记得你」的回应，不再重复扣 EP
+      log('深渊回望了你一眼——它记得你的凝视。', 'good');
+      try { toast('👁 深渊记住了你'); } catch (_) { /* 同上 */ }
+      return;
+    }
+    const lost = Math.max(0, (S.ep || 0) * 0.20);
+    S.ep = Math.max(0, (S.ep || 0) - lost);
+    unlockAchievement(S, 'gaze_stare');
+    log(`深渊回望了你：一次凝视收走 ${fmt(lost)} EP`, 'bad');
+    try { toast('👁 五目相对！-20% EP'); } catch (_) { /* 同上 */ }
+    save(S);
+    dirty.achievements = true; dirty.top = true; dirty.hero = true;
   });
   document.getElementById('btn-expedition')?.addEventListener('click', () => switchTab('expedition'));
   document.getElementById('btn-storyline')?.addEventListener('click', () => switchTab('storyline'));

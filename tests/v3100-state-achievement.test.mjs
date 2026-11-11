@@ -164,12 +164,12 @@ test('A8 静态接线：各处不再内联手写清单', () => {
 
 console.log('[B] 成就注册表（纯函数可单测）');
 
-test('B1 136 条成就、id 唯一、无语义重复', () => {
-  assert.equal(ACHIEVEMENTS.length, 136);
-  assert.equal(reg.ACHIEVEMENT_IDS.length, 136);
-  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 136);
+test('B1 140 条成就、id 唯一、无语义重复', () => {
+  assert.equal(ACHIEVEMENTS.length, 140); // v3.12.7：+gaze_stare（凝视连击）/ colony1·3·6（原星际里程碑并入）
+  assert.equal(reg.ACHIEVEMENT_IDS.length, 140);
+  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 140);
   assert.deepEqual(reg.duplicateAchievementTests(), [], 'es1000/es1k 类重复不得回归');
-  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 133); // 136 - 3 条手动点亮
+  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 136); // 140 - 4 条手动点亮
   assert.ok(!reg.ACHIEVEMENT_IDS.includes('es1k') && !reg.ACHIEVEMENT_IDS.includes('vow'), '两条语义重复项已移除');
 });
 
@@ -437,8 +437,8 @@ test('E5 新增事件 / 章节 / 政策条件全部可执行且类型合法', ()
     assert.ok(sec && typeof sec.body === 'function', `百科 ${id} 缺正文`);
     assert.ok(sec.body().length > 20);
   }
-  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test !== 'function').length, 3,
-    '仅 demon_friend / gaze_abyss / tentacle_combo 为手动点亮');
+  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test !== 'function').length, 4,
+    '仅 demon_friend / gaze_abyss / tentacle_combo / gaze_stare 为手动点亮（v3.12.7 新增凝视连击）');
   assert.ok(MAIN.includes("unlockAchievement(S, 'demon_friend')")
     && MAIN.includes("unlockAchievement(S, 'gaze_abyss')"));
 });

@@ -41,6 +41,7 @@ export const COMPAT_KEYS = Object.freeze([
   // v3.10.2 ④：本局运行时快照旧档缺省补齐（见 RUN_RUNTIME_KEYS）
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
   '_purifierSeen',
+  'galaxyDone', // v3.12.7 ⑦：按星系的探索回数（与 colonies 同寿命，跨本局保留）
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）

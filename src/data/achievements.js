@@ -56,10 +56,15 @@ export const ACHIEVEMENTS = [
   { id: 'demon_friend', name: '恶魔的朋友', icon: '🤝', desc: '深渊吞噬倒计时终结时选择贿赂深渊——上缴 90% EP，成为深渊的朋友' },
   { id: 'gaze_abyss', name: '同归于尽', icon: '🌑', desc: '深渊吞噬倒计时终结时选择同归于尽——崩溃吞没了你，也杀死了深渊' },
   { id: 'tentacle_combo', name: '深渊连击', icon: '🐙', desc: '深渊之中 5 秒内连点触手 5 次——深渊收走了 1% EP' },
+  { id: 'gaze_stare', name: '五目相对', icon: '👁️', desc: '5 秒内凝视深渊 5 次——它收走了 20% EP，并记住了你' },
   // v3.6.0 成就扩充（方向②）：覆盖星际/宗教/政策/裂隙/AI/剧情/长线
   { id: 'exped1',    name: '初次远征',   icon: '🛰️', desc: '完成首次星际探索，星图在眼前展开', test: (s, ctx) => (s.expeditionsDone || 0) >= 1 },
   { id: 'exped10',   name: '星海旅人',   icon: '🛰️', desc: '累计完成 10 次星际探索', test: (s, ctx) => (s.expeditionsDone || 0) >= 10 },
   { id: 'exped50',   name: '深空常客',   icon: '🛰️', desc: '累计完成 50 次星际探索', test: (s, ctx) => (s.expeditionsDone || 0) >= 50 },
+  // v3.12.7 ⑧：原「星际里程碑」三个门槛（1/3/6 个星系）并入成就，不再有独立领取卡片
+  { id: 'colony1',   name: '星系立足',   icon: '🏴', desc: '在第一个星系建立殖民地', test: (s) => Object.values(s.colonies || {}).filter(Boolean).length >= 1 },
+  { id: 'colony3',   name: '星海殖民',   icon: '🏴', desc: '在 3 个星系建立殖民地', test: (s) => Object.values(s.colonies || {}).filter(Boolean).length >= 3 },
+  { id: 'colony6',   name: '星际联邦',   icon: '🏴', desc: '在全部 6 个星系建立殖民地', test: (s) => Object.values(s.colonies || {}).filter(Boolean).length >= 6 },
   { id: 'cps1k',     name: '燃料点火',   icon: '🔥', desc: '星际燃料 CPS 达到 1K', test: (s, ctx) => (s.starCps || 0) >= 1e3 },
   { id: 'cps100k',   name: '星炬燎原',   icon: '🔥', desc: '星际燃料 CPS 达到 100K', test: (s, ctx) => (s.starCps || 0) >= 1e5 },
   { id: 'cosmos1',   name: '宇宙工坊',   icon: '🌌', desc: '启动首个宇宙探索工程', test: (s, ctx) => Object.values(s.cosmos?.lv || {}).filter(v => v >= 1).length >= 1 },

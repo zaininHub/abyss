@@ -108,6 +108,26 @@ body {
   cursor: help; user-select: none;
 }
 
+/* v3.12.7 ④：感叹号与「消耗/s」此前共用一个气泡——感叹号是 .stat 的子元素，
+   父项的 :hover::after 会先命中，于是悬停感叹号弹出的仍是「消耗来源」。
+   现在感叹号自带右对齐气泡（只讲 EP 耗尽 ETA），父项气泡在悬停它时用 :has 抑制，
+   两者内容互不串台；长来源行改为可换行，避免顶栏右侧把气泡顶出屏幕。 */
+.stat[data-tip]:hover::after {
+  max-width: min(380px, 90vw);
+  white-space: normal;
+  line-height: 1.6;
+}
+.drain-warn[data-tip] { position: relative; }
+.drain-warn[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; top: 100%; right: 0; z-index: 999;
+  background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; font-size: 11px; color: var(--text-2);
+  white-space: normal; width: max-content; max-width: min(280px, 84vw); line-height: 1.6;
+  pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.stat[data-tip]:has(.drain-warn[data-tip]:hover)::after { content: none; }
+
 .buff-tag {
   padding: 2px 8px;
   border-radius: 3px;
@@ -144,6 +164,15 @@ body {
 
 /* v3.3.9 反馈①：列内面板保持自然高度（不被压缩变形），超出由列滚动承担 */
 .first-col > .panel, .left-col > .panel, .side-col > .panel { flex: 0 0 auto; }
+/* v3.12.7 ③：右列四段（日志 / 故事线 / 岔路口 / 晋升）此前合计 ≈1060px，
+   常规窗口里「晋升」会被顶出视口——玩家看到的正是「晋升底部与左列不齐」。
+   现在日志弹性伸缩（96~240）、故事线正文固定占位、岔路口封顶 180 内部滚动、
+   晋升自然高度收尾；短窗口再收一档，整列因此放得下，晋升下边框与左列齐平。
+   仍是放不下时（超短视口）由整列滚动兜底，内容不会被裁掉。 */
+.side-col > .log-panel { flex: 1 1 auto; min-height: 96px; max-height: 240px; display: flex; flex-direction: column; }
+.side-col > .log-panel .log-content { flex: 1 1 auto; height: auto; min-height: 0; }
+.side-col > #tab-storyline > #crossroad-list { max-height: clamp(112px, 15vh, 190px); overflow-y: auto; }
+.side-col > #tab-prestige { flex: 1 0 auto; margin-top: auto; }
 
 /* v3.3.9 反馈①：中列标签内容独立滚动，页面本身不动 */
 .right-col { overflow: hidden; }
@@ -491,7 +520,21 @@ body {
 .ai-action.on { border-color: rgba(80,220,140,.45); box-shadow: inset 2px 0 0 var(--good); }
 .ai-action .ai-crew-btn { padding: 0 8px; font-size: 13px; line-height: 1; }
 .ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
-.ai-assistant-head { font-size: 12px; color: var(--text-2); margin-top: 8px; cursor: help; }
+/* v3.12.7 ⑤：助手信息收进面板标题行——「🤖 AI 助手 4/7 …… 购买助手」单行，
+   slot 靠右吸收剩余宽度；台账/占编进悬浮，卡片区不再被这块占三行 */
+.ai-card > h3 { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.ai-assist-slot { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.ai-assist-slot:empty { display: none; }
+.ai-assist-slot .ai-assist-buy { padding: 2px 10px; font-size: 12px; line-height: 1.7; flex: 0 0 auto; }
+.ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
+.ai-assistant-head b { font-size: 13px; }
+.ai-assist-sep { color: var(--text-3); margin: 0 1px; }
+/* 台账悬浮较长：允许换行，避免气泡横穿面板 */
+.ai-assistant-head[data-tip]:hover::after {
+  max-width: min(320px, 86vw);
+  white-space: normal;
+  line-height: 1.6;
+}
 
 /* ========== 科技网格 ========== */
 .tech-grid {
@@ -760,6 +803,11 @@ body {
 }
 
 .off-upg:hover { background: #252b33; }
+
+/* v3.12.7 ⑥⑦：星图「目的地 / 深空殖民」的灰显态——此前只是在行上加了 cant 类，
+   但只有 .shop-grid .item 的规则命中，星图行完全没有视觉降级，玩家分不清「买不起」和「可买」。 */
+.off-upg.cant { opacity: .5; cursor: not-allowed; }
+.off-upg.cant:hover { background: #1c2128; }
 
 .off-upg.owned {
   opacity: 0.5;
@@ -1185,40 +1233,50 @@ body.paused .pet-grid .pet-card {
 .proj { user-select: none; }
 
 /* v3.12.0 反馈⑭：触手为 56px 全宽底部条带——平铺在页面预留的底部空白内，
-   pointer-events:none 不阻挡上方四列；形态为横向低矮卷须。
-   v3.12.1 反馈②：深渊凝视已上移到 .sys-btns 行首（HUD 徽记），底部条带只归触手独占。 */
+   pointer-events:none 不阻挡上方四列。
+   v3.12.7 ①：原「横向卷须」看不出是触手，重画为从底边升起的章鱼臂——
+   每条臂由四段递减粗细的圆头路径叠成锥形（26→17→10→4.5），沿线布吸盘，
+   底暗紫、尖端亮紫的竖向渐变；摆动幅度收到 1.6px / .22deg（原来 3px / .4deg）。 */
 .tentacle-deco {
   position: fixed; left: 0; right: 0; bottom: 0;
   width: 100%; height: var(--bottom-deco-h, 56px);
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
-  opacity: .9;
-  filter: drop-shadow(0 0 6px rgba(77, 208, 225, .25));
+  opacity: .84;
+  filter: drop-shadow(0 0 7px rgba(168, 85, 247, .26));
 }
 .tentacle-deco svg { display: block; width: 100%; height: 100%; overflow: hidden; }
-.tentacle-deco path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.tentacle-deco .td-base   { stroke: #1b0733; stroke-width: 16; }
-.tentacle-deco .td-mid-a  { stroke: url(#td-grad-a); stroke-width: 10; }
-.tentacle-deco .td-glow   { stroke: #4dd0e1; stroke-width: 1.6; opacity: .72; }
-.tentacle-deco .td-base-b { stroke: #2a0c46; stroke-width: 10; }
-.tentacle-deco .td-mid-b  { stroke: url(#td-grad-b); stroke-width: 5; }
-.tentacle-deco .td-mid-c  { stroke: url(#td-grad-c); stroke-width: 2.4; }
-.tentacle-deco .tentacle { transform-origin: 50% 100%; animation: tentacle-sway 5s ease-in-out infinite; }
-.tentacle-deco .tentacle-b { animation-duration: 7s; animation-delay: .6s; }
-.tentacle-deco .tentacle-c { animation-duration: 9s; animation-delay: 1.2s; }
-.tentacle-deco .tentacle-b { opacity: 0; }
-.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: .85; }
-.tentacle-deco .tentacle-c { opacity: 0; }
-.tentacle-deco.tentacle-3 .tentacle-c { opacity: .8; }
-@keyframes tentacle-sway {
-  0%, 100% { transform: translateY(0) rotate(-.4deg); }
-  50%      { transform: translateY(-3px) rotate(.4deg); }
+.tentacle-deco path { fill: none; stroke-linecap: round; }
+.tentacle-deco .td-arm-1 { stroke: url(#td-grad-arm); stroke-width: 26; }
+.tentacle-deco .td-arm-2 { stroke: url(#td-grad-arm); stroke-width: 17; }
+.tentacle-deco .td-arm-3 { stroke: url(#td-grad-arm); stroke-width: 10; }
+.tentacle-deco .td-arm-4 { stroke: #c4b5fd; stroke-width: 4.5; }
+.tentacle-deco .td-suck { fill: rgba(240, 219, 255, .5); }
+.tentacle-deco .td-glow-rim { stroke: rgba(77, 208, 225, .55); stroke-width: 1.4; }
+/* transform-box: fill-box —— 让每条臂绕自己的根部摆动；默认用整个 viewBox 作参照，
+   会让所有臂像一块板子一起倾斜（旧版「看不出是触手」的观感来源之一）。 */
+.tentacle-deco .tentacle {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: tentacle-sway 7s ease-in-out infinite;
 }
-/* 手动点击彩蛋热区：只覆盖底部条带右侧一小块，上方内容由 #app padding-bottom 让开 */
+.tentacle-deco .tentacle-b { animation-duration: 9s; animation-delay: .8s; }
+.tentacle-deco .tentacle-c { animation-duration: 11s; animation-delay: 1.6s; }
+.tentacle-deco .tentacle-b { opacity: 0; }
+.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: .88; }
+.tentacle-deco .tentacle-c { opacity: 0; }
+.tentacle-deco.tentacle-3 .tentacle-c { opacity: .82; }
+@keyframes tentacle-sway {
+  0%, 100% { transform: translateY(0) rotate(-.22deg); }
+  50%      { transform: translateY(-1.6px) rotate(.22deg); }
+}
+/* 点击彩蛋热区：v3.12.7 ① 铺满整条底部条带（原来只有右下 120×56）——
+   玩家点的是眼睛看到的触手，热区必须与触手同宽，否则「点了没反应」。
+   条带本身在 #app padding-bottom 预留的空白里，铺满不会压住任何面板。 */
 .tentacle-tap-zone {
-  position: fixed; right: 0; bottom: 0;
-  width: 120px; height: var(--bottom-deco-h, 56px);
+  position: fixed; left: 0; right: 0; bottom: 0;
+  width: 100%; height: var(--bottom-deco-h, 56px);
   z-index: 2; pointer-events: auto; cursor: pointer;
 }
 
@@ -1276,14 +1334,15 @@ body.paused .pet-grid .pet-card {
 .rift-upg-row .btn { flex-shrink: 0; }
 #rift-tab-panel .btn.disabled { opacity: .45; cursor: not-allowed; }
 
-/* v2.6.3 反馈③：触手协议触发拍动动画（叠加于常驻摆动） */
-.tentacle-deco.tap .tentacle { animation: tentacle-tap .45s steps(3, end) infinite !important; }
+/* v2.6.3 反馈③：触手协议触发拍动动画（叠加于常驻摆动）
+   v3.12.7 ①：幅度收到 3px、只播一次——原来 infinite 会让整条触手连续跳 600ms，观感是「抖」。 */
+.tentacle-deco.tap .tentacle { animation: tentacle-tap .45s steps(3, end) !important; }
 .tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
 .tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
 @keyframes tentacle-tap {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  33% { transform: translateY(-6px) rotate(-.5deg); }
-  66% { transform: translateY(-2px) rotate(.5deg); }
+  33% { transform: translateY(-3px) rotate(-.3deg); }
+  66% { transform: translateY(-1px) rotate(.3deg); }
 }
 
 /* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========
@@ -1360,6 +1419,36 @@ body {
 .sl-node .sl-ch-desc { font-size: 10.5px; color: var(--text-2); line-height: 1.6; margin-top: 1px; }
 
 /* v3.2.4 反馈①：故事线面板收起态（点击标题切换，状态记 localStorage） */
+/* v3.12.7 ③：故事线正文固定占位——章节解锁 / 收起展开都不再让右列整体抖动；
+   内容超出时在卡片内部滚动，不再把「命运的岔路口」和「晋升」往下推。 */
+#storyline-panel { height: clamp(112px, 13vh, 196px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+#storyline-panel::-webkit-scrollbar { width: 6px; }
+#storyline-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+#storyline-h3 { display: flex; align-items: center; gap: 6px; }
+/* 短窗口（≤1020px 高）：右列再收一档，保证四段恰好放得下、晋升底部仍与左列齐平 */
+@media (max-height: 1020px) {
+  #storyline-panel { height: 112px; }
+  .side-col > #tab-storyline > #crossroad-list { max-height: 112px; }
+}
+.sl-zoom {
+  margin-left: auto; flex: 0 0 auto;
+  width: 24px; height: 24px; padding: 0; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text-3); font-size: 13px; cursor: pointer;
+}
+.sl-zoom:hover { color: var(--purple); border-color: var(--purple); background: rgba(168, 85, 247, .1); }
+/* 放大弹窗：同一棵树上放大字号与行距（右列 280px 塞不下的描述在这里读得开） */
+.sl-modal-box { max-width: min(760px, 94vw); width: min(760px, 94vw); max-height: 82vh; }
+.sl-modal-h { font-size: 13px; color: var(--purple); font-weight: 600; letter-spacing: .5px; margin-bottom: 10px; }
+#sl-modal-body .sl-forest { margin-top: 0; gap: 16px; }
+#sl-modal-body .sl-line-name { font-size: 13.5px; }
+#sl-modal-body .sl-tree { margin: 8px 0 0 8px; padding-left: 20px; }
+#sl-modal-body .sl-node { padding: 6px 0; }
+#sl-modal-body .sl-ch-name { font-size: 13.5px; }
+#sl-modal-body .sl-ch-desc { font-size: 12px; line-height: 1.75; margin-top: 3px; color: var(--text-2); }
+#sl-modal-body .sl-node::after { top: 17px; width: 14px; }
+#sl-modal-body .sl-node.last::before { height: 18px; }
 #tab-storyline.sl-collapsed #storyline-panel,
 #tab-storyline.sl-collapsed #crossroad-title,
 #tab-storyline.sl-collapsed #crossroad-list { display: none; }

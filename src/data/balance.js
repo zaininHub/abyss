@@ -423,13 +423,8 @@ export const BALANCE = {
     { id: 'colony3', name: '环恒星城',   base: 2e10, growth: 1.7, cap: 3,  rpRate: 2,    desc: '每级 +2 RP/s' },
   ],
   colonyExploreBonus: 0.10, // 每殖民等级 深空探索收益 +10%
-  // v2.8.5：星际里程碑——殖民星系数门槛一次性奖励（EP/RP），长线引导深空殖民
-  // v3.6.0 方向⑤⑧：殖民模型改为「按星系建立殖民地」（至多 6 个），门槛改为 1/3/6
-  starMilestones: [
-    { need: 1,  rp: 10,  ep: 5e5,  name: '星系立足' },
-    { need: 3,  rp: 40,  ep: 5e7,  name: '星海殖民' },
-    { need: 6,  rp: 150, ep: 5e9,  name: '星际联邦' },
-  ],
+  // v3.12.7 ⑧：星际里程碑整表移除——三个门槛改为成就（colony1/colony3/colony6），
+  //   不再有独立「可领取」卡片与一次性 EP/RP 结算；殖民本身仍给 RP/s 与探索收益加成。
 
   // v2.8.4：研究点专属升级（RP 购买，研究点 tab 渲染；长线消耗 RP，克制——cap 8-10 + 成本指数涨）
   researchUpgs: [

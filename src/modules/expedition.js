@@ -106,6 +106,14 @@ export function warpExpedition(idx) {
 
 export function maxExpeditions() { return hasTech('deep_space') ? 2 : 1; }
 
+// v3.12.7 ⑦：深空殖民按星系逐级开放——必须「该星系探索回来过」才出现殖民项。
+//   计数落 S.galaxyDone（跨本局保留，与 S.colonies 同寿命），旧档缺失按 0 处理。
+export function galaxyDone(id) { return (S.galaxyDone && S.galaxyDone[id]) || 0; }
+function markGalaxyDone(id) {
+  S.galaxyDone = S.galaxyDone || {};
+  S.galaxyDone[id] = (S.galaxyDone[id] || 0) + 1;
+}
+
 // ===== v3.6.0 方向⑤⑧：深空殖民改为「按星系建立殖民地」 =====
 export function starColonyLevel() {
   // 殖民总级数 = 已建立殖民地数量（驱动探索收益加成与星际里程碑）
@@ -138,7 +146,8 @@ function colonize(g) {
 // v3.6.0 方向⑨：供 AI 助手自动殖民调用——建立当前最便宜可负担的未殖民星系
 export function aiBuyCheapestColony() {
   if (!starColoniesUnlocked()) return false;
-  const avail = GALAXIES.filter(g => !isColonized(g.id));
+  // v3.12.7 ⑦：只买「已探索过」的星系（与面板可见口径同源），避免 AI 抢先殖民玩家还没去过的星
+  const avail = GALAXIES.filter(g => !isColonized(g.id) && galaxyDone(g.id) > 0);
   if (!avail.length) return false;
   const best = avail.slice().sort((a, b) => a.colonyCps - b.colonyCps)[0];
   if ((S.starCps || 0) >= best.colonyCps) { colonize(best); return true; }
@@ -149,6 +158,15 @@ export function aiBuyCheapestColony() {
 export function refreshExpeditionAffordability() {
   const panel = document.getElementById('expedition-panel');
   if (!panel) return;
+  // v3.12.7 ⑥：目的地行同样只切 cant（已解锁但 EP/RP/PT 不够 → 灰显）
+  for (const el of panel.querySelectorAll('[data-galaxy]')) {
+    const g = GALAXIES.find(x => x.id === el.dataset.galaxy);
+    if (!g) continue;
+    const c = galaxyCost(g);
+    const ok = (S.ep || 0) >= c.ep && (S.rp || 0) >= c.rp && (S.pt || 0) >= c.pt;
+    el.classList.toggle('cant', !ok);
+    el.style.cursor = ok ? 'pointer' : 'not-allowed';
+  }
   for (const el of panel.querySelectorAll('[data-colonize]')) {
     const g = GALAXIES.find(x => x.id === el.dataset.colonize);
     if (!g || isColonized(g.id)) continue;
@@ -163,14 +181,15 @@ export function refreshExpeditionAffordability() {
   }
 }
 function renderColoniesHtml() {
-  if (!starColoniesUnlocked()) {
-    return `<div style="margin-top:12px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px;color:var(--text-3);font-size:11.5px">
-      🛸 深空殖民未解锁——科技树研究「深空探测」后开放（按星系建立殖民地，长期产出 RP，并让该星系探索消耗 ×${BALANCE.jump.colonizeDiscount}、时间 ÷${BALANCE.jump.colonizeTimeDiv}）。</div>`;
-  }
+  // v3.12.7 ⑦：未购「深空探测」时整块不渲染（不再输出锁定说明）；解锁后也只列
+  //   「已经探索回来过」的星系——没探索过的星系连殖民入口都不出现。
+  if (!starColoniesUnlocked()) return '';
+  const rows = GALAXIES.filter(g => isColonized(g.id) || galaxyDone(g.id) > 0);
+  if (!rows.length) return '';
   const bonus = (BALANCE.colonyExploreBonus || 0) * starColonyLevel();
   let html = `<div style="margin-top:14px;border-top:1px solid var(--line, rgba(255,255,255,.08));padding-top:10px">
     <div style="color:var(--purple);font-size:12px;font-weight:600;margin-bottom:4px">🛸 深空殖民 <span style="color:var(--text-2);font-weight:400;font-size:11px">（已殖民 ${starColonyLevel()} 个星系 · 探索收益 +${Math.round(bonus * 100)}% · 消耗星际燃料 CPS）</span></div>`;
-  for (const g of GALAXIES) {
+  for (const g of rows) {
     const colonized = isColonized(g.id);
     const cost = g.colonyCps;
     html += `<div class="off-upg${!colonized && (S.starCps || 0) < cost ? ' cant' : ''}" data-colonize="${g.id}" style="${colonized ? 'opacity:.55' : ''}">
@@ -181,32 +200,7 @@ function renderColoniesHtml() {
       }</span></span>
       <span style="color:var(--cyan)">${colonized ? '✓' : '建立'}</span></div>`;
   }
-  // v2.8.5：星际里程碑（殖民总级数门槛一次性奖励，长线）
-  html += `<div style="margin-top:8px;color:var(--text-2);font-size:11px;font-weight:600">星际里程碑（已殖民 ${starColonyLevel()} 个星系，奖励一次性）</div>`;
-  for (const ms of BALANCE.starMilestones || []) {
-    const claimed = !!(S.starMiles && S.starMiles[ms.need]);
-    const reach = starColonyLevel() >= ms.need;
-    html += `<div class="off-upg${claimed ? '' : reach ? '' : ' cant'}" data-starmile="${ms.need}" style="${claimed ? 'opacity:.55' : ''}">
-      <span>${ms.name} · ${ms.need} 个星系${claimed ? '（已领取）' : ''}<br><span style="color:var(--text-3);font-size:10.5px">${fmt(ms.rp)} RP + ${fmt(ms.ep)} EP</span></span>
-      <span style="color:var(--cyan)">${claimed ? '✓' : reach ? '可领取' : '未达成'}</span></div>`;
-  }
   return html + `</div>`;
-}
-
-// v2.8.5：领取星际里程碑奖励
-function claimStarMilestone(need) {
-  const ms = (BALANCE.starMilestones || []).find(x => x.need === need);
-  if (!ms) return;
-  if (S.starMiles && S.starMiles[need]) { toast('该里程碑已领取'); return; }
-  if (starColonyLevel() < need) { toast(`殖民星系数未达标（需 ${need} 个，当前 ${starColonyLevel()}）`); return; }
-  S.starMiles = S.starMiles || {};
-  S.starMiles[need] = true;
-  S.ep += ms.ep;
-  addRp(ms.rp); // v2.8.27 ②
-  save(S);
-  dirty.expedition = true;
-  log(`星际里程碑「${ms.name}」：+${fmt(ms.rp)} RP / +${fmt(ms.ep)} EP`, 'good');
-  toast(`星际里程碑「${ms.name}」达成：+${fmt(ms.rp)} RP / +${fmt(ms.ep)} EP`);
 }
 
 export function renderExpeditions(container) {
@@ -234,7 +228,9 @@ export function renderExpeditions(container) {
       研究「跃迁理论」每级 +${Math.round((BALANCE.jump.speedPerLevel || 0.05) * 100)}%c（β 硬顶 0.99c，光速不可超越）；跃迁以目标星系群的专属资源为燃料，次数越多越贵。
     </div></div>`;
   html += panelShell({
-    title: '🌌 星系分组 · 专属资源库存', cls: 'star-res',
+    // v3.12.7 ⑨：标题只留「星系分组」——「专属资源库存」这个说法既拗口又和下面每张卡的
+    //   数值重复，去掉后卡片自解释（群名 / 归属星球 / 该群资源余额）。
+    title: '🌌 星系分组', cls: 'star-res',
     body: (() => {
       let rows = '';
       for (const grp of (BALANCE.starRes.groups || [])) {
@@ -266,9 +262,11 @@ export function renderExpeditions(container) {
     }
   }
   // 可选星系列表（按星球区分；殖民后消耗/时间优化）
+  // v3.12.7 ⑥：未达 CPS 门槛的星系整行不渲染（原来排成一片「??? 需 cps X」），
+  //   已解锁但资源不够的保留行 + cant 灰显，让玩家知道「差在哪」而不是「看不见」。
   html += `<div style="font-size:11px;color:var(--text-2);margin:12px 0 4px">选择目的地</div>`;
   for (const g of GALAXIES) {
-    const unlocked = cps >= g.cpsReq;
+    if (cps < g.cpsReq) continue;
     const busy = S.expeditions.length >= maxExpeditions();
     const c = galaxyCost(g);
     const dur = galaxyDur(g);
@@ -279,15 +277,10 @@ export function renderExpeditions(container) {
     const colonized = isColonized(g.id);
     const resStr = g.res.map(k => `${starResLabel(k)}×${fmt(Math.round(g.resBase * starResMult() * petCpsBonus()))}`).join(' / ');
     const rewardStr = `+${fmt(expeditionCpsReward(g))} CPS${g.es ? ` + ${g.es} ES` : ''}<br><span style="font-size:10.5px;color:var(--purple)">专属：${resStr}</span>`;
-    if (!unlocked) {
-      html += `<div class="off-upg" style="opacity:.5"><span>???<br><span style="color:var(--text-3)">需 cps ${fmt(g.cpsReq)}</span></span>
-        <span style="color:var(--text-3)">—</span></div>`;
-    } else {
-      const canAfford = (S.ep || 0) >= c.ep && (S.rp || 0) >= c.rp && (S.pt || 0) >= c.pt;
-      html += `<div class="off-upg${!canAfford ? ' cant' : ''}" data-galaxy="${g.id}" style="cursor:${busy ? 'not-allowed' : 'pointer'}">
-        <span>${g.icon} ${g.name}${colonized ? ' · 🏴 已殖民' : ''}<br><span style="color:var(--text-3)">${g.desc} · ${fmtLongDuration(dur)} · 出发消耗 ${costParts.join(' + ')}</span></span>
-        <span style="color:var(--cyan);text-align:right">${rewardStr}</span></div>`;
-    }
+    const canAfford = (S.ep || 0) >= c.ep && (S.rp || 0) >= c.rp && (S.pt || 0) >= c.pt;
+    html += `<div class="off-upg${!canAfford ? ' cant' : ''}" data-galaxy="${g.id}" style="cursor:${busy || !canAfford ? 'not-allowed' : 'pointer'}">
+      <span>${g.icon} ${g.name}${colonized ? ' · 🏴 已殖民' : ''}${galaxyDone(g.id) > 0 ? ` · 已探索 ${galaxyDone(g.id)} 次` : ''}<br><span style="color:var(--text-3)">${g.desc} · ${fmtLongDuration(dur)} · 出发消耗 ${costParts.join(' + ')}</span></span>
+      <span style="color:var(--cyan);text-align:right">${rewardStr}</span></div>`;
   }
   html += renderColoniesHtml();
   html += renderCosmosHtml(); // v3.0.3 后续反馈④：宇宙探索（深空探测解锁）
@@ -308,9 +301,6 @@ export function renderExpeditions(container) {
   });
   container.querySelectorAll('[data-colonize]').forEach(div => {
     div.addEventListener('click', () => { colonize(GALAXIES.find(x => x.id === div.dataset.colonize)); renderExpeditions(container); });
-  });
-  container.querySelectorAll('[data-starmile]').forEach(div => {
-    div.addEventListener('click', () => claimStarMilestone(parseInt(div.dataset.starmile, 10)));
   });
   container.querySelectorAll('[data-galaxy]').forEach(div => {
     div.addEventListener('click', () => {
@@ -374,6 +364,7 @@ export function tickExpeditions() {
     }
     log(msg, 'good');
     S.expeditionsDone++;
+    markGalaxyDone(g.id); // v3.12.7 ⑦：该星系探索过 → 深空殖民入口解锁
     // 深空探索有概率获得信仰
     if ((ex.galaxyId === 'edge' || ex.galaxyId === 'andromeda') && Math.random() < 0.15) {
       S.faith = (S.faith || 0) + 1;

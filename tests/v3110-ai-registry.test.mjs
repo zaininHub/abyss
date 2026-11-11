@@ -108,7 +108,11 @@ test('A5 防回归：绑定（占编）模型是唯一实现，消耗 / 自动�
   assert.ok(!/\bconsumeAssistant\(\)/.test(AI_SRC), '不得再有旧的单数扣费分支');
   assert.ok(!/S\.ai\.autoUpgrade = false; S\.ai\.autoHire = false/.test(AI_SRC),
     '一键全关不得再内联手写开关集合');
-  assert.match(AI_SRC, /allOffActions\(\);/, 'UI 点击消费产品入口');
+  // v3.12.7 ⑩：面板上的「一键全关」按钮已移除（占编 − 到 0 即关闭），
+  //   allOffActions 保留为单一实现（自动化 / 测试 / 未来快捷入口），不再挂 UI 点击。
+  assert.match(AI_SRC, /export function allOffActions\(\)/, '一键全关实现保留');
+  assert.ok(!AI_SRC.includes('data-ai-alloff'), '一键全关按钮已从面板移除');
+  assert.ok(!/if \(e\.target\.closest\('\[data-ai-alloff\]'\)\)/.test(AI_SRC), '点击分支同步移除');
   assert.match(MAIN_SRC, /AI_CREW_REQUIRED_IDS/, 'QA 钩子暴露占编者清单');
   assert.match(MAIN_SRC, /setCrew/, 'QA 钩子暴露绑定函数');
   assert.match(MAIN_SRC, /crewOf/, 'QA 钩子暴露占编读取');

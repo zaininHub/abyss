@@ -477,18 +477,24 @@ function renderAssistantSection() {
     : '';
   // v3.12.5 反馈④：面板上的「常驻班组/涨价」说明与「本局已执行…」台账整段移除——
   // 玩法口径交给玩家自己发现（已写进 Wiki）。台账数值改为悬浮在助手行上，需要时才看，不占版面。
-  const ledgerTip = `本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}`;
-  const head = `<div class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}">🤖 AI 助手 <b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名 · 占编 ${bound} · 空闲 ${idle}</div>`;
-  const buyHtml = aiUnlocked() ? `<div style="margin-top:6px">
-      <button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>
-    </div>` : '';
-  return head + unstaffedHtml + buyHtml;
+  const ledgerTip = `空闲 ${idle} · 占编 ${bound} · 共 ${n} 名｜本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}`;
+  // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），购买按钮贴最右，
+  //   整行落进面板标题 <h3>（见 renderAiPanel），卡片区不再被这块占三行。
+  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
+  const buyHtml = aiUnlocked() ? `<button class="btn ai-assist-buy ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>` : '';
+  return { rowHtml: head + buyHtml, stallHtml: unstaffedHtml };
 }
 
 // ========== 面板 ==========
 export function renderAiPanel(container) {
   if (!container) return;
-  if (!aiUnlocked()) { container.innerHTML = ''; container.style.display = 'none'; return; }
+  if (!aiUnlocked()) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    const s0 = container.parentElement && container.parentElement.querySelector('[data-ai-assist-slot]');
+    if (s0) s0.innerHTML = '';
+    return;
+  }
   container.style.display = '';
   const ai = S.ai;
   // v2.6.3 反馈②：混沌心智生效中 → 面板整体表达 AI 已禁用
@@ -550,19 +556,26 @@ export function renderAiPanel(container) {
   }
   const basicHtml = actionsByGroup('basic').map(a => actionCard(a)).join('');
   const advancedHtml = (techHtml || buildHtml) ? `<div class="ai-action-grid">${techHtml}${buildHtml}</div>` : '';
+  const section = renderAssistantSection();
+  // v3.12.7 ⑤：助手行（4/7 + 购买）落进面板标题行，卡片区只留动作卡与未绑定提示
+  const card = container.parentElement && container.parentElement.classList.contains('ai-card')
+    ? container.parentElement : document.getElementById('ai-card');
+  const slot = card && card.querySelector('[data-ai-assist-slot]');
+  if (slot) slot.innerHTML = section.rowHtml;
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
     <div class="ai-action-grid">${basicHtml}</div>
     ${advancedHtml}
-    ${renderAssistantSection()}
+    ${section.stallHtml}
     <div class="ai-reserve-row">
       <span>预留线 · EP 上限 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</span>${reserveOpts}
-      <button class="btn" data-ai-alloff="1" title="关闭全部自动化（占编清零）">一键全关</button>
     </div>`;
 
-  if (!container.dataset.v13Delegated) {
-    container.dataset.v13Delegated = '1';
-    container.addEventListener('click', (e) => {
+  // 点击委托挂在 #ai-card 上（购买按钮在标题行，不在 #ai-panel 内，否则收不到事件）
+  const delegateHost = card || container;
+  if (!delegateHost.dataset.v13Delegated) {
+    delegateHost.dataset.v13Delegated = '1';
+    delegateHost.addEventListener('click', (e) => {
       const swEl = e.target.closest('[data-ai-switch]');
       if (swEl) {
         // v2.8.21 ③：不再要求 key 预存在 S.ai（旧档无 autoTech 字段 → 点击无效）
@@ -590,12 +603,8 @@ export function renderAiPanel(container) {
         renderAiPanel(container);
         return;
       }
-      if (e.target.closest('[data-ai-alloff]')) {
-        // v3.11.0：从注册表派生，修掉手写集合漏 autoTech 导致「日志说全停、自动研究还在跑」。
-        allOffActions();
-        renderAiPanel(container);
-        return;
-      }
+      // v3.12.7 ⑩：面板上的「一键全关」按钮已移除（占编 − 到 0 就是关闭）。
+      //   allOffActions() 保留为自动化 / 测试 / 未来快捷入口的单一实现，不再挂 UI。
       // v2.5.5：激活自动购建——二次确认（首次点击变确认态，再点执行）
       const actEl = e.target.closest('[data-ai-build-activate]');
       if (actEl) {
