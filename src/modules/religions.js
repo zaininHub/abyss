@@ -384,7 +384,7 @@ export function renderReligionPanel(container) {
     </div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(2)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 本级 -${fmt(templeEpPerUnit() * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / Math.max(1, templeEpPerUnit())).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
-      <span>Lv.${templeLv} 无上限</span>
+      <span>Lv.${templeLv}</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰；等级不设上限，消耗随等级递增">${`建造 / 升级（${fmt(tCost)} EP）`}</button>
       ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
@@ -406,8 +406,8 @@ export function renderReligionPanel(container) {
       <span>超验：Lv.${transcendLevel()} → ${transcendLevel() + 1}（成本 ${transcendCost()} 虔诚）</span>
       <button class="btn ${(S.devotion || 0) < transcendCost() ? 'disabled' : ''}" data-religion-transcend="1"
         title="消耗虔诚提升超验层级——赞颂转化率提升、解锁隐密圣学门槛">超验</button>
-    </div>` : '<div style="font-size:11px;color:var(--text-2);margin-top:4px">赞颂一次（虔诚 &gt; 0）后解锁「超验」。</div>'}
-    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">赞颂与超验将在圣印首次升级后解锁。</div>'}
+    </div>` : ''}
+    ` : ''}
     ${transcendLevel() >= 1 ? `
     <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">隐密圣学（跨周期保留 · 门槛每轮重达）</div>
     ${SECRET_SANCTUMS.map(s2 => {
@@ -420,7 +420,7 @@ export function renderReligionPanel(container) {
           title="${s2.desc}">${lv > 0 ? `升级（${fmt(cost)} 余烬）` : `建造（${fmt(cost)} 余烬）`}</button>
       </div>`;
     }).join('')}
-    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">隐密圣学将在首次超验（虔诚转化）后解锁。</div>'}
+    ` : ''}
     ${sealLevel() >= 3 || ((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
     ${sealLevel() >= 3 ? `
@@ -428,15 +428,15 @@ export function renderReligionPanel(container) {
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ${fmtMultDelta(1 + ORACLE.effect * oracleLevel())}）</span>
       <button class="btn ${oracleLevel() >= ORACLE.cap || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
         title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} FP）`}</button>
-    </div>` : '<div style="font-size:11px;color:var(--text-2)">神谕塔将在圣印 ≥3 级后解锁。</div>'}
+    </div>` : ''}
     ${((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div class="religion-seal-row">
       <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ${fmtMultDelta(1 + CRUSADE.effect * crusadeLevel())}）</span>
       <button class="btn ${crusadeLevel() >= CRUSADE.cap || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
         title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} FP）`}</button>
-    </div>` : '<div style="font-size:11px;color:var(--text-2)">圣战军将在信仰圣所 ≥5 级后解锁。</div>'}
-    ` : '<div style="font-size:11px;color:var(--text-2);margin-top:6px">神谕塔（圣印 ≥3）与圣战军（圣所 ≥5）将随深耕逐步解锁。</div>'}
-    <div style="font-size:11px;color:var(--text-2);margin-top:8px">全流程：仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ 圣印/圣所 → 神谕塔（圣印≥3）与圣战军（圣所≥5）深耕 → 章节「神格」与终局共振。</div>`;
+    </div>` : ''}
+    ` : ''}
+  `;
 }
 
 export function bindReligionPanel(container) {

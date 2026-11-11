@@ -17,9 +17,6 @@
   --bad: #f85149;
   --warn: #d29922;
   --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条高度（触手）；v3.12.1 ② 凝视已上移到系统按钮行，不再占底部条带 */
-  /* v3.12.4 反馈④：系统按钮行实测宽度（main.js 的 syncSysBtnsWidth 写入），顶栏据此留右侧空白。
-     默认值只求首帧不塌陷，一帧后即被实测值覆盖。 */
-  --sys-btns-w: 420px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,10 +65,11 @@ body {
 }
 /* v3.10.4 ③：统一悬浮气泡——.stat / .item / .btn 共用同一套 [data-tip] 样式，
    政策等面板改用 data-tip 后与其它面板一致（不再用原生 title 或零散内联提示）。 */
-.item[data-tip], .btn[data-tip] { position: relative; }
+.item[data-tip], .btn[data-tip], .ai-assistant-head[data-tip] { position: relative; }
 .stat[data-tip]:hover::after,
 .item[data-tip]:hover::after,
-.btn[data-tip]:hover::after {
+.btn[data-tip]:hover::after,
+.ai-assistant-head[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute; top: 100%; left: 0; z-index: 999;
   background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
@@ -298,6 +296,8 @@ body {
   border-radius: 3px;
   font-size: 10px;
   text-transform: uppercase;
+  flex: 0 0 auto;       /* v3.12.5：剧情条收窄时标签不被压成竖排 */
+  white-space: nowrap;
 }
 
 /* ========== 离线预览栏 ========== */
@@ -435,38 +435,41 @@ body {
 .dealer-cost { font-size: 11px !important; line-height: 1.6; }
 
 /* ========== v3.12.3 反馈②：深渊集市重做 ========== */
-/* 集市等级单独一行（含进度条） */
-.bz-tier { margin: 2px 0 10px; }
-.bz-tier-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  font-size: 12px; color: var(--text-2); margin-bottom: 4px;
+/* v3.12.5 反馈③：「集市等级」文案与整行标题删除，等级/进度、刷新、二次确认并作一条紧凑控制行 */
+.bz-bar {
+  /* 单行承载：等级进度条用 flex 吸收剩余宽度，按钮不换行（面板窄列也能一行放下） */
+  display: flex; align-items: center; flex-wrap: nowrap; gap: 5px;
+  margin: 2px 0 8px;
 }
-.bz-tier-num { font-size: 11px; color: var(--text-3); font-family: monospace; }
-.bz-tier-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
-.bz-tier-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
-/* 刷新行：EP 刷新是常规主按钮，回响刷新用紫色边框区分（不同资源、不同代价） */
-.bz-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-.bz-actions .btn { flex: 1; min-height: 28px; }
+.bz-lv { font-size: 11px; color: var(--accent); font-family: monospace; flex: 0 0 auto; }
+.bz-bar-track {
+  flex: 1 1 24px; min-width: 18px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.07); overflow: hidden;
+}
+.bz-bar-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width .3s; }
+.bz-bar-num { font-size: 10.5px; color: var(--text-3); font-family: monospace; flex: 0 0 auto; white-space: nowrap; }
+/* 刷新按钮：常规（EP）与回响（紫框）并排缩小，不再是整行大按钮 */
+.bz-bar .btn { min-height: 24px; padding: 2px 7px; font-size: 11px; flex: 0 0 auto; white-space: nowrap; }
 .bz-btn-echo { border-color: rgba(168,85,247,.65) !important; color: #d8b4fe !important; background: rgba(168,85,247,.12) !important; }
 .bz-btn-echo:hover:not(.disabled) { background: rgba(168,85,247,.2) !important; }
-/* 二次确认：独立一行拨动开关（与两个刷新按钮分开） */
-.bz-confirm {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin: 0 0 10px; padding: 5px 10px;
-  border: 1px solid var(--border); border-radius: 6px;
-  font-size: 11.5px; color: var(--text-2); cursor: pointer; user-select: none;
+/* 二次确认：与刷新同一行的紧凑拨动开关（不再独占一行） */
+.bz-btn-confirm {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px; font-size: 11px; color: var(--text-2);
+  border: 1px solid var(--border); border-radius: 6px; background: transparent;
+  cursor: pointer; user-select: none; flex: 0 0 auto;
 }
-.bz-confirm:hover { border-color: var(--accent); }
+.bz-btn-confirm:hover { border-color: var(--accent); }
 .bz-switch {
-  position: relative; width: 30px; height: 16px; border-radius: 999px;
+  position: relative; width: 26px; height: 14px; border-radius: 999px;
   background: rgba(255,255,255,.12); transition: background .15s; flex: 0 0 auto;
 }
 .bz-switch i {
-  position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
   border-radius: 50%; background: var(--text-3); transition: transform .15s, background .15s;
 }
 .bz-switch.on { background: rgba(63,185,80,.35); }
-.bz-switch.on i { transform: translateX(14px); background: var(--good, #3fb950); }
+.bz-switch.on i { transform: translateX(12px); background: var(--good, #3fb950); }
 /* 商品品质 6 档：卡面短标签 + 紧凑网格（1080px 标签在窄卡里必然折出「EP」孤行） */
 .bz-quality { font-size: 10.5px !important; font-weight: 600; letter-spacing: .2px; }
 .bz-grid { grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
@@ -476,16 +479,19 @@ body {
 .bz-card .dealer-cost { white-space: nowrap; }
 
 /* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面） */
-.ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
+.ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 6px; }
 .ai-action { background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
 .ai-action-locked { border-style: dashed; opacity: .78; }
+/* v3.12.5 反馈②：名称与步进器同处一行——卡片高度从两行压到一行 */
+.ai-action-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ai-crew { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.ai-crew > b { min-width: 26px; text-align: center; font-size: 13px; color: var(--text-2); }
 /* v3.12.3 反馈⑦：动作卡改为「名称 + 占编步进器」，占编 > 0 时左缘亮起表示正在执行 */
-.ai-action-name { font-size: 12px; color: var(--text-1); font-weight: 600; }
+.ai-action-name { font-size: 12px; color: var(--text-1); font-weight: 600; white-space: nowrap; }
 .ai-action.on { border-color: rgba(80,220,140,.45); box-shadow: inset 2px 0 0 var(--good); }
 .ai-action .ai-crew-btn { padding: 0 8px; font-size: 13px; line-height: 1; }
 .ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
-.ai-assistant-head { font-size: 12px; color: var(--text-2); margin-top: 8px; }
-.ai-assistant-note { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
+.ai-assistant-head { font-size: 12px; color: var(--text-2); margin-top: 8px; cursor: help; }
 
 /* ========== 科技网格 ========== */
 .tech-grid {
@@ -895,18 +901,32 @@ body {
   background: rgba(163,113,247,.08);
 }
 
-/* ========== 系统按钮 ========== */
-.sys-btns {
-  position: fixed;
-  top: 12px;
-  right: 12px;
+/* ========== 剧情栏 + 系统按钮（同一行）========== */
+/* v3.12.5 反馈①：暂停/Wiki/存档与深渊之眼贴在剧情栏右侧。
+   上一版把它们做成 position:fixed 浮层，顶栏与它互不知情、资源项被眼睛盖住；
+   现在两者是同一 flex 行的兄弟节点，布局天然不会重叠，顶栏也不必再让位。 */
+.chapter-row {
   display: flex;
-  flex-wrap: wrap; /* v3.6.3 反馈⑤：窄屏允许换行，绝不横向溢出视口 */
-  align-items: center; /* v3.12.3：眼睛与三个按钮垂直居中对齐 */
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.chapter-row .ch-bar {
+  flex: 1 1 auto;
+  min-width: 0;         /* 允许章节文案在窄屏收缩，不把按钮组顶出视口 */
+  margin-bottom: 0;     /* 行距由 .chapter-row 统一给 */
+}
+
+.sys-btns {
+  display: flex;
+  flex-wrap: wrap;      /* 极窄屏兜底，绝不横向溢出视口 */
+  align-items: center;  /* 眼睛与三个按钮垂直居中 */
   justify-content: flex-end;
-  max-width: calc(100vw - 24px);
+  flex: 0 0 auto;
   gap: 6px;
-  z-index: 50;
+  position: relative;   /* 存档下拉的定位上下文（原为 fixed 浮层） */
+  z-index: 50;          /* 下拉要盖住下方面板 */
 }
 
 .sys-btns .btn {
@@ -919,21 +939,11 @@ body {
   box-sizing: border-box;
 }
 
-/* v3.12.4 反馈④：按钮行是 fixed 覆盖层，顶栏按它的实测宽度让出右侧空白，
-   潮汐/增益等资源项不再被眼睛压住。≤899px 由 padding-top 整行让位，无需右侧留白。 */
-@media (min-width: 900px) {
-  .topbar { padding-right: calc(var(--sys-btns-w) + 20px); }
-}
-
-/* v3.12.4 ④：中等屏按钮略收一档，减少顶栏为按钮行让出的右侧空白（配合徽记缩到 104px） */
-@media (min-width: 900px) and (max-width: 1199px) {
-  .sys-btns .btn { font-size: 10.5px; padding: 3px 8px; }
-}
-
-/* v3.6.3 反馈⑤：小屏时按钮组固定顶栏上方，不再压住/漂出顶栏资源行 */
+/* 窄屏：剧情条先让位，按钮组整组换到下一行并靠右 */
 @media (max-width: 899px) {
-  .topbar { padding-top: 44px; } /* 给顶部固定按钮组让出一整行 */
-  .sys-btns { top: 8px; right: 8px; max-width: calc(100vw - 16px); gap: 4px; }
+  .chapter-row { flex-wrap: wrap; gap: 6px; }
+  .chapter-row .ch-bar { flex: 1 1 100%; }
+  .sys-btns { flex: 1 1 100%; gap: 4px; }
   .sys-btns .btn { font-size: 10px; padding: 3px 7px; }
   .save-menu-pop { max-width: calc(100vw - 16px); }
 }

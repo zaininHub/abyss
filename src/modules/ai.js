@@ -33,7 +33,7 @@ import {
   AI_ACTIONS, AI_ACTION_GROUPS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS,
   AI_CREW_REQUIRED_IDS, ALL_OFF_SWITCH_KEYS, actionById, actionsByGroup,
   enabledActions, isAnyActionEnabled, emptyActionCounts, totalActionCount,
-  maxCycleCrewDemand, crewSizeOf, groupRankOf,
+  maxCycleCrewDemand, crewSizeOf, crewMaxOf, groupRankOf,
 } from '../core/aiActionRegistry.js';
 
 let logFn = null;
@@ -72,12 +72,13 @@ export function crewBoundTotal() {
   return AI_ACTION_IDS.reduce((n, id) => n + (c[id] || 0), 0);
 }
 export function crewIdle() { return Math.max(0, assistantCount() - crewBoundTotal()); }
-// 调整某动作占编数：clamp 到 [0, 当前 + 空闲]，不会超过总助手数也不会为负。
+// 调整某动作占编数：clamp 到 [0, min(当前 + 空闲, 动作占编上限)]。
+// v3.12.5 反馈②：基础三项 crewMax = 1——一次决策周期本来就只跑一次，多绑只是白占人手。
 export function setCrew(id, n) {
   if (!actionById(id)) return false;
   if (!S.ai.crew) S.ai.crew = {};
   const cur = crewOf(id);
-  const max = cur + crewIdle();
+  const max = Math.min(cur + crewIdle(), crewMaxOf(id));
   const next = Math.max(0, Math.min(max, Math.round(n)));
   S.ai.crew[id] = next;
   // v3.12.3 反馈⑦：基础三项不再提供 ON/OFF 开关——「占编 > 0」即开启，「占编 0」即关闭。
@@ -107,7 +108,7 @@ export function actionCounts() {
   for (const k of AI_ACTION_IDS) base[k] = cur[k] || 0;
   return base;
 }
-export { totalActionCount, maxCycleCrewDemand, AI_CREW_REQUIRED_IDS, crewSizeOf, groupRankOf };
+export { totalActionCount, maxCycleCrewDemand, AI_CREW_REQUIRED_IDS, crewSizeOf, crewMaxOf, groupRankOf };
 
 // 已开启但未绑定助手的动作（占编 0 = 未生效，等待绑定 / 购买补员）。
 // 告警按 60s 真实时间节流，避免刷屏。
@@ -474,13 +475,14 @@ function renderAssistantSection() {
   const unstaffedHtml = unstaffed.length
     ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 ＋ 绑定或购买助手后自动补员。</div>`
     : '';
-  const head = `<div class="ai-assistant-head">🤖 AI 助手 <b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名 · 占编 ${bound} · 空闲 ${idle}</div>`;
+  // v3.12.5 反馈④：面板上的「常驻班组/涨价」说明与「本局已执行…」台账整段移除——
+  // 玩法口径交给玩家自己发现（已写进 Wiki）。台账数值改为悬浮在助手行上，需要时才看，不占版面。
+  const ledgerTip = `本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}`;
+  const head = `<div class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}">🤖 AI 助手 <b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名 · 占编 ${bound} · 空闲 ${idle}</div>`;
   const buyHtml = aiUnlocked() ? `<div style="margin-top:6px">
       <button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>
-      <div class="ai-assistant-note">助手为常驻班组，绑定后不随动作消耗；每多买 1 名价格 +${Math.round((BALANCE.ai.assistants.costGrowth - 1) * 100)}%。</div>
     </div>` : '';
-  const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:4px">本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}</div>`;
-  return head + unstaffedHtml + buyHtml + ledgerHtml;
+  return head + unstaffedHtml + buyHtml;
 }
 
 // ========== 面板 ==========
@@ -501,18 +503,25 @@ export function renderAiPanel(container) {
   //   ① 基础自动化整段说明（分组横幅）删除；② ±两侧「占编 / 空闲 N」文案删除；
   //   ③ 基础三项不再有 ON/OFF 开关——占编 0 就是关闭（0 助手时自然全关）；
   //   ④ 进阶两项解锁前整卡不渲染（不再出现「未解锁 / 需科技树研究…」的锁定卡与文案），解锁后自动出现。
+  // v3.12.5 反馈②：名称与占编步进器同处一行（原为上下两行，卡片被白白拉高一倍）；
+  // 有硬上限的动作显示 n/上限，到顶后 ＋ 直接禁用。
   const crewRow = (id, disabled = false) => {
     const n = crewOf(id); const idle = crewIdle();
-    return `<div class="ai-crew" data-ai-crew="${id}" style="display:flex;align-items:center;gap:6px;margin-top:6px">
+    const cap = crewMaxOf(id);
+    const capTxt = Number.isFinite(cap) ? '/' + cap : '';
+    const atCap = n >= cap;
+    return `<div class="ai-crew" data-ai-crew="${id}">
       <button class="btn ai-crew-btn" data-ai-crew-dec="${id}" ${n <= 0 || disabled ? 'disabled' : ''} title="解绑 1 名（释放回空闲池）">−</button>
-      <b data-ai-crew-count="${id}" style="min-width:18px;text-align:center;font-size:14px">${n}</b>
-      <button class="btn ai-crew-btn" data-ai-crew-inc="${id}" ${idle <= 0 || disabled ? 'disabled' : ''} title="再绑定 1 名助手到本动作">＋</button>
+      <b data-ai-crew-count="${id}">${n}${capTxt}</b>
+      <button class="btn ai-crew-btn" data-ai-crew-inc="${id}" ${idle <= 0 || atCap || disabled ? 'disabled' : ''} title="${atCap ? `该动作占编上限 ${cap} 名` : '再绑定 1 名助手到本动作'}">＋</button>
     </div>`;
   };
   const actionCard = (a, extra = '') => `
     <div class="ai-action ${crewOf(a.id) > 0 ? 'on' : ''}" data-ai-action="${a.id}" title="${a.desc}">
-      <div class="ai-action-name">${a.name}</div>
-      ${crewRow(a.id)}
+      <div class="ai-action-row">
+        <span class="ai-action-name">${a.name}</span>
+        ${crewRow(a.id)}
+      </div>
       ${extra}
     </div>`;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>

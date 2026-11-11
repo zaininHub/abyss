@@ -177,7 +177,6 @@ export function renderDelvePanel(container) {
   const cr = delveCorruptRate(Math.max(1, depth), delveUpgradeLv('purge'));
   const afford = (S.ep || 0) >= nextEpCost && (S.dm || 0) >= nextCost;
   let html = `
-    <div class="delve-desc">深渊深潜：消耗 <b style="color:var(--cyan)">EP</b>（主成本，随层深按存储上限比例涨）+ DM（辅助）下潜，越深虚空碎片产出越高，但腐化与 <b style="color:var(--warn,#d29922)">EP 维持开销</b>随层深累积（净化核心抵腐化、耐压舱抵维持）。上浮保留层深，产出停止。</div>
     <div class="off-stat"><span>虚空碎片（VS）</span><b style="color:var(--cyan)">${fmt(S.vs || 0)}</b></div>
     <div class="off-stat"><span>层深</span><b>Lv.${depth}${active ? ' · 深潜中' : ''}</b></div>
     <div class="off-stat"><span>EP 存量 / 上限</span><b>${fmt(S.ep || 0)} / ${fmt(epStorageCap())}</b></div>

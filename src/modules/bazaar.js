@@ -292,21 +292,17 @@ export function renderBazaarPanel(container) {
   const epOk = (S.ep || 0) >= refreshCost;
   const echoOn = echoRefreshUnlocked();
   const echoOk = (S.abyssEcho || 0) >= BAZAAR.echoRefresh;
-  // v3.12.3 反馈②：集市等级单独一行（含进度）+ 两个刷新按钮 + 独立的「二次确认」拨动开关。
-  // 文案只陈述自身状态，不写玩法长句（原「6 位商人常驻 / 汇率每 45s 波动 / 库存每 30s +1」整段已删）。
+  // v3.12.5 反馈③：删掉「集市等级」标题行与两行大按钮——
+  // 等级/进度、刷新、二次确认压成一条紧凑控制行（「集市等级」四个字不再出现，只留 Lv.N 与进度）。
   const tierPct = need === null ? 100 : Math.min(100, (trades / need) * 100);
   let html = `
-    <div class="bz-tier">
-      <div class="bz-tier-head"><span>集市等级 <b style="color:var(--accent)">Lv.${tier}</b></span><span class="bz-tier-num">${trades} 笔${need === null ? '' : ` / ${need} 笔`}</span></div>
-      <div class="bz-tier-bar"><i style="width:${tierPct}%"></i></div>
-    </div>
-    <div class="bz-actions">
+    <div class="bz-bar">
+      <span class="bz-lv">Lv.${tier}</span>
+      <span class="bz-bar-track"><i style="width:${tierPct}%"></i></span>
+      <span class="bz-bar-num">${trades}${need === null ? '' : `/${need}`}</span>
       <button class="btn bz-btn-ep ${epOk ? '' : 'disabled'}" data-bazaar-refresh="1" ${epOk ? '' : 'disabled'} title="重掷摊位与汇率，库存补满">刷新 ${fmt(refreshCost)} EP</button>
       ${echoOn ? `<button class="btn bz-btn-echo ${echoOk ? '' : 'disabled'}" data-bazaar-refresh-echo="1" ${echoOk ? '' : 'disabled'} title="用 1 点深渊回响刷新（不消耗 EP）">✨ 回响刷新 ${BAZAAR.echoRefresh}</button>` : ''}
-    </div>
-    <div class="bz-confirm" data-bazaar-confirm-toggle="1" role="switch" aria-checked="${S.bazaar.skipConfirm !== true}" title="开启后购买需再点一次确认">
-      <span>二次确认</span>
-      <span class="bz-switch ${S.bazaar.skipConfirm === true ? '' : 'on'}"><i></i></span>
+      <button class="btn bz-btn-confirm" data-bazaar-confirm-toggle="1" role="switch" aria-checked="${S.bazaar.skipConfirm !== true}" title="开启后购买需再点一次确认">二次确认<span class="bz-switch ${S.bazaar.skipConfirm === true ? '' : 'on'}"><i></i></span></button>
     </div>`;
   html += `<div class="shop-grid bz-grid" style="margin-top:4px">`;
   for (const d of bazaarLineup()) {

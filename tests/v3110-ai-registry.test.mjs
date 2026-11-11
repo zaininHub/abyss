@@ -143,12 +143,13 @@ test('B1 自动升级：5 名助手，仅开启自动升级 → 自动占编 1�
   assert.ok(!logs.some(l => l.m.includes('消耗 1 名助手')), '不再有「消耗助手」文案');
 });
 
-test('B2 自动领取：绑定 2 名 → 领 2 个 pending、助手不消耗', () => {
+// v3.12.5 反馈②：基础三项占编上限 1（一次决策周期只结算一次，多绑是白占人手）
+test('B2 自动领取：基础动作占编上限 1（绑 2 名被钳制），每周期领 1 个', () => {
   reset({ assistants: 5 });
   AI.setAiSwitch('autoClaim', true);
   AI.setCrew('claim', 2);
-  assert.equal(AI.crewOf('claim'), 2, '可手动绑定 2 名（用户的「绑定2个」示例）');
-  assert.equal(AI.crewIdle(), 3);
+  assert.equal(AI.crewOf('claim'), 1, 'crewMax=1：申请 2 名被钳到 1');
+  assert.equal(AI.crewIdle(), 4);
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
     { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
@@ -156,33 +157,36 @@ test('B2 自动领取：绑定 2 名 → 领 2 个 pending、助手不消耗', (
   ];
   assert.equal(AI.tickAI(5), true);
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
-  assert.equal(AI.actionCounts().claim, 2, '绑定 2 名 → 领 2 个');
-  assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2, 'active 任务不领');
+  assert.equal(AI.actionCounts().claim, 1, '占编 1 → 每周期只领 1 个');
+  assert.equal(S.projects.filter(p => p.status === 'claimed').length, 1, 'active 任务不领');
 });
 
-test('B3 执行次数 = 工人数，但受真实条件上限约束（pending 不足时不会超领）', () => {
+test('B3 执行次数受真实条件约束（pending 清空后不再累加台账）', () => {
   reset({ assistants: 5 });
   AI.setAiSwitch('autoClaim', true);
-  AI.setCrew('claim', 5);
+  AI.setCrew('claim', 5); // crewMax=1 → 实际只绑 1 名
+  assert.equal(AI.crewOf('claim'), 1);
   S.projects = [
     { status: 'pending', name: '任务甲', reward: { kind: 'ep', amount: 1 } },
-    { status: 'pending', name: '任务乙', reward: { kind: 'ep', amount: 1 } },
+    { status: 'active', name: '未达标', reward: { kind: 'ep', amount: 1 } },
   ];
   AI.tickAI(5);
   assert.equal(AI.assistantCount(), 5, '助手不消耗');
-  assert.equal(AI.actionCounts().claim, 2, '绑定 5 名但只有 2 个待领，按 pending 数截断');
-  assert.equal(S.projects.filter(p => p.status === 'claimed').length, 2);
+  assert.equal(AI.actionCounts().claim, 1, '只有 1 个待领 → 只领 1 个');
+  AI.tickAI(5);
+  assert.equal(AI.actionCounts().claim, 1, '没有新的 pending 不再累加');
 });
 
-test('B4 自动招募：绑定 2 名 → 招 2 条、助手不消耗', () => {
+test('B4 自动招募：占编上限 1，每周期招 1 条、助手不消耗', () => {
   reset({ assistants: 5 });
   AI.setAiSwitch('autoHire', true);
   AI.setCrew('hire', 2);
+  assert.equal(AI.crewOf('hire'), 1, 'crewMax=1');
   const before = S.cultists.length;
   assert.equal(AI.tickAI(5), true);
-  assert.equal(S.cultists.length, before + 2, '每绑定 1 名招 1 条');
+  assert.equal(S.cultists.length, before + 1, '每周期招 1 条');
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
-  assert.equal(AI.actionCounts().hire, 2);
+  assert.equal(AI.actionCounts().hire, 1);
 });
 
 test('B5 自动研究 / 自动购建（进阶动作）同样绑定、不消耗，每周期执行 = 绑定工人数', () => {
@@ -334,10 +338,12 @@ test('D2 SAVE_VERSION 保持 6（仅删字段，无存档结构变更）', () =>
 
 test('D3 面板源码：编制不足提示与台账 DOM 均由读侧派生，无 undefined 风险', () => {
   assert.match(AI_SRC, /data-ai-stall/, '编制不足提示存在');
-  assert.match(AI_SRC, /data-ai-ledger/, '本局动作台账存在');
+  // v3.12.5 反馈④：台账不再独占一行，改为助手行的 data-tip；常驻班组说明移入 Wiki
+  assert.match(AI_SRC, /data-ai-head[^>]*data-tip=/, '台账数值挂在助手行的 data-tip 上');
+  assert.match(AI_SRC, /本局已执行/, '台账读侧容错');
   assert.match(AI_SRC, /stalledActions\(\)/, '编制不足提示由派生谓词驱动');
   assert.match(AI_SRC, /actionCounts\(\)/, '台账读侧容错');
-  assert.match(AI_SRC, /常驻班组/, '面板文案表达常驻班组模型');
+  assert.ok(!AI_SRC.includes('ai-assistant-note'), '面板不再有「常驻班组/涨价」整段说明');
   assert.ok(!AI_SRC.includes('supply.intervalSec'), '已无自动补给文案残留');
 });
 

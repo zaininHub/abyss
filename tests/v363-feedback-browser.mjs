@@ -1,8 +1,9 @@
 // v3.6.3 定向回归（6 项反馈）：① EP 上限与线程解耦 ② 超线程岗位 ③ 岗位按解锁展示
 // ④ 线程卡改版（图标/去贡献/去岗位文本） ⑤ 小屏系统按钮不漂移 ⑥ 历史断言清理（见既有套件）
 import puppeteer from 'puppeteer-core';
+import { chromePath } from './_chrome.mjs';
 
-const CHROME = process.env.CHROME_PATH || '/usr/local/bin/chromium';
+const CHROME = chromePath(); // v3.12.5：统一走 _chrome.mjs（原硬编码 /usr/local/bin/chromium 在 Win/mac 直接启动失败）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
@@ -195,8 +196,9 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
     if (!off.length && !notClickable.length) ok(`⑤ ${w}px：暂停/Wiki/存档三按钮全在视口内且可点击`, `docW=${r.docW}`);
     else bad(`⑤ ${w}px：按钮漂移或被遮挡`, `off=${off} notClickable=${notClickable} ${JSON.stringify(r.btns)}`);
     if (w <= 899 && r.statTop !== null) {
+      // v3.12.5 ①：系统按钮行改挂剧情栏右侧（不再 fixed 覆盖顶栏），三个按钮底边应在资源行之下
       const maxBtnBottom = Math.max(...Object.values(r.btns).map(b => b.bt));
-      if (maxBtnBottom <= r.statTop + 2) ok(`⑤ ${w}px：按钮不与顶栏资源行重叠`, `btnBottom=${maxBtnBottom} statTop=${r.statTop}`);
+      if (maxBtnBottom > r.statTop - 2) ok(`⑤ ${w}px：按钮不与顶栏资源行重叠`, `btnBottom=${maxBtnBottom} statTop=${r.statTop}`);
       else bad(`⑤ ${w}px：按钮压住顶栏资源`, `btnBottom=${maxBtnBottom} statTop=${r.statTop}`);
     }
     const boxOff = Object.entries(r.boxes).filter(([, b]) => b && (b.l < -1 || b.r > r.vw + 1)).map(([k]) => k);

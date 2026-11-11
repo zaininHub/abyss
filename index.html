@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.4</title>
+<title>深渊效能工作台 v3.12.5</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -34,8 +34,33 @@
     <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
   </div>
 
-  <!-- 主线剧情 -->
-  <div id="chapter-bar" class="ch-bar"></div>
+  <!-- 主线剧情 + 系统按钮（v3.12.5 反馈①：暂停/Wiki/存档与深渊之眼贴在同一行右侧，
+       不再占用顶栏；眼睛由 abyssGaze.js prepend 到按钮组行首） -->
+  <div class="chapter-row">
+    <div id="chapter-bar" class="ch-bar"></div>
+    <div class="sys-btns">
+      <button class="btn" id="pauseBtn">暂停</button>
+      <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
+      <div class="save-menu">
+        <!-- v3.10.4 ④：💾 存档改为下拉直接展示所有存档（参考 KG）；每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；
+             导入导出作为每条的功能；旧「存档管理」模态作为兼容入口保留于底部 .save-legacy -->
+        <!-- v3.12.1 反馈①：悬停即展开、移开即收；去掉原生 title 避免 tooltip 与下拉同时弹出 -->
+        <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
+        <div class="save-menu-pop" id="save-pop">
+          <div class="save-actions">
+            <button class="btn" id="save-new" title="保存当前进度为新快照（最多 3 个，已满则覆盖最早）">+ 保存新档</button>
+            <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
+            <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
+          </div>
+          <div class="save-list-label">存档列表</div>
+          <div id="save-list" class="save-list"></div>
+          <!-- v3.10.5 ⑤：去除旧「导出当前/导入覆盖当前/存档管理（旧）」按钮；
+               导入/导出已内聚为存档列表每条的功能，隐藏文件输入供「📥 导入」复用 -->
+          <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- v2.9.0：Wiki 弹框（侧栏分章 + 内容区；全部章节无条件展示） -->
   <div class="modal" id="wiki-modal">
@@ -387,31 +412,6 @@
     </div>
   </div>
 
-  <!-- 系统按钮（v3.2.1 反馈⑤：导入/导出/存档管理收进一个存档图标，悬浮展示） -->
-  <!-- v3.12.3 反馈④：暂停 / Wiki / 存档 / 故事线 与深渊之眼同处一行；眼睛由 abyssGaze.js prepend 到行首 -->
-  <div class="sys-btns">
-    <button class="btn" id="story-btn" title="故事线：只记录已解锁的章节">📜 故事线</button>
-    <button class="btn" id="pauseBtn">暂停</button>
-    <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
-    <div class="save-menu">
-      <!-- v3.10.4 ④：💾 存档改为下拉直接展示所有存档（参考 KG）；每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；
-           导入导出作为每条的功能；旧「存档管理」模态作为兼容入口保留于底部 .save-legacy -->
-      <!-- v3.12.1 反馈①：悬停即展开、移开即收；去掉原生 title 避免 tooltip 与下拉同时弹出 -->
-      <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
-      <div class="save-menu-pop" id="save-pop">
-        <div class="save-actions">
-          <button class="btn" id="save-new" title="保存当前进度为新快照（最多 3 个，已满则覆盖最早）">+ 保存新档</button>
-          <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
-          <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
-        </div>
-        <div class="save-list-label">存档列表</div>
-        <div id="save-list" class="save-list"></div>
-        <!-- v3.10.5 ⑤：去除旧「导出当前/导入覆盖当前/存档管理（旧）」按钮；
-             导入/导出已内聚为存档列表每条的功能，隐藏文件输入供「📥 导入」复用 -->
-        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-      </div>
-    </div>
-  </div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

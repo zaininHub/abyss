@@ -585,6 +585,9 @@ async function uiCheck(page) {
         const cards = [...panel.querySelectorAll('[data-ai-action]')].map(c => c.dataset.aiAction);
         const steppers = [...panel.querySelectorAll('[data-ai-crew-inc]')].map(b => b.dataset.aiCrewInc);
         const ledger = panel.querySelector('[data-ai-ledger]');
+        // v3.12.5 反馈④：台账不再独占一行，改为助手行的 data-tip
+        const headEl = panel.querySelector('[data-ai-head]');
+        const headTip = (headEl && headEl.dataset.tip) || '';
         const stall = panel.querySelector('[data-ai-stall]');
         const countEl = panel.querySelector('[data-ai-assistant-count]');
         // 孤字换行：inline 元素换行会返回多个矩形，末矩形过窄即孤字（v3.9.0 同范式）
@@ -620,6 +623,7 @@ async function uiCheck(page) {
           orphans, orphanDetails, sizeOk, sizes: sizes.slice(0, 10), buttonCount: btns.length,
           allOffOk,           badText: /undefined|NaN|Infinity/.test(text),
           crewHint: /常驻班组|每动作每周期执行次数/.test(text),
+          headTip,
           ledgerText: ledger ? (ledger.innerText || '').slice(0, 160) : '',
           ids: [...q.AI_ACTION_IDS], crew: [...q.AI_CREW_REQUIRED_IDS] };
       } finally {
@@ -1102,8 +1106,10 @@ try {
     ok('AI 面板 5 张动作卡 + 占编步进器由注册表完整渲染（无 ON/OFF 开关）',
       `${A.cards.join(',')}`);
   else bad('AI 面板动作卡或步进器缺项', JSON.stringify({ cards: A.cards, switches: A.switches, steppers: A.steppers }));
-  if (A.hasLedger && A.crewHint && !A.badText) ok('助手区块含执行台账与常驻班组口径，无非法数值');
-  else bad('助手区块 UI 文案异常', JSON.stringify({ l: A.hasLedger, c: A.crewHint, b: A.badText }));
+  // v3.12.5 反馈④：面板不再写「常驻班组/涨价」与独立台账行，台账改为悬浮在助手行上
+  if (!A.hasLedger && !A.crewHint && /本局已执行/.test(A.headTip || '') && !A.badText)
+    ok('助手区块只留数量/占编/购买，台账移至悬浮（面板无教学文案）', (A.headTip || '').slice(0, 46));
+  else bad('助手区块 UI 文案异常', JSON.stringify({ l: A.hasLedger, c: A.crewHint, t: (A.headTip || '').slice(0, 40), b: A.badText }));
   if (A.stallConsistent) ok('未绑定提示与占用读侧同源（开启但未绑定占编的动作才提示）');
   else bad('未绑定提示与读侧不一致', JSON.stringify({ s: A.stalled, h: A.hasStall }));
   if (A.orphans === 0) ok('AI 面板窄卡无孤字换行（getClientRects）');

@@ -42,17 +42,17 @@ export const AI_ACTION_GROUP_KEYS = Object.freeze(AI_ACTION_GROUPS.map(g => g.ke
 export const AI_ACTIONS = Object.freeze([
   Object.freeze({
     id: 'upgrade', switchKey: 'autoUpgrade', name: '自动升级', group: 'basic',
-    crewSize: 1, cadence: 'decision',
+    crewSize: 1, crewMax: 1, cadence: 'decision',
     desc: '每决策周期购买回本时间最短的产出项（成本 ÷ 边际 CPS，含全局乘数）；EP 低于预留线时暂停',
   }),
   Object.freeze({
     id: 'hire', switchKey: 'autoHire', name: '自动招募', group: 'basic',
-    crewSize: 1, cadence: 'decision',
+    crewSize: 1, crewMax: 1, cadence: 'decision',
     desc: '线程净产出为正且 EP ≥ 2×招募成本时自动招募；净产出为负自动停止',
   }),
   Object.freeze({
     id: 'claim', switchKey: 'autoClaim', name: '自动领取', group: 'basic',
-    crewSize: 1, cadence: 'decision', maxPerCycle: Infinity,
+    crewSize: 1, crewMax: 1, cadence: 'decision', maxPerCycle: Infinity,
     desc: '任务完成进入待领取状态立即自动领取',
   }),
   Object.freeze({
@@ -87,6 +87,13 @@ export function actionsByGroup(key) { return AI_ACTIONS.filter(a => a.group === 
 export function crewSizeOf(id) {
   const a = actionById(id);
   return a ? a.crewSize : 0;
+}
+// 每个动作的占编硬上限（v3.12.5 反馈②：基础三项各 1 名，多绑无意义——一次决策周期只跑一次）。
+// 未声明的动作视为「无上限」（进阶两项仍可按需多绑，用于提升单周期吞吐）。
+export function crewMaxOf(id) {
+  const a = actionById(id);
+  if (!a) return 0;
+  return Number.isFinite(a.crewMax) ? a.crewMax : Infinity;
 }
 export function enabledActions(ai) {
   if (!ai) return [];

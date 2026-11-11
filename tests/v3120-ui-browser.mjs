@@ -77,8 +77,10 @@ try {
       allSteppers: actions.length > 0 && actions.every(a =>
         a.querySelector('[data-ai-crew-inc]') && a.querySelector('[data-ai-crew-dec]')),
       lockedHints: [...(ai ? ai.querySelectorAll('.ai-lock-hint') : [])].map(e => txt(e).trim()),
+      // v3.12.5 反馈④：台账不占版面，改为助手行 data-tip；「常驻班组」说明移入 Wiki
       hasLedger: !!ai?.querySelector('[data-ai-ledger]'),
       crewHint: /常驻班组/.test(txt(ai)),
+      headTip: ai?.querySelector('[data-ai-head]')?.dataset.tip || '',
     };
 
     // ④ 政策 / 集市：升级商店同款 shop-grid + 文字状态角标
@@ -244,8 +246,9 @@ try {
   // v3.12.3 ⑦⑨：分组横幅与锁定卡下线——未解锁的动作不再渲染，面板只剩真实可用的动作卡 + 统一占编步进器
   const want = ['upgrade', 'hire', 'claim'];
   if (want.every(id => b.actionIds.includes(id)) && b.actionIds.length <= 5
-      && !b.groups.length && !b.lockedHints.length && b.allSteppers && b.hasLedger && b.crewHint)
-    ok('② 可用自动化动作按注册表渲染（未解锁不展示、无锁定卡）且统一占编步进器',
+      && !b.groups.length && !b.lockedHints.length && b.allSteppers
+      && !b.hasLedger && !b.crewHint && /本局已执行/.test(b.headTip))
+    ok('② 可用自动化动作按注册表渲染（未解锁不展示、无锁定卡）且统一占编步进器；台账移至悬浮',
       `${b.actionIds.join(',')} / 分组横幅 ${b.groups.length} / 锁定提示 ${b.lockedHints.length} 条`);
   else bad('② AI 面板结构异常', JSON.stringify(b));
 

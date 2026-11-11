@@ -111,6 +111,9 @@ export const WIKI_SECTIONS = [
     </ul>
     <h4>隐密圣学（跨周期保留，解锁科技每轮重研）</h4>
     ${SECRET_SANCTUMS.map(s => `<p>· <b>${s.name}</b>（超验 ≥${s.needTranscend}，虔诚门槛 ${s.devGate}）：${s.desc}</p>`).join('')}
+    <h4>解锁链（面板不写，靠进度自己开）</h4>
+    <p>仓库解锁 → 分支选择（RP/DM/ES 逐级开放）→ <b>圣印首次升级</b>后出现「赞颂 / 超验」→ <b>首次超验</b>后出现「隐密圣学」→ <b>圣印 ≥3</b> 出神谕塔、<b>圣所 ≥5</b> 出圣战军 → 章节「神格」与终局共振。</p>
+    <p>信仰圣所<b>不设等级上限</b>，价格随等级递增；关闭圣所会暂停 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）。</p>
   ` },
   { id: 'policy', name: '周期政策', unlock: 'policy', body: () => `
     <h4>周期政策（组内互斥、每轮重选）</h4>
@@ -132,7 +135,7 @@ export const WIKI_SECTIONS = [
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `
     <h4>深渊深潜（终局层，层深/VS 跨转生保留）</h4>
     <p>解锁：ES ≥ ${DELVE.unlockEs} + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × ${DELVE.epDiveRatio*100}% × ${DELVE.epDiveGrowth}^层深（封顶 ${DELVE.epDiveRatioCap*100}% 上限，耐压舱 -8%/级），DM 成本 ${DELVE.diveBase}×${DELVE.diveGrowth}^层深；<b>下潜即层深 +1</b>；越深 VS 产出越高（基础 ${DELVE.vsBase}/s × (1+${DELVE.vsDepthMult}×层)）。</p>
-    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × ${(DELVE.epUpkeepPerDepth*100).toFixed(2)}% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）。腐化同时累积：${DELVE.corruptPerDepth}%/层/s（净化核心 -30%/级）。</p>
+    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × ${(DELVE.epUpkeepPerDepth*100).toFixed(2)}% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）；主动上浮同样保留层深，但 VS 产出立即停止。腐化同时累积：${DELVE.corruptPerDepth}%/层/s（净化核心 -30%/级）。</p>
     <p>当前层深：Lv.${delveDepth()}。里程碑：${DELVE.milestones.map(m => `${m.depth} 层 +${m.vs} VS`).join(' / ')}（100 层得「深渊之眼」终局徽记）。</p>
     <h4>深潜升级树（VS 消耗，${Object.keys(DELVE.upgrades).length} 项）</h4>
     <p>${Object.values(DELVE.upgrades).map(u => `${u.name}（${u.desc}）`).join(' / ')}。</p>
@@ -318,7 +321,9 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'ledger', name: '动作台账与未绑定', unlock: null, body: () => `
     <h4>本局记了什么</h4>
-    <p>AI 面板底部按动作列出本局执行次数：升级、招募、领取、购建、研究各一行，并给出合计。台账只描述「真的跑过了多少次」，不参与任何数值结算；它是判断自动化是否生效最快的一处读侧，也是长期推演核对执行次数的依据。</p>
+    <p>本局执行次数按动作（升级、招募、领取、购建、研究）+ 合计记录。台账只描述「真的跑过了多少次」，不参与任何数值结算。为避免面板被文字占满，它不再单独占一行，<b>把鼠标移到「🤖 AI 助手 N 名 · 占编 · 空闲」那一行即可看到</b>。</p>
+    <h4>每个动作能绑几名</h4>
+    <p>基础三项（自动升级 / 自动招募 / 自动领取）<b>各上限 1 名</b>——一个决策周期本来就只结算一次，多绑只是白占人手，卡面显示为「n/1」且到顶后 ＋ 置灰。进阶两项（自动研究 / 自动购建）不设此上限。</p>
     <h4>占编就是开关</h4>
     <p>面板上每个动作只有「名称 + − 数字 +」：数字是该动作绑定的助手数，<b>绑了就是开启，绑 0 就是关闭</b>——没有额外的 ON/OFF 开关。0 名助手时三项基础动作自然全关，不会刷任何「待补员」提示。进阶两项（自动研究 / 自动购建）在真正解锁之前整张卡都不出现，解锁后自动带入同款步进器。</p>
     <h4>一键全关</h4>

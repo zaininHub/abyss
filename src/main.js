@@ -1416,12 +1416,6 @@ function bindEvents() {
       applySl();
     });
     applySl();
-    // v3.12.3 反馈④：顶栏「📜 故事线」——展开面板并滚到可见处（收起状态点一下就能看）
-    document.getElementById('story-btn')?.addEventListener('click', () => {
-      localStorage.setItem('abyss_story_collapsed', '0');
-      applySl();
-      try { slPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) { /* 老浏览器忽略 */ }
-    });
   }
   // v3.3.1 反馈⑨：成就面板同样支持点击标题收起/展开（键独立记忆）
   const achPanel = document.getElementById('tab-achievement');
@@ -2520,33 +2514,9 @@ function ensureStorylineRuntime() {
   if (loadStoryline(sl) && sl !== 'default') lockStorylineSwitch();
 }
 
-// v3.12.4 反馈④：右上「眼睛 + 暂停/Wiki/存档/故事线」是一整行 fixed 覆盖层，
-// 宽度随眼睛是否解锁、文案长短变化。把实测宽度写进 --sys-btns-w，让 .topbar 在右侧
-// 留出等宽空白——资源项（潮汐/增益等）不会再钻到按钮底下被眼睛盖住。
-function syncSysBtnsWidth() {
-  if (typeof document === 'undefined') return;
-  const row = document.querySelector('.sys-btns');
-  if (!row || typeof row.getBoundingClientRect !== 'function') return;
-  const w = Math.ceil(row.getBoundingClientRect().width);
-  if (!w) return;
-  document.documentElement.style.setProperty('--sys-btns-w', w + 'px');
-}
-
-function watchSysBtnsWidth() {
-  if (typeof document === 'undefined') return;
-  syncSysBtnsWidth();
-  window.addEventListener('resize', syncSysBtnsWidth);
-  const row = document.querySelector('.sys-btns');
-  if (row && typeof ResizeObserver === 'function') {
-    // 眼睛解锁 / 文案变化会改变行宽，观测自身而非轮询
-    new ResizeObserver(syncSysBtnsWidth).observe(row);
-  }
-}
-
 function startApp() {
   ensureStorylineRuntime();
   ensureAbyssGaze(S.abyssGazeUnlocked); // v3.4.2：已解锁凝视深渊则重载后裂开常驻
-  watchSysBtnsWidth(); // v3.12.4 ④：顶栏右侧留白跟随系统按钮行实测宽度
   // v3.10.2 ④：旧档上限回落兜底——rp / pt / dm 余额是隐式保留，而上限随本局升级变化。
   // 加载即钳一次，避免「余额 31m / 上限 3,000」以及用超额 RP 绕过进度曲线购买。
   clampRunResourceBalances();
