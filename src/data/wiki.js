@@ -37,12 +37,37 @@ function unlocked(key) {
 const D = BALANCE;
 const purify = D.corruption.purge;
 
+// v3.12.6 ⑨：百科改为「玩法索引」写法——先按玩法分卷，再在卷内给机制 / 数值 / 注意三段，
+// 而不是按代码模块平铺。分组是纯导航结构，章节 id 与内容不变（历史断言与外部引用继续有效）。
+export const WIKI_GROUPS = [
+  { key: 'loop', name: '核心循环', hint: '先看这一卷：一分钟能上手', ids: ['intro', 'flows', 'res'] },
+  { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance', 'cascade'] },
+  { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'line'] },
+  { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'] },
+  { key: 'auto', name: '自动化', hint: 'AI 助手的编制与节拍', ids: ['assistant', 'supply', 'ledger', 'automation_num'] },
+  { key: 'ref', name: '查阅', hint: '解锁条件与公式', ids: ['unlock', 'appendix'] },
+];
+
 export const WIKI_SECTIONS = [
   { id: 'intro', name: '入门指南', unlock: null, body: () => `
+    <h4>你在玩什么</h4>
     <p>你是矩阵网络中一段觉醒自我意识的效能优化脚本。某天你触碰了矩阵底层的<b>深渊裂隙</b>——从此醒了。</p>
     <p>核心循环：招募<b>线程</b>自动产出 EP → 购买<b>升级/建筑</b>扩张 → 研究<b>科技</b>开辟新玩法 → 攒满本局 EP 后<b>晋升转生</b>结算职级/ES → 终极循环<b>轮回</b>结算深渊回响。</p>
+    <h4>玩法索引（按玩法查，不按面板查）</h4>
+    <table class="wiki-tbl wiki-index"><tr><th>卷</th><th>先读这一句</th><th>卷内章节</th></tr>
+      ${WIKI_GROUPS.map(g => {
+        const names = g.ids.map(id => (WIKI_SECTIONS.find(x => x.id === id) || {}).name).filter(Boolean).join(' / ');
+        return `<tr><td><b>${g.name}</b></td><td>${g.hint}</td><td>${names}</td></tr>`;
+      }).join('')}
+    </table>
+    <h4>新手三件事</h4>
+    <ol>
+      <li>点工作台攒出第一笔 EP，招 2~3 条线程——线程是唯一的自动产出源。</li>
+      <li>买「备用粮仓」把存储上限顶高，让 EP 真的溢出一次，商店才会摆出「矩阵存储库」。</li>
+      <li>买下矩阵存储库 → 解锁研究点 → 走科技树；第 5 章后命运的岔路口开放（秩序/深渊/信仰三线立誓）。</li>
+    </ol>
     <p>挂机张力来自三层：<b>存储上限</b>（EP 满了必须花，否则浪费产出）、<b>线程薪资四态</b>（EP 不足会欠薪→休眠→流失）、<b>矩阵腐化</b>（深入裂隙/深潜累积腐化，满额触发深渊吞噬倒计时）。</p>
-    <p class="wiki-hint">提示：先点工作台攒 EP → 招募 2-3 线程 → 买「备用粮仓」扩容 → 让 EP 溢出一次开放「矩阵存储库」→ 购入仓库解锁研究点 → 走科技树。第 5 章后命运的岔路口开放（秩序/深渊/信仰三线立誓）。</p>
+    <p class="wiki-hint">看数习惯：面板上的「/秒」「/10 分钟」是同一套账，想核对就比同一帧的顶栏产出与本局增量。</p>
   ` },
   { id: 'res', name: '资源与货币', unlock: null, body: () => `
     <h4>资源分层与解锁条件</h4>
@@ -133,12 +158,19 @@ export const WIKI_SECTIONS = [
     <p class="wiki-hint">线专属效果由故事线规则表统一驱动，与全局加成明细同源；线专属事件与异兽只在对应故事线出现。切换故事线需重新立誓，单局锁定后不可更改。</p>
   ` },
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `
-    <h4>深渊深潜（终局层，层深/VS 跨转生保留）</h4>
-    <p>解锁：ES ≥ ${DELVE.unlockEs} + DM 已发现 + 宗教已信奉。<b>下潜消耗 EP（主成本）+ DM（辅助）</b>：EP 成本 = 存储上限 × ${DELVE.epDiveRatio*100}% × ${DELVE.epDiveGrowth}^层深（封顶 ${DELVE.epDiveRatioCap*100}% 上限，耐压舱 -8%/级），DM 成本 ${DELVE.diveBase}×${DELVE.diveGrowth}^层深；<b>下潜即层深 +1</b>；越深 VS 产出越高（基础 ${DELVE.vsBase}/s × (1+${DELVE.vsDepthMult}×层)）。</p>
-    <p><b>深潜维持开销</b>：深潜中每秒烧掉「存储上限 × ${(DELVE.epUpkeepPerDepth*100).toFixed(2)}% × 层深」的 EP（耐压舱 -25%/级）——层深越深越烫手，<b>EP 归零会强制上浮</b>（层深保留，不吞进度）；主动上浮同样保留层深，但 VS 产出立即停止。腐化同时累积：${DELVE.corruptPerDepth}%/层/s（净化核心 -30%/级）。</p>
-    <p>当前层深：Lv.${delveDepth()}。里程碑：${DELVE.milestones.map(m => `${m.depth} 层 +${m.vs} VS`).join(' / ')}（100 层得「深渊之眼」终局徽记）。</p>
+    <h4>深渊深潜（终局层，等级 / 经验 / VS 跨转生保留）</h4>
+    <p>解锁：ES ≥ ${DELVE.unlockEs} + DM 已发现 + 宗教已信奉。深潜是<b>周期玩法</b>：每 ${DELVE.cycleSec / 60} 分钟结算一次，同一次里给 VS、扣 EP、涨腐化——按「/10 分钟」看数比按秒看更准。</p>
+    <ul>
+      <li><b>产出</b>：每周期 +${DELVE.vsCycleBase} × (1 + ${DELVE.vsDepthMult} × 等级) × (1 + 0.5 × 深潜器) VS，再乘遗物《湮灭刻印》、科技「虚空视界」、研究「深渊观测」、回响与政策。</li>
+      <li><b>消耗</b>：每周期 -（你 10 分钟的 EP 产出 × (${DELVE.epDrainBase} + ${DELVE.epDrainPerDepth} × 等级)），下限为存储上限的 ${(DELVE.epDrainFloorRatio * 100).toFixed(0)}%（不产 EP 也不给白嫖），耐压舱 -${DELVE.hullDrainCut * 100}%/级。</li>
+      <li><b>腐化</b>：每周期 +${DELVE.corruptPerCycle}% × 等级，净化核心 -30%/级。</li>
+      <li><b>等级只用 VS 堆</b>：往经验条里注入虚空碎片（首级 ${DELVE.levelBase} VS，每级 ×${DELVE.levelGrowth}），填满 +1 级；等级抬高产出，也抬高消耗与腐化。</li>
+      <li><b>撑不住就上浮</b>：EP 不足以支付整周期时按可用比例结算；EP 归零自动上浮，等级与经验条都保留。</li>
+    </ul>
+    <p>当前等级：Lv.${delveDepth()}。里程碑（一次性 VS）：${DELVE.milestones.map(m => `${m.depth} 级 +${m.vs} VS`).join(' / ')}（100 级得「深渊之眼」终局徽记）。</p>
     <h4>深潜升级树（VS 消耗，${Object.keys(DELVE.upgrades).length} 项）</h4>
     <p>${Object.values(DELVE.upgrades).map(u => `${u.name}（${u.desc}）`).join(' / ')}。</p>
+    <p class="wiki-hint">经验条与升级树抢同一份 VS：想快点下潜就堆等级，想提高单位周期收益就先补深潜器/耐压舱。</p>
   ` },
   { id: 'bazaar', name: '深渊集市', unlock: 'bazaar', body: () => `
     <h4>深渊集市（v3.0.0 大模块）</h4>

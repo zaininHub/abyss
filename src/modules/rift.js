@@ -631,18 +631,9 @@ export function renderRiftPanel(container) {
     const autoToggle = isAuto && lv > 0
       ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
       : '';
-    // v3.4.9 反馈②：自动净化仪未满足前置时给出明确指引（卡片不隐藏，先让玩家知道有这件东西）
-    if (id === 'auto_purify' && lv === 0 && riftUpgradeLevel('auto_descent') < 1) {
-      html += `
-      <div class="rift-upg-row" data-rift-upg="${id}" style="opacity:.55">
-        <div style="flex:1">
-          <div style="font-size:13px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:11px">Lv.0/${u.cap}</span></div>
-          <div style="font-size:11px;color:var(--text-3)">🔒 需先购入「无限深入」 · 腐化每涨 5% 自动净化 5%（消耗 EP）</div>
-        </div>
-        <span style="flex-shrink:0;font-size:11px;color:var(--text-3)">未解锁</span>
-      </div>`;
-      continue;
-    }
+    // v3.12.6 ⑥：未购入「无限深入」时整张卡不出现（原来是一张带「需先购入…」的锁定卡，
+    //   玩家嫌这是把解锁条件写在面板上）。买入无限深入后自动解锁，无需任何提示文案。
+    if (id === 'auto_purify' && lv === 0 && riftUpgradeLevel('auto_descent') < 1) continue;
     const maxed = cost === null;
     const afford = !maxed && (S.riftEmber || 0) >= cost;
     // v2.8.30 review：余烬升级价格 pill 化（灰满级/绿可购/红不足）——与回响商店卡统一

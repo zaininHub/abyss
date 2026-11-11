@@ -23,6 +23,7 @@ export const CROSS_RUN_KEYS = Object.freeze([
   'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades',
   'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar', 'abyssGazeUnlocked',
   'moduleUnlocks', // v3.12.0 反馈⑬：职级点买断的大模块，跨局保留
+  '_purifierSeen', // v3.12.6 ⑤：净化节点族「见过就永久可见」——熵减协议是本局科技，晋升后重置
 ]);
 
 // ② 旧档补齐：字段缺失时用默认值填上（与 ① 语义不同，允许重叠：保留 vs 补齐）
@@ -39,6 +40,7 @@ export const COMPAT_KEYS = Object.freeze([
   'resonance',
   // v3.10.2 ④：本局运行时快照旧档缺省补齐（见 RUN_RUNTIME_KEYS）
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
+  '_purifierSeen',
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）
@@ -74,6 +76,7 @@ export const RUN_RESET_KEYS = Object.freeze([
 //    默认值由 defaultState() 提供（与 RUN_RESET_KEYS 同一赋值路径），不在此复制数值。
 export const RUN_RUNTIME_KEYS = Object.freeze([
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
+  '_purifierSeen',
 ]);
 
 // ⑥ 资源发现：顶栏统计条 id ↔ 锚点 key ↔ toast 文案，三处此前各自手写一份。

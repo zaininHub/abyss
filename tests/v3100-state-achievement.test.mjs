@@ -45,7 +45,7 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 130, 'v3.10.2 的 129 字段 + v3.12.0 ⑬ 的 moduleUnlocks');
+  assert.equal(keys.length, 131, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen');
   assert.deepEqual(d.moduleUnlocks, { reincarn: false, bazaar: false }, '新档两个大模块均未开启');
 });
 

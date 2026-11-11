@@ -540,10 +540,12 @@ function vaultDesc(u) {
   const [, label, capFn] = row;
   const before = capFn();
   const after = withTempLv('upgrades', u.id, capFn);
-  // v3.5.0 反馈④：扩容已改为「叠在产出基座之上」，增量恒 >0——文案回到「+增量（当前总量）」，
+  // v3.5.0 反馈④：扩容已改为「叠在产出基座之上」，增量恒 >0——文案只写本级增量，
   //   不再出现「已由产出基座接管，扩容不再叠加」这种内部术语
+  // v3.12.6 ⑧：去掉「（当前 5.20K）」这类括注——上限本身在顶栏/资源行就能看到，
+  //   卡面只陈述「买这一级得到多少」，避免同一句里塞两个数字。
   if (after <= before) return `${label} 上限 ${fmt(before)}（本级已达上限）`;
-  let s = `${label} 上限 +${fmt(after - before)}（当前 ${fmt(before)}）`;
+  let s = `${label} 上限 +${fmt(after - before)}`;
   const partsFn = VAULT_CAP_PARTS[u.id];
   if (partsFn) {
     const p = partsFn();
@@ -598,6 +600,10 @@ function moveToOwnedFold(u, el) {
 function updateShopItem(u) {
   const el = shopItemEls.get(u.id);
   if (!el) return;
+  // v3.12.6 ⑧：锁定卡（???）不参与原地刷新——此前会把真实成本与效果写进一张名字仍是 ??? 的卡，
+  // 玩家看到「??? ｜ PT 上限 +200（当前 1.00K）｜ 240.00K」，既泄露了未解锁内容又读不懂。
+  // 解锁态的变化统一走 refreshShopAffordability 的重渲染分支。
+  if (el.classList.contains('locked')) return;
   const owned = S.upgrades[u.id] || 0;
   // v2.0.2：购后到达满级——原地转满级锁定态
   if (u.maxLevel && owned >= u.maxLevel) {
@@ -1110,9 +1116,17 @@ export function refreshAllShop() {
 export function refreshShopAffordability() {
   if (!shopContainer) return;
   // v2.4.2：深渊商店余额展示已移除（顶栏 h-dm 常显），不再每帧同步
+  let unlockedNow = false;
   for (const [id, el] of shopItemEls) {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) continue;
+    // v3.12.6 ⑧：锁定卡既不刷灰态也不刷价格（否则会把隐藏数值写进 ??? 卡）；
+    //   同时检测「条件已满足但卡片还停在 ???」——补一次整表重渲染。
+    //   此前这种卡会永久停在 locked（点击被拦），饵料仓库卡死 = PT 永远解锁不了。
+    if (el.classList.contains('locked')) {
+      if (shopUnlocked(u)) unlockedNow = true;
+      continue;
+    }
     if (maxedLevel(u)) continue; // v2.0.2：满级锁定项不参与灰态刷新
     const cost = bulkCostCalc(u, 1); // v2.3.1 ⑥：倍率移除，固定 ×1
     el.classList.toggle('cant', S.ep < cost);
@@ -1120,6 +1134,7 @@ export function refreshShopAffordability() {
     const c = el.querySelector('.cost');
     if (c) c.textContent = fmt(cost);
   }
+  if (unlockedNow) { refreshShopChain(); return; }
   for (const [id, el] of threadItemEls) {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) continue;

@@ -62,7 +62,13 @@ function mkState(extra = {}) {
   }
   const up = S.delve.up;
   rec('V3 升级树 6 项均满级', up.diver === 5 && up.void === 5 && up.purge === 3 && up.resonance === 3 && up.matrix === 3 && up.ember === 3, JSON.stringify(up));
-  rec('V3 总消耗 VS 精确（6 项全满 = 7986）', S.vs === 999999 - 7986, `vs=${S.vs}`);
+  // v3.12.6 ①：树价随 VS 产出重新标定（深潜器首价 10→40）——改为从数据表派生期望值，
+  // 避免每次调价都要改这条封板断言。
+  const { DELVE: DD } = await import('../src/data/delve.js');
+  const expectCost = ['diver', 'void', 'purge', 'resonance', 'matrix', 'ember']
+    .reduce((sum, id) => sum + Array.from({ length: DD.upgrades[id].cap }, (_, lv) => Math.round(DD.upgrades[id].base * Math.pow(1.8, lv)))
+      .reduce((a, b) => a + b, 0), 0);
+  rec('V3 总消耗 VS 与升级树数据表一致', S.vs === 999999 - expectCost, `vs=${S.vs} expect=${999999 - expectCost}`);
 }
 
 const failed = results.filter(r => !r.ok);

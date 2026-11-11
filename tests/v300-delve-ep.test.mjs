@@ -1,6 +1,8 @@
-// v3.0.0 ① 深潜 EP 化回归测试
-// 原缺陷：下潜只吃 DM，深潜与 EP 主经济完全脱钩（终局 EP 无出口、存储扩容对下潜毫无意义）。
-// 现口径：EP 主成本（按存储上限比例 × 1.12^层深，封顶 75%）+ DM 辅助成本 + 深潜中每秒 EP 维持开销。
+// 深潜结算制回归测试
+// v3.12.6 反馈①~④：深潜从「每秒结算 + 一次性 EP/DM 下潜」改为「每 10 分钟结算一次」，
+// 等级（层深）改为「注入虚空碎片（VS）填经验条」提升。
+// 原缺陷：每秒产出叠加终局乘区后半天刷出 2K+ VS，而升级树单价只有 10~800，
+//        下潜成本（EP+DM）相对每秒产出几乎可忽略（用户实报「消耗过少、VS 过多」）。
 import assert from 'node:assert';
 import test from 'node:test';
 
@@ -9,7 +11,7 @@ global.window = { addEventListener() {} };
 
 const { S } = await import('../src/state.js');
 const delve = await import('../src/modules/delve.js');
-const { DELVE, diveEpCost, diveEpRatio, delveEpUpkeep, diveCost, milestoneVs } = await import('../src/data/delve.js');
+const { DELVE, levelNeed, vsPerCycle, epPerCycle, corruptPerCycle, milestoneVs } = await import('../src/data/delve.js');
 const { epStorageCap } = await import('../src/modules/economy.js');
 
 function setup(extra = {}) {
@@ -17,87 +19,118 @@ function setup(extra = {}) {
     ep: 1e12, rp: 0, es: 3, dm: 1e6, vs: 0, faith: 0, pt: 0, riftEmber: 0,
     upgrades: {}, buildings: {}, tech: {}, cultists: [], religion: { unlocked: true },
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: true, es: true, faith: true, pt: true, dm: true },
-    delve: { unlocked: true, active: false, depth: 0, up: {}, mileDone: {} },
+    delve: { unlocked: true, active: false, depth: 0, up: {}, mileDone: {}, xp: 0, cycleT: 0 },
     corruption: 0, policies: {}, policyRerolls: {}, vowPolicyBoost: false,
   }, extra);
 }
 
-test('v3.0.0 ①：下潜消耗 EP（此前只扣 DM）', () => {
+test('③ 一个周期 = 10 分钟：未到点不结算，到点才扣 EP / 给 VS', () => {
   setup();
-  const cap = epStorageCap();
-  const epCost = diveEpCost(0, cap, 0);
-  assert.ok(epCost > 0, '下潜 EP 成本 > 0');
-  assert.equal(Math.round(epCost), Math.round(cap * DELVE.epDiveRatio), 'Lv.0 EP 成本 = 存储上限 × 4%');
-  const before = { ep: S.ep, dm: S.dm };
-  const r = delve.startDelve();
-  assert.equal(r.ok, true, r.reason);
-  assert.equal(S.ep, before.ep - epCost, '下潜扣 EP');
-  assert.equal(S.dm, before.dm - diveCost(0), '下潜同时扣 DM（辅助成本）');
-  assert.equal(delve.delveDepth(), 1);
+  assert.equal(delve.startDelve().ok, true);
+  const ep0 = S.ep, vs0 = S.vs;
+  delve.tickDelve(DELVE.cycleSec - 1);
+  assert.equal(S.ep, ep0, '周期未走完不扣 EP');
+  assert.equal(S.vs, vs0, '周期未走完不产 VS');
+  delve.tickDelve(1);
+  assert.ok(S.ep < ep0, '走完一个周期扣 EP');
+  assert.ok(S.vs > vs0, '走完一个周期产 VS');
+  assert.ok(Math.abs(S.ep - ep0) < ep0 * 0.5, '单周期消耗不会一次抽干');
 });
 
-test('v3.0.0 ①：EP 不足无法下潜（合理门槛）', () => {
-  setup({ ep: 1, dm: 1e6 });
-  const r = delve.startDelve();
-  assert.equal(r.ok, false, 'EP 不足应拒绝下潜');
-  assert.match(r.reason, /EP 不足/);
-  assert.equal(delve.delveDepth(), 0, '未下潜则层深不变');
-  assert.equal(S.dm, 1e6, '失败不扣任何资源');
-});
-
-test('v3.0.0 ①：EP 成本随层深指数涨且封顶 75% 上限（防死锁）', () => {
+test('② 消耗按「10 分钟 EP 产出 × 比例」计价，层深越高占比越大', () => {
   const cap = 1e6;
-  const c0 = diveEpCost(0, cap, 0);
-  const c10 = diveEpCost(10, cap, 0);
-  assert.ok(c10 > c0 * 2, '层深 10 成本显著高于层深 0');
-  assert.equal(diveEpRatio(100, 0), DELVE.epDiveRatioCap, '极深层封顶 75% 上限');
-  assert.ok(diveEpCost(100, cap, 0) <= cap * DELVE.epDiveRatioCap + 1, '单次下潜永不超过上限的 75%');
+  const cps = 1000;                       // 10 分钟产出 = 600,000 EP
+  const c1 = epPerCycle(1, cps, cap, 0);
+  const c10 = epPerCycle(10, cps, cap, 0);
+  assert.ok(c10 > c1, '层深越高每周期消耗越大');
+  assert.ok(c1 > cps * DELVE.cycleSec * 0.1, '比例下限 10% 起（不是象征性扣费）');
+  assert.ok(c10 > cps * DELVE.cycleSec * 0.3, '层深 10 时吃掉三成以上 10 分钟产出');
+  // 零产出时有存储上限兜底，避免「不产 EP 就免费下潜」
+  assert.equal(epPerCycle(1, 0, cap, 0), Math.round(cap * DELVE.epDrainFloorRatio));
+  // 耐压舱减免
+  assert.ok(epPerCycle(10, cps, cap, 3) < epPerCycle(10, cps, cap, 0), '耐压舱降低每周期消耗');
 });
 
-test('v3.0.0 ①：耐压舱同时降低下潜 EP 成本与维持开销', () => {
-  const cap = 1e6;
-  assert.ok(diveEpCost(5, cap, 3) < diveEpCost(5, cap, 0), '耐压舱降低下潜 EP 成本（-8%/级）');
-  assert.ok(delveEpUpkeep(10, cap, 3) < delveEpUpkeep(10, cap, 0), '耐压舱降低维持开销（-25%/级）');
-  assert.equal(delveEpUpkeep(0, cap, 0), 0, '未下潜无维持开销');
+test('① VS 产出回落到「每个周期个位数」——不再是半天 2K', () => {
+  const perCycle = vsPerCycle(2, 0);
+  assert.ok(perCycle < 2, `层深 2 单周期产出应 < 2（实际 ${perCycle.toFixed(2)}）`);
+  const perDay = perCycle * (24 * 60) / (DELVE.cycleSec / 60) * 2.5; // ×2.5 常见终局乘区
+  assert.ok(perDay < 500, `满乘区一天也不该超过 500 VS（实际 ${perDay.toFixed(0)}）`);
+  assert.ok(vsPerCycle(10, 0) > vsPerCycle(2, 0), '层深越高产出越高');
+  assert.ok(vsPerCycle(10, 3) > vsPerCycle(10, 0), '深潜器提升产出');
 });
 
-test('v3.0.0 ①：深潜中每秒烧 EP，EP 归零强制上浮（保留层深）', () => {
+test('④ 等级靠注入 VS：部分注入→填满→升级，扣费与经验条一致', () => {
+  setup({ vs: 1000 });
+  const need = levelNeed(0);
+  const r = delve.injectVs();
+  assert.equal(r.ok, true);
+  assert.equal(delve.delveDepth(), 1, '一次点击至少升 1 级');
+  assert.equal(S.vs, 1000 - need, '按需求扣 VS');
+  assert.equal(delve.delveXp(), 0, '升级后经验条归零');
+  assert.ok(levelNeed(1) > levelNeed(0), '下一级需求更高');
+});
+
+test('④ 余额不足时只注入差额，不吞光余额也不越级', () => {
+  setup({ vs: 2, delve: { unlocked: true, active: false, depth: 0, up: {}, mileDone: {}, xp: 0, cycleT: 0 } });
+  const need = levelNeed(0);
+  const r = delve.injectVs();
+  assert.equal(r.ok, true);
+  assert.equal(r.leveled, 0, '没填满不升级');
+  assert.equal(S.vs, 0, '余额全部注入');
+  assert.equal(delve.delveXp(), Math.min(2, need), '经验条等于注入量');
+  assert.equal(delve.delveDepth(), 0);
+});
+
+test('④ VS 为 0 时注入被拒绝（不会出现负余额）', () => {
+  setup({ vs: 0 });
+  const r = delve.injectVs();
+  assert.equal(r.ok, false);
+  assert.equal(S.vs, 0);
+});
+
+test('② 层深抬高产出、消耗与腐化（三处同源）', () => {
+  assert.ok(vsPerCycle(5, 0) > vsPerCycle(1, 0));
+  assert.ok(epPerCycle(5, 1000, 1e6, 0) > epPerCycle(1, 1000, 1e6, 0));
+  assert.ok(corruptPerCycle(5, 0) > corruptPerCycle(1, 0));
+  assert.equal(corruptPerCycle(0, 0), 0, '未下潜不累积腐化');
+  assert.ok(corruptPerCycle(5, 2) < corruptPerCycle(5, 0), '净化核心降低腐化');
+});
+
+test('② EP 见底：按可用比例结算，归零则强制上浮（不吞等级）', () => {
   setup();
   delve.startDelve();
-  assert.equal(delve.delveActive(), true);
-  const cap = epStorageCap();
-  const upkeep = delveEpUpkeep(1, cap, 0);
-  assert.ok(upkeep > 0, '层深 1 有维持开销');
-  const ep0 = S.ep;
-  delve.tickDelve(1);
-  assert.ok(S.ep < ep0, '深潜中 EP 被维持开销消耗');
-  assert.equal(delve.delveActive(), true, 'EP 充足时不会被强制上浮');
-  // 抽干 EP → 强制上浮
-  S.ep = 1;
-  delve.tickDelve(10);
-  assert.equal(delve.delveActive(), false, 'EP 耗尽 → 强制上浮');
-  assert.equal(delve.delveDepth(), 1, '强制上浮保留层深（不吞进度）');
+  const c = epPerCycle(1, 0, epStorageCap(), 0);
+  S.ep = c / 2;
+  delve.tickDelve(DELVE.cycleSec);
+  assert.equal(delve.delveActive(), true, '部分结算不强制上浮');
+  assert.ok(S.vs > 0, '按比例给了一部分 VS');
+  S.ep = 0;
+  delve.tickDelve(DELVE.cycleSec);
+  assert.equal(delve.delveActive(), false, 'EP 归零 → 强制上浮');
+  assert.equal(delve.delveDepth(), 0, '层深/等级不受影响');
 });
 
-test('v3.0.0 ①：上浮后停止 EP 维持开销', () => {
+test('上浮后不再结算（不产不耗）', () => {
   setup();
   delve.startDelve();
   delve.stopDelve();
-  const ep0 = S.ep;
-  delve.tickDelve(30);
-  assert.equal(S.ep, ep0, '上浮后不再烧 EP');
+  const ep0 = S.ep, vs0 = S.vs;
+  delve.tickDelve(DELVE.cycleSec * 3);
+  assert.equal(S.ep, ep0, '上浮后不烧 EP');
+  assert.equal(S.vs, vs0, '上浮后不产 VS');
 });
 
-test('v3.0.0 扩展：里程碑 6 档 + 回声定位加成', () => {
-  assert.equal(DELVE.milestones.length, 6, '里程碑 4 → 6 档');
-  assert.ok(DELVE.milestones.some(m => m.depth === 75));
-  assert.ok(DELVE.milestones.some(m => m.depth === 150));
+test('里程碑 6 档 + 回声定位加成', () => {
+  assert.equal(DELVE.milestones.length, 6);
   const m = DELVE.milestones.find(x => x.depth === 10);
   assert.equal(milestoneVs(m, 0), m.vs, '无回声定位 = 原值');
   assert.ok(milestoneVs(m, 5) > m.vs, '回声定位提升里程碑奖励');
 });
 
-test('v3.0.0 扩展：深潜升级树 6 → 8 项（耐压舱 / 回声定位）', () => {
+test('升级树 8 项：耐压舱（降消耗）与回声定位（升里程碑）', () => {
   assert.equal(Object.keys(DELVE.upgrades).length, 8);
   assert.ok(DELVE.upgrades.hull && DELVE.upgrades.sonar);
+  // 树价与产出同量级：首级深潜器不该贵过一个周期产出的 100 倍
+  assert.ok(DELVE.upgrades.diver.base >= 20, '深潜器首价随 VS 产出下调后重新标定');
 });

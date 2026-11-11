@@ -29,7 +29,9 @@ export function defaultState() {
     tech: {},
     // 异兽
     pets: {}, activePets: [], fusesDone: 0,
-    delve: { up: {} }, vs: 0, // v3.0.3 后续反馈①：up 显式初始化（原缺省致首次 VS 升级 TypeError）
+    // v3.0.3 后续反馈①：up 显式初始化（原缺省致首次 VS 升级 TypeError）
+    // v3.12.6 ④：xp = 本级已注入 VS，cycleT = 当前结算周期已走过的秒数
+    delve: { up: {}, xp: 0, cycleT: 0 }, vs: 0, _purifierSeen: false,
     petXpMult: 1, petXpUntil: 0, fuseLuckUntil: 0,
     // 晋升/永恒
     prestige: 0, prestigePoints: 0, runTalent: null,

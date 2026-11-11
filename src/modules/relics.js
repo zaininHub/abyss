@@ -50,6 +50,14 @@ export function buyPurifier(id) {
   return { ok: true };
 }
 
+// v3.12.6 ⑤：净化节点族可见性——熵减协议研究过 / 已购过任一节点，都记为「见过」并跨局保留
+function purifierFamilySeen() {
+  if (S._purifierSeen) return true;
+  const seen = !!((S.tech && S.tech.entropy_reduce) || (S.upgrades && S.upgrades.purifier1));
+  if (seen) S._purifierSeen = true;
+  return seen;
+}
+
 // 面板渲染
 export function renderRelics(container) {
   if (!container) return;
@@ -64,7 +72,10 @@ export function renderRelics(container) {
     <h3 style="margin-top:0;color:var(--purple)">🌀 深渊遗物 <span style="font-size:12px;font-weight:400;color:var(--text-2)">DM 购买 · 跨转生保留 · 裂隙触发后苏醒</span></h3>
     <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">以深渊物质 DM 唤醒尘封遗物，每件 5 级，费用 ×1.8/级递增。深渊物质（DM）来自载具外勤与深潜，是超长线资产。</p>`;
   // v2.8.22 ⑥：净化节点移入遗物（DM 区）——熵减协议解锁后显示，DM 购买、限购 3 级
-  if ((S.tech && S.tech.entropy_reduce) || (S.upgrades && S.upgrades.purifier1)) {
+  // v3.12.6 ⑤：熵减协议是「本局科技」，晋升/轮回会重置，但净化节点是 DM 计价、跨转生保留的资产。
+  //   原判定只看 tech → 一晋升整块消失（用户实报「遗物的净化节点等升级还是没有」）。
+  //   现改为「见过一次就永久可见」：_purifierSeen 跨局保留，旧档靠 tech / 已购节点兜底。
+  if (purifierFamilySeen()) {
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
       <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">净化节点 <span style="color:var(--text-3)">DM 购买 · 深入辅助（限 3 级）</span></div>`;
     for (const [id, nm, base, rate] of PURIFIER_DEFS) {

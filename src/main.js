@@ -64,7 +64,7 @@ import { ensureAbyssGaze, setGazeInteract } from './modules/abyssGaze.js'; // v3
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
-import { WIKI_SECTIONS, wikiUnlocked } from './data/wiki.js'; // v2.9.0：体系化百科（KG 风格）
+import { WIKI_SECTIONS, WIKI_GROUPS, wikiUnlocked } from './data/wiki.js'; // v2.9.0：体系化百科（KG 风格）；v3.12.6 ⑨：玩法索引分组
 import { PETS } from './data/pets.js';
 import { MOOD_MULT, CONVERTERS } from './data/threads.js'; // v3.6.5 ⑤：招募自动安置的岗位名
 import { BALANCE } from './data/balance.js';
@@ -253,15 +253,16 @@ function renderStorylinePanel() {
   const curChs = (curPkg && curPkg.data && curPkg.data.chapters && curPkg.data.chapters.append) || [];
   if (curChs.length > 0) {
     const seen = (S.chaptersUnlocked && S.chaptersUnlocked[current]) || [];
-    let unlockedN = 0, prevOk2 = true;
+    let unlockedN = 0;
+    // v3.12.6 ⑦：只统计「真的解锁过」的章节——原实现里 prevOk 初值为 true，
+    //   于是第一章永远成立、顺次把整条线都算成已解锁（进度恒满、树恒全亮）。
     for (const ch of curChs) {
       let ok = false;
       try { ok = !!ch.cond(S); } catch (e) { /* 未解锁 */ }
       const code = chapterCode(ch.id);
       // v3.7.0：新编码 + 旧档数字双向兼容
-      if (seen.includes(code) || seen.includes(chapterSeq(ch.id)) || prevOk2) ok = true;
+      if (seen.includes(code) || seen.includes(chapterSeq(ch.id))) ok = true;
       if (ok) unlockedN++;
-      prevOk2 = ok;
     }
     progTxt = ` · 剧情进度 ${unlockedN}/${curChs.length} 章`;
   }
@@ -289,15 +290,14 @@ function renderStorylinePanel() {
       const chs = (pkg.data && pkg.data.chapters && pkg.data.chapters.append) || []; // 章节数据在 pkg.data.chapters 下
       const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
       const nodes = [];
-      let prevOk = true; // 前章解锁 → 本章剧情顺次可见
+      // v3.12.6 ⑦：树只挂「已解锁」的章节（cond 成立 或 写进 chaptersUnlocked），
+      //   不再顺次外推——否则第一章成立就把整条线全渲染出来，「只记录解锁的章节」形同虚设。
       for (const ch of chs) {
         let ok = false;
         try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
         const code = chapterCode(ch.id);
         if (seenChs.includes(code) || seenChs.includes(chapterSeq(ch.id))) ok = true;
-        if (prevOk) ok = true;
         if (ok) nodes.push(ch);
-        prevOk = ok;
       }
       if (!nodes.length) continue;
       html += `<div class="sl-line"><div class="sl-line-name">${pkg.name}${id === current ? '<span class="sl-cur">当前</span>' : ''}</div>`;
@@ -1563,9 +1563,13 @@ function bindEvents() {
   function renderWikiNav() {
     const nav = document.getElementById('wiki-nav');
     if (!nav) return;
-    nav.innerHTML = WIKI_SECTIONS.map(s =>
-      `<button class="wiki-nav-btn${s.id === wikiActiveId ? ' on' : ''}" data-wiki="${s.id}">${s.name}</button>`
-    ).join('');
+    // v3.12.6 ⑨：导航按「玩法索引」分卷——先卷名（一句说明），再卷内章节
+    const byId = new Map(WIKI_SECTIONS.map(x => [x.id, x]));
+    nav.innerHTML = WIKI_GROUPS.map(g => {
+      const btns = g.ids.map(id => byId.get(id)).filter(Boolean).map(x =>
+        `<button class="wiki-nav-btn${x.id === wikiActiveId ? ' on' : ''}" data-wiki="${x.id}">${x.name}</button>`).join('');
+      return `<div class="wiki-nav-group"><div class="wiki-nav-head" title="${g.hint}">${g.name}</div>${btns}</div>`;
+    }).join('');
     nav.querySelectorAll('[data-wiki]').forEach(b => b.addEventListener('click', () => {
       wikiActiveId = b.dataset.wiki;
       renderWikiNav();

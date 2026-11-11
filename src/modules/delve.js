@@ -1,11 +1,12 @@
-// v2.6.0：终局层「深渊深潜」模块——解锁 / 下潜上浮 / 深潜产出与腐化 / 升级树 / 里程碑 / 面板
+// 终局层「深渊深潜」模块——解锁 / 10 分钟周期结算 / VS 注入升级 / 升级树 / 里程碑 / 面板
+// v3.12.6 反馈①~④：结算制重做（详见 data/delve.js 头部注释）
 import { S, save } from '../state.js';
 import { policyMult } from '../data/policies.js';
-import { fmt, echoLv, delveTechMult, researchMult, epStorageCap, corruptionCap } from './economy.js';
+import { fmt, fmtTime, echoLv, delveTechMult, researchMult, epStorageCap, corruptionCap, computeCps } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
-import { relicMult } from '../data/relics.js'; // v2.7.0：湮灭刻印——深潜产出乘区
+import { relicMult } from '../data/relics.js';
 import {
-  DELVE, diveCost, diveEpCost, delveEpUpkeep, vsPerSec, delveCorruptRate, delveUpgradeCost, milestoneVs,
+  DELVE, levelNeed, vsPerCycle, epPerCycle, corruptPerCycle, delveUpgradeCost, milestoneVs,
 } from '../data/delve.js';
 
 let logFn = null;
@@ -26,6 +27,19 @@ export function delveDepth() {
 export function delveUpgradeLv(id) {
   return (S.delve && S.delve.up && S.delve.up[id]) || 0;
 }
+// v3.12.6 ④：经验条（已注入 VS / 本级需求）
+export function delveXp() {
+  return (S.delve && S.delve.xp) || 0;
+}
+export function delveLevelNeed() {
+  return levelNeed(delveDepth());
+}
+// 距离下次结算还剩多少秒
+export function delveNextSettleSec() {
+  if (!delveActive()) return DELVE.cycleSec;
+  const t = (S.delve && S.delve.cycleT) || 0;
+  return Math.max(0, DELVE.cycleSec - t);
+}
 
 // 解锁判定：ES ≥ 3 且 DM 资源点已发现 且 宗教已信奉（贯穿全流程的终点层）
 export function canUnlockDelve() {
@@ -45,83 +59,89 @@ export function unlockDelve() {
   if (!religionUnlocked()) return { ok: false, reason: '需先信奉一个宗教分支' };
   S.delve = S.delve || {};
   S.delve.unlocked = true;
-  S.delve.up = S.delve.up || {}; // v3.0.3 后续反馈①：旧档兜底
+  S.delve.up = S.delve.up || {};
+  if (S.delve.xp == null) S.delve.xp = 0;
+  if (S.delve.cycleT == null) S.delve.cycleT = 0;
   save(S);
-  dlog('深渊之眼睁开：深潜层解锁——耗尽深渊之力，直取矩阵之底', 'good');
+  dlog('深渊之眼睁开：深潜层解锁——每 10 分钟结算一次，注入虚空碎片可下潜更深', 'good');
   if (toastFn) toastFn('🌀 深潜解锁：深渊之眼已睁开（终局层）');
   return { ok: true };
 }
 
-// v3.0.0 ①：下潜当前成本快照（EP 主成本 + DM 辅助成本）——面板与 startDelve 共用同一口径
-export function diveCostNow() {
-  const depth = delveDepth();
+// 单个结算周期的快照（面板与 tick 共用同一口径）
+export function delveCycleNow(depthArg) {
+  const depth = Math.max(1, depthArg || delveDepth());
+  const runMult = relicMult('brand') * delveTechMult() * researchMult('delve')
+    * (1 + 0.5 * (echoLv('echo_delve') || 0)) * policyMult('delve');
   return {
-    dm: diveCost(depth),
-    ep: diveEpCost(depth, epStorageCap(), delveUpgradeLv('hull')),
+    vs: vsPerCycle(depth, delveUpgradeLv('diver')) * runMult,
+    ep: epPerCycle(depth, computeCps(), epStorageCap(), delveUpgradeLv('hull')),
+    corrupt: corruptPerCycle(depth, delveUpgradeLv('purge')),
   };
 }
-// v3.0.0 ①：深潜维持开销（EP/秒，深潜中生效）
-export function delveUpkeepNow(depth) {
-  return delveEpUpkeep(Math.max(1, depth || delveDepth()), epStorageCap(), delveUpgradeLv('hull'));
-}
 
-// 下潜：消耗 EP（主成本，随层深按存储上限比例涨）+ DM（辅助成本，随层深指数涨），开启深潜产出与腐化累积
+// 开始 / 继续深潜：只切换开关，不再一次性收费（消耗改由周期结算承担）
 export function startDelve() {
   if (!delveUnlocked()) return { ok: false, reason: '未解锁' };
   if (delveActive()) return { ok: false, reason: '已在深潜中' };
-  const { dm: cost, ep: epCost } = diveCostNow();
-  if ((S.ep || 0) < epCost) return { ok: false, reason: `EP 不足：下潜至 Lv.${delveDepth() + 1} 需 ${fmt(epCost)} EP（当前 ${fmt(S.ep || 0)}）` };
-  if ((S.dm || 0) < cost) return { ok: false, reason: `DM 不足：下潜至 Lv.${delveDepth() + 1} 需 ${fmt(cost)} DM（当前 ${fmt(S.dm || 0)}）` };
-  S.ep -= epCost;
-  S.dm -= cost;
-  // v2.9.0 修复：下潜成功即层深 +1——此前 depth 从不递增（恒 0），层深里程碑/深渊政策组/轮回遗存维度全部失效
-  S.delve.depth = (S.delve.depth || 0) + 1;
   S.delve.active = true;
+  S.delve.cycleT = S.delve.cycleT || 0;   // 中断后续着走，不重置进度
   save(S);
-  dlog(`下潜至 Lv.${delveDepth()}（-${fmt(epCost)} EP / -${fmt(cost)} DM）：虚空碎片产出开启，腐化与 EP 维持随层深累积`, 'good');
-  return { ok: true, cost, epCost };
+  dlog(`开始深潜（Lv.${delveDepth()}）：每 ${DELVE.cycleSec / 60} 分钟结算一次产出与消耗`, 'good');
+  return { ok: true };
 }
 
-// 上浮：停止产出与腐化累积，层深保留
+// 上浮：停止结算，等级与经验条保留
 export function stopDelve() {
   if (!delveActive()) return { ok: false, reason: '未在深潜中' };
   S.delve.active = false;
   save(S);
-  dlog(`上浮完成（当前层深 Lv.${delveDepth()} 保留，产出与腐化停止）`, 'good');
+  dlog(`上浮完成（当前等级 Lv.${delveDepth()} 保留，产出与腐化停止）`, 'good');
   return { ok: true };
 }
 
-// 深潜产出 / 腐化 / 里程碑（主循环 tick 驱动；仅深潜中生效）
-export function tickDelve(dt) {
-  if (!delveUnlocked() || !delveActive()) return;
-  const depth = Math.max(1, delveDepth()); // 当前已下潜到的层（层深自下潜成功时递增）
-  const rate = vsPerSec(depth, delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult() * researchMult('delve'); // v2.7.0 遗物 + v2.8.4 虚空视界 + v2.8.25 ②：深渊观测
-  if (rate > 0) S.vs = (S.vs || 0) + rate * dt * (1 + 0.5 * (echoLv('echo_delve') || 0)) * policyMult('delve'); // v2.7.3 ⑤：回响·深潜共振 + v2.8.6 B2a：观测主义/实证主义
-  const cr = delveCorruptRate(depth, delveUpgradeLv('purge'));
-  // v3.7.0：上限统一走 corruptionCap()（深渊线可由规则抬高），不再硬编码 100
-  const cCap = corruptionCap();
-  if (cr > 0) S.corruption = Math.min(cCap, (S.corruption || 0) + cr * dt);
-  // v2.8.6 B2a：观测主义——腐化 +0.02/s（拿深潜产出强的代价）
-  const obsMult = policyMult('corruption');
-  if (obsMult > 1 && S.corruption < cCap) S.corruption = Math.min(cCap, (S.corruption || 0) + 0.02 * dt);
-  // v3.0.0 ①：深潜维持开销——每秒烧 EP（层深驱动）。EP 耗尽 → 算力枯竭，强制上浮（防死锁，不吞层深）
-  const upkeep = delveEpUpkeep(depth, epStorageCap(), delveUpgradeLv('hull'));
-  if (upkeep > 0) {
-    S.ep = Math.max(0, (S.ep || 0) - upkeep * dt);
-    if ((S.ep || 0) <= 0) {
-      stopDelve();
-      dlog(`算力枯竭：EP 被维持开销抽干（-${fmt(upkeep)}/s），深潜强制上浮（层深 Lv.${depth} 保留）`, 'bad');
-      if (toastFn) toastFn('⚠️ 算力枯竭：EP 耗尽，深潜强制上浮');
-      save(S);
-      return;
-    }
+// 注入 VS 升一级（v3.12.6 ④）：一次点击最多升一级，差额不足时按余额部分注入
+export function injectVs() {
+  if (!delveUnlocked()) return { ok: false, reason: '未解锁' };
+  if (!S.delve) S.delve = {};
+  S.delve.xp = S.delve.xp || 0;
+  // 先结算可能存在的历史溢出（旧档 / 手动改档兜底），再取本级真实缺口
+  let leveled = 0;
+  while (S.delve.xp >= levelNeed(delveDepth())) {
+    S.delve.xp -= levelNeed(delveDepth());
+    S.delve.depth = (S.delve.depth || 0) + 1;
+    leveled++;
   }
-  // 层深里程碑（一次性 VS 奖励；v3.0.0：回声定位 +20%/级）
+  const have = S.vs || 0;
+  if (have <= 0) {
+    if (leveled) { save(S); checkMilestones(); }
+    return { ok: false, reason: '虚空碎片不足' };
+  }
+  const need = Math.max(0, levelNeed(delveDepth()) - S.delve.xp);
+  const take = Math.min(need, have);
+  S.vs = have - take;
+  S.delve.xp += take;
+  while (S.delve.xp >= levelNeed(delveDepth())) {
+    S.delve.xp -= levelNeed(delveDepth());
+    S.delve.depth = (S.delve.depth || 0) + 1;
+    leveled++;
+  }
+  save(S);
+  if (leveled) {
+    dlog(`深潜等级提升至 Lv.${delveDepth()}（-${fmt(take)} VS）：产出与每周期消耗同步抬高`, 'good');
+    if (toastFn) toastFn(`🌑 深潜 Lv.${delveDepth()}`);
+    checkMilestones();
+  } else {
+    dlog(`注入 ${fmt(take)} VS：${fmt(S.delve.xp)} / ${fmt(levelNeed(delveDepth()))}`, 'info');
+  }
+  return { ok: true, spent: take, leveled };
+}
+
+function checkMilestones() {
   const d = delveDepth();
   const sonarLv = delveUpgradeLv('sonar');
   for (const m of DELVE.milestones) {
-    if (d >= m.depth && !(S.delve && S.delve.mileDone && S.delve.mileDone[m.depth])) {
-      S.delve = S.delve || {};
+    if (d >= m.depth && !(S.delve.mileDone && S.delve.mileDone[m.depth])) {
       S.delve.mileDone = S.delve.mileDone || {};
       S.delve.mileDone[m.depth] = true;
       const gain = milestoneVs(m, sonarLv);
@@ -129,6 +149,49 @@ export function tickDelve(dt) {
       dlog(`深潜 Lv.${m.depth} 达成：深渊之眼凝视，+${fmt(gain)} 虚空碎片`, 'good');
       if (toastFn) toastFn(`🌌 深潜里程碑 Lv.${m.depth}：+${fmt(gain)} VS`);
     }
+  }
+}
+
+// 单周期结算：先扣 EP，再给 VS；EP 不足以覆盖时按可用比例折算（不吞进度、不出现负数）
+function settleCycle() {
+  const depth = Math.max(1, delveDepth());
+  const c = delveCycleNow(depth);
+  const ratio = c.ep > 0 ? Math.min(1, (S.ep || 0) / c.ep) : 1;
+  if (ratio <= 0) {
+    stopDelve();
+    dlog(`EP 见底：无法支付 Lv.${depth} 的维持开销（需 ${fmt(c.ep)} EP / 周期），已自动上浮`, 'bad');
+    if (toastFn) toastFn('⚠️ EP 见底，深潜已自动上浮');
+    return;
+  }
+  S.ep = Math.max(0, (S.ep || 0) - c.ep * ratio);
+  const gain = c.vs * ratio;
+  if (gain > 0) S.vs = (S.vs || 0) + gain;
+  const cCap = corruptionCap();
+  if (c.corrupt > 0) S.corruption = Math.min(cCap, (S.corruption || 0) + c.corrupt);
+  if (ratio < 0.999) {
+    dlog(`EP 不足：本周期只结算 ${Math.round(ratio * 100)}%（+${fmt(gain)} VS / -${fmt(c.ep * ratio)} EP）`, 'bad');
+  } else {
+    dlog(`Lv.${depth} 结算：+${fmt(gain)} VS · -${fmt(c.ep)} EP`, 'good');
+  }
+  checkMilestones();
+}
+
+// 周期推进（主循环 tick 驱动；仅深潜中生效）
+export function tickDelve(dt) {
+  if (!delveUnlocked() || !delveActive()) return;
+  if (!S.delve) return;
+  S.delve.cycleT = (S.delve.cycleT || 0) + dt;
+  let guard = 0;
+  while (S.delve.cycleT >= DELVE.cycleSec && S.delve.active && guard < DELVE.maxCyclesPerTick) {
+    S.delve.cycleT -= DELVE.cycleSec;
+    guard++;
+    settleCycle();
+  }
+  if (guard >= DELVE.maxCyclesPerTick) S.delve.cycleT = 0; // 极端离线回归：放弃溢出部分，防卡帧
+  // v2.8.6 B2a：观测主义政策——腐化额外累积（政策侧效果，与周期结算无关，仍按秒）
+  const obsMult = policyMult('corruption');
+  if (obsMult > 1 && S.corruption < corruptionCap()) {
+    S.corruption = Math.min(corruptionCap(), (S.corruption || 0) + 0.02 * dt);
   }
 }
 
@@ -142,8 +205,6 @@ export function buyDelveUpgrade(id) {
   const cost = delveUpgradeCost(id, lv);
   if ((S.vs || 0) < cost) return { ok: false, reason: `虚空碎片不足（需 ${fmt(cost)} VS）` };
   S.vs -= cost;
-  // v3.0.3 后续反馈①：S.delve 默认 {} 无 up 字段（state.js），首次购买原 `S.delve.up[id]=lv+1` 对 undefined
-  // 赋值抛 TypeError → 点击静默失败（「终局升级无法升级」根因）
   S.delve.up = S.delve.up || {};
   S.delve.up[id] = lv + 1;
   save(S);
@@ -160,7 +221,7 @@ export function renderDelvePanel(container) {
     const dmOk = !!(S.resDiscovered && S.resDiscovered.dm);
     const relOk = religionUnlocked();
     container.innerHTML = `
-      <div class="delve-desc">深渊之眼在矩阵之底沉睡……满足以下全部条件后深潜层开启（终局层，层深与虚空碎片跨转生保留）：</div>
+      <div class="delve-desc">深渊之眼在矩阵之底沉睡……满足以下全部条件后深潜层开启（终局层，等级与虚空碎片跨转生保留）：</div>
       <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
         转生 ES ≥ ${DELVE.unlockEs}：${esOk ? '✓' : `（当前 ${S.es || 0}）`}<br>
         发现深渊之力（DM）：${dmOk ? '✓' : '✗'}<br>
@@ -171,23 +232,42 @@ export function renderDelvePanel(container) {
   }
   const depth = delveDepth();
   const active = delveActive();
-  const { dm: nextCost, ep: nextEpCost } = diveCostNow();
-  const upkeep = delveUpkeepNow(depth);
-  const rate = vsPerSec(Math.max(1, depth), delveUpgradeLv('diver')) * relicMult('brand') * delveTechMult(); // v2.9.0：产出按当前真实层深（此前恒按第 1 层）
-  const cr = delveCorruptRate(Math.max(1, depth), delveUpgradeLv('purge'));
-  const afford = (S.ep || 0) >= nextEpCost && (S.dm || 0) >= nextCost;
+  const need = delveLevelNeed();
+  const xp = delveXp();
+  const pct = Math.min(100, (xp / need) * 100);
+  const c = delveCycleNow(Math.max(1, depth));
+  // 注入按钮：一次注入「补满本级缺口」与「当前余额」中较小者
+  const injectTake = Math.min(Math.max(0, need - xp), S.vs || 0);
+  const canInject = injectTake > 0;
+  const left = delveNextSettleSec();
+  const muted = (S.corruption || 0) >= corruptionCap();
+
   let html = `
     <div class="off-stat"><span>虚空碎片（VS）</span><b style="color:var(--cyan)">${fmt(S.vs || 0)}</b></div>
-    <div class="off-stat"><span>层深</span><b>Lv.${depth}${active ? ' · 深潜中' : ''}</b></div>
-    <div class="off-stat"><span>EP 存量 / 上限</span><b>${fmt(S.ep || 0)} / ${fmt(epStorageCap())}</b></div>
-    <div class="off-stat"><span>DM 存量</span><b>${fmt(S.dm || 0)}</b></div>
-    ${active ? `
-      <div class="off-stat"><span>VS 产出</span><b style="color:var(--green)">+${rate.toFixed(2)}/s</b></div>
-      <div class="off-stat"><span>EP 维持开销</span><b style="color:var(--warn,#d29922)">-${fmt(upkeep)}/s</b></div>
-      <div class="off-stat"><span>深潜腐化</span><b style="color:var(--red, #f85149)">+${cr.toFixed(2)}%/s</b></div>` : ''}
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">${active ? '深潜中（EP 归零将强制上浮）' : `下次下潜至 Lv.${depth + 1}：${fmt(nextEpCost)} EP + ${fmt(nextCost)} DM`}</div>
-    <button class="btn ${active ? '' : afford ? '' : 'disabled'}" data-delve-toggle="1"
-      title="${active ? '上浮：停止产出与腐化' : `消耗 ${fmt(nextEpCost)} EP + ${fmt(nextCost)} DM 下潜一层`}">${active ? '上浮' : `下潜（${fmt(nextEpCost)} EP · ${fmt(nextCost)} DM）`}</button>
+    <div class="delve-lv">
+      <div class="delve-lv-head">
+        <span>深潜等级 <b style="color:var(--accent)">Lv.${depth}</b>${active ? '<span class="delve-lv-on">深潜中</span>' : ''}</span>
+        <span class="delve-lv-num">${fmt(xp)} / ${fmt(need)} VS</span>
+      </div>
+      <div class="delve-lv-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+    </div>
+    <div class="delve-cycle">
+      <div class="delve-cycle-row"><span>产出 / 10 分钟</span><b style="color:var(--green,#3fb950)">+${fmt(c.vs)} VS</b></div>
+      <div class="delve-cycle-row"><span>消耗 / 10 分钟</span><b style="color:var(--warn,#d29922)">-${fmt(c.ep)} EP</b></div>
+      ${active ? `<div class="delve-cycle-row"><span>腐化 / 10 分钟</span><b style="color:var(--red,#f85149)">+${c.corrupt.toFixed(1)}%</b></div>` : ''}
+    </div>
+    <div class="delve-actions">
+      <button class="btn ${canInject ? '' : 'disabled'}" data-delve-inject="1" ${canInject ? '' : 'disabled'}
+        title="把虚空碎片注入经验条，填满即升 1 级（产出与消耗同步抬高）">注入 ${fmt(injectTake)} VS → Lv.${depth + 1}</button>
+      <button class="btn" data-delve-toggle="1"
+        title="${active ? '上浮：停止周期结算（等级与经验条保留）' : `开始深潜：每 ${DELVE.cycleSec / 60} 分钟结算 +${fmt(c.vs)} VS / -${fmt(c.ep)} EP`}">${active ? '上浮' : '开始深潜'}</button>
+    </div>
+    <div class="delve-state">${active
+      ? (muted
+        ? '<span style="color:var(--red,#f85149)">腐化已满：先净化再继续</span>'
+        : `下次结算 <b>${fmtTime(left)}</b> 后`)
+      : '已上浮：不产出也不消耗'}</div>
+    <div class="delve-hint">等级只吃虚空碎片：每 10 分钟结算一次，越深赚得越多、烧得也越多。</div>
     <div style="margin:12px 0 6px;font-size:11px;color:var(--text-2)">终局升级（虚空碎片）</div>`;
   for (const [id, u] of Object.entries(DELVE.upgrades)) {
     const lv = delveUpgradeLv(id);
@@ -210,6 +290,12 @@ export function bindDelvePanel(container) {
   container.addEventListener('click', (e) => {
     if (e.target.closest('[data-delve-unlock]')) {
       const r = unlockDelve();
+      if (!r.ok && toastFn) toastFn(r.reason);
+      renderDelvePanel(container);
+      return;
+    }
+    if (e.target.closest('[data-delve-inject]')) {
+      const r = injectVs();
       if (!r.ok && toastFn) toastFn(r.reason);
       renderDelvePanel(container);
       return;
