@@ -1,5 +1,6 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
+import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { epStorageCap, fmt, echoLv, faithTechMult, researchMult } from './economy.js';
 import { converterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径）
 import {
@@ -424,13 +425,13 @@ export function renderReligionPanel(container) {
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
     ${sealLevel() >= 3 ? `
     <div class="religion-seal-row">
-      <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ×${(1 + ORACLE.effect * oracleLevel()).toFixed(2)}）</span>
+      <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ${fmtMultDelta(1 + ORACLE.effect * oracleLevel())}）</span>
       <button class="btn ${oracleLevel() >= ORACLE.cap || (S.faith || 0) < oracleCost() ? 'disabled' : ''}" data-religion-oracle="1"
         title="需圣印 ≥3 级；${ORACLE.desc}">${oracleLevel() >= ORACLE.cap ? '满级' : `升级（${oracleCost()} FP）`}</button>
     </div>` : '<div style="font-size:11px;color:var(--text-2)">神谕塔将在圣印 ≥3 级后解锁。</div>'}
     ${((S.religion && S.religion.temple) || 0) >= 5 ? `
     <div class="religion-seal-row">
-      <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ×${(1 + CRUSADE.effect * crusadeLevel()).toFixed(2)}）</span>
+      <span>圣战军 Lv.${crusadeLevel()}/${CRUSADE.cap}（全局 ${fmtMultDelta(1 + CRUSADE.effect * crusadeLevel())}）</span>
       <button class="btn ${crusadeLevel() >= CRUSADE.cap || (S.faith || 0) < crusadeCost() ? 'disabled' : ''}" data-religion-crusade="1"
         title="需信仰圣所 ≥5 级；${CRUSADE.desc}">${crusadeLevel() >= CRUSADE.cap ? '满级' : `升级（${crusadeCost()} FP）`}</button>
     </div>` : '<div style="font-size:11px;color:var(--text-2)">圣战军将在信仰圣所 ≥5 级后解锁。</div>'}

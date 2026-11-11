@@ -245,20 +245,25 @@ test('D1 清单：运行时快照字段在 defaultState / COMPAT / 审计 / 重�
   assert.equal(state.SAVE_VERSION, 6, '旧档零迁移成本');
 });
 
-test('D2 行为：转生 / 轮回后上限回落 3000，隐式保留的余额同步钳制', () => {
+test('D2 行为：转生 / 轮回后上限回落 2500，隐式保留的余额同步钳制', () => {
   fresh();
   S.upgrades = { storage: 20, reserve_bin: 10, rp_vault: 4, pt_vault: 3, dm_vault: 3 };
   S._rpOverflowSeen = true; S._epCapBasisCps = 5e6; S._epCapBasisSig = 'old';
   S.rpTheories = { rp_sync: 1 }; // v3.10.5 ③：产出基座联动由「星图同调」门控，需已购才出现高上限
   S.rp = 9e9; S.pt = 5e9; S.dm = 1e6;
-  assert.ok(eco.rpCap() > 1e8, '重置前确为高上限（复现用户场景）');
+  const capBefore = eco.rpCap();
+  assert.ok(capBefore > 1e5, '重置前上限显著高于新档（复现钳制场景）');
+  // v3.12.0 反馈③：EP 上限改「相对硬顶 + 取 max」后，产能快照不再把上限撑到亿级，
+  // 旧断言 > 1e8 编码的是已修复的缺陷本身，改为验证「不再复现」。
+  assert.ok(capBefore < 1e8, '产能快照不得再把 RP 上限撑到亿级');
   schema.resetRunState(S, defaultState(), { clamp: eco.clampRunResourceBalances });
   assert.equal(S._rpOverflowSeen, false, '产出基座快照归零');
   assert.equal(S._epCapBasisCps, 0);
   assert.equal(eco.epStorageCap(), 2000, 'EP 上限回到新档值');
-  assert.equal(eco.rpCap(), 3000, 'RP 上限回到新档 3,000');
-  assert.equal(eco.ptCap(), 1360, 'PT 同构回落');
-  assert.equal(S.rp, 3000, 'RP 余额不得显示 31m / 3,000');
+  // v3.12.0 反馈⑪：研究项清零后「星图同调」失效，RP 上限回到纯基础 2,500。
+  assert.equal(eco.rpCap(), 2500, 'RP 上限回到新档 2,500');
+  assert.equal(eco.ptCap(), 1000, 'PT 同构回落（研究项清零后无产出基座）');
+  assert.equal(S.rp, 0, 'v3.12.0 反馈⑪：RP 余额本局制，重置后归零');
   assert.equal(S.pt, eco.ptCap());
   assert.equal(S.dm, eco.dmCap());
   assert.ok(eco.rpCap() < 3000 + 400 * 2, '之后靠买仓库升级缓慢增长');
@@ -305,17 +310,24 @@ test('E1 Wiki / RP 说明弹框写出产出基座与转生回落，过期注释�
   assert.ok(WIKI.includes('产出基座「当前 EP 上限 ×25%」'));
   assert.ok(WIKI.includes('转生或轮回后，本局扩容与产出基座一起归零'));
   assert.ok(MAIN.includes('上限：基础 2,500 + 矩阵存储库逐级扩容'));
-  assert.ok(MAIN.includes('回到 3,000 再逐次扩容'));
+  // v3.12.0 项⑪：RP 本局制后新档上限为 2,500（不再含 500 产出基座），旧文案 3,000 已修正。
+  assert.ok(MAIN.includes('回到 2,500 再逐次扩容'));
   const ecoSrc = readSrc(join('modules', 'economy.js'));
   assert.doesNotMatch(ecoSrc.slice(ecoSrc.indexOf('反馈⑥'), ecoSrc.indexOf('function prodCapFloor')),
     /取「仓库值」与「EP 上限 × 比例」中的较大者/);
   assert.ok(ecoSrc.includes('不再是早年的 max() 取较大者'), '注释与叠加实现一致');
 });
 
-test('E2 长时段格式化单一真源：expedition.js 不再自带实现', () => {
+test('E2 长时段格式化单一真源：expedition.js 不再自带实现', async () => {
   const exp = readSrc(join('modules', 'expedition.js'));
-  assert.ok(exp.includes("import { fmtLongDuration } from '../core/format.js'"));
+  // 结构断言只校验「从 core/format.js 导入」这一事实，不锁死花括号内的其它导入项
+  // （v3.12.0 反馈⑮ 同文件新增 fmtMultDelta，旧断言精确匹配整条 import 会误伤）。
+  assert.match(exp, /import\s*\{[^}]*fmtLongDuration[^}]*\}\s*from\s*'\.\.\/core\/format\.js'/);
   assert.ok(exp.includes('export { fmtLongDuration }'), '保留原有导出路径');
   assert.ok(!exp.includes('export function fmtLongDuration('), '不得残留第二份实现');
   assert.ok(readSrc(join('core', 'format.js')).includes('export function fmtLongDuration('));
+  // 行为断言：再导出的就是 core 的同一函数，而非本文件另写一份
+  const core = await import('../src/core/format.js');
+  const ex = await import('../src/modules/expedition.js');
+  assert.equal(ex.fmtLongDuration, core.fmtLongDuration, 'expedition 再导出应指向 core 单一实现');
 });

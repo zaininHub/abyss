@@ -139,7 +139,9 @@ export function registerFrameSystems(deps = {}) {
     id: 'panel-check', phase: FRAME, order: 20, intervalSec: 5,
     run: (ctx) => {
       if (delveUnlocked()) ctx.dirty.delve = true;
-      if (bazaarUnlocked()) ctx.dirty.bazaar = true;
+      // v3.12.0 反馈⑬：未买断时购买卡也要随 PP 变化刷新（低频，不吞点击）
+      ctx.dirty.bazaar = true;
+      ctx.dirty.reincarn = true;
     },
   });
 

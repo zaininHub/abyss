@@ -22,9 +22,9 @@ export const DELVE = {
   // 升级树（VS 消耗，费用 ×1.8^lv）
   upgrades: {
     diver:    { name: '深潜器',   icon: '🚀', base: 10,   cap: 5, desc: '虚空碎片产出 +50%/级' },
-    void:     { name: '虚空强化', icon: '🌀', base: 50,   cap: 5, desc: '全局 EP 产出 ×1.10/级' },
+    void:     { name: '虚空强化', icon: '🌀', base: 50,   cap: 5, desc: '全局 EP 产出 +10%/级' },
     purge:    { name: '净化核心', icon: '💧', base: 100,  cap: 3, desc: '深潜腐化累积 -30%/级' },
-    resonance:{ name: '深渊共鸣', icon: '🙏', base: 200,  cap: 3, desc: '圣印上限 +2/级 · FP 产出 ×1.5/级' },
+    resonance:{ name: '深渊共鸣', icon: '🙏', base: 200,  cap: 3, desc: '圣印上限 +2/级 · FP 产出 +50%/级' },
     matrix:   { name: '拟态矩阵', icon: '🤖', base: 300,  cap: 3, desc: 'AI 决策间隔 -20%/级' },
     ember:    { name: '星辰余烬', icon: '🌌', base: 500,  cap: 3, desc: '离线效率上限 ×(1+20%)/级' },
     // v3.0.0 扩展（升级树 6 → 8 项）

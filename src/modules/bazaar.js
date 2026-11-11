@@ -2,10 +2,12 @@
 // 参考 Kittens Game 贸易/资源转换（多余资源换稀缺资源、汇率波动、限购），
 // 解决本作中期痛点：EP 顶到存储上限没处花、RP/DM/信仰/余烬/虚空碎片彼此孤立无兑换通道。
 import { S, save } from '../state.js';
-import { fmt, epStorageCap, addRp, addDm, addPt } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, researchMult } from './economy.js';
+import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：汇率倍率 → 带符号百分比
 import { policyMult } from '../data/policies.js';
 import { faithCap } from '../data/religions.js';
 import { delveUnlocked } from './delve.js';
+import { moduleBuyState, buyModuleUnlock, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：集市改为职级点买断
 import {
   BAZAAR, RES_LABEL, dealerById, bazaarTier, bazaarNextTierNeed, rollRate, bazaarRefreshEpCost,
 } from '../data/bazaar.js';
@@ -38,21 +40,17 @@ export function ensureBazaar() {
 
 // ========== 解锁 ==========
 export function bazaarUnlocked() { return !!(S.bazaar && S.bazaar.unlocked); }
-export function canUnlockBazaar() {
-  if (bazaarUnlocked()) return true;
-  if ((S.prestige || 0) < BAZAAR.unlockRank) return false;
-  return !!(S.resDiscovered && S.resDiscovered.rp);
-}
+// v3.12.0 反馈⑬：集市不再「免费挂牌」，改为首次晋升后在职级点商店买断。
+// 价格 / 可见性 / 扣费 / 跨局保留全部委托 modules/moduleUnlocks.js（单一真源）。
+export function canUnlockBazaar() { return moduleBuyState('bazaar').ok; }
 export function unlockBazaar() {
-  if (bazaarUnlocked()) return { ok: false, reason: '已解锁' };
-  if ((S.prestige || 0) < BAZAAR.unlockRank) return { ok: false, reason: `需职级 ≥ ${BAZAAR.unlockRank}` };
-  if (!(S.resDiscovered && S.resDiscovered.rp)) return { ok: false, reason: '需先发现研究点（RP）' };
-  ensureBazaar();
-  S.bazaar.unlocked = true;
-  save(S);
-  blog('深渊集市开张：六位商人常驻矩阵夹层，汇率每 45 秒波动一次', 'good');
-  if (toastFn) toastFn('🏪 深渊集市开张：富余资源可以在这里换稀缺资源了');
-  return { ok: true };
+  const r = buyModuleUnlock('bazaar');
+  if (r.ok) {
+    ensureBazaar();
+    blog(`深渊集市开张：消耗 ${r.cost} PP，六位商人常驻矩阵夹层，汇率每 45 秒波动一次`, 'good');
+    if (toastFn) toastFn('🏪 深渊集市开张：富余资源可以在这里换稀缺资源了');
+  }
+  return r;
 }
 
 // ========== 读侧 ==========
@@ -94,7 +92,7 @@ export function lotOf(id) {
   ensureBazaar();
   const cap = epStorageCap();
   const tier = bazaarTierNow();
-  const mult = bazaarRateOf(id) * policyMult('bazaarRate') * marketEventOf(id); // v3.0.3 反馈②：特惠/涨跌事件并入汇率
+  const mult = bazaarRateOf(id) * policyMult('bazaarRate') * marketEventOf(id) * researchMult('bazaar'); // v3.12.0 反馈⑩：集市协议 // v3.0.3 反馈②：特惠/涨跌事件并入汇率
   let give = d.give, get = d.get;
   if (d.capRatio === 'give') give = Math.round(cap * d.give);
   if (d.capRatio === 'get') get = cap * d.get;
@@ -160,7 +158,7 @@ export function trade(id) {
   S.bazaar.stock[id] = stock - 1;
   S.bazaar.trades = (S.bazaar.trades || 0) + 1;
   save(S);
-  blog(`与「${d.name}」成交：-${fmt(lot.give)} ${RES_LABEL[d.from]} → +${fmt(lot.get)} ${RES_LABEL[d.to]}（汇率 ×${lot.mult.toFixed(2)}）`, 'good');
+  blog(`与「${d.name}」成交：-${fmt(lot.give)} ${RES_LABEL[d.from]} → +${fmt(lot.get)} ${RES_LABEL[d.to]}（汇率 ${fmtMultDelta(lot.mult)}）`, 'good');
   return { ok: true, give: lot.give, get: lot.get, mult: lot.mult };
 }
 
@@ -237,18 +235,14 @@ export function resetBazaarRun() {
 export function renderBazaarPanel(container) {
   if (!container) return;
   if (!bazaarUnlocked()) {
-    const ok = canUnlockBazaar();
-    const rankOk = (S.prestige || 0) >= BAZAAR.unlockRank;
-    const rpOk = !!(S.resDiscovered && S.resDiscovered.rp);
-    container.innerHTML = `
-      <div class="religion-desc">矩阵夹层里有一处不记名的黑市——富余资源换稀缺资源，汇率每 ${BAZAAR.shuffleSec} 秒波动一次（±${BAZAAR.volatility * 100}%）。满足以下全部条件后开张：</div>
-      <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-        职级 ≥ ${BAZAAR.unlockRank}：${rankOk ? '✓' : `（当前 ${S.prestige || 0}）`}<br>
-        发现研究点（RP）：${rpOk ? '✓' : '✗'}
-      </div>
-      <button class="btn ${ok ? '' : 'disabled'}" data-bazaar-unlock="1">挂牌开张</button>`;
+    const card = moduleUnlockCard('bazaar');
+    if (container._lastUnlockHtml !== card) {
+      container._lastUnlockHtml = card;
+      container.innerHTML = card;
+    }
     return;
   }
+  container._lastUnlockHtml = null;
   ensureBazaar();
   const tier = bazaarTierNow();
   const trades = bazaarTrades();
@@ -263,7 +257,7 @@ export function renderBazaarPanel(container) {
       <button class="btn ${(S.abyssEcho || 0) >= BAZAAR.echoRefresh ? '' : 'disabled'}" data-bazaar-refresh-echo="1" style="flex:1">刷新（回响）</button>
       <button class="btn" data-bazaar-confirm-toggle="1" style="flex:1" title="开启后购买需点击两次确认；关闭后单击直接成交">二次确认：${S.bazaar.skipConfirm === true ? '关' : '开'}</button>
     </div>`;
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">`;
+  html += `<div class="shop-grid" style="margin-top:4px">`;
   for (const d of BAZAAR.dealers) {
     const lockedByTier = tier < d.tier;
     const lockedByVs = d.to === 'vs' && !delveUnlocked();
@@ -276,17 +270,19 @@ export function renderBazaarPanel(container) {
     const canTrade = !lockedByTier && !lockedByVs && stock > 0 && resOf(d.from) >= (lot ? lot.give : Infinity);
     const evTag = marketEventOf(d.id) > 1 ? '<span style="font-size:10.5px;color:var(--green,#3fb950)"> 🔥特惠</span>'
       : marketEventOf(d.id) < 1 ? '<span style="font-size:10.5px;color:var(--red,#f85149)"> 📈涨价</span>' : '';
+    // v3.12.0 反馈④：与升级商店同一套 name / desc / cost 卡面；状态用文字角标显式区分。
+    const state = lockedByTier ? `<span class="dealer-state dealer-state-lock">🔒 需 Lv.${d.tier}</span>`
+      : lockedByVs ? '<span class="dealer-state dealer-state-lock">🔒 需深潜</span>'
+      : stock <= 0 ? '<span class="dealer-state dealer-state-lock">库存已空</span>'
+      : canTrade ? '<span class="dealer-state dealer-state-ok">可成交</span>'
+      : '<span class="dealer-state dealer-state-bad">资源不足</span>';
+    const rateSigned = fmtMultDelta(rate);
     html += `
-      <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;${canTrade ? 'opacity:1' : ''}">
-        <div class="name"><span>${d.icon} ${d.name}${evTag}</span><span class="count">库存 ${stock}/${mx}</span></div>
-        <div style="font-size:11px;color:var(--text-3);line-height:1.7">${d.desc}</div>
-        <div style="font-size:12px;margin-top:4px">
-          <span style="color:var(--text-2)">- ${fmt(lot ? lot.give : 0)} ${RES_LABEL[d.from]}</span>
-          <span style="color:var(--text-3)"> → </span>
-          <b style="color:var(--cyan)">+ ${fmt(lot ? lot.get : 0)} ${RES_LABEL[d.to]}</b>
-          <span style="font-size:11px;color:${rateColor}">（汇率 ×${rate.toFixed(2)}${good ? ' ↑优' : bad ? ' ↓劣' : ''}）</span>
-        </div>
-        <div style="font-size:10.5px;color:var(--text-3)">${lockedByTier ? `🔒 需集市等级 Lv.${d.tier}` : lockedByVs ? '🔒 需先解锁深潜（VS）' : stock > 0 ? '点击成交 1 批' : '库存已空——等补货或刷新'}</div>
+      <div class="item ${canTrade ? '' : 'cant'}" data-bazaar-dealer="${d.id}" style="cursor:pointer;">
+        <div class="name"><span>${d.icon} ${d.name}${evTag}</span><span class="count">${state}</span></div>
+        <div class="desc">${d.desc}</div>
+        <div class="cost mono dealer-cost">- ${fmt(lot ? lot.give : 0)} ${RES_LABEL[d.from]} → + ${fmt(lot ? lot.get : 0)} ${RES_LABEL[d.to]}</div>
+        <div class="desc dealer-meta" style="margin-bottom:0">库存 ${stock}/${mx} · 汇率 <b style="color:${rateColor}">${rateSigned}</b>${good ? ' ↑优' : bad ? ' ↓劣' : ''}</div>
       </div>`;
   }
   html += `</div>`;

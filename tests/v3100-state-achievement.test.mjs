@@ -45,7 +45,8 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 129, 'v3.10.1 的 124 字段 + 5 个本局运行时快照字段（v3.10.2 ④）');
+  assert.equal(keys.length, 130, 'v3.10.2 的 129 字段 + v3.12.0 ⑬ 的 moduleUnlocks');
+  assert.deepEqual(d.moduleUnlocks, { reincarn: false, bazaar: false }, '新档两个大模块均未开启');
 });
 
 test('A2 资源发现键 / 顶栏锚点 / 默认值三者同源', () => {
@@ -207,10 +208,10 @@ test('B5 main.js 只保留薄适配，成就表与判定都在新层', () => {
 
 console.log('[C] 面板键 / deps 清单双向锁死');
 
-test('C1 PANEL_KEYS 26 个、always 3 个、受脏标记控制 23 个', () => {
-  assert.equal(pk.PANEL_KEYS.length, 26);
+test('C1 PANEL_KEYS 27 个、always 3 个、受脏标记控制 24 个', () => {
+  assert.equal(pk.PANEL_KEYS.length, 27);
   assert.equal(pk.ALWAYS_PANEL_KEYS.length, 3);
-  assert.equal(pk.dirtyDrivenPanels().length, 23);
+  assert.equal(pk.dirtyDrivenPanels().length, 24);
   const main = read('main.js');
   const registered = [...main.matchAll(/registerPanel\(\{ key: '([^']+)'/g)].map(m => m[1]);
   assert.deepEqual(registered, [...pk.PANEL_KEYS], '注册顺序必须与清单逐字一致');

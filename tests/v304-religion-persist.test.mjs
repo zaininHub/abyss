@@ -22,6 +22,7 @@ function setup() {
     riftEmber: 300, riftsSealed: 3, bazaar: { unlocked: true, trades: 12 }, resDiscovered: { ep: true, es: true, faith: true, rp: true },
     storylinesCompleted: [], storyline: 'line_order', collapsed: false, _collapseAt: 0, _collapseChoicePending: false,
     policies: {}, policyRuns: [], relicLegacy: {}, chapters: 9, expeditions: [], cosMoS: undefined,
+    moduleUnlocks: { reincarn: true, bazaar: true }, // v3.12.0 反馈⑬：夹具模拟已买断模块
   });
 }
 

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.11.3</title>
+<title>深渊效能工作台 v3.12.0</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-DxJCz83D.js"></script>
-  <link rel="stylesheet" href="./assets/index-jY4gaSMY.css">
+  <script defer src="./assets/index-B3QKaPQz.js"></script>
+  <link rel="stylesheet" href="./assets/index-D23pRwBK.css">
 </head>
 <body>
 <div id="app">
@@ -102,9 +102,10 @@
           <div class="big" id="big-ep">0</div>
           <div style="text-align:center;color:var(--dim);font-size:11px">点击产出 <span id="click-power">1</span></div>
         </div>
-        <div class="hero-row">
+        <!-- v3.12.0 反馈⑯：薪资四态说明由窄 span 扩成「整块」触发——悬浮整行显气泡、点击整行弹完整说明 -->
+        <div class="hero-row wage-help-zone" id="wage-help-zone" data-tip="线程薪资四态 · 点击整块查看完整规则">
           <span>线程: <b id="staff-count">0</b></span>
-          <span id="staff-status" title="线程运转状态：EP 不足以支付薪资时会积累不满，严重时线程死锁或退出">运行中</span>
+          <span class="wage-help"><span id="staff-status">运行中</span><span class="wage-help-mark" aria-hidden="true">?</span></span>
           <span id="staff-preview" style="font-size:11px;color:var(--text-2)"></span>
           <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
         </div>
@@ -146,6 +147,8 @@
         <button class="btn" id="btn-delve">深潜</button>
         <button class="btn" id="btn-rift-tab">裂隙</button>
         <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <!-- v3.12.0 反馈⑬：轮回从晋升面板拆出，成为首次晋升后可购买开启的独立大模块 -->
+        <button class="btn" id="btn-reincarn" title="轮回：第二层循环，首次晋升后可用职级点开启">轮回</button>
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
              保留隐藏桩元素与 switchTab 绑定（兼容程序化切换与既有测试） -->
         <button class="btn" id="btn-prestige" style="display:none">晋升</button>
@@ -226,6 +229,9 @@
         <div class="tab-pane" id="tab-bazaar">
           <div id="bazaar-panel"></div>
         </div>
+        <div class="tab-pane" id="tab-reincarn">
+          <div id="reincarn-panel"></div>
+        </div>
       </div>
     </div>
 
@@ -256,41 +262,61 @@
   <!-- 浮动异兽 -->
   <div id="pet-float" class="pet-float"></div>
 
-  <!-- v2.5.3 反馈③：深渊鱼缸触手（购买鱼缸后工作台底部缓慢摆动） -->
-  <!-- v2.7.1 触手重构：锥形真实章鱼触手（基座粗、尖端内卷）+ 深渊基座团 + 密集吸盘 + 霓虹光晕；hover 蠕动/点击拍打交互动画 -->
+  <!-- v3.12.0 反馈⑭：深渊触手与「深渊凝视」统一为 56px 底部条带。
+       形态由右下角竖立的章鱼触手改为横向平铺的低矮卷须；全宽铺开、pointer-events:none，
+       上方四列可完整平铺且不再被遮挡，右侧浮动栏留白同步收窄。 -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
-    <svg viewBox="0 0 200 126" width="200" height="126" preserveAspectRatio="xMaxYMax meet">
-      <ellipse cx="100" cy="123" rx="96" ry="13" fill="#150824"/>
-      <ellipse cx="100" cy="123" rx="96" ry="13" fill="none" stroke="#4dd0e1" stroke-width="1" opacity="0.25"/>
+    <svg viewBox="0 0 1200 56" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="td-grad-a" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#1b0733" stop-opacity="0"/>
+          <stop offset="16%" stop-color="#3d1d6e" stop-opacity=".92"/>
+          <stop offset="48%" stop-color="#9c27b0" stop-opacity=".9"/>
+          <stop offset="82%" stop-color="#3d1d6e" stop-opacity=".92"/>
+          <stop offset="100%" stop-color="#1b0733" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="td-grad-b" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7b1fa2" stop-opacity="0"/>
+          <stop offset="28%" stop-color="#7b1fa2" stop-opacity=".85"/>
+          <stop offset="68%" stop-color="#e1bee7" stop-opacity=".72"/>
+          <stop offset="100%" stop-color="#7b1fa2" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="td-grad-c" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#4dd0e1" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#4dd0e1" stop-opacity=".6"/>
+          <stop offset="100%" stop-color="#4dd0e1" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
       <g class="tentacle tentacle-a">
-        <path d="M32 124 C42 114 32 100 44 88 C56 76 42 64 48 52 C54 42 46 32 50 22 C52 15 58 12 56 18 C54 26 48 24 52 14" fill="none" stroke="#1b0733" stroke-width="16" stroke-linecap="round"/>
-        <path d="M32 124 C42 114 32 100 44 88 C56 76 42 64 48 52 C54 42 46 32 50 22 C52 15 58 12 56 18 C54 26 48 24 52 14" fill="none" stroke="#3d1d6e" stroke-width="10" stroke-linecap="round"/>
-        <path d="M33 120 C42 111 33 100 44 88 C55 77 43 65 48 53 C53 43 46 33 50 23 C52 16 57 13 55 18" fill="none" stroke="#9c27b0" stroke-width="4.5" stroke-linecap="round"/>
-        <path d="M33 120 C42 111 33 100 44 88 C55 77 43 65 48 53 C53 43 46 33 50 23 C52 16 57 13 55 18" fill="none" stroke="#4dd0e1" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
-        <path d="M33 120 C42 111 33 100 44 88 C55 77 43 65 48 53 C53 43 46 33 50 23 C52 16 57 13 55 18" fill="none" stroke="#4dd0e1" stroke-width="4" stroke-linecap="round" opacity="0.18"/>
-        <g fill="#311b92"><ellipse cx="41" cy="110" rx="3.6" ry="2.8"/><ellipse cx="37" cy="96" rx="3.2" ry="2.5"/><ellipse cx="48" cy="82" rx="2.9" ry="2.2"/><ellipse cx="43" cy="68" rx="2.6" ry="2"/><ellipse cx="49" cy="54" rx="2.3" ry="1.8"/><ellipse cx="46" cy="41" rx="2" ry="1.5"/><ellipse cx="51" cy="29" rx="1.6" ry="1.2"/><ellipse cx="55" cy="17" rx="1.2" ry="0.9"/></g>
-        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="41" cy="110" rx="1.3" ry="1"/><ellipse cx="37" cy="96" rx="1.1" ry="0.9"/><ellipse cx="48" cy="82" rx="1" ry="0.8"/><ellipse cx="43" cy="68" rx="0.9" ry="0.7"/><ellipse cx="49" cy="54" rx="0.8" ry="0.6"/><ellipse cx="46" cy="41" rx="0.7" ry="0.5"/><ellipse cx="51" cy="29" rx="0.6" ry="0.45"/><ellipse cx="55" cy="17" rx="0.5" ry="0.35"/></g>
+        <path class="td-base" d="M-20 54 C 70 54 110 30 200 30 C 290 30 320 50 410 50 C 500 50 530 22 620 22 C 710 22 740 46 830 46 C 920 46 950 28 1040 28 C 1120 28 1160 46 1220 46"/>
+        <path class="td-mid-a" d="M-20 54 C 70 54 110 30 200 30 C 290 30 320 50 410 50 C 500 50 530 22 620 22 C 710 22 740 46 830 46 C 920 46 950 28 1040 28 C 1120 28 1160 46 1220 46"/>
+        <path class="td-glow" d="M-20 54 C 70 54 110 30 200 30 C 290 30 320 50 410 50 C 500 50 530 22 620 22 C 710 22 740 46 830 46 C 920 46 950 28 1040 28 C 1120 28 1160 46 1220 46"/>
+        <g fill="#311b92" opacity=".9">
+          <ellipse cx="150" cy="36" rx="3.6" ry="2.4"/><ellipse cx="300" cy="42" rx="3.2" ry="2.2"/>
+          <ellipse cx="470" cy="34" rx="3" ry="2"/><ellipse cx="680" cy="30" rx="2.7" ry="1.9"/>
+          <ellipse cx="880" cy="40" rx="2.4" ry="1.7"/><ellipse cx="1080" cy="32" rx="2" ry="1.5"/>
+        </g>
+        <g fill="#4dd0e1" opacity=".8">
+          <ellipse cx="150" cy="36" rx="1.2" ry=".8"/><ellipse cx="470" cy="34" rx="1" ry=".7"/><ellipse cx="880" cy="40" rx=".8" ry=".6"/>
+        </g>
       </g>
+
       <g class="tentacle tentacle-b">
-        <path d="M98 124 C108 114 112 102 106 90 C100 78 116 68 110 56 C104 44 120 34 116 22 C114 14 128 16 126 24 C124 32 110 30 120 12" fill="none" stroke="#1b0733" stroke-width="16" stroke-linecap="round"/>
-        <path d="M98 124 C108 114 112 102 106 90 C100 78 116 68 110 56 C104 44 120 34 116 22 C114 14 128 16 126 24 C124 32 110 30 120 12" fill="none" stroke="#7b1fa2" stroke-width="10" stroke-linecap="round"/>
-        <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#e1bee7" stroke-width="4.5" stroke-linecap="round" opacity="0.8"/>
-        <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#4dd0e1" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
-        <path d="M99 120 C108 111 111 100 106 90 C101 80 115 69 110 57 C105 45 119 35 116 23 C114 15 126 16 124 23" fill="none" stroke="#4dd0e1" stroke-width="4" stroke-linecap="round" opacity="0.18"/>
-        <g fill="#311b92"><ellipse cx="106" cy="110" rx="3.6" ry="2.8"/><ellipse cx="110" cy="96" rx="3.2" ry="2.5"/><ellipse cx="102" cy="82" rx="2.9" ry="2.2"/><ellipse cx="113" cy="68" rx="2.6" ry="2"/><ellipse cx="107" cy="54" rx="2.3" ry="1.8"/><ellipse cx="117" cy="41" rx="2" ry="1.5"/><ellipse cx="123" cy="17" rx="1.2" ry="0.9"/></g>
-        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="106" cy="110" rx="1.3" ry="1"/><ellipse cx="110" cy="96" rx="1.1" ry="0.9"/><ellipse cx="102" cy="82" rx="1" ry="0.8"/><ellipse cx="113" cy="68" rx="0.9" ry="0.7"/><ellipse cx="107" cy="54" rx="0.8" ry="0.6"/><ellipse cx="117" cy="41" rx="0.7" ry="0.5"/><ellipse cx="123" cy="17" rx="1.2" ry="0.9"/></g>
+        <path class="td-base-b" d="M-20 56 C 90 56 140 42 240 42 C 340 42 360 54 460 54 C 560 54 590 38 690 38 C 790 38 810 52 910 52 C 1010 52 1050 40 1140 40 C 1180 40 1200 48 1220 48"/>
+        <path class="td-mid-b" d="M-20 56 C 90 56 140 42 240 42 C 340 42 360 54 460 54 C 560 54 590 38 690 38 C 790 38 810 52 910 52 C 1010 52 1050 40 1140 40 C 1180 40 1200 48 1220 48"/>
+        <g fill="#7b1fa2" opacity=".85">
+          <ellipse cx="240" cy="43" rx="2.6" ry="1.8"/><ellipse cx="690" cy="39" rx="2.2" ry="1.6"/><ellipse cx="1140" cy="41" rx="1.8" ry="1.3"/>
+        </g>
       </g>
+
       <g class="tentacle tentacle-c">
-        <path d="M152 124 C162 114 172 106 166 92 C160 78 178 68 172 54 C166 40 184 30 180 16 C178 8 192 10 190 20 C188 30 176 26 184 12" fill="none" stroke="#1b0733" stroke-width="16" stroke-linecap="round"/>
-        <path d="M153 120 C162 111 170 104 166 92 C162 80 176 69 172 55 C168 41 182 31 180 17 C178 9 190 10 189 19" fill="none" stroke="#f3e5f5" stroke-width="4.5" stroke-linecap="round" opacity="0.75"/>
-        <path d="M153 120 C162 111 170 104 166 92 C162 80 176 69 172 55 C168 41 182 31 180 17 C178 9 190 10 189 19" fill="none" stroke="#4dd0e1" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
-        <path d="M153 120 C162 111 170 104 166 92 C162 80 176 69 172 55 C168 41 182 31 180 17 C178 9 190 10 189 19" fill="none" stroke="#4dd0e1" stroke-width="4" stroke-linecap="round" opacity="0.18"/>
-        <g fill="#311b92"><ellipse cx="160" cy="110" rx="3.6" ry="2.8"/><ellipse cx="165" cy="96" rx="3.2" ry="2.5"/><ellipse cx="160" cy="82" rx="2.9" ry="2.2"/><ellipse cx="170" cy="68" rx="2.6" ry="2"/><ellipse cx="165" cy="54" rx="2.3" ry="1.8"/><ellipse cx="174" cy="41" rx="2" ry="1.5"/><ellipse cx="176" cy="29" rx="1.6" ry="1.2"/><ellipse cx="181" cy="16" rx="1.2" ry="0.9"/></g>
-        <g fill="#4dd0e1" opacity="0.85"><ellipse cx="160" cy="110" rx="1.3" ry="1"/><ellipse cx="165" cy="96" rx="1.1" ry="0.9"/><ellipse cx="160" cy="82" rx="1" ry="0.8"/><ellipse cx="170" cy="68" rx="0.9" ry="0.7"/><ellipse cx="174" cy="41" rx="0.7" ry="0.5"/><ellipse cx="176" cy="29" rx="0.6" ry="0.45"/><ellipse cx="181" cy="16" rx="0.5" ry="0.35"/></g>
+        <path class="td-mid-c" d="M-20 56 C 120 56 180 50 300 50 C 420 50 460 54 580 54 C 700 54 750 48 870 48 C 990 48 1040 54 1220 52"/>
       </g>
     </svg>
   </div>
-
+  <!-- 点击彩蛋热区：只占底部条带右侧 120×56，#app 已留底部 padding，不挡任何上方内容 -->
+  <div id="tentacle-tap-zone" class="tentacle-tap-zone" aria-hidden="true"></div>
   <!-- Toast -->
   <div id="toast" class="toast"></div>
 

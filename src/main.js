@@ -1,6 +1,6 @@
 import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤：SAVE_KEY/SAVE_VERSION 供存档导出/导入
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
-import { fmtDepletionEta, epDepletionSec } from './core/format.js'; // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
+import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain, bulkCostCalc, // v3.6.4 ④：两条购买路径同口径 QA 钩子（unitCost 已在下方导入）
@@ -50,7 +50,8 @@ import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, 
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
-import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v2.7.3 ⑤：轮回（晋升面板底部）
+import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v3.12.0 反馈⑬：轮回独立大模块
+import { moduleVisible, buyModuleUnlock } from './modules/moduleUnlocks.js'; // v3.12.0 反馈⑬：职级点买断大模块
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
 import { chapterRank, chapterProgress, chapterCode, chapterSeq, getStorylineEvents, getStorylinePets, validateEvent } from './core/storylineContent.js'; // v3.7.0：章节 ID 统一口径
@@ -429,7 +430,7 @@ function registerAllPanels() {
   registerPanel({ key: 'prestige', render: () => {
     syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：P3 未到时整块隐藏
     const preEl = document.getElementById('prestige-panel');
-    if (preEl) { renderPrestige(preEl); renderReincarn(preEl); }
+    if (preEl) renderPrestige(preEl); // v3.12.0 反馈⑬：轮回已拆到独立 tab
   } });
   registerPanel({ key: 'relics', render: () => renderRelics(document.getElementById('relics-panel')) });
   registerPanel({ key: 'projects', render: renderProjects });
@@ -467,6 +468,11 @@ function registerAllPanels() {
   registerPanel({ key: 'expedition', render: () => {
     const expEl = document.getElementById('expedition-panel');
     if (expEl) renderExpeditions(expEl);
+  } });
+  // v3.12.0 反馈⑬：轮回从晋升面板拆出，注册为独立的第 27 个面板（顺序与 PANEL_KEYS 一致）
+  registerPanel({ key: 'reincarn', render: () => {
+    const rcEl = document.getElementById('reincarn-panel');
+    if (rcEl) renderReincarn(rcEl);
   } });
 }
 
@@ -731,15 +737,15 @@ function renderHero() {
     let txt = '满薪', color = 'var(--good)';
     if (S.cultists.length === 0) { txt = '待招募'; color = 'var(--text-2)'; }
     else if (isLazy()) { // v2.7.1：懒惰态（EP 满上限惩罚）——消耗 > 产出
-      txt = `懒惰 · 产出 ×${lazyProdMult()} 消耗 ×${lazyCostMult()}`;
+      txt = `懒惰 · 产出 ${fmtMultDelta(lazyProdMult(), { digits: 1 })} 消耗 ${fmtMultDelta(lazyCostMult(), { digits: 1 })}`;
       color = 'var(--warn)';
     }
     else if (w.state === 'debt') {
-      if ((w.bufferSec || 0) > 0) { txt = `欠薪 ×${wageDebtMult()} · 恢复缓冲 ${Math.ceil(w.bufferSec)}s`; }
-      else { txt = `欠薪 ×${wageDebtMult()} · 休眠还剩 ${Math.ceil(Math.max(0, W.dormantAfterSec - (w.debtSec || 0)))}s`; }
+      if ((w.bufferSec || 0) > 0) { txt = `欠薪 ${fmtMultDelta(wageDebtMult(), { digits: 1 })} · 恢复缓冲 ${Math.ceil(w.bufferSec)}s`; }
+      else { txt = `欠薪 ${fmtMultDelta(wageDebtMult(), { digits: 1 })} · 休眠还剩 ${Math.ceil(Math.max(0, W.dormantAfterSec - (w.debtSec || 0)))}s`; }
       color = 'var(--warn)';
     } else if (w.state === 'dormant') {
-      txt = `休眠 ×0 · 流失还剩 ${Math.ceil(Math.max(0, W.loseAfterSec - (w.dormantSec || 0)))}s`;
+      txt = `休眠 -100% · 流失还剩 ${Math.ceil(Math.max(0, W.loseAfterSec - (w.dormantSec || 0)))}s`;
       color = '#ff9800';
     } else if (w.state === 'losing') {
       txt = `流失预警 · 下次判定 ${Math.ceil(Math.max(0, 60 - (w.loseTimer || 0)))}s`;
@@ -747,13 +753,16 @@ function renderHero() {
     }
     staffStatus.textContent = txt;
     staffStatus.style.color = color;
-    staffStatus.title = `线程薪资四态（当前：${w.state}）\n` +
+    // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块 [data-tip]，整行悬浮 / 点击均可触发。
+    const wageZone = document.getElementById('wage-help-zone');
+    const wageTip = `线程薪资四态（当前：${w.state}）\n` +
       `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
-      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ×${wageDebtMult()}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
-      `· 强制休眠（橙）：产出 ×0，保命成本 = 薪资 ×${wageKeepCostMult()}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
+      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
+      `· 强制休眠（橙）：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
       `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程（维修坞 → 0，免疫）\n` +
-      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
+      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
       `恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）`;
+    if (wageZone) wageZone.dataset.tip = wageTip;
   }
   // v2.8.10：招募行只展示「下一线程」增量（总产出/消耗移出 hero——顶栏已有，避免重复显示）
   const staffPrevEl = document.getElementById('staff-preview');
@@ -933,10 +942,11 @@ function switchTab(id) {
     const bzPanel = document.getElementById('bazaar-panel');
     if (bzPanel) renderBazaarPanel(bzPanel);
   }
+  if (id === 'reincarn') dirty.reincarn = true;
 }
 
 // v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性），点击提示解锁路径
-const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市' };
+const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市', 'btn-reincarn': '轮回' };
 const TAB_LOCK_HINTS = {
   'btn-expedition': '星图未解锁：完成首次远征准备（或研究科技「深空探测」）后开放',
   'btn-relics': '遗物未解锁：触发首次深渊裂隙并发现 DM 后开放',
@@ -944,7 +954,8 @@ const TAB_LOCK_HINTS = {
   'btn-policy': '政策未解锁：达成对应政策开放条件后出现',
   'btn-delve': '深潜未解锁：ES≥3 + DM 已发现 + 宗教已信奉',
   'btn-rift-tab': '裂隙未解锁：班组 ≥15 条线程后开放',
-  'btn-bazaar': '集市未解锁：达成集市开启条件后开放',
+  'btn-bazaar': '集市未解锁：完成首次晋升后可用职级点开启',
+  'btn-reincarn': '轮回未解锁：完成首次晋升后可用职级点开启',
 };
 function setTabLocked(btn, locked) {
   if (!btn) return;
@@ -972,11 +983,13 @@ function refreshTabVisibility() {
   // v3.0.9 反馈②：解锁口径收紧为「购入矩阵存储库」（anchorShown('rp')）——溢出只开放仓库购买入口，
   // 不再显示研究点 tab（未购仓库时的「未解锁」提示页与溢出引导文案一并移除）
   const rpBtn = document.getElementById('btn-rp');
-  if (rpBtn) rpBtn.style.display = anchorShown('rp', S) ? '' : 'none';
+  // v3.12.0 反馈⑪：RP 改本局制后，tab 门控必须改用 anchorDone（不含跨转生持久标记），
+  // 否则转生后 resDiscovered.rp 仍为 true 会误放行一个本局根本没解锁的研究点 tab。
+  if (rpBtn) rpBtn.style.display = anchorDone('rp', S) ? '' : 'none';
   // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）——v3.3.3 反馈⑨：未解锁改「??？」锁定态
   // v3.4.0 反馈⑤：科技树「深空探测」本身即解锁星图（深空殖民/第二路探索都在星图内），
   // 此前只认 expeditionsDone/expeditions，玩家买完科技仍看到「???」，以为解锁没生效
-  setTabLocked(document.getElementById('btn-expedition'), !(S.expeditionsDone > 0 || S.expeditions.length > 0 || hasTech('deep_space')));
+  setTabLocked(document.getElementById('btn-expedition'), !(anchorDone('rp', S) && (S.expeditionsDone > 0 || S.expeditions.length > 0 || hasTech('deep_space'))));
   // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才开放
   // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
   if (canUnlockReligion()) { S._religionHintSeen = true; }
@@ -1000,8 +1013,9 @@ function refreshTabVisibility() {
   setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
   // v2.8.6 B2a：政策——有开放政策组才开放
   setTabLocked(document.getElementById('btn-policy'), !(policyOpenGroups().length > 0));
-  // v3.0.0：深渊集市——解锁或可解锁时开放
-  setTabLocked(document.getElementById('btn-bazaar'), !(bazaarUnlocked() || canUnlockBazaar()));
+  // v3.12.0 反馈⑬：集市 / 轮回在首次晋升后常驻入口；未买断也可点进去看「职级点开启」卡。
+  setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
+  setTabLocked(document.getElementById('btn-reincarn'), !moduleVisible('reincarn'));
 }
 
 // ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
@@ -1087,7 +1101,7 @@ function bindQuickSwitches() {
 function renderRpPanel() {
   const panel = document.getElementById('rp-panel');
   if (!panel) return;
-  if (!anchorShown('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
+  if (!anchorDone('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></div>
@@ -1103,7 +1117,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 ×1.15）+ 产出基座（当前 EP 上限 ×25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 3,000 再逐次扩容。达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 +15%）+ 产出基座（+当前 EP 上限的 25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 2,500 再逐次扩容。达到上限后停止积累。', () => {});
   });
 }
 
@@ -1138,14 +1152,14 @@ function updateTabLocks() {
     // v3.7.2 反馈①：异兽再叠 PT 锚点（见 petsTabUnlocked），修复「PT 未解锁、异兽大模块却已开放」
     const unlocked = id === 'btn-pets'
       ? petsModuleUnlocked(S)
-      : isStageUnlocked(stage, S) && (!anchorKey || anchorShown(anchorKey, S));
+      : isStageUnlocked(stage, S) && (!anchorKey || anchorDone(anchorKey, S));
     if (!unlocked) {
       if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」与解锁提示）
       btn.classList.add('tab-locked');
       btn.textContent = '🔒 ???';
       btn.title = id === 'btn-pets'
         ? '异兽将在解锁 PT 后开放'
-        : (anchorKey && isStageUnlocked(stage, S) && !anchorShown(anchorKey, S)
+        : (anchorKey && isStageUnlocked(stage, S) && !anchorDone(anchorKey, S)
           ? `${label} 将在解锁对应资源后开放`
           : `${label} 将在 ${stage} 阶段解锁`);
       btn.disabled = true;
@@ -1334,15 +1348,17 @@ function bindEvents() {
   document.getElementById('hero')?.addEventListener('click', doClick);
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
   // v2.8.10：线程状态点击弹出四态说明（欠薪/休眠状态悬停提示对点击无响应，改为点击弹窗）
-  document.getElementById('staff-status')?.addEventListener('click', () => {
+  // v3.12.0 反馈⑯：整块触发（招募按钮除外，避免误弹说明）
+  document.getElementById('wage-help-zone')?.addEventListener('click', (e) => {
+    if (e.target.closest('#hire-btn')) return;
     const W = BALANCE.thread.wages;
     askConfirm('线程状态说明', `线程薪资四态（当前：${(S.wageState || {}).state || 'ok'}）\n` +
       `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
-      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ×${wageDebtMult()}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
-      `· 强制休眠（橙）：产出 ×0，保命成本 = 薪资 ×${wageKeepCostMult()}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
+      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
+      `· 强制休眠（橙）：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
       `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程\n` +
-      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ×${BALANCE.lazy.prodMult}、消耗 ×${BALANCE.lazy.costMult}\n` +
-      `恢复：EP ≥ ${W.recoverSec}s 薪资后经 ${W.transitionSec}s 过渡 / ${W.bufferSec}s 缓冲回到满薪（恢复后休眠 ≥60s 触发补偿 ×1.5）`, () => {});
+      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}\n` +
+      `恢复：EP ≥ ${W.recoverSec}s 薪资后经 ${W.transitionSec}s 过渡 / ${W.bufferSec}s 缓冲回到满薪（恢复后休眠 ≥60s 触发补偿 +50%）`, () => {});
   });
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   document.getElementById('focus-bar')?.addEventListener('click', buyFocus);
@@ -1388,7 +1404,7 @@ function bindEvents() {
   document.getElementById('btn-achievement')?.addEventListener('click', () => switchTab('achievement'));
   document.getElementById('btn-offline')?.addEventListener('click', () => switchTab('offline'));
   // v2.7.1：触手交互动画——点击拍打 + 日志反馈（hover 蠕动走 CSS）
-  document.getElementById('tentacle-deco')?.addEventListener('click', () => {
+  document.getElementById('tentacle-tap-zone')?.addEventListener('click', () => {
     const deco = document.getElementById('tentacle-deco');
     if (!deco) return;
     deco.classList.remove('tap');
@@ -1424,6 +1440,18 @@ function bindEvents() {
   // v3.0.0：深渊集市
   document.getElementById('btn-bazaar')?.addEventListener('click', () => switchTab('bazaar'));
   bindBazaarPanel(document.getElementById('bazaar-panel'));
+  document.getElementById('btn-reincarn')?.addEventListener('click', () => switchTab('reincarn'));
+  // v3.12.0 反馈⑬：模块购买卡（轮回页 / 集市页共用同一 data 属性与同一购买入口）
+  document.addEventListener('click', (e) => {
+    const el = e.target && e.target.closest && e.target.closest('[data-module-unlock]');
+    if (!el) return;
+    const r = buyModuleUnlock(el.dataset.moduleUnlock);
+    if (r.ok) {
+      toast(`已开启「${r.name}」：消耗 ${r.cost} PP`);
+      dirty.reincarn = true; dirty.bazaar = true; dirty.top = true; dirty.prestige = true;
+      refreshTabVisibility();
+    } else if (r.reason !== '已开启' && toast) toast(r.reason);
+  });
   // v2.9.0：Wiki 重构为侧栏分章 + 内容区；v3.1.1 反馈⑥：全部章节无条件展示（不管是否解锁——
   // wiki 同时是研发手册，未解锁章节直接可见解锁条件，不再灰显锁定）
   const wikiBtn = document.getElementById('btn-wiki');

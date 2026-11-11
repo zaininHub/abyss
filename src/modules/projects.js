@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { PROJECT_TYPES, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
-import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost } from './economy.js';
+import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost, researchMult } from './economy.js';
 import { anchorShown } from './disclosure.js'; // v2.5 ③：未解锁资源不出对应奖励任务
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
@@ -12,7 +12,9 @@ export function setProjectLogFn(fn) { logFn = fn; }
 export function maxProjects() {
   // v3.7.0 bugfix：原实现 Math.max(3, fxValue) 而建筑只给 2 → 恒等于基础 3，
   //   玩家花 4.8M EP 买的「项目平行台」完全没有效果。改为基础 3 + 建筑增量（叠加而非取大）。
-  return MAX_PROJECTS + Math.round(fxValue('maxProjects'));
+  // v3.12.0 反馈⑩：研究点「项目统筹」扩展并行任务数（玩法扩展，不是又一个资源倍率）。
+  // researchMult('project') 在 v=1 的线性口径下 = 1 + 等级，减 1 即等级本身。
+  return MAX_PROJECTS + Math.round(fxValue('maxProjects')) + Math.round(researchMult('project') - 1);
 }
 
 // v2.0：记录上次生成时间，配合 PROJECT_SPAWN_COOLDOWN 防止秒刷
@@ -47,20 +49,20 @@ export function spawnProject() {
   let reward;
   if (roll < 0.55) {
     // v2.4.2：奖励量级再降——10 分钟产出（goal 的 2 倍；原 15 分钟产出，反馈「奖励值过大」）
-    let amt = cps * windowSec * 1.0;
+    let amt = cps * windowSec * (BALANCE.projEpRatio || 0.35);
     if (!isFinite(amt) || amt < 50) amt = 50;
     amt *= projRewardMult(); // v2.1 建筑驱动：项目督导室 +50%/级（生成时计入，奖励展示与实际一致）
-    amt = Math.min(amt, epStorageCap()); // v2.8.7：任务 EP 奖励不超过当前存储上限
+    amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.25)); // v3.12.0 反馈⑧：不再一次灌满整仓
     reward = { kind: 'ep', amount: amt };
   } else if (roll < 0.8 && rpUnlocked) {
     // v2.0：项目 RP 奖励 3-8（balance.js 配置）
     reward = { kind: 'rp', amount: Math.ceil((BALANCE.projRpMin + Math.floor(Math.random() * (BALANCE.projRpMax - BALANCE.projRpMin + 1))) * projRewardMult()) };
   } else if (roll < 0.8) {
     // v2.5 ③：RP 未解锁 → 回退 EP 档（等同基础档）
-    let amt = cps * windowSec * 1.0;
+    let amt = cps * windowSec * (BALANCE.projEpRatio || 0.35);
     if (!isFinite(amt) || amt < 50) amt = 50;
     amt *= projRewardMult();
-    amt = Math.min(amt, epStorageCap()); // v2.8.7：任务 EP 奖励不超过当前存储上限
+    amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.25)); // v3.12.0 反馈⑧：不再一次灌满整仓
     reward = { kind: 'ep', amount: amt };
   } else if (roll < 0.9 && !hasBuff) reward = { kind: 'buff', buffMult: 2, dur: 300 };
   else if (!hasDebuff) reward = { kind: 'debuff', buffMult: 0.8, dur: 0 };

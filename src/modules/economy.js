@@ -239,9 +239,13 @@ export function purgeDmFor(cutPct) { // DM 析出 = cut² × 0.02（50% → 50 D
   return Math.round(cutPct * cutPct * (BALANCE.corruption.purge?.dmPerPctSq || 0.02) * 100) / 100;
 }
 
+// v3.12.0 反馈⑫：职级点加速资源发展的唯一真源（每点 +10%）。
+// 过去硬编码在 globalMult / clickMult 两处且 UI 无处展示，玩家误以为「职级点不推动发展」。
+export function prestigeBoost() { return 1 + (S.prestigePoints || 0) * 0.10; }
+
 // ========== 全局乘数 ==========
 export function globalMult() {
-  let m = 1 + S.prestigePoints * 0.10;
+  let m = prestigeBoost();
   // v2.1 建筑驱动：全局加法（预热节点/效能尖塔/调度中枢 Σ +2%~+50%/级）
   // 与全局乘算（双倍工坊 ×1.25^级、锚链 ×1.5~1.8^级）全部来自效果引擎；科技=解锁钥匙，不再参与乘数计算
   m *= (1 + fxValue('globalAdd'));
@@ -306,7 +310,8 @@ export function rpProdPerSec() {
   if (n < 1 || !converterEnabled('atrium')) return 0;
   // v3.4.6 反馈⑤：班组加成对蒸馏产出的放大封顶 ×2——绑定线程的等级/职业乘区曾无上限叠乘
   // （十几条绑定线程 ×14 时实际汇率被压到 1/14，RP 获取过快且卡面显示 +0 RP/s），现钳制后口径自洽
-  return (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2);
+  // v3.12.0 反馈⑫：职级点同样加速 RP 这类独立资源产出（不只 EP）
+  return (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) * prestigeBoost();
 }
 export function rpEffScale() {
   const p = rpProdPerSec();
@@ -347,7 +352,7 @@ export function clickMult() {
   let m = 1; // v2.8.17 ⑦：专注等级不再加成点击（效果迁移至线程产出）
   // v2.1 建筑驱动：指尖力场族（初/中/深/极，×1.5~×5 每级乘算）；click_up 改钥匙
   m *= fxValue('clickMul');
-  m *= (1 + S.prestigePoints * 0.1);
+  m *= prestigeBoost();
   if (S.runTalent === 'foc') m *= 5;
   m *= (1 + elv('click') * 0.1);
   m *= petMult('click');
@@ -781,7 +786,9 @@ export function prestigeGain() {
   // v2.5.1：奖励合理化——round 而非 floor（27.68M/需求 10M → 2 PP，原 1 PP）；未达标仍为 0
   const x = S.runEarned / prestigeNeed();
   if (x < 1) return 0;
-  return Math.max(1, Math.round(Math.sqrt(x))) * ppMult();
+  // v3.12.0 反馈⑦：ppMult() 含 √2 / ×3 等倍率，旧实现返回小数，顶栏职级点显示 1.41421356…。
+  //   倍率先乘、最终统一取整，保证任何来源的职级点都是整数。
+  return Math.max(1, Math.round(Math.max(1, Math.round(Math.sqrt(x))) * ppMult()));
 }
 
 export function prestigeRpGain() {
@@ -964,7 +971,9 @@ function capBasisSignature() {
   for (const k in (S.tech || {})) tech += (S.tech[k] ? 1 : 0);
   return `${up}|${bd}|${tech}|${Object.keys(S.milesDone || {}).length}|${S.storyline || 'default'}|${S.prestigePoints || 0}`;
 }
-// 返回快照产能（只在签名变化时重新取样）；busy 时直接返回已有值，避免递归
+// v3.12.0 反馈③：快照允许回落。旧实现「单调不回落」会把早期一次高 cps 永久钉在上限里，
+//   转生 / 吞噬 / 产能结构收缩后上限依旧天文数字。签名只在结构性投入变化时刷新，
+//   所以允许回落不会让线程数量 / 薪资四态的实时波动造成上限抖动。
 function epCapBasisCps() {
   const sig = capBasisSignature();
   if (S._epCapBasisSig !== sig) {
@@ -973,7 +982,7 @@ function epCapBasisCps() {
       capBasisBusy = true;
       let cps = 0;
       try { cps = computeCps(); } catch { cps = 0; } finally { capBasisBusy = false; }
-      if (isFinite(cps) && cps > (S._epCapBasisCps || 0)) S._epCapBasisCps = cps;
+      S._epCapBasisCps = isFinite(cps) && cps > 0 ? cps : 0;
     }
   }
   return S._epCapBasisCps || 0;
@@ -1023,14 +1032,19 @@ export function epStorageCap() {
   //   与 v3.4.9 ⑤ 的直接 cps 口径不同：这里用 epCapBasisCps()（只在买升级/建筑时刷新、
   //   单调不回落），所以线程数量/心情/薪资/懒惰/吞噬的实时波动不会让上限抖动；
   //   玩家每次加大结构性投入后又会把产能重新纳入，存满一次仍 ≈ 1~3 小时。
-  //   ⚠️ 仍是「叠加」而非「取 max」：基座与结构性值相加，扩容件每一级都真实生效。
+  // v3.12.0 反馈③：基座改「相对硬顶 + 取 max」。旧实现 cap = cps×3600h + 结构性值，
+  //   cps 快照单调不回落，产能到 1e17 时上限被撑到 1e20，备用粮仓 +4,000/级完全无感。
+  //   现在基座最多把结构性上限放大 capOverflowHardRatio 倍；且用 max() 而非相加，
+  //   买扩容会等比抬高最终上限 —— 扩容件重新成为 EP 上限的唯一成长来源。
   if (S._rpOverflowSeen) {
     const baseCap = cap;
     const hours = B.capHoursFloor != null ? B.capHoursFloor : 2;
     const mult = B.capOverflowMult != null ? B.capOverflowMult : 3;
+    const hardRatio = B.capOverflowHardRatio != null ? B.capOverflowHardRatio : 6;
     const basis = epCapBasisCps();
-    const floor = Math.max(basis * 3600 * hours, baseCap * mult);
-    if (isFinite(floor) && floor > 0 && isFinite(cap) && cap > 0) cap = floor + baseCap;
+    const timeFloor = basis * 3600 * hours;
+    const floor = Math.min(Math.max(timeFloor, baseCap * mult), baseCap * hardRatio);
+    if (isFinite(floor) && floor > 0 && isFinite(cap) && cap > 0) cap = Math.max(cap, floor);
   }
   return Math.round(cap);
 }

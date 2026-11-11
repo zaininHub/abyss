@@ -16,6 +16,7 @@
   --good: #3fb950;
   --bad: #f85149;
   --warn: #d29922;
+  --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条统一高度（触手 / 深渊凝视） */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,6 +76,28 @@ body {
   pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
 
+/* v3.12.0 反馈⑯：线程薪资说明整块触发。整行都是命中区（.hero-row 本身即块），
+   悬浮显示含换行的四态说明，点击任意空白处也会弹完整说明；刻意不用原生 title 免双弹窗。 */
+.wage-help-zone { position: relative; cursor: help; }
+.wage-help-zone[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 100%; left: 0; z-index: 999;
+  background: #1c2128; border: 1px solid var(--border); border-radius: 5px;
+  padding: 8px 10px; font-size: 11px; color: var(--text-2);
+  white-space: pre-line; width: max-content; max-width: min(360px, 80vw); line-height: 1.7;
+  pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+}
+.wage-help {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 7px; border: 1px dashed var(--border); border-radius: 4px;
+  background: rgba(88,166,255,.06);
+}
+.wage-help-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; flex: 0 0 14px; border-radius: 50%;
+  border: 1px solid var(--border); color: var(--text-2); font-size: 10px; line-height: 1;
+}
+
 .stat b { color: var(--accent); }
 
 /* v3.10.2 ②：顶栏「产出 < 消耗」警告标志。悬浮所在 stat 的气泡查看预期 EP 耗尽时间；
@@ -101,7 +124,7 @@ body {
   /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口
      v3.4.0 反馈①：最左列再放宽（0.58→0.70fr，下限 240→280px）——裂隙/任务文案不再频繁换行
      v3.4.1 反馈①：右侧让出 132px 浮动栏后重新配权（最左列 0.70→0.74fr），1920 宽下仍保持 ≈300px */
-  grid-template-columns: minmax(290px, 0.74fr) minmax(340px, 1.00fr) minmax(0, 1.84fr) minmax(250px, 0.72fr);
+  grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.02fr) minmax(0, 1.94fr) minmax(280px, 0.80fr);
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
@@ -384,6 +407,26 @@ body {
   color: var(--accent);
   font-size: 12px;
 }
+
+/* v3.12.0 反馈④：政策 / 集市状态角标——四态各有文字，不再只靠透明度与边框色暗示 */
+.policy-state, .dealer-state {
+  display: inline-block; font-size: 10.5px; font-weight: 600;
+  padding: 1px 6px; border-radius: 3px; white-space: nowrap; line-height: 1.6;
+}
+.policy-state-on, .dealer-state-ok { background: rgba(63,185,80,.16); color: var(--green); border: 1px solid rgba(63,185,80,.38); }
+.policy-state-open { background: rgba(88,166,255,.14); color: var(--accent); border: 1px solid rgba(88,166,255,.34); }
+.policy-state-lock, .dealer-state-lock { background: rgba(110,118,129,.14); color: var(--text-3); border: 1px solid var(--border); }
+.dealer-state-bad { background: rgba(248,81,73,.14); color: var(--red); border: 1px solid rgba(248,81,73,.34); }
+.policy-foot, .dealer-meta { font-size: 10.5px !important; color: var(--text-3) !important; line-height: 1.6; }
+.dealer-cost { font-size: 11px !important; line-height: 1.6; }
+
+/* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面） */
+.ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; }
+.ai-action { background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
+.ai-action-locked { border-style: dashed; opacity: .78; }
+.ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
+.ai-assistant-head { font-size: 12px; color: var(--text-2); margin-top: 8px; }
+.ai-assistant-note { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
 
 /* ========== 科技网格 ========== */
 .tech-grid {
@@ -914,9 +957,9 @@ body.paused .pet-grid .pet-card {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* v3.4.1 反馈①：不再满铺到视口边缘——右侧留 132px 浮动栏（许愿池 / 触手），
-       底部留 56px 条带（异兽浮标），三件装饰物与四列内容互不遮挡 */
-    padding: 10px 148px 58px 12px;
+    /* v3.12.0 反馈⑭：触手移到底部条带后，右侧浮动栏只需留给许愿池（148px → 112px），
+       回收的 36px 与左侧 4px 一并让给四列；底部 62px 与 56px 装饰条对齐且留 6px 余量。 */
+    padding: 10px 112px 62px 8px;
   }
   .topbar { flex: 0 0 auto; }
   .ch-bar { flex: 0 0 auto; }
@@ -924,7 +967,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(290px, 0.74fr) minmax(340px, 1.00fr) minmax(0, 1.84fr) minmax(250px, 0.72fr); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
+    grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.02fr) minmax(0, 1.94fr) minmax(280px, 0.80fr); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;
@@ -1055,47 +1098,41 @@ body.paused .pet-grid .pet-card {
 }
 .proj { user-select: none; }
 
-/* v2.5.3 反馈③：深渊鱼缸触手装饰（工作台底部缓慢摆动） */
+/* v3.12.0 反馈⑭：触手与「深渊凝视」同为 56px 底部条带——全宽平铺在页面预留的底部空白内，
+   pointer-events:none 不阻挡上方四列；形态改为横向低矮卷须，不再占右侧浮动栏。 */
 .tentacle-deco {
-  position: fixed;
-  right: 10px;
-  bottom: 10px;
-  z-index: 40;
-  /* v3.4.1 反馈①：缩进右侧浮动栏（200px → 124px），只占栏内空间，不盖住第四列底部日志 */
-  transform: scale(0.62);
-  transform-origin: 100% 100%;
-  pointer-events: auto; /* v2.7.1：交互动画（hover 蠕动 / 点击拍打） */
-  opacity: 0.85;
-  cursor: pointer;
-  filter: drop-shadow(0 0 5px rgba(77, 208, 225, 0.25)); /* v2.7.1：赛博霓虹光晕 */
-  transition: opacity 0.2s, filter 0.2s;
+  position: fixed; left: 0; right: 0; bottom: 0;
+  width: 100%; height: var(--bottom-deco-h, 56px);
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: .9;
+  filter: drop-shadow(0 0 6px rgba(77, 208, 225, .25));
 }
-.tentacle-deco:hover { opacity: 1; filter: drop-shadow(0 0 8px rgba(77, 208, 225, 0.55)); }
-.tentacle-deco svg { display: block; overflow: hidden; /* v2.7.2：动画幅度收敛后兜底裁剪，触手本体永不超出视口 */ }
-.tentacle-deco .tentacle { transform-origin: 50% 100%; /* v2.5.9 像素克苏鲁检查：平滑摆动 → 四帧痉挛式抽摆 */ animation: tentacle-sway 5s steps(6, end) infinite; /* v2.6.2：四帧 → 六帧更细腻抽摆 */ }
-.tentacle-deco .tentacle-b { animation-duration: 7s; animation-delay: 0.6s; }
+.tentacle-deco svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.tentacle-deco path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tentacle-deco .td-base   { stroke: #1b0733; stroke-width: 16; }
+.tentacle-deco .td-mid-a  { stroke: url(#td-grad-a); stroke-width: 10; }
+.tentacle-deco .td-glow   { stroke: #4dd0e1; stroke-width: 1.6; opacity: .72; }
+.tentacle-deco .td-base-b { stroke: #2a0c46; stroke-width: 10; }
+.tentacle-deco .td-mid-b  { stroke: url(#td-grad-b); stroke-width: 5; }
+.tentacle-deco .td-mid-c  { stroke: url(#td-grad-c); stroke-width: 2.4; }
+.tentacle-deco .tentacle { transform-origin: 50% 100%; animation: tentacle-sway 5s ease-in-out infinite; }
+.tentacle-deco .tentacle-b { animation-duration: 7s; animation-delay: .6s; }
 .tentacle-deco .tentacle-c { animation-duration: 9s; animation-delay: 1.2s; }
 .tentacle-deco .tentacle-b { opacity: 0; }
-.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: 0.85; }
+.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: .85; }
 .tentacle-deco .tentacle-c { opacity: 0; }
-.tentacle-deco.tentacle-3 .tentacle-c { opacity: 0.8; }
-/* v2.7.1：hover 交互动画——触手受惊蠕动（覆盖常驻抽摆），逐根错峰 */
-.tentacle-deco:hover .tentacle { animation: tentacle-writhe 0.9s steps(4, end) infinite; }
-.tentacle-deco:hover .tentacle-b { animation-duration: 1.1s; }
-.tentacle-deco:hover .tentacle-c { animation-duration: 1.3s; }
-@keyframes tentacle-writhe {
-  0%, 100% { transform: rotate(0deg) scaleY(1); }
-  25% { transform: rotate(-1.5deg) scaleY(1.02); }
-  50% { transform: rotate(1deg) scaleY(0.99); }
-  75% { transform: rotate(-0.5deg) scaleY(1.01); }
-}
+.tentacle-deco.tentacle-3 .tentacle-c { opacity: .8; }
 @keyframes tentacle-sway {
-  0%, 100% { transform: rotate(-2deg); }
-  15% { transform: rotate(-1.5deg); }
-  30% { transform: rotate(-0.5deg); }
-  50% { transform: rotate(1deg); }
-  70% { transform: rotate(2deg); }
-  85% { transform: rotate(1deg); }
+  0%, 100% { transform: translateY(0) rotate(-.4deg); }
+  50%      { transform: translateY(-3px) rotate(.4deg); }
+}
+/* 手动点击彩蛋热区：只覆盖底部条带右侧一小块，上方内容由 #app padding-bottom 让开 */
+.tentacle-tap-zone {
+  position: fixed; right: 0; bottom: 0;
+  width: 120px; height: var(--bottom-deco-h, 56px);
+  z-index: 2; pointer-events: auto; cursor: pointer;
 }
 
 
@@ -1139,9 +1176,9 @@ body.paused .pet-grid .pet-card {
 .tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
 .tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
 @keyframes tentacle-tap {
-  0%, 100% { transform: rotate(1deg); }
-  33% { transform: rotate(-5deg); }
-  66% { transform: rotate(4deg); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(-.5deg); }
+  66% { transform: translateY(-2px) rotate(.5deg); }
 }
 
 /* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========

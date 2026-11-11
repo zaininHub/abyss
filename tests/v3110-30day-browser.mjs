@@ -19,7 +19,7 @@
 //   - 新玩法「相位共鸣」：自动玩家在解锁后经产品真实入口开启共鸣、轮换焦点，
 //     长期推演中核对叠层 / 换相位减半 / 上限 20 / 四管线增益与代价 / CPS 同口径；
 //   - 抽象层：状态生命周期单一真源、成就注册表、面板键 / deps 清单在真实浏览器里
-//     核对旧档兼容（无 resonance 字段）、成就逐页渲染、26 面板 / 43 帧系统零异常；
+//     核对旧档兼容（无 resonance 字段）、成就逐页渲染、27 面板 / 43 帧系统零异常；
 //   - 内容扩充：主表事件 62 + 线专属 12、研究 55、政策 11 组 33 项、编排 6 条策略、百科 24 章；
 //   - UI 侧新增：共鸣开关 / 四焦点按钮的 aria-label / aria-pressed / ≥24×24 点击目标、
 //     窄卡孤字换行（getClientRects）、真实 DOM 点击后读侧同步；排班表升级为 4×6 槽位。
@@ -691,7 +691,7 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  if (bootState.panels === 26 && bootState.achievements === 135) {
+  if (bootState.panels === 27 && bootState.achievements === 135) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -723,12 +723,12 @@ try {
   else bad('EP 主产出流漏帧', `${last.flowTicks} / ${totalTicks}`);
 
   // v3.9.0 控制流层：帧系统 / 面板注册表全程零异常，render 无漏帧，声明完整
-  if (last.sysErrors === 0 && last.panelErrs === 0) ok('43 条帧系统与 26 个注册面板 30 天零异常（异常隔离生效）');
+  if (last.sysErrors === 0 && last.panelErrs === 0) ok('43 条帧系统与 27 个注册面板 30 天零异常（异常隔离生效）');
   else bad('控制流层出现运行异常', JSON.stringify({ sys: last.sysErrors, panel: last.panelErrs }));
   const sysIds = Object.keys(last.sysStats || {});
   if (last.renderTicks >= totalTicks) ok('render 帧系统每帧执行（无漏帧）', `${last.renderTicks} ticks / ${totalTicks} 帧`);
   else bad('render 帧系统漏帧', `${last.renderTicks} / ${totalTicks}`);
-  if (sysIds.length >= 40 && last.panelCount === 26) ok('帧系统 / 面板声明完整接线', `${sysIds.length} 个系统已运行 / ${last.panelCount} 个面板已注册`);
+  if (sysIds.length >= 40 && last.panelCount === 27) ok('帧系统 / 面板声明完整接线', `${sysIds.length} 个系统已运行 / ${last.panelCount} 个面板已注册`);
   else bad('声明缺失', JSON.stringify({ sys: sysIds.length, panels: last.panelCount }));
 
   if (last.projectsDone >= 3) ok('任务链路在线可达（领取即计入累计完成）',
@@ -941,7 +941,7 @@ try {
   if (s.clickOk && s.resetOk) ok('排班表真实点击后读侧同步，恢复默认按钮生效',
     `${s.before} → ${s.after} → 默认排班`);
   else bad('排班表点击链路异常', JSON.stringify({ clickOk: s.clickOk, resetOk: s.resetOk }));
-  if (s.panelCount === 26 && s.panelErrs === 0 && s.sysErrs === 0) {
+  if (s.panelCount === 27 && s.panelErrs === 0 && s.sysErrs === 0) {
     ok('渲染分发层与控制流层台账零异常', `${s.panelCount} 面板 / ${s.sysCount} 系统`);
   } else bad('控制流层台账异常', JSON.stringify({ p: s.panelCount, pe: s.panelErrs, se: s.sysErrs }));
   // v3.10.0 相位共鸣 UI 准确性
@@ -1013,11 +1013,16 @@ try {
       total: d.ai && d.ai.total,
       stalled: d.ai && d.ai.stalled && d.ai.stalled.length })) };
 
+  // v3.12.0：首价 8e6 高于前几日经济量级，灰度（DAYS<10）里 AI 零执行是定价设计而非漏接线。
+  // 长期覆盖类断言统一延后到 30 天完整推演；UI / 守恒 / 门控断言在灰度仍照常验收。
+  const isGray = DAYS < 10;
   if (aiAudit.ids.length === 5 && aiAudit.crew.length === 5
       && ['upgrade', 'hire', 'claim'].every(id => aiAudit.crew.includes(id)))
     ok('五项自动化动作全部声明需占编（含自动升级/领取/招募）', aiAudit.crew.join(', '));
   else bad('动作注册表占编清单不完整', JSON.stringify(aiAudit.crew));
-  if (aiAudit.total > 0) ok('30 天推演中 AI 自动化真实执行',
+  if (isGray) ok('灰度：AI 长期执行覆盖延后到 30 天推演',
+    `${DAYS} 天 / 助手 ${aiAudit.assistants} 名 / 执行 ${aiAudit.total} 次 / 首价 ${fx(aiAudit.cost)} EP`);
+  else if (aiAudit.total > 0) ok('30 天推演中 AI 自动化真实执行',
     `累计 ${aiAudit.total} 次 / 分布 ${JSON.stringify(aiAudit.counts)}`);
   else bad('AI 自动化全程零执行（长期覆盖失效）');
   // v3.11.3：绑定（占编）守恒——占编 + 空闲 = 助手总数，且常驻不消耗（非自动均分）。
@@ -1025,7 +1030,8 @@ try {
     ok('占编 + 空闲 = 助手总数（绑定守恒，常驻不消耗）',
       `占编 ${aiAudit.boundTotal} + 空闲 ${aiAudit.idle} = ${aiAudit.assistants}`);
   else bad('占编与空闲之和不等于助手总数', JSON.stringify({ bound: aiAudit.boundTotal, idle: aiAudit.idle, total: aiAudit.assistants }));
-  if (aiAudit.boundTotal >= 1) ok('30 天推演中 AI 动作均通过绑定占编生效（非自动均分）', `占编合计 ${aiAudit.boundTotal}`);
+  if (isGray) ok('灰度：绑定占编覆盖延后到 30 天推演', `占编 ${aiAudit.boundTotal} / 助手 ${aiAudit.assistants}`);
+  else if (aiAudit.boundTotal >= 1) ok('30 天推演中 AI 动作均通过绑定占编生效（非自动均分）', `占编合计 ${aiAudit.boundTotal}`);
   else bad('全程无动作被绑定占编');
   // v3.11.2：助手是常驻班组，不随动作消耗；余额只增不减（仅由购买扩编）。
   if (aiAudit.assistants === (aiSt.aiBuys || 0))
@@ -1041,7 +1047,8 @@ try {
   const activeKinds = executedKinds.length;
   const rogueKinds = executedKinds.filter(id => !(aiAudit.crew || []).includes(id));
   const advancedUnlocked = (aiSt.aiTechBought || 0) > 0 || (aiSt.aiBuildActivations || 0) > 0;
-  if (rogueKinds.length === 0 && activeKinds > 0)
+  if (isGray) ok('灰度：动作清单覆盖延后到 30 天推演', `执行类别 ${activeKinds}/5 · 清单外 ${rogueKinds.length}`);
+  else if (rogueKinds.length === 0 && activeKinds > 0)
     ok('长期执行过的动作全部属于 5 项占编清单（无清单外动作）',
       `${activeKinds}/5 类有记录 · 分布 ${JSON.stringify(counts)}`);
   else bad('出现清单外动作或全程零执行', JSON.stringify({ rogueKinds, counts }));
@@ -1050,14 +1057,35 @@ try {
       `本次 ${DAYS} 天推演：自动购建激活 ${aiSt.aiBuildActivations || 0} 次 / 自动研究科技购入 ${aiSt.aiTechBought || 0} 次`);
   } else if (activeKinds >= 2) {
     ok('进阶动作已解锁且长期推演覆盖多类自动化', `${activeKinds}/5 类动作有执行记录`);
+  } else if (isGray) {
+    ok('灰度：进阶动作多类覆盖延后到 30 天推演', JSON.stringify({ counts, activeKinds }));
   } else {
     bad('进阶动作已解锁但只有单一动作执行', JSON.stringify({ counts, advancedUnlocked }));
   }
+  // v3.12.0 反馈⑥：助手大幅涨价后是「稀缺编制」，自动玩家仍把 5 个开关全开，
+  // 「任一已开启动作缺人」几乎全程为真；旧断言 aiStallPct <= 50 编码的是 v3.11.3
+  // 「30 天买满 24 名、5 动作全程满编」的旧设计，不再适用。
+  // 新口径按可玩性底线验收：中期能首购、末段满编零停摆、末段有真实执行。
   const decisionPoints = DAYS * TICKS_PER_DAY / 6;
   const aiStallPct = (aiSt.aiStallTicks || 0) / decisionPoints * 100;
-  if (aiStallPct <= 50) ok('自动化未长期停摆（可玩性）',
-    `编制不足采样占比 ${aiStallPct.toFixed(1)}% / 购买 ${aiSt.aiBuys || 0} 次`);
-  else bad('自动化长期编制不足，助手供给不足', `${aiStallPct.toFixed(1)}%`);
+  const aiDaily = report.daily.map(d => ({
+    day: d.day, assistants: (d.ai && d.ai.assistants) || 0,
+    stalled: ((d.ai && d.ai.stalled) || []).length,
+    total: (d.ai && d.ai.total) || 0,
+  }));
+  const firstBuyDay = (aiDaily.find(x => x.assistants > 0) || {}).day;
+  const lastStallDay = aiDaily.filter(x => x.stalled > 0).reduce((n, x) => Math.max(n, x.day), 0);
+  const tailN = Math.min(5, DAYS);
+  const tail = aiDaily.slice(-tailN);
+  const tailClean = tail.length === tailN && tail.every(x => x.stalled === 0);
+  const tailActions = tail.length >= 2 && tail[tail.length - 1].total > tail[0].total;
+  const midAvailable = firstBuyDay != null && firstBuyDay <= Math.ceil(DAYS / 2);
+  const stallDetail = `首购 D${firstBuyDay == null ? '-' : firstBuyDay} / 末次缺编 D${lastStallDay} / 末 ${tailN} 天零停摆 ${tailClean} / 末段执行 ${tailActions} / 全程缺编采样 ${aiStallPct.toFixed(1)}% / 购买 ${aiSt.aiBuys || 0} 次`;
+  if (DAYS < 10) {
+    ok('灰度：自动化供给曲线已记录（可玩性判定在 30 天完整推演）', stallDetail);
+  } else if (aiAudit.total > 0 && midAvailable && tailClean && tailActions) {
+    ok('自动化中期可用、末段满编且真实执行（v3.12.0 助手稀缺口径）', stallDetail);
+  } else bad('自动化供给未达可玩性底线', stallDetail);
   const A = ui.aiUI || {};
   if (A.ok && A.groups && A.groups.includes('basic') && A.groups.includes('advanced') && A.switches && A.switches.length === 5)
     ok('AI 面板两组横幅 + 5 张开关由注册表完整渲染',

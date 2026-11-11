@@ -48,6 +48,7 @@ export function defaultState() {
     devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）
     policies: {}, policyRerolls: {}, vowPolicyBoost: false, policyRuns: [], // v2.8.6 B2a：周期政策（每轮重选）+ 政策走向历史
     bazaar: { unlocked: false, trades: 0, refreshCount: 0, shuffleTimer: 0, regenTimer: 0, rates: {}, stock: {} }, // v3.0.0：深渊集市（成交笔数跨周期，库存/汇率每轮重置）
+    moduleUnlocks: { reincarn: false, bazaar: false }, // v3.12.0 反馈⑬：首次晋升后用职级点买断的大模块（跨局保留）
     religion: {}, faith: 0,
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,

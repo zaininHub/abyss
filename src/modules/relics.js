@@ -1,5 +1,6 @@
 // v2.7.0：深渊遗物模块——科技树旁新长线栏目（DM 消费；跨转生保留；裂隙触发 + DM 发现后解锁）
 import { S, save } from '../state.js';
+import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { fmt } from './economy.js';
 import { RELICS, relicLevel, relicCost, relicMult, relicsUnlocked } from '../data/relics.js';
 
@@ -96,7 +97,7 @@ export function renderRelics(container) {
     html += `<div class="relic-card ${gateOk ? '' : 'relic-gated'}" data-relic="${r.id}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div style="flex:1">
         <div style="font-weight:600;color:${gateOk ? 'var(--purple)' : 'var(--text-3)'}">${r.name} <span style="font-size:11px;color:var(--text-2)">Lv.${lv}/${r.cap}</span></div>
-        <div style="font-size:12px;color:var(--text-2);margin-top:2px">${r.desc}（当前 ×${effNow}${effNext ? ` → ×${effNext}` : ''}）</div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:2px">${r.desc}（当前 ${fmtMultDelta(effNow)}${effNext ? ` → ${fmtMultDelta(effNext)}` : ''}）</div>
         ${gateOk ? '' : `<div style="font-size:11px;color:var(--text-3);margin-top:2px">未苏醒：需 ${r.gateHint || '更深层深渊进度'}</div>`}
       </div>
       <button class="btn ${canBuy ? '' : 'disabled'}" data-relic-buy="${r.id}" ${canBuy ? '' : 'disabled'} title="${canBuy ? `唤醒：-${fmt(cost)} DM` : maxed ? '已达上限' : !gateOk ? '进度不足' : `DM 不足（需 ${fmt(cost)}）`}">${maxed ? '已圆满' : `${fmt(cost)} DM`}</button>

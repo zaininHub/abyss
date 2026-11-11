@@ -8,22 +8,22 @@ import { relicMult } from './relics.js'; // v2.7.0：永暗祷文——信仰产
 
 // 分支定义（可见性随进度；选一锁定，跨转生保留——crossRun 含 religion）
 export const RELIGIONS = [
-  { id: 'sun',      name: '日耀议会',   icon: '☀️', desc: '全局产出 ×2',          effect: '全局产出 ×2',          gate: () => true,
+  { id: 'sun',      name: '日耀议会',   icon: '☀️', desc: '全局产出 +100%',          effect: '全局产出 +100%',          gate: () => true,
     hook: (s) => (s.religion && s.religion.sun) ? 2 : 1 },
-  { id: 'genesis',  name: '创世枢机',   icon: '⚙️', desc: '所有成本 ×0.8',          effect: '所有成本 ×0.8',        gate: () => true,
+  { id: 'genesis',  name: '创世枢机',   icon: '⚙️', desc: '所有成本 -20%',          effect: '所有成本 -20%',        gate: () => true,
     hook: (s) => (s.religion && s.religion.genesis) ? 0.8 : 1 },
-  { id: 'moon',     name: '月影修道会', icon: '🌙', desc: '离线效率 ×1.5',          effect: '离线效率 ×1.5',        gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
+  { id: 'moon',     name: '月影修道会', icon: '🌙', desc: '离线效率 +50%',          effect: '离线效率 +50%',        gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
     hook: (s) => (s.religion && s.religion.moon) ? 1.5 : 1 },
-  { id: 'reveal',   name: '天启密会',   icon: '📜', desc: '项目奖励 ×2',            effect: '项目奖励 ×2',          gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
+  { id: 'reveal',   name: '天启密会',   icon: '📜', desc: '项目奖励 +100%',            effect: '项目奖励 +100%',          gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
     hook: (s) => (s.religion && s.religion.reveal) ? 2 : 1 },
-  { id: 'nature',   name: '自然亲和',   icon: '🌿', desc: '异兽加成 ×2',            effect: '异兽加成 ×2',          gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
+  { id: 'nature',   name: '自然亲和',   icon: '🌿', desc: '异兽加成 +100%',            effect: '异兽加成 +100%',          gate: () => !!(S.resDiscovered && S.resDiscovered.rp),
     hook: (s) => (s.religion && s.religion.nature) ? 2 : 1 },
-  { id: 'immortal', name: '永生日轮',   icon: '♾️', desc: '转生 ES 获得 ×2',        effect: 'ES 获得 ×2',           gate: () => !!(S.resDiscovered && S.resDiscovered.dm),
+  { id: 'immortal', name: '永生日轮',   icon: '♾️', desc: '转生 ES 获得 +100%',        effect: 'ES 获得 +100%',           gate: () => !!(S.resDiscovered && S.resDiscovered.dm),
     hook: (s) => (s.religion && s.religion.immortal) ? 2 : 1 },
-  { id: 'omnipot',  name: '全知教团',   icon: '🔱', desc: '全局产出 ×10',         effect: '全局产出 ×10',         gate: () => (S.es || 0) >= 1,
+  { id: 'omnipot',  name: '全知教团',   icon: '🔱', desc: '全局产出 +900%',         effect: '全局产出 +900%',         gate: () => (S.es || 0) >= 1,
     hook: (s) => (s.religion && s.religion.omnipot) ? 10 : 1 },
   // v3.6.0 方向④：宗教↔裂隙联动分支
-  { id: 'abyss',    name: '深渊崇拜',   icon: '🌑', desc: '裂隙余烬产出 ×2',      effect: '裂隙余烬产出 ×2',      gate: () => !!(S.resDiscovered && S.resDiscovered.dm),
+  { id: 'abyss',    name: '深渊崇拜',   icon: '🌑', desc: '裂隙余烬产出 +100%',      effect: '裂隙余烬产出 +100%',      gate: () => !!(S.resDiscovered && S.resDiscovered.dm),
     hook: (s) => (s.religion && s.religion.abyss) ? 2 : 1 },
 ];
 
@@ -68,9 +68,9 @@ export function templeFaithPerSec() {
 }
 
 // ===== v2.6.4 ⑤ 信仰超长线：神谕塔 / 圣战军（消耗信仰的后期升级点） =====
-export const ORACLE = { id: 'oracle', name: '神谕塔', base: 2500, growth: 2.6, cap: 5, effect: 0.15, desc: '信仰产出 ×1.15/级' }; // v3.0.3 后续反馈⑦：600×2.2 // v3.3.7 反馈⑤：过于便宜 → 2500×2.6（到满级总投入 ×9.7）
+export const ORACLE = { id: 'oracle', name: '神谕塔', base: 2500, growth: 2.6, cap: 5, effect: 0.15, desc: '信仰产出 +15%/级' }; // v3.0.3 后续反馈⑦：600×2.2 // v3.3.7 反馈⑤：过于便宜 → 2500×2.6（到满级总投入 ×9.7）
 
-export const CRUSADE = { id: 'crusade', name: '圣战军', base: 5000, growth: 2.7, cap: 5, effect: 0.12, desc: '全局产出 ×1.12/级' }; // v3.0.3 后续反馈⑦：1000×2.3 // v3.3.7 反馈⑤：过于便宜 → 5000×2.7（到满级总投入 ×8.6）
+export const CRUSADE = { id: 'crusade', name: '圣战军', base: 5000, growth: 2.7, cap: 5, effect: 0.12, desc: '全局产出 +12%/级' }; // v3.0.3 后续反馈⑦：1000×2.3 // v3.3.7 反馈⑤：过于便宜 → 5000×2.7（到满级总投入 ×8.6）
 export function oracleLevel() { return (S.religion && S.religion.oracle) || 0; }
 export function crusadeLevel() { return (S.religion && S.religion.crusade) || 0; }
 export function oracleCost() { const lv = oracleLevel(); return Math.round(ORACLE.base * Math.pow(ORACLE.growth, lv)); }

@@ -96,8 +96,8 @@ export const BALANCE = {
   // v2.1：数据中心随 RESCALE 重标定——原 base 1e6 growth 10 在终局上限（≈3.7e11）下远期失衡，
   // 重标为 base 8e4 growth 4（三档 8e4 / 3.2e5 / 1.28e6），并纳入 30% 防死锁钳制（组长硬性要求：DC 三档成本随 cap 曲线重标定）
   buildings: {
-    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪惩罚 0.7 → 0.8', '欠薪惩罚 0.8 → 0.9', '欠薪惩罚 0.9 → 0.95'] },
-    dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 0.3 → 0.15'] },
+    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪产出系数 +0.10（0.7 → 0.8）', '欠薪产出系数 +0.10（0.8 → 0.9）', '欠薪产出系数 +0.05（0.9 → 0.95）'] },
+    dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 -50%（0.3 → 0.15）'] },
     dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
     datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 存储上限 +10,000', '每 10 线程全局产出 +10%，EP 存储上限 +25,000', '每 10 线程全局产出 +15%，EP 存储上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
@@ -130,12 +130,12 @@ export const BALANCE = {
     //   旧口径满档累计 ×0.511（全部成本几乎对半砍）而总投入不到 5,000 万，明显过强。
     //   新口径：单价 ×5~12、每级折价幅度收窄一档 → 满档累计 ×0.742（约 26% 折扣），总投入 ≈6.3 亿 EP。
     //   minMile：按原档位显式锁定，避免涨价后一律被 unlockMilestoneV21 顶到 m7。
-    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e6, growth: 1.45, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.99 },  minMile: 5, desc: '每级所有成本 ×0.99' },
-    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.2e7, growth: 1.48, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.98 },  minMile: 6, desc: '每级所有成本 ×0.98' },
-    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 5e7,   growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.975 }, minMile: 7, desc: '每级所有成本 ×0.975' },
-    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 8e7,   growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.97 },  minMile: 7, desc: '每级所有成本 ×0.97' },
-    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 2e8,   growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.95 },  minMile: 7, desc: '所有成本 ×0.95' },
-    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 3e6,   growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.88 }, minMile: 5, desc: '专注成本 ×0.88' },
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e6, growth: 1.45, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.99 },  minMile: 5, desc: '每级所有成本 -1%' },
+    { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.2e7, growth: 1.48, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.98 },  minMile: 6, desc: '每级所有成本 -2%' },
+    { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 5e7,   growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.975 }, minMile: 7, desc: '每级所有成本 -2.5%' },
+    { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 8e7,   growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.97 },  minMile: 7, desc: '每级所有成本 -3%' },
+    { id: 'purchase_office_3',name: '采购总署·极',cat:'C',cap: 1, base: 2e8,   growth: 1.30, unlockTech: 'grand_cost', fx: { key: 'costMul', value: 0.95 },  minMile: 7, desc: '所有成本 -5%' },
+    { id: 'focus_core',     name: '专注心核',   cat: 'C', cap: 1, base: 3e6,   growth: 1.25, unlockTech: 'focus_opt',  fx: { key: 'focusCost', value: 0.88 }, minMile: 5, desc: '专注成本 -12%' },
     // ---- 组 D · 上限扩容 / 组 G · 离线效率（v3.4.5 反馈③：整组从效能建筑删除）----
     // 删除原因：EP 上限已由升级商店的「存储节点 / 备用粮仓 / 深井仓储」+ 三仓库（矩阵存储库/饵料仓库/星尘金库）
     // 承担，离线效率/上限改由「远程协作」科技基线 + 离线升级（off_eff1~3 / off_cap1~2）+ 天赋/遗物/研究提供，
@@ -144,28 +144,28 @@ export const BALANCE = {
     // v3.3.9 反馈② / v3.4.1 反馈⑤ / v3.4.2 反馈①：三轮涨价；本轮 base 再抬 2.5~6 倍、growth 陡化。
     // 红线保留：产出族（coop_hall/eco_battery/eco_battery_2）满档扩展级 ≤ m=9 期上限 4.0e7。
     { id: 'coop_hall',      name: '协作大厅',   cat: 'E', cap: 5, base: 8e5,  growth: 1.38, unlockTech: 'teamwork',   fx: { key: 'threadAdd', value: 0.08 }, desc: '每级线程产出 +8%' },
-    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 5e6,  growth: 1.42, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 ×1.3' },
-    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.15e7,growth: 1.45, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 ×1.8' },
-    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 8e5,  growth: 1.38, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 ×0.90' },
-    { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 1.1e6, growth: 1.40, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 ×0.85' },
+    { id: 'team_temple',    name: '团队圣堂',   cat: 'E', cap: 3, base: 5e6,  growth: 1.42, unlockTech: 'team2',      fx: { key: 'threadMul', value: 1.3 },  desc: '每级线程产出 +30%' },
+    { id: 'super_team',     name: '超级团队殿', cat: 'E', cap: 2, base: 1.15e7,growth: 1.45, unlockTech: 'team3',      fx: { key: 'threadMul', value: 1.8 },    desc: '每级线程产出 +80%' },
+    { id: 'eco_battery',    name: '节能电池',   cat: 'E', cap: 5, base: 8e5,  growth: 1.38, unlockTech: 'fuel_eff',   fx: { key: 'fuelMul', value: 0.90 },   desc: '每级线程薪资 -10%' },
+    { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 1.1e6, growth: 1.40, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 -15%' },
     // ---- 组 F · RP 加成（5 座）----
     { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 6.6e5, rpCost: 300, growth: 1.45, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
     { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.75e6,rpCost: 600, growth: 1.45, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
-    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 5.6e6, rpCost: 1000, growth: 1.50, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 5.6e6, rpCost: 1000, growth: 1.50, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP +100%' },
     { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 8e6,   rpCost: 1800, growth: 1.50, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
-    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.50, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP ×2' },
+    { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.50, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP +100%' },
     // v2.7.4 ⑦：灵感蒸馏塔——主动消耗 EP 转化 RP（cat F via upgrade，主商店显示；RP 解锁后可用）
     { id: 'rp_distill',     name: '灵感蒸馏塔', cat: 'F', unlimited: true, cap: 20, base: 5e3, rpCost: 20, growth: 1.25, unlockTech: null, via: 'upgrade', fx: { key: 'rpDistill', value: 0.12 }, desc: 'RP 蒸馏效率每级 +12%' },
     // ---- 组 H · 事件/项目（6 座；v3.4.2 反馈①：base ×3、growth 陡化）----
     { id: 'chance_sensor',  name: '机会感知器', cat: 'H', cap: 3, base: 6e5,  growth: 1.45, unlockTech: 'patience',   fx: { key: 'eventFreqAdd', value: 0.30 }, desc: '每级事件触发频率 +30%' },
     { id: 'chance_sensor_2',name: '机会感知器·锐',cat:'H',cap: 2, base: 1.8e6, growth: 1.45, unlockTech: 'event_boost',fx: { key: 'eventRewardAdd', value: 0.50 }, desc: '每级事件奖励 +50%' },
     { id: 'lucky_nebula',   name: '幸运星云',   cat: 'H', cap: 2, base: 3.6e6,  growth: 1.45, unlockTech: 'luck',       fx: { key: 'eventFreqAdd', value: 0.50 }, desc: '每级事件触发频率 +50%' },
-    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 ×2' },
+    { id: 'event_tide_lab', name: '事件潮汐所', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'event3',     fx: { key: 'eventFreqMul', value: 2 },  desc: '事件触发频率 +100%' },
     { id: 'proj_supervisor',name: '项目督导室', cat: 'H', cap: 2, base: 1.4e6, growth: 1.45, unlockTech: 'morale2',    fx: { key: 'projRewardAdd', value: 0.50 }, desc: '每级项目奖励 +50%' },
-    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可同时进行 2 个项目' },
+    { id: 'proj_parallel',  name: '项目平行台', cat: 'H', cap: 1, base: 4.8e6,  growth: 1.30, unlockTech: 'project2',   fx: { key: 'maxProjects', value: 2 },   desc: '可并行任务 +2（同时进行 2 个）' },
     // ---- 组 I · 晋升/职级（2 座；满级 ppMult 合计 ×6，对齐终章口径；v3.4.2 反馈①：×3）----
-    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '晋升职级点 ×1.41/级（满 2 级共 ×2）' }, // v3.5.0 反馈③：原「×√2」看不懂，改写为数值倍率
-    { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 ×3' },
+    { id: 'cycle_temple',   name: '轮回圣殿',   cat: 'I', cap: 2, base: 9e5,  growth: 1.45, unlockTech: 'prestige2',  fx: { key: 'ppMul', value: Math.SQRT2 }, desc: '晋升职级点 +41%/级（满 2 级共 +100%）' }, // v3.5.0 反馈③：原「×√2」看不懂，改写为数值倍率
+    { id: 'legend_rank_hall',name: '传奇职级殿',cat: 'I', cap: 1, base: 1.5e6,  growth: 1.45, unlockTech: 'grand_pp',   fx: { key: 'ppMul', value: 3 },        desc: '晋升职级点 +200%' },
     // v3.4.5 反馈③：原「既有升级体系镜像」四条（存储节点/缓存优化/备用粮仓/深井仓储，cat D via upgrade）
     // 一并移除——它们本就在升级商店售卖，在效能建筑里是重复入口，也是「存储与续航」整组删掉后残留的空组来源。
   ],
@@ -206,21 +206,21 @@ export const BALANCE = {
     // v2.8.4：深渊遗存——每次轮回按本局最强维度自动携带 1 座（跨轮回保留，cap 3，克制）
     // 参考 KG：跨周期资源通过「建筑」承载而非直接继承数值
     legacy: [
-      { id: 'relic_core',   name: '湮灭核心', fx: 0.25, needKey: 'delve', need: 5,   desc: '全局产出 ×1.25/座' },
-      { id: 'relic_vault',  name: '记忆库',   fx: 2.0,  needKey: 'colony', need: 5,  desc: 'EP 存储上限 ×2/座' },
+      { id: 'relic_core',   name: '湮灭核心', fx: 0.25, needKey: 'delve', need: 5,   desc: '全局产出 +25%/座' },
+      { id: 'relic_vault',  name: '记忆库',   fx: 2.0,  needKey: 'colony', need: 5,  desc: 'EP 存储上限 +100%/座' },
       { id: 'relic_anchor', name: '虚空锚',   fx: 0.25, needKey: 'rift', need: 10,  desc: '裂隙余烬 +25%/座' },
     ],
     legacyCap: 3,
     upgBase: 50, upgGrowth: 1.6,
     upgs: [
-      { id: 'echo_global', name: '回响增幅', cap: 5, desc: '回响全局倍率 ×1.3/级' },
-      { id: 'echo_rift', name: '裂隙共鸣', cap: 3, desc: '裂隙余烬获取 ×2/级' },
-      { id: 'echo_delve', name: '深潜共振', cap: 3, desc: '深潜产出 ×1.5/级' },
-      { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: 'FP 产出 ×1.5/级' },
-      { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 ×2/级' },
+      { id: 'echo_global', name: '回响增幅', cap: 5, desc: '回响全局倍率 +30%/级' },
+      { id: 'echo_rift', name: '裂隙共鸣', cap: 3, desc: '裂隙余烬获取 +100%/级' },
+      { id: 'echo_delve', name: '深潜共振', cap: 3, desc: '深潜产出 +50%/级' },
+      { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: 'FP 产出 +50%/级' },
+      { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 +100%/级' },
       // v2.9.0 大项②（参考 KG 长线克制）：扩充 2 项回响升级——存储/薪资双维度
-      { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 ×1.25/级（跨轮回）' },
-      { id: 'echo_wage', name: '薪酬共鸣', cap: 3, desc: '线程消耗 ×0.94/级（跨轮回）' },
+      { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 +25%/级（跨轮回）' },
+      { id: 'echo_wage', name: '薪酬共鸣', cap: 3, desc: '线程消耗 -6%/级（跨轮回）' },
     ],
   },
   crossroadToLine: { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' },
@@ -245,8 +245,9 @@ export const BALANCE = {
     // 助手是自动化工人池，自动分配到开启的动作岗位，每动作每周期执行次数 = 分配工人数（越多越强）。
     // 因此删除自动补给流，购买价仍温和递增（天然限购），购买 = 扩编。
     assistants: {
-      baseCost: 2e6,          // 第 1 名助手的购买价（EP）——购买=扩编，无自动补给
-      costGrowth: 1.12,       // 每买 1 名，下 1 名价格 ×1.12（温和递增，仍天然限购）
+      baseCost: 8e6,          // v3.12.0 反馈⑥：首名 2e6 → 8e6（×4）。30 天实测 5e7 会把首购推到 D20、前 19 天 AI 全线停摆，故回调到中期可负担
+      costGrowth: 1.28,       // v3.12.0 反馈⑥：1.12 → 1.28；第 10 名价由 6.2e6 抬到 9.4e7（×15），长期稀缺化才是涨价主体
+      researchDiscountCap: 3, // v3.12.0：拟我系研究最多摊薄 ×3，避免满级把涨价整段抹平
     },
     reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
     defaultReserve: 0.3,
@@ -305,7 +306,12 @@ export const BALANCE = {
   //   「结构性投入快照产能」：只在玩家买了升级/建筑（签名变化）时刷新一次产能，
   //   且单调不回落；线程招募、心情、薪资四态、懒惰、吞噬都不触发刷新。
   capHoursFloor: 1,   // 时间基座 = 快照产能 × 1 小时（v3.10.5 ④ 由 2 小时放缓，抑制上限过快增长）
-  capOverflowMult: 1.5, // 基座下限 = 结构性上限 ×1.5（合计 2.5×；v3.10.5 ④ 由 3 放缓）
+  capOverflowMult: 1.5, // 基座下限 = 结构性上限 ×1.5（v3.10.5 ④ 由 3 放缓）
+  // v3.12.0 反馈③：时间基座的「相对硬顶」——过去 cap = cps×3600h + 结构性值，
+  //   而 cps 快照单调不回落，后期产能 1e17 时上限被撑到 1e20 量级，备用粮仓 +4,000/级
+  //   完全无感（玩家永不购买）。现在基座最多把结构性上限放大 capOverflowHardRatio 倍，
+  //   且改用 max() 而非相加：买扩容会等比抬高最终上限，扩容件重新成为唯一成长来源。
+  capOverflowHardRatio: 6,
   // v2.0.2：数据中心每级额外增加 EP 存储上限（映射现有建筑，不造新概念）
   datacenterCapBonus: [0, 10000, 25000, 50000],
   // v2.0.2：防死锁硬约束——扩容项价格 ≤ 当前 EP 上限 ×30%（KG 谷仓模式：扩容永远只是存量的一小部分）
@@ -354,10 +360,10 @@ export const BALANCE = {
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
-      auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（损失 20% EP 换爆发）' },
+      auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（-20% EP 换爆发）' },
       auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）· 开关在左侧「自动转化」' },
       // v3.4.9 反馈②：昂贵的余烬升级——腐化每涨 5% 自动净化 5%（EP 充足时），需先买「无限深入」
-      auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 5% 自动净化 5%（消耗 EP）· 开关在左侧「自动转化」' },
+      auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 +5% 自动净化 -5%（消耗 EP）· 开关在左侧「自动转化」' },
       // v3.4.5 反馈②：语音文案改为「???」，动画改为屏幕底部中央一只左右打量你的眼睛（见 modules/abyssGaze.js）
       gaze: { name: '深渊凝视', cap: 1, desc: '???', egg: true },
       // v3.6.0 方向④：裂隙余烬升级树扩充
@@ -391,8 +397,10 @@ export const BALANCE = {
   // 全局乘数软上限（v2.0 §1.3：m > 5000 → 5000 + sqrt(m-5000)*70）
   softCapThreshold: 5e3,
   softCapFactor: 70,
-  // 项目奖励
+  // 项目奖励（v3.12.0 反馈⑧：原 10 分钟满额产出、且可一次灌满整仓 → 奖励过高）
   projRpMin: 3, projRpMax: 8,
+  projEpRatio: 0.35,      // 任务 EP 奖励 = 10 分钟基线产出 ×0.35
+  projEpCapRatio: 0.25,   // 且不超过当前 EP 上限 ×25%（不再一次灌满整仓）
   // 事件奖励
   brainstormRp: 35, epiphanyRp: 80,
   // 线程补贴科技
@@ -427,12 +435,12 @@ export const BALANCE = {
   researchUpgs: [
     { id: 'rp_entropy',     name: '熵减研究',   cap: 10, base: 50, growth: 1.6,  fx: { key: 'ep',   v: 0.05 }, desc: '基础 EP 产出 +5%/级' },
     { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60, growth: 1.6,  fx: { key: 'thread', v: 0.05 }, desc: '线程产出 +5%/级' },
-    { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80, growth: 1.65, fx: { key: 'global', v: 0.04 }, desc: '全局产出 ×1.04/级' },
+    { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80, growth: 1.65, fx: { key: 'global', v: 0.04 }, desc: '全局产出 +4%/级' },
     // v3.4.6 反馈②：深渊终局组整组大幅涨价（此前 100~640 RP 满级总投入仅 ≈1.6 万，远低于其永久乘区强度）
     { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650, growth: 1.8, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
     { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800, growth: 1.8, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
     // v2.8.25 ②：研究点内容扩充（5→10 项）——消耗 RP、cap 5-10、成本指数涨；效果全接线
-    { id: 'rp_wage',        name: '薪酬协商',   cap: 10, base: 70, growth: 1.6,  fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
+    { id: 'rp_wage',        name: '薪酬协商',   cap: 4,  base: 600,  growth: 1.85, fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
     { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90, growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: 'FP 产出 +10%/级' },
@@ -442,8 +450,8 @@ export const BALANCE = {
     // 原价几乎与老项同档，等于用同样的 RP 买到更强的永久乘区；涨价后成为「后期才买得起的高阶研究」
     { id: 'rp_quantum',  name: '量子推演',   cap: 8, base: 280, growth: 1.70, fx: { key: 'ep',      v: 0.06 }, desc: '基础 EP 产出 +6%/级' },
     { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 320, growth: 1.70, fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
-    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 360, growth: 1.70, fx: { key: 'global',  v: 0.05 }, desc: '全局产出 ×1.05/级' },
-    { id: 'rp_frugal',   name: '精益管理',   cap: 8, base: 300, growth: 1.70, fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
+    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 360, growth: 1.70, fx: { key: 'global',  v: 0.05 }, desc: '全局产出 +5%/级' },
+    { id: 'rp_frugal',   name: '精益管理',   cap: 4, base: 2400, growth: 1.90, fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
     { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 2000, growth: 1.85, fx: { key: 'storage', v: 0.15 }, desc: 'EP 存储上限 +15%/级' }, // v3.4.6 反馈⑬：大幅涨价（380→2000）且存储额增多（10%→15%/级）
     { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 440, growth: 1.75, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
     { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 560, growth: 1.80, fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
@@ -465,7 +473,7 @@ export const BALANCE = {
     // 避免新增无人消费的效果键；五项按语义分入既有 4 组（RP_GROUPS 已同步）。
     { id: 'rp_ep3',     name: '熵流超频',   cap: 8, base: 900,  growth: 1.72, fx: { key: 'ep',      v: 0.09 }, desc: '基础 EP 产出 +9%/级' },
     { id: 'rp_thread2', name: '群体意识',   cap: 8, base: 980,  growth: 1.72, fx: { key: 'thread',  v: 0.07 }, desc: '线程产出 +7%/级' },
-    { id: 'rp_wage2',   name: '弹性薪酬',   cap: 8, base: 1100, growth: 1.75, fx: { key: 'wage',    v: -0.06 }, desc: '线程消耗 -6%/级' },
+    { id: 'rp_project',  name: '项目统筹',   cap: 3, base: 2400, growth: 1.85, fx: { key: 'project',    v: 1    }, desc: '可并行任务 +1/级' },
     { id: 'rp_rift3',   name: '裂隙演算',   cap: 6, base: 6000, growth: 1.90, fx: { key: 'rift',    v: 0.10 }, desc: '裂隙余烬 +10%/级' },
     { id: 'rp_ai2',     name: '拟我演化',   cap: 8, base: 1400, growth: 1.80, fx: { key: 'ai',      v: 0.06 }, desc: 'AI 助手效率 +6%/级' },
     // v3.8.0 研究项扩充（35→40，+14.3%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
@@ -477,16 +485,16 @@ export const BALANCE = {
     // v3.9.0 研究项扩充（40→46，+15%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
     { id: 'rp_ep5',      name: '熵流守夜',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'ep',     v: 0.11 }, desc: '基础 EP 产出 +11%/级' },
     { id: 'rp_thread4',  name: '群体值守',   cap: 8, base: 2700, growth: 1.80, fx: { key: 'thread', v: 0.09 }, desc: '线程产出 +9%/级' },
-    { id: 'rp_global2',  name: '全域编排',   cap: 8, base: 3000, growth: 1.82, fx: { key: 'global', v: 0.06 }, desc: '全局产出 ×1.06/级' },
-    { id: 'rp_wage3',    name: '值守津贴',   cap: 8, base: 2400, growth: 1.80, fx: { key: 'wage',   v: -0.07 }, desc: '线程消耗 -7%/级' },
+    { id: 'rp_global2',  name: '全域编排',   cap: 8, base: 3000, growth: 1.82, fx: { key: 'global', v: 0.06 }, desc: '全局产出 +6%/级' },
+    { id: 'rp_crew',     name: '班组扩编',   cap: 8, base: 3200, growth: 1.88, fx: { key: 'crew',       v: 0.10 }, desc: '班组全局加成 +10%/级' },
     { id: 'rp_ai4',      name: '拟我值守',   cap: 8, base: 2800, growth: 1.82, fx: { key: 'ai',     v: 0.09 }, desc: 'AI 助手效率 +9%/级' },
     { id: 'rp_dm3',      name: '星尘夜采',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'dm',     v: 0.13 }, desc: '载具 DM 采集 +13%/级' },
     // v3.10.0 研究项扩充（46→55，+19.57%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
     { id: 'rp_ep6',      name: '熵流共鸣',   cap: 8, base: 3400, growth: 1.84, fx: { key: 'ep',     v: 0.12 }, desc: '基础 EP 产出 +12%/级' },
     { id: 'rp_thread5',  name: '群体合弦',   cap: 8, base: 3500, growth: 1.84, fx: { key: 'thread', v: 0.10 }, desc: '线程产出 +10%/级' },
-    { id: 'rp_global3',  name: '全域共鸣',   cap: 8, base: 3800, growth: 1.86, fx: { key: 'global', v: 0.07 }, desc: '全局产出 ×1.07/级' },
-    { id: 'rp_wage4',    name: '相位津贴',   cap: 8, base: 3200, growth: 1.84, fx: { key: 'wage',   v: -0.08 }, desc: '线程消耗 -8%/级' },
-    { id: 'rp_dm4',      name: '星尘共振',   cap: 8, base: 3400, growth: 1.84, fx: { key: 'dm',     v: 0.14 }, desc: '载具 DM 采集 +14%/级' },
+    { id: 'rp_global3',  name: '全域共鸣',   cap: 8, base: 3800, growth: 1.86, fx: { key: 'global', v: 0.07 }, desc: '全局产出 +7%/级' },
+    { id: 'rp_expedition',name:'远征后勤',   cap: 8, base: 4000, growth: 1.90, fx: { key: 'expedition', v: 0.12 }, desc: '远征收益 +12%/级' },
+    { id: 'rp_policy3',  name: '律令统筹',   cap: 8, base: 4200, growth: 1.90, fx: { key: 'policy',    v: 0.10 }, desc: '政策效果 +10%/级' },
     { id: 'rp_rift5',    name: '裂隙共鸣',   cap: 6, base: 9800, growth: 1.94, fx: { key: 'rift',   v: 0.14 }, desc: '裂隙余烬 +14%/级' },
     { id: 'rp_delve3',   name: '深潜回响',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'delve',  v: 0.14 }, desc: '深潜产出 +14%/级' },
     { id: 'rp_ai5',      name: '拟我合弦',   cap: 8, base: 3600, growth: 1.86, fx: { key: 'ai',     v: 0.10 }, desc: 'AI 助手效率 +10%/级' },
@@ -500,9 +508,9 @@ export const BALANCE = {
     // 4 组各 3 项，RP_GROUPS 已同步（否则玩家看不到也买不到）。
     { id: 'rp_ep7',      name: '熵流补货',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'ep',     v: 0.13 }, desc: '基础 EP 产出 +13%/级' },
     { id: 'rp_thread6',  name: '群体代班',   cap: 8, base: 4400, growth: 1.88, fx: { key: 'thread', v: 0.11 }, desc: '线程产出 +11%/级' },
-    { id: 'rp_global4',  name: '全域台账',   cap: 8, base: 4800, growth: 1.90, fx: { key: 'global', v: 0.08 }, desc: '全局产出 ×1.08/级' },
-    { id: 'rp_wage5',    name: '代班津贴',   cap: 8, base: 4000, growth: 1.88, fx: { key: 'wage',   v: -0.09 }, desc: '线程消耗 -9%/级' },
-    { id: 'rp_dm5',      name: '星尘补给',   cap: 8, base: 4300, growth: 1.88, fx: { key: 'dm',     v: 0.15 }, desc: '载具 DM 采集 +15%/级' },
+    { id: 'rp_global4',  name: '全域台账',   cap: 8, base: 4800, growth: 1.90, fx: { key: 'global', v: 0.08 }, desc: '全局产出 +8%/级' },
+    { id: 'rp_bazaar',   name: '集市协议',   cap: 8, base: 4800, growth: 1.92, fx: { key: 'bazaar',     v: 0.12 }, desc: '集市交易收益 +12%/级' },
+    { id: 'rp_policy2',  name: '政策推演',   cap: 8, base: 4600, growth: 1.92, fx: { key: 'policy',    v: 0.08 }, desc: '政策效果 +8%/级' },
     { id: 'rp_storage2', name: '周转仓位',   cap: 8, base: 4100, growth: 1.88, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
     { id: 'rp_rift6',    name: '裂隙值守',   cap: 6, base: 11200, growth: 1.96, fx: { key: 'rift',  v: 0.15 }, desc: '裂隙余烬 +15%/级' },
     { id: 'rp_delve4',   name: '深潜补货',   cap: 8, base: 6200, growth: 1.94, fx: { key: 'delve', v: 0.15 }, desc: '深潜产出 +15%/级' },
@@ -521,9 +529,9 @@ export const BALANCE = {
     // 净化 50% ≈ 消耗 30% 存储上限 EP、析出 50 DM；净化 10% ≈ 6% 上限 EP、2 DM
     purge: { maxCut: 50, epCostPerPct: 0.006, dmPerPctSq: 0.02 },
     purifiers: [
-      { id: 'purifier1', name: '净化节点 I', base: 50, dmCost: true, rate: 0.5, desc: '每秒清除 0.5% 腐化' },
-      { id: 'purifier2', name: '净化节点 II', base: 500, dmCost: true, rate: 2, desc: '每秒清除 2% 腐化' },
-      { id: 'purifier3', name: '净化节点 III', base: 5000, dmCost: true, rate: 5, desc: '每秒清除 5% 腐化' },
+      { id: 'purifier1', name: '净化节点 I', base: 50, dmCost: true, rate: 0.5, desc: '每秒 -0.5% 腐化' },
+      { id: 'purifier2', name: '净化节点 II', base: 500, dmCost: true, rate: 2, desc: '每秒 -2% 腐化' },
+      { id: 'purifier3', name: '净化节点 III', base: 5000, dmCost: true, rate: 5, desc: '每秒 -5% 腐化' },
     ],
   },
 };

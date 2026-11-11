@@ -45,7 +45,8 @@ export function upgradePolicy(groupId) {
   return { ok: true };
 }
 
-// 渲染：政策面板（组开放状态 + 组内互斥单选 + 改选）
+// v3.12.0 反馈④：政策卡对齐升级商店 .shop-grid 体系（name / desc / cost 三段 + 显式状态角标）。
+// 状态不再只靠 opacity / 边框颜色暗示，四态各有文字标签，解决「展示区分效果差、模糊不清」。
 export function renderPolicyPanel(container) {
   if (!container) return;
   const groups = policyOpenGroups();
@@ -54,41 +55,53 @@ export function renderPolicyPanel(container) {
       <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 路线抉择（需职级 ≥1）<br>· 信仰组（需信仰解锁）<br>· 集市组（需集市开张）</div>`;
     return;
   }
-  // v3.0.3 第三批⑤：一次只出现一个未选政策组（候选全显示）；已选组顶部收起查看；去除等级概念（无 Lv）
   let html = `<div class="religion-desc">周期政策：每轮（晋升/轮回）后重选；一次只开放一个政策组，选定后自动解锁下一组。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
-  // 已选政策收起区（点击展开查看）
+  const stateBadge = (kind) => {
+    const M = {
+      on:   ['policy-state-on', '✓ 当前生效'],
+      open: ['policy-state-open', '可选用'],
+      lock: ['policy-state-lock', '前置未满足'],
+      done: ['policy-state-lock', '本组已选定'],
+    };
+    const [cls, label] = M[kind];
+    return `<span class="policy-state ${cls}">${label}</span>`;
+  };
+  const card = (g, p, kind) => {
+    const foot = kind === 'on' ? '已选定 · 本周期不可改选'
+      : kind === 'done' ? '本组已选定其它政策'
+      : kind === 'lock' ? (g.id === 'deepen' ? '需先选定对应路线（深渊/秩序）' : '未满足前置')
+      : '点击选定（选定后解锁下一组）';
+    return `<div class="item ${kind === 'on' ? 'policy-on' : kind === 'lock' ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;${kind === 'on' ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
+      <div class="name"><span>${kind === 'on' ? '✓ ' : ''}${p.name}</span><span class="count">${stateBadge(kind)}</span></div>
+      <div class="desc">${p.desc}</div>
+      <div class="cost mono policy-foot">${foot}</div>
+    </div>`;
+  };
+  // 已选政策收起区（点击展开查看全部候选）
   const chosenList = groups.filter(g => groupPolicyId(g.id));
   if (chosenList.length > 0) {
-    html += `<div style="margin:8px 0 2px;font-size:11px;color:var(--accent);font-weight:600">已选政策（点击展开查看）</div>`;
+    html += `<div class="group-title" style="margin-top:8px">已选政策（点击展开查看）</div>`;
     for (const g of chosenList) {
       const chosen = groupPolicyId(g.id);
       const chosenName = g.policies.find(x => x.id === chosen);
       html += `<div class="item policy-on" data-policy-fold="${g.id}" style="cursor:pointer;border-color:var(--green,#2ea043);opacity:1">
-        <div class="name"><span>✓ ${g.name}：${chosenName ? chosenName.name : chosen}</span><span class="count">${chosenName ? chosenName.desc : ''}</span></div>
-        <div style="font-size:10.5px;color:var(--text-3)">点击展开查看</div></div>
-      <div data-fold-body="${g.id}" style="display:none">`;
-      for (const p of g.policies) {
-        const isCur = chosen === p.id;
-        // v3.10.4 ③：政策项改用统一 [data-tip] 气泡（与 .stat 同一套样式），悬浮即显完整说明
-        html += `<div class="item ${isCur ? 'policy-on' : 'cant'}" data-policy-group="${g.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;${isCur ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
-          <div class="name"><span>${isCur ? '✓ ' : ''}${p.name}</span><span class="count">${p.desc}</span></div>
-        </div>`;
-      }
-      html += `</div>`;
+        <div class="name"><span>✓ ${g.name}：${chosenName ? chosenName.name : chosen}</span><span class="count">${stateBadge('on')}</span></div>
+        <div class="desc">${chosenName ? chosenName.desc : ''}</div>
+        <div class="cost mono policy-foot">点击展开查看全部候选</div></div>
+      <div data-fold-body="${g.id}" style="display:none"><div class="shop-grid" style="margin:4px 0 8px">`;
+      for (const p of g.policies) html += card(g, p, chosen === p.id ? 'on' : 'done');
+      html += `</div></div>`;
     }
   }
-  // 当前组：第一个未选且开放的组（一次只出现一个）
+  // 当前组：第一个未选且开放的组
   const curGroup = groups.find(g => !groupPolicyId(g.id));
   if (curGroup) {
-    html += `<div style="margin:10px 0 4px;font-size:11px;color:var(--accent);font-weight:600">${curGroup.name}${curGroup.hint ? ` <span style="color:var(--text-3)">（${curGroup.hint}）</span>` : ''}</div>`;
-    const chosen = null;
+    html += `<div class="group-title" style="margin-top:10px">${curGroup.name}${curGroup.hint ? ` <span style="color:var(--text-3);font-weight:400">（${curGroup.hint}）</span>` : ''}</div><div class="shop-grid">`;
     for (const p of curGroup.policies) {
       const gate = p.unlock ? p.unlock() : true;
-      html += `<div class="item ${!gate ? 'cant' : ''}" data-policy-group="${curGroup.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;">
-        <div class="name"><span>${p.name}</span><span class="count">${p.desc}</span></div>
-        <div style="font-size:10.5px;color:var(--text-3)">${!gate ? (curGroup.id === 'deepen' ? '需先选定对应路线（深渊/秩序）' : '未满足前置') : '点击选定（选定后解锁下一组）'}</div>
-      </div>`;
+      html += card(curGroup, p, gate ? 'open' : 'lock');
     }
+    html += `</div>`;
   } else {
     html += `<div style="color:var(--good,#3fb950);font-size:11.5px;margin-top:8px">本周期政策已全部选定 ✓</div>`;
   }

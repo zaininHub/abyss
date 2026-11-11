@@ -9,6 +9,7 @@
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { PROFESSION_BY_ID, LEADER_PROFESSION_ID, LAZY_PROFESSION_ID, CONVERTER_IDS, RESOURCE_CONVERTER_IDS, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
+import { researchMult } from '../core/research.js'; // v3.12.0 反馈⑩：研究点「班组扩编」接入领导者全局加成
 
 const B = () => BALANCE.thread.binding;
 
@@ -148,7 +149,8 @@ export function threadXpGainPerSec(c) {
 export function leaderCount() { return (S.cultists || []).filter(isLeader).length; }
 export function leaderGlobalMult() {
   const n = leaderCount();
-  return 1 + Math.min(B().leaderGlobalCap, n * B().leaderGlobalPerLeader);
+  // v3.12.0 反馈⑩：「班组扩编」是研究点的玩法扩展项，放大班组领导者全局加成。
+  return (1 + Math.min(B().leaderGlobalCap, n * B().leaderGlobalPerLeader)) * researchMult('crew');
 }
 
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----

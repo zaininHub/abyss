@@ -22,6 +22,7 @@ export const CROSS_RUN_KEYS = Object.freeze([
   'allTimeEp', 'storylinesCompleted', 'storyline', 'crossroad', 'crossroadLockedBy',
   'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades',
   'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar', 'abyssGazeUnlocked',
+  'moduleUnlocks', // v3.12.0 反馈⑬：职级点买断的大模块，跨局保留
 ]);
 
 // ② 旧档补齐：字段缺失时用默认值填上（与 ① 语义不同，允许重叠：保留 vs 补齐）
@@ -31,7 +32,7 @@ export const COMPAT_KEYS = Object.freeze([
   'delve', 'vs', 'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone',
   '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades',
   '_farewellBought', 'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
-  'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar', 'cosmos',
+  'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar', 'cosmos', 'moduleUnlocks',
   'faithTemples', 'miraclesTriggered', 'prophecyNext', '_prestigeSkips', '_idleSec',
   '_catClicks', '_lastActionAt', 'resDiscovered', 'abyssGazeUnlocked',
   // v3.10.0：新增状态字段一律在此声明即自动兜底，无需 bump SAVE_VERSION
@@ -41,7 +42,7 @@ export const COMPAT_KEYS = Object.freeze([
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）
-export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance']);
+export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance', 'moduleUnlocks']);
 
 // ④ 绝对时间戳：弹框暂停恢复时整体顺延，否则 Date.now() 型计时会在弹框期间暗中流逝。
 //    支持 'a.b' 路径；只对有限正数生效（与原 `if (S.x > 0)` 口径一致，且更安全）。
@@ -61,6 +62,9 @@ export const RUN_RESET_KEYS = Object.freeze([
   'fuseLuckUntil', 'staffUnhappy', '_farewellBought', 'activeRift',
   'crossroad', 'crossroadLockedBy', 'policies', 'policyRerolls', 'vowPolicyBoost',
   'cosmos', 'resDiscovered',
+  // v3.12.0 反馈⑪：以下资产改为「本局制」——晋升 / 轮回一律清零，只保留跨局资产
+  // （职级点 / ES / 成就 / 宗教 / 深潜 / 回响 / 永恒 / 已完成故事线）。
+  'ai', 'rp', 'rpTheories', 'riftEmber', 'riftUpgrades', 'riftLevelTech', 'riftExpedition',
 ]);
 
 // ⑤-b 本局运行时快照：EP 上限「时间基座」与满仓涓流计时器。

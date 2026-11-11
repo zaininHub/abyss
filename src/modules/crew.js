@@ -4,6 +4,7 @@
 // v3.7.2 反馈③：卡面不再展示共事时长（信息噪音，且与岗位调度无关）。
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
+import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
 import { MOOD_MULT, CONVERTERS } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
@@ -43,7 +44,7 @@ export function crewShown() {
 // 全局态元信息（状态灯颜色/文案）：待招募 → 懒惰 → 四态
 export function crewStateMeta() {
   if (!S.cultists.length) return { label: '待招募', color: 'var(--text-3,#6e7681)' };
-  if (isLazy()) return { label: `懒惰怠工 · 产出 ×${BALANCE.lazy.prodMult} 消耗 ×${BALANCE.lazy.costMult}`, color: 'var(--warn,#c8a24a)' };
+  if (isLazy()) return { label: `懒惰怠工 · 产出 ${fmtMultDelta(BALANCE.lazy.prodMult)} 消耗 ${fmtMultDelta(BALANCE.lazy.costMult)}`, color: 'var(--warn,#c8a24a)' };
   return STATE_META[(S.wageState || {}).state] || STATE_META.ok;
 }
 

@@ -16,7 +16,7 @@ export const POLICY_GROUPS = [
   {
     id: 'deepen', name: '路线深化', unlock: (S) => !!groupPolicyId('route'), hint: '需先选定路线',
     policies: [
-      { id: 'order_deep', name: '秩序深化', unlock: () => groupPolicyId('route') === 'order_route', effect: { recruit: 0.30, collab: 0.20 }, desc: '线程招募 +30%，协作加成 ×1.2' },
+      { id: 'order_deep', name: '秩序深化', unlock: () => groupPolicyId('route') === 'order_route', effect: { recruit: 0.30, collab: 0.20 }, desc: '线程招募 +30%，协作加成 +20%' },
       { id: 'abyss_deep', name: '深渊深化', unlock: () => groupPolicyId('route') === 'abyss_route', effect: { delve: 0.15, ember: 0.10 }, desc: '深潜产出 +15%，余烬产出 +10%' },
     ],
   },
@@ -25,7 +25,7 @@ export const POLICY_GROUPS = [
     policies: [
       { id: 'ascetic',   name: '苦行',     effect: { faith: 0.30, ep: -0.15 },    desc: 'FP 产出 +30%，EP 产出 -15%' },
       { id: 'abundant',  name: '富足',     effect: { ep: 0.20, faith: -0.15 },    desc: 'EP 产出 +20%，FP -15%' },
-      { id: 'sacrifice', name: '牺牲',     effect: { devotion: 1.5, global: -0.10 }, desc: '虔诚获取 ×1.5，全局 -10%' },
+      { id: 'sacrifice', name: '牺牲',     effect: { devotion: 1.5, global: -0.10 }, desc: '虔诚获取 +50%，全局 -10%' },
     ],
   },
   // v3.0.0 扩展：第 4 组「集市」——与深渊集市模块联动

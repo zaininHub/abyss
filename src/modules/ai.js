@@ -59,7 +59,10 @@ export function assistantCost() {
   const c = BALANCE.ai.assistants;
   const n = assistantCount();
   // v3.10.5：「拟我协议」(rp_ai) 研究提升助手性价比——购买价 ÷ researchMult('ai')，数量递增仍然限购
-  return Math.round(c.baseCost * Math.pow(c.costGrowth, n) / researchMult('ai'));
+  // v3.12.0 反馈⑥：拟我系研究满级可摊薄 20~40 倍，会把「大幅涨价」整段抹平；
+  //   折扣封顶 researchDiscountCap（×3），研究仍有价值但不再抵消定价重标定。
+  const discount = Math.min(researchMult('ai'), c.researchDiscountCap || 3);
+  return Math.round(c.baseCost * Math.pow(c.costGrowth, n) / discount);
 }
 // v3.11.3：绑定（占编）模型。crew 存于 S.ai.crew[id] = 绑定到该动作的助手数。
 // 与线程绑定同理：绑定是常驻、不消耗；解绑即释放。
@@ -460,7 +463,8 @@ export function refreshAssistantAffordability() {
   btn.title = st.title;
 }
 
-// v3.11.3：助手区块（绑定/占编）——显示总量 + 空闲池 + 本局台账 + 未绑定提示。
+// v3.12.0 反馈②：助手区精简为「总量/占编/空闲 + 购买 + 台账」三行，
+// 原 head/crewInfo/说明/预留线多处重复且夹着一个多余的 </div>，一并收敛。
 function renderAssistantSection() {
   const n = assistantCount();
   const st = assistantBuyState();
@@ -469,19 +473,15 @@ function renderAssistantSection() {
   const counts = actionCounts();
   const unstaffed = enabledActions(S.ai).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
   const unstaffedHtml = unstaffed.length
-    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 + 绑定或购买助手后自动补员。</div>`
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 ＋ 绑定或购买助手后自动补员。</div>`
     : '';
-  const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">本局已执行：${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' · ')}（合计 ${totalActionCount(counts)} 次）</div>`;
-  const head = `<div class="ai-desc" style="margin-top:6px">🤖 AI 助手：<b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名（常驻班组）</div>`;
-  const crewInfo = `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">每动作每周期执行次数 = 绑定工人数 · 占编 ${bound} · 空闲 ${idle}</div>`;
-  if (aiUnlocked()) {
-    return head + crewInfo + `</div>` + unstaffedHtml
-      + `<div style="margin-top:4px">`
-      + `<button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>`
-      + `<div style="font-size:11px;color:var(--text-3,#6e7681);margin-top:2px">助手数量无上限，购买价随数量递增（×${BALANCE.ai.assistants.costGrowth}）；购买即扩编，绑定后才执行，不消耗。</div>`
-      + ledgerHtml + `</div>`;
-  }
-  return head + crewInfo + `</div>` + ledgerHtml;
+  const head = `<div class="ai-assistant-head">🤖 AI 助手 <b style="color:var(--cyan)" data-ai-assistant-count>${n}</b> 名 · 占编 ${bound} · 空闲 ${idle}</div>`;
+  const buyHtml = aiUnlocked() ? `<div style="margin-top:6px">
+      <button class="btn ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>
+      <div class="ai-assistant-note">助手为常驻班组，绑定后不随动作消耗；每多买 1 名价格 +${Math.round((BALANCE.ai.assistants.costGrowth - 1) * 100)}%，购买后自动补员。</div>
+    </div>` : '';
+  const ledgerHtml = `<div class="ai-ledger" data-ai-ledger style="font-size:11px;color:var(--text-3,#6e7681);margin-top:4px">本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}</div>`;
+  return head + unstaffedHtml + buyHtml + ledgerHtml;
 }
 
 // ========== 面板 ==========
@@ -498,14 +498,16 @@ export function renderAiPanel(container) {
     return;
   }
   const line = reserveLine();
-  // 每个动作 = 开关 + 占编步进器（绑定 / 解绑助手）
-  const crewRow = (id) => {
+  // v3.12.0 反馈②：五个注册动作全部可见，统一「开关 + 占编步进器」结构。
+  // 进阶动作未解锁时用锁定卡写明前置，不再整块隐藏（原「其他自动化没展示出来」）；
+  // 预留线只保留底部一处，去掉顶部重复说明行。
+  const crewRow = (id, disabled = false) => {
     const n = crewOf(id); const idle = crewIdle();
     return `<div class="ai-crew" data-ai-crew="${id}" style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--text-2)">
       <span style="opacity:.8">占编</span>
-      <button class="btn ai-crew-btn" data-ai-crew-dec="${id}" ${n <= 0 ? 'disabled' : ''} title="解绑 1 名（释放回空闲池）">−</button>
+      <button class="btn ai-crew-btn" data-ai-crew-dec="${id}" ${n <= 0 || disabled ? 'disabled' : ''} title="解绑 1 名（释放回空闲池）">−</button>
       <b data-ai-crew-count="${id}" style="min-width:16px;text-align:center">${n}</b>
-      <button class="btn ai-crew-btn" data-ai-crew-inc="${id}" ${idle <= 0 ? 'disabled' : ''} title="再绑定 1 名助手到本动作">＋</button>
+      <button class="btn ai-crew-btn" data-ai-crew-inc="${id}" ${idle <= 0 || disabled ? 'disabled' : ''} title="再绑定 1 名助手到本动作">＋</button>
       <span style="color:var(--text-3,#6e7681)">空闲 ${idle}</span>
     </div>`;
   };
@@ -518,62 +520,59 @@ export function renderAiPanel(container) {
       </div>
       ${crewRow(id)}
     </div>`;
+  const lockedCard = (a, hint) => `
+    <div class="ai-action ai-action-locked" data-ai-action="${a.id}">
+      <div class="ai-switch off" style="opacity:.65;cursor:not-allowed">
+        <span class="ai-switch-dot"></span>
+        <span class="ai-switch-name">${a.name}</span>
+        <span class="ai-switch-state">未解锁</span>
+      </div>
+      <div class="ai-lock-hint">🔒 ${hint}</div>
+      ${crewRow(a.id, true)}
+    </div>`;
+  const groupBanner = (g) => `<div class="ai-group-title" data-ai-group="${g.key}" style="font-size:12px;color:var(--text-2);margin:6px 0;padding:5px 8px;background:var(--row,#161b27);border-radius:6px;line-height:1.7">${g.key === 'basic' ? '🟢' : '🔧'} ${g.name} · ${g.hint}<br><span style="font-size:11px;color:var(--text-3,#6e7681)">${g.note} · 每个动作可用 ＋ 增派助手，每周期执行次数 = 占编人数</span></div>`;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
-  // v3.11.0：开关文案一律取注册表 desc（单一真源），不再在面板内联硬编码。
-  const autoTechAction = actionById('tech');
-  // v2.8.4：自动研究开关（秩序线科技「自动研究」已购后显示；RP 购买科技树）
-  const autoTechHtml = (S.tech && S.tech.auto_tech)
-    ? sw(autoTechAction.switchKey, autoTechAction.name, autoTechAction.desc, 'tech') : '';
-  // v2.5.5：自动购建区块（全部资源点解锁后可激活）
-  // v3.2.4 反馈④：未全解锁时整块不展示（原常驻展示「资源点 x/10」进度卡）；文案精简去冗余描述
+
+  // 进阶：自动研究（科技树「自动研究」）/ 自动购建（全资源点解锁后可激活）
   const AB = BALANCE.ai.aiAutoBuild;
-  let buildHtml = autoTechHtml + (autoTechHtml ? '<div style="margin-top:4px"></div>' : '');
-  if (!autoBuildUnlocked()) {
-    const resOk = allResDiscovered(S);
-    if (!resOk) buildHtml += ''; // 未全解锁：不展示（反馈④）
-    else {
-      const epOk = S.ep >= autoBuildActivateCost();
-      buildHtml += `
-      <div class="ai-build-box ${epOk ? '' : 'ai-build-locked'}">
-        <div class="ai-build-title">自动购建</div>
-        <div style="font-size:12px;line-height:1.9;color:var(--text-2)">
-          激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}
-        </div>
-        <button class="btn ${epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${epOk ? '' : 'disabled'}
-          title="消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活自动购建</button>
-      </div>`;
-    }
-  } else {
+  const techAction = actionById('tech');
+  const buildAction = actionById('build');
+  const techHtml = actionAvailable('tech')
+    ? sw(techAction.switchKey, techAction.name, techAction.desc, 'tech')
+    : lockedCard(techAction, '需科技树研究「自动研究」后开启');
+  let buildHtml;
+  if (autoBuildUnlocked()) {
     const rateBtns = AB.rateOptions.map(r =>
       `<button class="btn ai-rate-btn ${(ai.autoBuildRate ?? AB.defaultRate) === r ? 'on' : ''}" data-ai-build-rate="${r}">${r}s</button>`).join('');
-    buildHtml += `
-      <div class="ai-build-box">
-        <div class="ai-build-title">自动购建（已激活）</div>
-        ${sw(actionById('build').switchKey, actionById('build').name, `${actionById('build').desc}（当前间隔 ${autoBuildRate()}s）`, 'build')}
-        <div class="ai-reserve-row" style="margin-top:4px">
-          <span>购买间隔</span>${rateBtns}
-        </div>
-        <div style="font-size:11px;color:var(--text-2);margin-top:4px">下次购建倒计时 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>
-      </div>`;
+    buildHtml = `<div class="ai-build-box">
+      <div class="ai-build-title">${buildAction.name}（已激活）</div>
+      ${sw(buildAction.switchKey, buildAction.name, `${buildAction.desc}（当前间隔 ${autoBuildRate()}s）`, 'build')}
+      <div class="ai-reserve-row" style="margin-top:4px"><span>购买间隔</span>${rateBtns}</div>
+      <div style="font-size:11px;color:var(--text-2);margin-top:4px">下次购建倒计时 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>
+    </div>`;
+  } else if (allResDiscovered(S)) {
+    const epOk = S.ep >= autoBuildActivateCost();
+    buildHtml = `<div class="ai-build-box ${epOk ? '' : 'ai-build-locked'}">
+      <div class="ai-build-title">${buildAction.name}</div>
+      <div style="font-size:12px;line-height:1.9;color:var(--text-2)">激活消耗：${fmt(autoBuildActivateCost())} EP（一次性）${epOk ? '' : '（EP 不足）'}</div>
+      <button class="btn ${epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${epOk ? '' : 'disabled'} title="消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活自动购建</button>
+    </div>`;
+  } else {
+    buildHtml = lockedCard(buildAction, '需先解锁全部资源点，再消耗 EP 激活');
   }
-  // v3.11.0：分组横幅与开关列表均从注册表派生。旧版把「需消耗 AI 助手」横幅放在整张卡顶部，
-  // 把不消耗助手（当时）的进阶动作也框了进去；现在两组都明确写出各自口径，语义不再越界。
-  const groupBanner = (g) => `<div class="ai-group-title" data-ai-group="${g.key}" style="font-size:12px;color:var(--text-2);margin:2px 0 6px;padding:5px 8px;background:var(--row,#161b27);border-radius:6px;line-height:1.7">${g.key === 'basic' ? '🟢' : '🔧'} ${g.name} · ${g.hint}<br><span style="font-size:11px;color:var(--text-3,#6e7681)">${g.note}</span></div>`;
-  const basicActionsHtml = actionsByGroup('basic')
-    .map(a => sw(a.switchKey, a.name, a.desc, a.id)).join('');
+  const basicGroup = AI_ACTION_GROUPS.find(g => g.key === 'basic');
   const advancedGroup = AI_ACTION_GROUPS.find(g => g.key === 'advanced');
-  const advancedHtml = buildHtml.trim()
-    ? groupBanner(advancedGroup) + buildHtml : '';
+  const basicHtml = actionsByGroup('basic').map(a => sw(a.switchKey, a.name, a.desc, a.id)).join('');
+  const advancedHtml = groupBanner(advancedGroup) + `<div class="ai-action-grid">${techHtml}${buildHtml}</div>`;
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
-    ${groupBanner(AI_ACTION_GROUPS.find(g => g.key === 'basic'))}
-    <div class="ai-desc">预留线：EP 上限的 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</div>
-    ${basicActionsHtml}
+    ${groupBanner(basicGroup)}
+    <div class="ai-action-grid">${basicHtml}</div>
     ${advancedHtml}
     ${renderAssistantSection()}
     <div class="ai-reserve-row">
-      <span>预留线</span>${reserveOpts}
+      <span>预留线 · EP 上限 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</span>${reserveOpts}
       <button class="btn" data-ai-alloff="1" title="关闭全部自动化开关（含进阶动作）">一键全关</button>
     </div>`;
 

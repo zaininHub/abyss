@@ -14,6 +14,7 @@ import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
 import { BALANCE } from '../data/balance.js';
 import { toast, dirty, askConfirm } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { spawnProject } from './projects.js';
+import { moduleUnlocked, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：轮回改为职级点买断的独立大模块
 
 export function echoScore() {
   const W = BALANCE.reincarn.scoreWeights;
@@ -34,6 +35,8 @@ export function reincarnReady() {
   if (S._collapseAt || S.collapsed || S._collapseChoicePending) {
     return { ok: false, reason: '深渊吞噬中：已被深渊锁定，轮回不可脱离——直面命运抉择' };
   }
+  // v3.12.0 反馈⑬：轮回模块需先用职级点开启，未买断不得通过程序化入口绕过。
+  if (!moduleUnlocked('reincarn')) return { ok: false, reason: '轮回模块尚未开启（首次晋升后用职级点购买）' };
   if ((S.prestige || 0) < 1) return { ok: false, reason: '需先完成至少 1 次晋升（本局）' };
   if ((S.runEarned || 0) < BALANCE.reincarn.needEp) {
     return { ok: false, reason: `本局累计 EP 需 ≥ ${fmt(BALANCE.reincarn.needEp)}（当前 ${fmt(S.runEarned || 0)}）` };
@@ -113,19 +116,24 @@ export function buyEchoUpgrade(id) {
 // 渲染：晋升面板内轮回区块（v2.7.5 ①：增量——结构一次构建，数值/状态/卡列表轻量更新）
 export function renderReincarn(container) {
   if (!container) return;
-  // v2.8.2 反馈③：晋升完成前（本局 prestige < 1）不显示轮回模块——轮回是晋升之上的第二层循环，
-  // 未晋升时不占界面；晋升达成后即时渲染
-  if ((S.prestige || 0) < 1) {
+  // v3.12.0 反馈⑬：未买断时只显示「职级点开启」卡；买断后在独立面板内渲染完整轮回内容。
+  if (!moduleUnlocked('reincarn')) {
     if (container._echoBuilt) {
       const blk = container.querySelector('#echo-block');
       if (blk) blk.remove();
       container._echoBuilt = false;
     }
+    const card = moduleUnlockCard('reincarn');
+    if (container._lastUnlockHtml !== card) {
+      container._lastUnlockHtml = card;
+      container.innerHTML = card;
+    }
     return;
   }
+  container._lastUnlockHtml = null;
   if (!container._echoBuilt) {
     container._echoBuilt = true;
-    container.insertAdjacentHTML('beforeend', `<div id="echo-block" style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">
+    container.innerHTML = `<div id="echo-block" style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <b style="color:var(--accent);font-size:12px">轮回 · 第二层循环（晋升之上）</b>
         <span style="font-size:11px;color:var(--text-2)" id="echo-stat">深渊回响 <b style="color:var(--accent)">0</b> · 已轮回 0 次</span>
@@ -133,7 +141,7 @@ export function renderReincarn(container) {
       <div style="font-size:11px;color:var(--text-2);margin:6px 0;line-height:1.6" id="echo-desc">
         轮回 = 终局循环（晋升之上）：本轮成就结算为深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。
         与晋升的分工：<b style="color:var(--accent)">晋升</b>保留职级/RP/ES/回响/永恒——积累研究；<b style="color:var(--purple)">轮回</b>额外按本局最强维度携带 1 座「深渊遗存」建筑（跨轮回，参考 KG：跨周期资源由建筑承载而非直接继承）。
-        轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/遗存/已完成故事线。回响与遗存均严格克制。
+        轮回清空本局（EP/升级/科技/研究点/RP/AI 助手/裂隙余烬），保留职级/ES/宗教/深潜/回响/遗存/已完成故事线。回响与遗存均严格克制。
       </div>
       <div style="font-size:11px;color:var(--red,#f85149);margin-bottom:6px" id="echo-status">未就绪</div>
       <button class="btn reincarn-btn no" id="reincarn-btn" style="width:100%">轮回 · 结算回响（二次确认）</button>
@@ -141,7 +149,7 @@ export function renderReincarn(container) {
       <div id="echo-legacy-list" style="display:flex;flex-direction:column;gap:6px;margin:6px 0 12px"></div>
       <div style="margin-top:10px;font-size:11px;color:var(--text-2)">回响商店（升级永久，跨轮回）</div>
       <div id="echo-upg-list"></div>
-    </div>`);
+    </div>`;
     container.querySelector('#reincarn-btn')?.addEventListener('click', () => {
       // v2.7.5 ②：轮回二次确认弹窗（显示收益与重置范围，避免误触终局重置）
       const ready2 = reincarnReady();
@@ -151,7 +159,7 @@ export function renderReincarn(container) {
         if (r.ok) {
           if (toast) toast(`轮回完成：深渊回响 +${r.gain}（累计 ${r.total}）`);
         } else if (toast) toast(r.reason);
-        dirty.prestige = true; dirty.top = true; dirty.shop = true;
+        dirty.reincarn = true; dirty.top = true; dirty.shop = true;
       });
     });
   }
@@ -160,7 +168,7 @@ export function renderReincarn(container) {
   const st = container.querySelector('#echo-stat');
   if (st) st.innerHTML = `深渊回响 <b style="color:var(--accent)">${S.abyssEcho || 0}</b> · 已轮回 ${S.reincarned || 0} 次`;
   const ds = container.querySelector('#echo-desc');
-  if (ds) ds.innerHTML = `结束当前发展：本轮成就结算为 <b style="color:var(--accent)">${gain}</b> 点深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。轮回清空本局（EP/升级/建筑/异兽），保留职级/RP/ES/宗教/裂隙/深潜/回响/已完成故事线。`;
+  if (ds) ds.innerHTML = `结束当前发展：本轮成就结算为 <b style="color:var(--accent)">${gain}</b> 点深渊回响（单次上限 100），回响全局 +5%/点（跨轮回保留），并可在回响商店购买特殊升级。轮回清空本局（EP/升级/科技/研究点/RP/AI 助手/裂隙余烬），保留职级/ES/宗教/深潜/回响/已完成故事线。`;
   const sts = container.querySelector('#echo-status');
   if (sts) {
     sts.style.color = ready.ok ? 'var(--green,#3fb950)' : 'var(--red,#f85149)';
@@ -206,7 +214,7 @@ export function renderReincarn(container) {
       list.querySelectorAll('[data-echo-upg]').forEach(el => {
         el.addEventListener('click', () => {
           const r = buyEchoUpgrade(el.dataset.echoUpg);
-          if (r.ok) { if (toast) toast('回响升级成功'); dirty.prestige = true; }
+          if (r.ok) { if (toast) toast('回响升级成功'); dirty.reincarn = true; }
           else if (toast) toast(r.reason);
         });
       });

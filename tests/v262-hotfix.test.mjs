@@ -1,5 +1,5 @@
 // v2.6.2 三项反馈修复：
-// ① 触手重绘（三端渐变粗细 + 加密折点 + 深色描边 + 6 帧动画）
+// ① 触手重绘（v3.12.0 起改为 56px 横向低矮卷须底部条带，与深渊凝视统一）
 // ② AI 激活按钮未达标时真正禁点（disabled 属性，灰显不可点）
 // ③ 宗教入口持久化（曾达标常显 + 唤醒按钮禁点）
 import { readFileSync } from 'node:fs';
@@ -15,10 +15,13 @@ const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
 const schema = readFileSync(new URL('../src/core/stateSchema.js', import.meta.url), 'utf8');
 
 // ===== ① 触手 =====
-rec('V1 触手平滑贝塞尔曲线 + 多层描边（基座粗 16 → 主 10 → 高光 4.5 → 霓虹 1.6，圆头端帽）', html.includes('C42 114 32 100 44 88') && html.includes('stroke-linecap="round"') && html.includes('stroke-width="10"') && html.includes('stroke-width="4.5"'), '');
+// v3.12.0 反馈⑭：触手由「右下角竖立章鱼触手」改为「56px 横向低矮卷须底部条带」，
+// 旧断言（贝塞尔折点 / 描边色值 / steps(6) 六帧抽摆）编码旧形态，改校验新形态不变量。
+const gaze = readFileSync(new URL('../src/modules/abyssGaze.js', import.meta.url), 'utf8');
+rec('V1 横向低矮卷须 + 渐变三层描边', html.includes('viewBox="0 0 1200 56"') && html.includes('id="td-grad-a"') && css.includes('.td-base') && css.includes('.td-mid-a') && css.includes('.td-glow'), '');
 rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
-rec('V1 深色描边层（基座粗描边）', html.includes('stroke="#3d1d6e"') && html.includes('stroke-width="10"'), '');
-rec('V1 动画六帧抽摆（steps(6) + 6 keyframes）', css.includes('steps(6, end)') && css.includes('15% { transform: rotate(-1.5deg); }') && css.includes('70% { transform: rotate(2deg); }'), '');
+rec('V1 深色描边层 + non-scaling-stroke（横向拉伸不变粗）', html.includes('class="td-base"') && css.includes('stroke: #1b0733; stroke-width: 16;') && css.includes('vector-effect: non-scaling-stroke'), '');
+rec('V1 与深渊凝视同为 56px 底部条带且不阻挡页面', css.includes('--bottom-deco-h: 56px') && css.includes('pointer-events: none') && gaze.includes('var(--bottom-deco-h,56px)') && html.includes('tentacle-tap-zone'), '');
 
 // ===== ② AI 激活按钮 =====
 rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP

@@ -33,7 +33,8 @@ function mkState(extra = {}) {
   const r = prestige.doPrestige('sharp');
   rec('V1 转生后腐化清零（88 → 0）', S.corruption === 0, `corruption=${S.corruption}`);
   rec('V1 转生结算正常（prestigePoints 累加 + runEarned 清零）', S.prestigePoints >= 100 && S.runEarned === 0 && S.earnedFull === 0, `pp=${S.prestigePoints}`);
-  rec('V1 转生保留 AI 核心科技', S.tech.ai_core === true, 'ai_core');
+  // v3.12.0 反馈⑪：科技树改为本局制，晋升不再保留 AI 管理核心
+  rec('V1 转生不保留 AI 核心科技', !S.tech.ai_core, 'ai_core=' + S.tech.ai_core);
   rec('V1 转生重置薪资状态机', S.wageState.state === 'ok' && S.wageState.dormantSec === 0, JSON.stringify(S.wageState));
   rec('V1 转生保留宗教/信仰（跨转生）', Object.keys(S.religion || {}).length >= 0 && typeof S.faith === 'number', 'religion/faith');
 }

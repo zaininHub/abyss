@@ -20,17 +20,21 @@ export function doPrestige(talentId) {
   const esg = esGain();
   S.prestigePoints += gain;
   S.prestige++;
-  addRp(rpg); // v2.8.27 ②：RP 上限（晋升奖励克制）
   if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
   // v2.9.0：湮灭残片改由「同归于尽」抉择结算发放（main.js），晋升不再发放/清除吞噬状态
   S.runTalent = talentId;
   // v3.10.0：本局重置字段清单与重置动作收敛到 core/stateSchema.js（晋升 / 轮回共用一条路径）。
   // 两条转生路径的差异只保留为 opts：晋升保留 AI 管理核心，legacy 天赋保留专注等级。
-  const keepAiCore = !!S.tech.ai_core;
+  // v3.12.0 反馈⑪：科技树不再保留 AI 管理核心（keepAiCore 选项仅保留给历史轮回路径兼容）
   recordPolicyRun(); // 必须在重置前记录本轮政策走向（读的是清空前的 S.policies）
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
   // v3.10.2 ④：重置后上限回落到新档值，隐式保留的 RP/PT/DM 余额同步钳制。
-  resetRunState(S, defaultState(), { keepAiCore, keepFocus: talentId === 'legacy', clamp: clampRunResourceBalances });
+  resetRunState(S, defaultState(), { keepFocus: talentId === 'legacy', clamp: clampRunResourceBalances });
+  // v3.12.0 反馈⑪：本次晋升的 RP 奖励在重置之后发放（否则会被清零），仍受新上限约束。
+  addRp(rpg);
+  // v3.12.0 反馈⑫：晋升推动故事线——驻留计时回拨，让「条件已满足」的下一章立即推进，
+  // 但章节条件仍由 chapters.js 逐章判定，不会无条件跳章。
+  S.chapterEnteredAt = Date.now() - 3 * 86400000;
   crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水
   // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
   let startEp = 0;
@@ -112,7 +116,7 @@ export function renderPrestige(container) {
     btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `转生将获得 ${reward}，跨转生资产（职级/RP/ES/宗教/裂隙/深潜/回响/永恒）保留。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
+  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `转生将获得 ${reward}；职级点 / ES / 成就 / 宗教 / 深潜 / 回响 / 永恒保留，AI 助手 / 升级 / 科技 / 研究点 / RP / 裂隙余烬归零。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
   const td = container.querySelector('#talent-display');
   if (td) td.textContent = S.runTalent ? `本局天赋：${TALENTS.find(t => t.id === S.runTalent)?.name || ''}` : '';
 }

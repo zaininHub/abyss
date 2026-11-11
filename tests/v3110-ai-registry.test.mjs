@@ -280,9 +280,10 @@ test('C3 allOffActions 关闭全部 5 个开关（一键全关不再漏 autoTech
   assert.equal(REG.isAnyActionEnabled(S.ai), false);
 });
 
-test('C4 助手定价温和递增、无数量上限', () => {
+test('C4 助手定价显著涨价但长期可负担、无数量上限', () => {
   const cfg = BALANCE.ai.assistants;
-  assert.equal(cfg.costGrowth, 1.12, 'v3.10.5 的 ×1.5 复利已放缓');
+  assert.equal(cfg.costGrowth, 1.28, 'v3.12.0 反馈⑥：助手大幅涨价（1.12 → 1.28）');
+  assert.equal(cfg.baseCost, 8e6, 'v3.12.0 反馈⑥：首价 2e6 → 8e6（×4）；5e7 经 30 天实测会把首购推到 D20');
   reset({ assistants: 0 });
   const c0 = AI.assistantCost();
   S.ai.assistants = 40;

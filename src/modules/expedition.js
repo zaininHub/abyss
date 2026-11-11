@@ -4,7 +4,7 @@ import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
-import { fmtLongDuration } from '../core/format.js'; // v3.10.2：长时段格式化单一真源（顶栏耗尽预估复用）
+import { fmtLongDuration, fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改动
 
 // v3.6.0 方向⑤⑧：星际探索重构——
@@ -55,11 +55,11 @@ export function petCpsBonus() {
 }
 export function expeditionCpsReward(g) {
   const colonyBonus = 1 + (BALANCE.colonyExploreBonus || 0) * starColonyLevel();
-  return Math.round(g.cps * petCpsBonus() * colonyBonus);
+  return Math.round(g.cps * petCpsBonus() * colonyBonus * researchMult('expedition')); // v3.12.0 反馈⑩：远征后勤
 }
 // v3.6.0 方向⑧：专属星际资源奖励——每个星系按其群产出 2 种专属资源，受星蕴提纯加成与随队加成
 export function expeditionResReward(g) {
-  const m = starResMult() * petCpsBonus();
+  const m = starResMult() * petCpsBonus() * researchMult('expedition'); // v3.12.0 反馈⑩：远征后勤
   return g.res.map(key => ({ key, n: Math.round(g.resBase * m) }));
 }
 export function starResLabel(key) { return (BALANCE.starRes && BALANCE.starRes.labels && BALANCE.starRes.labels[key]) || key; }
@@ -219,7 +219,7 @@ export function renderExpeditions(container) {
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:12.5px;color:var(--cyan)">🛰 星际燃料（CPS）：<b class="mono">${fmt(S.starCps || 0)}</b></span>
       <button class="btn-mini" data-fuel-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 14px;font-size:12px;${fuelOn ? 'color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : 'color:var(--text-3)'}">${fuelOn ? '🔥 燃料模式 开' : '燃料模式 关'}</button>
-      <span style="font-size:11px;color:var(--text-2)">${fuelOn ? `每秒 -${FUEL_BURN_PER_SEC} CPS · 全局产出 ×${FUEL_GLOBAL_MULT}（CPS 耗尽自动熄火）` : `开启后每秒 -${FUEL_BURN_PER_SEC} CPS，全局产出 ×${FUEL_GLOBAL_MULT}`}</span>
+      <span style="font-size:11px;color:var(--text-2)">${fuelOn ? `每秒 -${FUEL_BURN_PER_SEC} CPS · 全局产出 ${fmtMultDelta(FUEL_GLOBAL_MULT)}（CPS 耗尽自动熄火）` : `开启后每秒 -${FUEL_BURN_PER_SEC} CPS，全局产出 ${fmtMultDelta(FUEL_GLOBAL_MULT)}`}</span>
     </div>
     <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.7">探索消耗 EP/RP/PT，携带出战异兽进行深空探索（每只 +10% CPS 与专属资源收益）；CPS 用于升级深空殖民与宇宙探索的所有升级，也可开启燃料模式持续燃烧、作为加速发展的燃料。</div>
   </div>`;
@@ -336,7 +336,7 @@ export function renderExpeditions(container) {
       if (!S.fuelMode && (S.starCps || 0) < FUEL_BURN_PER_SEC) { toast(`星际燃料不足（需 ≥ ${FUEL_BURN_PER_SEC} CPS）`); return; }
       S.fuelMode = !S.fuelMode;
       save(S);
-      log(S.fuelMode ? `燃料模式开启：每秒 -${FUEL_BURN_PER_SEC} CPS，全局产出 ×${FUEL_GLOBAL_MULT}` : '燃料模式关闭：CPS 停止燃烧，全局加成失效', S.fuelMode ? 'good' : '');
+      log(S.fuelMode ? `燃料模式开启：每秒 -${FUEL_BURN_PER_SEC} CPS，全局产出 ${fmtMultDelta(FUEL_GLOBAL_MULT)}` : '燃料模式关闭：CPS 停止燃烧，全局加成失效', S.fuelMode ? 'good' : '');
       renderExpeditions(container);
     });
   }

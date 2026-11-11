@@ -48,3 +48,63 @@ export function epDepletionSec(ep, outputPerSec, drainPerSec) {
   if (!(net > 0) || !(Number(ep) > 0)) return 0;
   return (Number(ep) || 0) / net;
 }
+
+// ========== v3.12.0 反馈⑮：资源增减文案的正负号单一真源 ==========
+// 模块卡面凡「增加产出 / 减少产出」都必须带显式 + / -，不允许只写「×1.3」「0.85」这类无符号倍率。
+// 这里只提供纯字符串/数值口径（零 DOM、零状态依赖），数据表文案与动态描述共用。
+export function deltaSign(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n === 0) return '±';
+  return n > 0 ? '+' : '-';
+}
+
+// 百分比增量 → "+30%" / "-12%"；digits 用于 2.5% 这类非整数。
+export function fmtDelta(v, { unit = '%', digits = 0 } = {}) {
+  const n = Number(v) || 0;
+  let body = Math.abs(n).toFixed(digits);
+  // 只在「有小数部分」时去掉尾部零：直接套 /\.?0+$/ 会把整数末尾的 0 也吃掉
+  // （30 → 3、-10 → -1），汇率 ×0.90 / 燃料 ×1.50 都会显示错误百分比。
+  if (body.includes('.')) body = body.replace(/\.?0+$/, '');
+  if (body === '' || body === '-') body = '0';
+  return `${n < 0 ? '-' : '+'}${body}${unit}`;
+}
+
+// 倍率（×1.3 / ×0.88）→ 带符号百分比（+30% / -12%）。
+export function fmtMultDelta(m, opts) {
+  return fmtDelta(((Number(m) || 0) - 1) * 100, opts);
+}
+
+// 防御性归一：把数据表里漏写的「×N」补成「+X%（×N）」/「-X%（×N）」。
+// 已有 + / - 的文案原样返回，避免重复标注。
+export function signedDesc(desc) {
+  const s = String(desc || '');
+  if (/[+\-−]/.test(s)) return s;
+  const m = s.match(/×\s*(\d+(?:\.\d+)?)/);
+  if (!m) return s;
+  return s.replace(m[0], `${fmtMultDelta(m[1])}（${m[0]}）`);
+}
+
+// 卡面角标：从任意数据对象的效果字段推出 + / - / ±，供 .delta-badge 渲染。
+// 判定序与数据表书写习惯一致：fx.value / fx.v → cps / produces.rate → desc 内首个带符号数 → ×N 倍率。
+export function effectSignOf(u) {
+  if (!u || typeof u !== 'object') return '';
+  const fx = u.fx && typeof u.fx === 'object' ? u.fx : null;
+  if (fx) {
+    const raw = fx.v != null ? fx.v : fx.value;
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      // 只有字段名明确是乘区（*Mul / *Mult / costMul）才按「相对 1」判定；
+      // 不能用 raw<1 反推——加区字段常见 0.1 表示 +10%，会被误判成 -90%。
+      const isMul = /mul|mult/i.test(String(fx.key || ''));
+      return deltaSign(isMul ? raw - 1 : raw);
+    }
+  }
+  for (const v of [u.cps, u.produces && u.produces.rate, u.rpRate]) {
+    if (typeof v === 'number' && Number.isFinite(v) && v !== 0) return deltaSign(v);
+  }
+  const desc = String(u.desc || '');
+  const signed = desc.match(/([+\-−])\s*\d/);
+  if (signed) return signed[1] === '−' ? '-' : signed[1];
+  const mult = desc.match(/×\s*(\d+(?:\.\d+)?)/);
+  if (mult) return deltaSign(Number(mult[1]) - 1);
+  return '';
+}

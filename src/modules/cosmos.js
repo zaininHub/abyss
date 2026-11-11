@@ -3,6 +3,7 @@
 // 一次性把 EP 转化为稀缺资源（PT/DM/信仰/余烬/VS/RP），跨资源发展通道（与集市互补、成本口径随存储上限缩放）。
 // 克制：每项等级上限 4~5、成本 ×1.7~1.9/级陡峭增长、转化率劣于最优通道（集市/深潜）但不占库存不占队列。
 import { S, save } from '../state.js';
+import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult } from './economy.js';
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
@@ -105,7 +106,7 @@ export function renderCosmosHtml() {
     const gain = cosmosReward(p, cost);
     html += `<div class="off-upg${!full && (S.starCps || 0) < cost ? ' cant' : ''}" data-cosmos="${p.id}" style="${full ? 'opacity:.55' : ''}">
       <span>${p.icon} ${p.name} <span style="color:var(--text-3);font-size:10.5px">Lv.${lv}/${p.cap}</span><br>
-        <span style="color:var(--text-3);font-size:10.5px">${p.desc} · ×${p.growth}/级</span></span>
+        <span style="color:var(--text-3);font-size:10.5px">${p.desc} · ${fmtMultDelta(p.growth)}/级</span></span>
       <span style="color:var(--cyan);text-align:right">${full ? '已满级' : `${fmt(cost)} CPS<br><span style="font-size:10.5px;color:var(--green,#3fb950)">→ +${fmt(gain)} ${COSMOS_RES_LABEL[p.res]}</span>`}</span></div>`;
   }
   return html + `</div>`;

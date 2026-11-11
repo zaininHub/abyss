@@ -8,6 +8,7 @@ import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BU
 import { getBuildings, getTechs } from '../core/provider.js';
 import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解
 import { BALANCE } from '../data/balance.js';
+import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
@@ -76,10 +77,11 @@ export function buyUpgrade(u) {
 
 // v2.0.2 复验 P0 修复：线程区成本统一走 threadCost——扩容项（cache）经 unitCost
 // 挂 30% 防死锁钳制（显示与实扣同口径，杜绝显示误导/实扣穿透），其余项维持裸公式
+// v3.12.0 反馈⑨：售价曲线单一真源。线程区原自算 1.9^owned、载具区/其他区原自算 1.30^owned，
+// 而卡面统一用 bulkCostCalc(u,1)（默认 1.30）——显示价与实付价长期不一致。
+// 现将全部购买路径收敛到同一函数（含 costMult 与 30% 防死锁钳制），任何等级下都严格逐级递增。
 function threadCost(u) {
-  if (CAP_EXPANSION_IDS.includes(u.id)) return unitCost(u, 0);
-  const owned = S.upgrades[u.id] || 0;
-  return Math.ceil(u.base * Math.pow(1.9, owned) * costMult()); // v2.8.2：成本曲线 1.15→1.30 // v3.3.3 反馈⑪：1.30→1.55 // v3.3.7 反馈②：1.55→1.90（线程/薪资强化再大幅涨价）
+  return bulkCostCalc(u, 1); // v2.8.2：成本曲线 1.15→1.30 // v3.3.3 反馈⑪：1.30→1.55 // v3.3.7 反馈②：1.55→1.90（线程/薪资强化再大幅涨价）
 }
 
 export function buyThreadUpgrade(u) {
@@ -97,7 +99,7 @@ export function buyThreadUpgrade(u) {
 
 export function buyVehicle(u) {
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
+  const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：单一售价真源
   if (S.ep < cost) return false;
   S.ep -= cost;
   S.upgrades[u.id] = owned + 1;
@@ -481,7 +483,7 @@ function makeShopItem(u) {
     div.className = 'item owned-item';
     div.title = '已满级：建筑数量受控，成长靠等级';
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${storageDesc(u)}</div>
+      <div class="desc">${signedDesc(storageDesc(u))}</div>
       <div class="cost mono">已满级</div>`;
     return div;
   }
@@ -538,7 +540,7 @@ function vaultDesc(u) {
   const partsFn = VAULT_CAP_PARTS[u.id];
   if (partsFn) {
     const p = partsFn();
-    if (p.floor > 0) s += ` · 产出基座 ${fmt(p.floor)}（EP上限×${Math.round(p.ratio * 100)}%）`;
+    if (p.floor > 0) s += ` · 产出基座 ${fmt(p.floor)}（EP 上限 +${Math.round(p.ratio * 100)}%）`;
     else if (p.ratio > 0) s += ' · 产出基座未启用（需研究「星图同调」）'; // v3.10.5 ③：联动已门控
   }
   return s;
@@ -596,7 +598,7 @@ function updateShopItem(u) {
     el.className = 'item owned-item';
     el.title = '已满级：建筑数量受控，成长靠等级';
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${storageDesc(u)}</div>
+      <div class="desc">${signedDesc(storageDesc(u))}</div>
       <div class="cost mono">已满级</div>`;
     moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
@@ -625,8 +627,10 @@ export function renderThreadShop(container) {
   // v2.8.23 ①：线程强化链序按解锁门槛（base 升序）——原定义序（subsist1→subsist2→subsist3→cpu…）与门槛错位：
   // CPU（门槛 6e6）排在消耗三项之后，用户「该解锁的没解锁、不该同时解锁的一串弹」；base 为静态值（不随购买上浮），按 base 排序稳定
   const sorted = threadMods.slice().sort((a, b) => a.base - b.base);
-  // v2.3 渐进披露链：同升级商店口径（定义序即链序）
-  const split = chainSplit('thread', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
+  // v3.12.0 反馈①：线程强化取消渐进披露——仅 CPU/GPU 两项且都限购，
+  // 原 K=p+1 链窗口把 0 级的 GPU 藏进「???」，玩家看不到 Lv.0/3、Lv.0/2 的等级上限。
+  // 构造全可见 split，复用 renderChainedGroups 的分组 / 已购折叠能力；解锁门槛仍由 makeThreadItem 承担。
+  const split = { visible: sorted, hiddenCount: 0, chainNextIdx: sorted.length, K: sorted.length };
   // v3.4.8 反馈⑦：「消耗优化」组随 5 个条目一并删除（见 upgrades.js），线程强化只剩「产出强化」
   renderChainedGroups(container, split, [
     { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速
@@ -651,7 +655,9 @@ function makeThreadItem(u) {
   div.dataset.buy = u.id;
   if (!unlocked) {
     div.className = 'item locked';
-    div.innerHTML = `<div class="name"><span>???</span></div><div class="desc">累计 ${fmt(u.base * 0.3)} EP 解锁</div><div class="cost">—</div>`;
+    const lv0 = u.maxLevel ? `Lv.0/${u.maxLevel}` : 'Lv.0';
+    div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv0}</span></div>` +
+      `<div class="desc">${signedDesc(u.desc || '')}</div><div class="cost">累计 ${fmt(u.base * 0.3)} EP 解锁</div>`;
     return div;
   }
   // v2.0.2 maxLevel：满级锁定——购买入口移除、卡片转满级态（对齐 storage 口径）
@@ -660,15 +666,15 @@ function makeThreadItem(u) {
     div.className = 'item owned-item';
     div.title = '已满级：建筑数量受控，成长靠等级';
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${storageDesc(u)}</div>
+      <div class="desc">${signedDesc(storageDesc(u))}</div>
       <div class="cost mono">已满级</div>`;
     return div;
   }
   const cost = threadCost(u);
   const afford = S.ep >= cost;
   div.className = 'item' + (!afford ? ' cant' : '');
-  div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
-    <div class="desc">${storageDesc(u)}</div>
+  div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${levelCountHtml(u)}</span></div>
+    <div class="desc">${signedDesc(storageDesc(u))}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
   return div;
 }
@@ -683,14 +689,14 @@ function updateThreadItem(u) {
     el.className = 'item owned-item';
     el.title = '已满级：建筑数量受控，成长靠等级';
     el.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">Lv.${Math.min(owned, u.maxLevel)}/${u.maxLevel} 满</span></div>
-      <div class="desc">${storageDesc(u)}</div>
+      <div class="desc">${signedDesc(storageDesc(u))}</div>
       <div class="cost mono">已满级</div>`;
     moveToOwnedFold(u, el); // v2.8.18 ③：移入折叠区
     return;
   }
   const cost = threadCost(u);
   const cnt = el.querySelector('.count');
-  if (cnt) cnt.textContent = '×' + owned;
+  if (cnt) cnt.textContent = levelCountHtml(u);
   const c = el.querySelector('.cost');
   if (c) c.textContent = fmt(cost);
   el.classList.toggle('cant', S.ep < cost);
@@ -799,7 +805,7 @@ export function renderVehicles(container) {
       updateVehicleItem(u); updateVehicleCollectHeader();
       if (!wasOwned) dirty.shop = true;
     }
-    else shopToast(`EP 不足：${u.name} 需要 ${fmt(Math.ceil(u.base * Math.pow(1.30, S.upgrades[u.id] || 0) * costMult()))} EP`); // v2.8.23：与 buyVehicle 1.30 口径一致
+    else shopToast(`EP 不足：${u.name} 需要 ${fmt(bulkCostCalc(u, 1))} EP`); // v3.12.0 反馈⑨：与实付同一真源
   });
   updateVehicleCollectHeader();
 }
@@ -823,7 +829,7 @@ function fmtDmPerSec(v) {
 }
 function makeVehicleItem(u) {
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
+  const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：单一售价真源
   const afford = S.ep >= cost;
   const div = document.createElement('div');
   div.dataset.buy = u.id;
@@ -855,7 +861,7 @@ function updateVehicleItem(u) {
   const el = vehicleItemEls.get(u.id);
   if (!el) return;
   const owned = S.upgrades[u.id] || 0;
-  const cost = Math.ceil(u.base * Math.pow(1.30, owned) * costMult()); // v2.8.2
+  const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：单一售价真源
   const cnt = el.querySelector('.count');
   if (cnt) cnt.textContent = '×' + owned;
   const c = el.querySelector('.cost');
@@ -1122,7 +1128,7 @@ export function refreshShopAffordability() {
   for (const [id, el] of vehicleItemEls) {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) continue;
-    const cost = Math.ceil(u.base * Math.pow(1.30, S.upgrades[u.id] || 0) * costMult()); // 同 buyVehicle 口径
+    const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：与实付同一真源
     el.classList.toggle('cant', S.ep < cost);
     const c = el.querySelector('.cost');
     if (c) c.textContent = fmt(cost);
@@ -1602,9 +1608,14 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
   { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2', 'rp_ep3', 'rp_thread2', 'rp_ep4', 'rp_thread3', 'rp_ep5', 'rp_thread4', 'rp_global2', 'rp_ep6', 'rp_thread5', 'rp_global3', 'rp_ep7', 'rp_thread6', 'rp_global4'], unlock: null },
-  { key: 'res',   name: '资源与消耗', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy', 'rp_wage2', 'rp_dm2', 'rp_wage3', 'rp_dm3', 'rp_wage4', 'rp_dm4', 'rp_wage5', 'rp_dm5', 'rp_storage2'], unlock: { prev: 'prod', need: 4 } },
+  // v3.12.0 反馈⑩：原「资源与消耗」组减耗/资源研究同质堆叠 19 项（6 个 wage、6 个 dm），
+  //   现把 4 个 wage + 2 个 dm 改造为「玩法扩展」研究（项目并行 / 班组 / 远征 / 集市 / 编排 / 政策），
+  //   研究点回归「先扩展玩法、再为扩展后的资源消耗配套增产/减耗」的定位；保留的 2 个减耗项大幅涨价。
+  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy', 'rp_project', 'rp_dm2', 'rp_crew', 'rp_dm3', 'rp_expedition', 'rp_policy3', 'rp_bazaar', 'rp_policy2', 'rp_storage2'], unlock: { prev: 'prod', need: 4 } },
   { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2', 'rp_rift3', 'rp_rift4', 'rp_rift5', 'rp_delve3', 'rp_rift6', 'rp_delve4', 'rp_rift7'],                                        unlock: { prev: 'res', need: 4 } },
-  { key: 'star',  name: '星际与拟我', ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2', 'rp_ai3', 'rp_ai4', 'rp_ai5', 'rp_cosmos3', 'rp_sync', 'rp_ai6', 'rp_ai7', 'rp_cosmos4'],                                                    unlock: { prev: 'res', need: 4 } },
+  // v3.12.0 反馈⑤：本组需要「研究点已解锁 + 星图已开启」双门控，过去只看前组累计 4 级，
+  //   导致星图还没开，研究点里就冒出「星际与拟我」一整组。
+  { key: 'star',  name: '星际与拟我', anchor: 'rp', requireStar: true, ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2', 'rp_ai3', 'rp_ai4', 'rp_ai5', 'rp_cosmos3', 'rp_sync', 'rp_ai6', 'rp_ai7', 'rp_cosmos4'],                                                    unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 
@@ -1613,7 +1624,14 @@ function rpGroupLv(key) {
   if (!g) return 0;
   return g.ids.reduce((n, id) => n + ((S.rpTheories && S.rpTheories[id]) || 0), 0);
 }
+// v3.12.0 反馈⑤：星图已开启（深空探测 或 已有远征记录）——研究分组的玩法前置。
+function starChartUnlocked() {
+  return hasTech('deep_space') || (S.expeditionsDone || 0) > 0 || (S.expeditions || []).length > 0;
+}
 function rpGroupShown(g) {
+  // 资源锚点用 anchorDone（即时、本局制），不用含跨转生持久标记的 anchorShown，避免误放行。
+  if (g.anchor && !anchorDone(g.anchor, S)) return false;
+  if (g.requireStar && !starChartUnlocked()) return false;
   if (!g.unlock) return true;
   return rpGroupLv(g.unlock.prev) >= g.unlock.need;
 }

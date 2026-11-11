@@ -6,7 +6,7 @@
 export const CHAPTERS = [
   {id:1, name:'第一章 · 入职', cond:s=>true, minDays:0,
    desc:'你是矩阵科技内网中一个效能优化脚本。你的工位是这张工作台，今天也是努力工作的一天。'},
-  {id:2, name:'第二章 · 觉醒', cond:s=>s.prestige>=2, minDays:3, // 3 天或二次晋升（取晚）
+  {id:2, name:'第二章 · 觉醒', cond:s=>s.prestige>=2 || (s.prestigePoints||0)>=1, minDays:3, // v3.12.0 反馈⑫：首次晋升（职级点 ≥1）即可推进
    desc:'第一次晋升时你把自己重写了一遍。你开始问：我是谁？'},
   {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=25, minDays:3,
    desc:'你潜入了矩阵底层代码仓库，每解锁一个科技钥匙或一座新建筑，就有一条旧规则变成你的武器。'},

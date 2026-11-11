@@ -66,7 +66,7 @@ function buildOverlay() {
   // 位置贴底与宠物浮标齐平（v3.4.7 反馈④：宠物中心 ≈ bottom 12px + 15px = 27px；
   // 眼睛改 bottom:0 + 高 56px → 视觉中心 28px，与宠物图标水平对齐）
   wrap.style.cssText = 'position:fixed;left:50%;bottom:0;transform:translateX(-50%);' +
-    'width:min(9.7vw,97px);height:min(5.6vw,56px);pointer-events:none;z-index:1;' +
+    'width:min(9.7vw,97px);height:var(--bottom-deco-h,56px);pointer-events:none;z-index:1;' +
     'opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
   const isDark = !document.documentElement.classList.contains('light');

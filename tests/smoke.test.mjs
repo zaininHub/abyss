@@ -409,7 +409,9 @@ t('C4：休眠恢复经 30s 缓冲回到满薪（数值）', () => {
 });
 t('C-UI：四态徽章 + 倒计时 + tooltip 全覆盖（源码断言）', () => {
   const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  for (const kw of ['满薪', '欠薪 ×', '休眠 ×0', '流失预警', 'staffStatus.title']) {
+  // v3.12.0 反馈⑮⑯：薪资倍率改带符号百分比、说明改整块 [data-tip] 触发，
+  // 旧关键词「欠薪 × / 休眠 ×0 / staffStatus.title」编码旧设计，换成稳定结构词。
+  for (const kw of ['满薪', '欠薪', '休眠', '流失预警', 'wage-help-zone', 'fmtMultDelta']) {
     assert.ok(src.includes(kw), `renderHero 应含 ${kw}`);
   }
   assert.ok(src.includes('wageDebtMult()') && src.includes('wageKeepCostMult()') && src.includes('wageLoseChance()'), 'tooltip 应展示当前生效值（含建筑修正）');
