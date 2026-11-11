@@ -51,14 +51,14 @@ for (const f of PKG_EXCLUDE_TESTS) {
   const p2 = path.join(TMP_FULL, 'tests', f);
   if (fs.existsSync(p2)) fs.unlinkSync(p2);
 }
-for (const f of ['index.html', 'package.json', 'package-lock.json', 'vite.config.js', 'README.md', 'DESIGN.md', '交付说明.md']) {
+for (const f of ['index.html', 'package.json', 'package-lock.json', 'vite.config.js', 'README.md', 'docs/DESIGN.md', 'docs/交付说明.md']) {
   const src = path.join(ROOT, f);
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(TMP_FULL, f));
 }
 
 // dist 包：dist 全部 + 交付说明 + README
 copyRecursive(path.join(ROOT, 'dist'), path.join(TMP_DIST, 'dist'));
-fs.copyFileSync(path.join(ROOT, '交付说明.md'), path.join(TMP_DIST, '交付说明.md'));
+fs.copyFileSync(path.join(ROOT, 'docs/交付说明.md'), path.join(TMP_DIST, '交付说明.md'));
 fs.copyFileSync(path.join(ROOT, 'README.md'), path.join(TMP_DIST, 'README.md'));
 
 // zip

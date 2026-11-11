@@ -703,7 +703,7 @@ t('Save Migration：v1.3 旧档无损升入 v2.0', () => {
 t('Version 纪律：package.json / index.html title / 交付说明 三处一致（参数化，升版不再改断言）', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  const doc = readFileSync(new URL('../交付说明.md', import.meta.url), 'utf8');
+  const doc = readFileSync(new URL('../docs/交付说明.md', import.meta.url), 'utf8');
   const v = pkg.version;
   assert.match(v, /^\d+\.\d+\.\d+$/, `package.json version 应为 semver，实际 ${v}`);
   assert.ok(html.includes(`v${v}`), `index.html title 应含 v${v}（与 package.json 一致）`);

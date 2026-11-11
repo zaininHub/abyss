@@ -36,3 +36,6 @@ coverage/
 tests/EV/
 tests/*.png
 tests/playthrough-shots/
+
+# ===== 项目工作记忆（本地，不入库） =====
+.workbuddy/

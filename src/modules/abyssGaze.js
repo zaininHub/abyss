@@ -3,8 +3,9 @@
 // 完全重叠（实测 97×56 满重叠）。现在改为挂载到 .sys-btns 行首作为 flex 子项：
 //   · 彻底离开底部，触手效果原样保留；
 //   · 作为 flex 子项随按钮组一起响应式换行，无需魔法坐标；
-//   · pointer-events:none、无 z-index，纯装饰，绝不接收点击或遮挡系统按钮。
+//   · pointer-events:auto、无 z-index，作为可点击彩蛋（点一下「凝视深渊」），仍不遮挡系统按钮。
 // 视觉：胶囊仪器框 + 刻度/状态点 + 杏仁眼裂内发光竖瞳（扫视/眨眼/呼吸光晕）。
+// 交互：点击触发 .gazing 反馈并向 main 注册的回调（log/toast）汇报。
 // 动效只动 transform / opacity，prefers-reduced-motion 全量降级。
 
 function buildEyeSvg() {
@@ -82,9 +83,21 @@ function buildOverlay() {
   wrap.className = 'abyss-gaze-hud';
   wrap.setAttribute('aria-hidden', 'true');
   wrap.style.cssText = 'position:relative;flex:0 0 auto;align-self:center;' +
-    'width:132px;height:34px;pointer-events:none;' +
+    'width:132px;height:34px;pointer-events:auto;cursor:pointer;' +
     'opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
+  // 点击交互：点一下「凝视深渊」——视觉反馈（.gazing）+ 回调汇报（log/toast）。
+  // 纯 Node 桩未实现 addEventListener，做能力检测后回退（与 querySelector 守卫一致）。
+  if (typeof wrap.addEventListener === 'function') {
+    wrap.addEventListener('click', () => {
+      wrap.classList.remove('gazing');
+      void wrap.offsetWidth; // 重排以重启动画
+      wrap.classList.add('gazing');
+      clearTimeout(wrap._gzT);
+      wrap._gzT = setTimeout(() => wrap.classList.remove('gazing'), 700);
+      if (typeof gazeInteract === 'function') gazeInteract();
+    });
+  }
   const isDark = !document.documentElement.classList.contains('light');
   wrap.querySelectorAll('.ag-lid').forEach(p => p.setAttribute('stroke', isDark ? '#4c1d95' : '#6d28d9'));
   const style = document.createElement('style');
@@ -106,6 +119,10 @@ function buildOverlay() {
     #abyss-gaze-crack .ag-halo { animation: ag-breathe 5.4s ease-in-out infinite; }
     #abyss-gaze-crack .ag-beacon { animation: ag-beacon 3.1s ease-in-out infinite; }
     #abyss-gaze-crack .ag-beacon-2 { animation-delay: 1.5s; }
+    /* 点击「凝视深渊」反馈：竖瞳骤亮 + 整体光晕 */
+    #abyss-gaze-crack.gazing { filter: drop-shadow(0 0 10px #c084fc); }
+    #abyss-gaze-crack.gazing .ag-iris-glow { animation: ag-gaze-flash .7s ease-out; }
+    @keyframes ag-gaze-flash { 0%,100% { opacity: .74; } 50% { opacity: 1; filter: drop-shadow(0 0 7px #f5d0fe); } }
     @media (prefers-reduced-motion: reduce) {
       #abyss-gaze-crack .ag-eye, #abyss-gaze-crack .ag-iris, #abyss-gaze-crack .ag-iris-glow,
       #abyss-gaze-crack .ag-halo, #abyss-gaze-crack .ag-beacon { animation: none; }
@@ -144,3 +161,7 @@ export function hideAbyssGaze() {
 export function ensureAbyssGaze(unlocked) {
   if (unlocked) showAbyssGaze();
 }
+
+// main 注入点击交互回调（log/toast），避免模块间循环依赖
+let gazeInteract = null;
+export function setGazeInteract(fn) { gazeInteract = fn; }

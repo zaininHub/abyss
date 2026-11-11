@@ -60,7 +60,7 @@ import { maybeTriggerEvent, peekNextEvent, eventPool } from './modules/events.js
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
-import { ensureAbyssGaze } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
+import { ensureAbyssGaze, setGazeInteract } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -1248,7 +1248,7 @@ function applyWishCollapsed(dock, collapsed) {
   if (btn) {
     btn.textContent = collapsed ? '‹' : '›';
     btn.setAttribute('aria-label', collapsed ? '展开许愿池' : '收起许愿池');
-    btn.title = collapsed ? '展开许愿池' : '收起到屏幕边缘';
+    btn.title = collapsed ? '展开许愿池' : '收起 / 拖到屏幕边缘自动隐藏';
   }
   // 收起只动 transform（项目动效纪律）：把 dock 右移，仅露左端 30px 的折叠按钮
   const left = parseFloat(dock.style.left) || 0;
@@ -1289,6 +1289,10 @@ function initWishDock(dock) {
     drag = null;
     dock.classList.remove('wish-dragging');
     try { bar.releasePointerCapture(e.pointerId); } catch { /* 已释放 */ }
+    // v3.12.2 反馈②：拖到屏幕右缘自动隐藏（贴边收起），仅露折叠把手
+    const EDGE = 10;
+    const fx = parseFloat(dock.style.left) || 0;
+    if (fx >= window.innerWidth - WISH_DOCK_W - EDGE) applyWishCollapsed(dock, true);
     writeWishDockState(dock);
   };
   bar.addEventListener('pointerup', endDrag);
@@ -1317,7 +1321,7 @@ function ensureWishWell() {
     dock.id = 'wish-dock';
     dock.className = 'wish-dock';
     dock.innerHTML = `<div class="wish-dock-bar">
-        <button class="wish-toggle" type="button" aria-label="收起许愿池" title="收起到屏幕边缘">›</button>
+        <button class="wish-toggle" type="button" aria-label="收起许愿池" title="收起 / 拖到屏幕边缘自动隐藏">›</button>
         <span class="wish-grip" aria-hidden="true">⠿</span>
         <span class="wish-dock-title">许愿池</span>
       </div>
@@ -1510,6 +1514,11 @@ function bindEvents() {
     clearTimeout(S._tentacleTapTimer);
     S._tentacleTapTimer = setTimeout(() => deco.classList.remove('tap'), 600);
     log('触手回应了你的触碰', 'good');
+  });
+  // v3.12.2：深渊凝视点击交互——点一下「凝视深渊」给出反馈（视觉在 abyssGaze.js）
+  setGazeInteract(() => {
+    log('你凝视着深渊，深渊也在凝视着你……', 'good');
+    try { toast('👁 凝视深渊'); } catch (_) { /* 早期 toast 未就绪 */ }
   });
   document.getElementById('btn-expedition')?.addEventListener('click', () => switchTab('expedition'));
   document.getElementById('btn-storyline')?.addEventListener('click', () => switchTab('storyline'));

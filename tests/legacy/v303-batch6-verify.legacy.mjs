@@ -1,9 +1,10 @@
 // v3.0.3 第六批：浏览器自动化验证（真实 UI 入口，覆盖 6 项反馈）
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert';
+import { chromePath } from '../_chrome.mjs';
 
 const browser = await puppeteer.launch({
-  executablePath: '/usr/local/bin/chromium', headless: 'new',
+  executablePath: chromePath(), headless: 'new',
   args: ['--no-sandbox', '--window-size=1366,900'],
 });
 const page = await browser.newPage();

@@ -132,8 +132,15 @@ const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySe
   else bad('② 仍与触手重叠', JSON.stringify({ gaze, tent }));
   if (tent && tent.y >= vh - 60 && Math.abs(tent.h - 56) < 0.5 && tent.pointer === 'none') ok('② 触手效果原样保留（56px 全宽底部条带、不接指针）', `y=${Math.round(tent.y)} h=${Math.round(tent.h)}`);
   else bad('② 触手被改动', JSON.stringify(tent));
-  if (gaze && gaze.pointer === 'none' && gaze.z === 0) ok('② 凝视为纯装饰（pointer-events:none、无额外层级）');
-  else bad('② 凝视可能阻挡交互', JSON.stringify(gaze));
+  if (gaze && gaze.pointer === 'auto' && gaze.z === 0) ok('② 凝视已支持点击交互（pointer-events:auto、无额外层级）');
+  else bad('② 凝视点击交互异常', JSON.stringify(gaze));
+  const gazeClick = await page.evaluate(() => {
+    const el = document.getElementById('abyss-gaze-crack');
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return el.classList.contains('gazing');
+  });
+  if (gazeClick) ok('② 点击凝视触发交互反馈（.gazing）');
+  else bad('② 凝视点击无反馈', '');
 
   const eye = await page.evaluate(() => {
     const el = document.getElementById('abyss-gaze-crack');
