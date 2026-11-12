@@ -142,13 +142,15 @@ test('B3 bookFlow 拒绝非法字段与非数值，resetFlowStats 清空台账',
 
 console.log('[C] 效能编排读侧单一真源');
 
-test('C1 六条策略、四个倍率键，增益与代价成对', () => {
-  assert.equal(orch.ORCHESTRATION_MODES.length, 6);
+test('C1 四条策略、四个倍率键，增益与代价成对', () => {
+  assert.equal(orch.ORCHESTRATION_MODES.length, 4);
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
   const ids = new Set();
   for (const m of orch.ORCHESTRATION_MODES) {
     ids.add(m.id);
-    assert.ok(m.name && m.desc && m.icon && m.short, `${m.id} 缺展示字段`);
+    // v3.12.8 ④：均衡编排不再配说明文案（用户要求删掉「没有增益，也没有代价」那句）
+    assert.ok(m.name && typeof m.desc === 'string' && m.icon && m.short, `${m.id} 缺展示字段`);
+    if (m.id !== 'balanced') assert.ok(m.desc.length > 0, `${m.id} 缺策略说明`);
     for (const k of orch.ORCHESTRATION_KEYS) {
       assert.ok(Number.isFinite(m.effects[k]) && m.effects[k] > 0, `${m.id}.${k} 非法`);
     }
@@ -157,12 +159,12 @@ test('C1 六条策略、四个倍率键，增益与代价成对', () => {
       assert.ok(Object.values(m.effects).some(v => v < 1), `${m.id} 应有代价`);
     }
   }
-  assert.equal(ids.size, 6);
+  // v3.12.8 ③：策略收敛到四档（均衡 / 产能 / 研究 / 深渊）
+  assert.equal(ids.size, 4);
+  assert.deepEqual([...ids].sort(), ['abyss', 'balanced', 'output', 'research']);
   assert.equal(orch.DEFAULT_MODE, 'balanced');
-  const vigil = orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil');
-  assert.ok(vigil, 'v3.9.0 应新增第 5 条策略「值守编排」');
-  assert.ok(vigil.effects.ep < 1 && vigil.effects.rp > 1 && vigil.effects.pt > 1 && vigil.effects.dm > 1,
-    '值守编排应是「EP 略降换三条转化管线提速」的互补取舍');
+  assert.equal(orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil'), undefined, '值守编排已移除');
+  assert.equal(orch.ORCHESTRATION_MODES.find(m => m.id === 'cascade'), undefined, '潮汐级联已移除');
 });
 
 test('C2 未解锁 / 旧档 / 非法存档一律回落 ×1，绝不放大数值', () => {
@@ -180,14 +182,16 @@ test('C3 自动排班按潮汐相位轮转，手动策略被旁路但不丢失',
   assert.equal(orch.effectiveModeId(st), 'abyss', '未开排班时按手动策略');
   const auto = p => ({ projectsDone: 3, tidePhase: p, orchestration: { mode: 'abyss', autoTide: true } });
   assert.deepEqual([0, 1, 2, 3].map(p => orch.effectiveModeId(auto(p))),
-    ['output', 'vigil', 'research', 'cascade']);
-  assert.equal(orch.effectiveModeId(auto(99)), 'cascade', '越界相位应回落到合法映射（相位 3 = 级联）而非崩溃');
+    ['output', 'balanced', 'research', 'abyss']);
+  assert.equal(orch.effectiveModeId(auto(99)), 'abyss', '越界相位应回落到合法映射（相位 3 = 深渊优先）而非崩溃');
   st.orchestration.autoTide = true;
   assert.equal(orch.effectiveModeId(st), 'output');
   st.tidePhase = 3;
-  assert.equal(orch.orchestrationMult('pt', st), 0.90, '相位 3 = 级联（pt 0.90）');
+  assert.equal(orch.effectiveModeId(st), 'abyss', '相位 3 = 深渊优先');
+  assert.equal(orch.orchestrationMult('pt', st), 1.40, '深渊优先 pt 1.40');
+  st.orchestration.mode = 'output';
   st.orchestration.autoTide = false;
-  assert.equal(orch.orchestrationMult('pt', st), 1.40, '关掉排班回到手动的深渊优先');
+  assert.equal(orch.orchestrationMult('pt', st), 0.85, '关掉排班回到手动的产能优先（pt 0.85）');
 });
 
 test('C4 设置入口只接受合法 id，非法写入不污染状态', () => {

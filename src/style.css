@@ -1248,10 +1248,10 @@ body.paused .pet-grid .pet-card {
 }
 .tentacle-deco svg { display: block; width: 100%; height: 100%; overflow: hidden; }
 .tentacle-deco path { fill: none; stroke-linecap: round; }
-.tentacle-deco .td-arm-1 { stroke: url(#td-grad-arm); stroke-width: 26; }
-.tentacle-deco .td-arm-2 { stroke: url(#td-grad-arm); stroke-width: 17; }
-.tentacle-deco .td-arm-3 { stroke: url(#td-grad-arm); stroke-width: 10; }
-.tentacle-deco .td-arm-4 { stroke: #c4b5fd; stroke-width: 4.5; }
+.tentacle-deco .td-arm-1 { stroke: url(#td-grad-arm); stroke-width: 32; }
+.tentacle-deco .td-arm-2 { stroke: url(#td-grad-arm); stroke-width: 23; }
+.tentacle-deco .td-arm-3 { stroke: url(#td-grad-arm); stroke-width: 15; }
+.tentacle-deco .td-arm-4 { stroke: #c4b5fd; stroke-width: 7; }
 .tentacle-deco .td-suck { fill: rgba(240, 219, 255, .5); }
 .tentacle-deco .td-glow-rim { stroke: rgba(77, 208, 225, .55); stroke-width: 1.4; }
 /* transform-box: fill-box —— 让每条臂绕自己的根部摆动；默认用整个 viewBox 作参照，
@@ -1339,10 +1339,14 @@ body.paused .pet-grid .pet-card {
 .tentacle-deco.tap .tentacle { animation: tentacle-tap .45s steps(3, end) !important; }
 .tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
 .tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
+/* v3.12.8 ②：点击反馈加强——整组先亮一下再弹起再落回（原来只有 3px 位移，几乎看不到）。
+   位移/旋转放大到 9px / 1.1deg，并叠加一层紫色辉光；0.45s 三拍结束，不干扰挂机视觉。 */
+.tentacle-deco { transition: filter .18s ease-out; }
+.tentacle-deco.tap { filter: drop-shadow(0 0 12px rgba(176, 108, 245, .62)) brightness(1.22); }
 @keyframes tentacle-tap {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  33% { transform: translateY(-3px) rotate(-.3deg); }
-  66% { transform: translateY(-1px) rotate(.3deg); }
+  0%, 100% { transform: translateY(0) rotate(0deg) scaleY(1); }
+  33% { transform: translateY(-9px) rotate(-1.1deg) scaleY(1.06); }
+  66% { transform: translateY(-3px) rotate(1.1deg) scaleY(1.02); }
 }
 
 /* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========

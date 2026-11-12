@@ -106,8 +106,8 @@ export const ACHIEVEMENTS = [
   { id: 'orch_tide',   name: '随潮而动',   icon: '🌊', desc: '开启随潮汐排班，让策略跟着相位轮转', test: (s, ctx) => !!(s.orchestration && s.orchestration.autoTide) },
   { id: 'chapter25',   name: '排班表的人', icon: '📖', desc: '剧情推进至番外·排班表（第 25 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 25 },
   // v3.9.0 成就扩充（89→100，+12.4%）：全部只读已持久化字段，判定 O(1)
-  { id: 'orch_vigil',   name: '守夜人',     icon: '☾',  desc: '把效能编排手动切换为「值守编排」', test: (s, ctx) => !!(s.orchestration && s.orchestration.mode === 'vigil') },
-  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: (s, ctx) => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'vigil', 'research', 'cascade'][i])) },
+  // v3.12.8：删除「守夜人」——对应的值守编排已被用户要求移除，判定条件不复存在
+  { id: 'schedule_edit',name: '自己排班',   icon: '🗓️', desc: '改写潮汐预案中任一相位的排班策略', test: (s, ctx) => !!(s.orchestration && Array.isArray(s.orchestration.schedule) && s.orchestration.schedule.some((m, i) => m !== ['output', 'balanced', 'research', 'abyss'][i])) },
   { id: 'chapter29',    name: '值守日志',   icon: '📖', desc: '剧情推进至番外·值守日志（第 29 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 29 },
   { id: 'chapter32',    name: '未命名进程', icon: '📖', desc: '剧情推进至番外·未命名进程（第 32 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 32 },
   { id: 'policy9',      name: '九政并立',   icon: '⚖️', desc: '同时采用 9 项周期政策', test: (s, ctx) => Object.keys(s.policies || {}).length >= 9 },
@@ -122,7 +122,7 @@ export const ACHIEVEMENTS = [
   { id: 'resonance_10',    name: '十叠回响',   icon: '◉', desc: '相位共鸣积累到 10 层', test: (s, ctx) => (s.resonance?.layers || 0) >= 10 },
   { id: 'resonance_20',    name: '满弦',       icon: '◉', desc: '相位共鸣积累到 20 层上限', test: (s, ctx) => (s.resonance?.layers || 0) >= 20 },
   { id: 'resonance_focus', name: '换一条弦',   icon: '◉', desc: '把共鸣焦点从产出改到别的管线', test: (s, ctx) => !!(s.resonance && s.resonance.focus && s.resonance.focus !== 'ep') },
-  { id: 'cascade',         name: '潮汐级联',   icon: '◈', desc: '把效能编排切换为「潮汐级联」', test: (s, ctx) => !!(s.orchestration && s.orchestration.mode === 'cascade') },
+  // v3.12.8：删除「潮汐级联」——对应策略已移除；四条剩余策略由 orch_switch / orch_tide 覆盖
   { id: 'chapter35',       name: '共鸣纪年',   icon: '📖', desc: '剧情推进至番外·共鸣纪年（第 35 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 35 },
   { id: 'chapter38',       name: '仍在值班',   icon: '📖', desc: '剧情推进至番外·仍在值班（第 38 章进度）', test: (s, ctx) => ctx.chapterProgress(s.chapter || '1') >= 38 },
   { id: 'policy11',        name: '十一政同席', icon: '⚖️', desc: '同时采用 11 项周期政策', test: (s, ctx) => Object.keys(s.policies || {}).length >= 11 },

@@ -164,12 +164,13 @@ test('A8 静态接线：各处不再内联手写清单', () => {
 
 console.log('[B] 成就注册表（纯函数可单测）');
 
-test('B1 140 条成就、id 唯一、无语义重复', () => {
-  assert.equal(ACHIEVEMENTS.length, 140); // v3.12.7：+gaze_stare（凝视连击）/ colony1·3·6（原星际里程碑并入）
-  assert.equal(reg.ACHIEVEMENT_IDS.length, 140);
-  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 140);
+test('B1 138 条成就、id 唯一、无语义重复', () => {
+  // v3.12.8：删除 orch_vigil（守夜人）/ cascade（潮汐级联）——对应策略已按反馈移除
+  assert.equal(ACHIEVEMENTS.length, 138);
+  assert.equal(reg.ACHIEVEMENT_IDS.length, 138);
+  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 138);
   assert.deepEqual(reg.duplicateAchievementTests(), [], 'es1000/es1k 类重复不得回归');
-  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 136); // 140 - 4 条手动点亮
+  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 134); // 138 - 4 条手动点亮
   assert.ok(!reg.ACHIEVEMENT_IDS.includes('es1k') && !reg.ACHIEVEMENT_IDS.includes('vow'), '两条语义重复项已移除');
 });
 
@@ -410,10 +411,10 @@ test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(EVENTS.length, 74);
   assert.equal(BALANCE.researchUpgs.length, 68);
   assert.equal(BALANCE.miles.length, 16);
-  assert.equal(WIKI_SECTIONS.length, 29);
+  assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 39);
-  assert.equal(orch.ORCHESTRATION_MODES.length, 6);
+  assert.equal(orch.ORCHESTRATION_MODES.length, 4); // v3.12.8：值守/级联已移除
   const grouped = RP_GROUPS.flatMap(g => g.ids).sort();
   assert.deepEqual(grouped, BALANCE.researchUpgs.map(u => u.id).sort(),
     'RP_GROUPS ↔ researchUpgs：新增研究项必须玩家可见可买');
@@ -432,7 +433,7 @@ test('E5 新增事件 / 章节 / 政策条件全部可执行且类型合法', ()
     assert.equal(typeof g.unlock, 'function');
     assert.equal(typeof g.unlock({ resonance: { enabled: true }, projectsDone: 200, prestige: 9 }), 'boolean');
   }
-  for (const id of ['resonance', 'cascade', 'chronicle3', 'longline']) {
+  for (const id of ['resonance', 'chronicle3', 'longline']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec && typeof sec.body === 'function', `百科 ${id} 缺正文`);
     assert.ok(sec.body().length > 20);

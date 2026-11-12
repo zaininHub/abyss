@@ -41,7 +41,7 @@ const purify = D.corruption.purge;
 // 而不是按代码模块平铺。分组是纯导航结构，章节 id 与内容不变（历史断言与外部引用继续有效）。
 export const WIKI_GROUPS = [
   { key: 'loop', name: '核心循环', hint: '先看这一卷：一分钟能上手', ids: ['intro', 'flows', 'res'] },
-  { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance', 'cascade'] },
+  { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance'] },
   { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'line'] },
   { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'] },
   { key: 'auto', name: '自动化', hint: 'AI 助手的编制与节拍', ids: ['assistant', 'supply', 'ledger', 'automation_num'] },
@@ -307,8 +307,8 @@ export const WIKI_SECTIONS = [
   { id: 'schedule', name: '潮汐预案', unlock: null, body: () => `
     <h4>把排班表握在自己手里</h4>
     <p>效能编排开放后，随潮汐排班默认按固定次序轮转：涨潮走产能、平潮回均衡、退潮转研究、乱流切深渊。完成 8 个任务或职级达到 2 之后，潮汐预案解锁——四个相位各自可以改排任意一条策略，改动即时生效，关掉排班也不会丢。</p>
-    <h4>第五条策略：值守</h4>
-    <p>值守编排是预案解锁后最值得放进夜里的那一档：基础产出略降，蒸馏、孵化与探采三条转化管线同时提速。它和产能优先正好互补，白班压产出、夜班攒转化，一天下来比死守一条策略更划算。想反悔，点一下「恢复默认排班」就回到最初的轮转次序。</p>
+    <h4>想反悔的时候</h4>
+    <p>排班改乱了点一下「恢复默认排班」，就回到最初的轮转次序。四相位各对应一条不同策略，默认表本身已经把四条管线都排过一遍。</p>
   ` },
   { id: 'watch', name: '值守与长夜', unlock: null, body: () => `
     <h4>为什么要有取舍</h4>
@@ -321,12 +321,6 @@ export const WIKI_SECTIONS = [
     <p>完成 12 个任务或职级达到 2 之后，效能编排卡里会多出一段相位共鸣。开启后，工作台在当前潮汐相位里持续运转会每 12 秒叠一层，最多 20 层；换相位时层数减半。焦点管线每层 +1.5%，其余三条每层 -0.2%——想叠得高，就得少换相位。</p>
     <h4>和排班表怎么配合</h4>
     <p>随潮汐排班会不断切相位，层数总被削掉一半；手动守住一条策略则相位照常流转，只是策略不变。两条路没有优劣：一条换策略的灵活，一条换层数的深度。卡面上四条编排倍率就是当前实际生效值，改完当场能看到对应管线的数字跟着变。</p>
-  ` },
-  { id: 'cascade', name: '第六条策略', unlock: null, body: () => `
-    <h4>潮汐级联</h4>
-    <p>潮汐级联是编排卡的第六条策略：产出与蒸馏小幅提速，孵化与探采相应收窄。它不像产能优先那样把算力全压在一条管线上，也不像值守编排那样让基础产出让位，适合想长时间守一个相位、靠共鸣慢慢叠层的玩法。</p>
-    <h4>取舍仍在</h4>
-    <p>六条策略都有增益也有代价，均衡编排是唯一不加不减的那一档。级联与共鸣叠加时，正负幅度会一起结算，卡面四条编排倍率给的是合并后的结果；关掉共鸣就回到策略本身的数值，不会有隐藏加成残留。</p>
   ` },
   { id: 'longline', name: '长线资产', unlock: null, body: () => `
     <h4>哪些东西不会清零</h4>

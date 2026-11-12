@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.7</title>
-<link rel="icon" href="data:,">
-  <script defer src="./assets/index-B06nw0iC.js"></script>
-  <link rel="stylesheet" href="./assets/index-BsP0p5US.css">
+<title>深渊效能工作台 v3.12.8</title>
+<link rel="icon" href="data:,">
+  <script defer src="./assets/index-DcqBHAob.js"></script>
+  <link rel="stylesheet" href="./assets/index-CWoyASKd.css">
 </head>
 <body>
 <div id="app">
@@ -291,10 +291,9 @@
   <!-- 浮动异兽 -->
   <div id="pet-float" class="pet-float"></div>
 
-  <!-- v3.12.7 ①：深渊触手重画为「从底边升起的章鱼臂」——
-       原横向卷须看不出是触手；现在每条臂是四段递减粗细的圆头叠成锥形 + 沿线吸盘，
-       底暗紫到尖端亮紫的竖向渐变。摆动幅度收到 1.6px / .22deg。
-       点击热区（#tentacle-tap-zone）与条带同宽，点任意触手都能触发拍动与 5 连击成就。 -->
+  <!-- v3.12.8 ②：触手收敛到 4 条（鱼缸 1 级 3 条 / 2 级起 4 条；3 级不再加第五条）——
+       每条臂仍是四段递减粗细的圆头叠成锥形 + 沿线吸盘，底暗紫到尖端亮紫的竖向渐变。
+       点击热区（#tentacle-tap-zone）与条带同宽，点任意位置都会触发整组拍动（幅度见 style.css 的 tentacle-tap）。 -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
     <svg viewBox="0 0 1200 56" preserveAspectRatio="none">
       <defs>
@@ -306,202 +305,58 @@
         </linearGradient>
       </defs>
     <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M26.0 57.9 C 27.0 46.4 30.0 36.8 35.1 31.0"/>
-      <path class="td-arm-2" d="M34.1 32.0 C 40.1 26.2 46.2 22.4 52.2 18.6"/>
-      <path class="td-arm-3" d="M51.2 19.5 C 56.2 15.7 59.3 11.8 60.3 8.0"/>
-      <path class="td-arm-4" d="M60.3 9.0 C 61.3 6.1 60.3 3.7 57.2 3.4"/>
-      <circle class="td-suck" cx="31.0" cy="34.9" r="2.30"/>
-      <circle class="td-suck" cx="35.1" cy="31.0" r="2.02"/>
-      <circle class="td-suck" cx="39.1" cy="27.2" r="1.82"/>
-      <circle class="td-suck" cx="43.1" cy="23.8" r="1.54"/>
-      <circle class="td-suck" cx="48.2" cy="20.9" r="1.34"/>
-      <circle class="td-suck" cx="53.2" cy="17.6" r="1.06"/>
-      <circle class="td-suck" cx="57.2" cy="13.8" r="0.86"/>
-      <circle class="td-suck" cx="59.3" cy="9.9" r="0.67"/>
-    </g>
-    <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M118.0 57.5 C 117.4 48.6 115.6 41.2 112.5 36.8"/>
-      <path class="td-arm-2" d="M113.1 37.5 C 109.5 33.1 105.9 30.1 102.2 27.1"/>
-      <path class="td-arm-3" d="M102.8 27.9 C 99.8 24.9 98.0 22.0 97.4 19.0"/>
-      <path class="td-arm-4" d="M97.4 19.7 C 96.8 17.5 97.4 15.7 99.2 15.4"/>
-      <circle class="td-suck" cx="115.0" cy="39.7" r="1.78"/>
-      <circle class="td-suck" cx="112.5" cy="36.8" r="1.55"/>
-      <circle class="td-suck" cx="110.1" cy="33.8" r="1.41"/>
-      <circle class="td-suck" cx="107.7" cy="31.2" r="1.18"/>
-      <circle class="td-suck" cx="104.7" cy="28.9" r="1.04"/>
-      <circle class="td-suck" cx="101.6" cy="26.4" r="0.81"/>
-      <circle class="td-suck" cx="99.2" cy="23.4" r="0.67"/>
-      <circle class="td-suck" cx="98.0" cy="20.5" r="0.52"/>
+      <path class="td-arm-1" d="M168 58 C 172.7 52.8 172.9 49.8 181.7 42.6"/>
+      <path class="td-arm-2" d="M181.7 42.6 C 193.2 33.2 189.5 36.5 201.9 30.3"/>
+      <path class="td-arm-3" d="M201.9 30.3 C 218.1 22.2 213.2 24.6 229.3 18.8"/>
+      <path class="td-arm-4" d="M229.3 18.8 C 250.4 11.2 255.0 10.8 264 8"/>
+      <circle class="td-suck" cx="176.3" cy="51.8" r="2.60"/>
+      <circle class="td-suck" cx="183.1" cy="44.1" r="2.42"/>
+      <circle class="td-suck" cx="192.4" cy="37.7" r="2.24"/>
+      <circle class="td-suck" cx="202.5" cy="31.5" r="2.06"/>
+      <circle class="td-suck" cx="215.5" cy="25.7" r="1.88"/>
+      <circle class="td-suck" cx="229.2" cy="20.0" r="1.70"/>
+      <circle class="td-suck" cx="244.4" cy="14.5" r="1.52"/>
     </g>
     <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M206.0 58.2 C 207.3 45.2 211.3 34.4 217.9 27.9"/>
-      <path class="td-arm-2" d="M216.5 29.0 C 224.4 22.5 232.4 18.2 240.3 13.9"/>
-      <path class="td-arm-3" d="M238.9 15.0 C 245.5 10.6 249.5 6.3 250.8 2.0"/>
-      <path class="td-arm-4" d="M250.8 3.1 C 252.1 -0.2 250.8 -2.9 246.8 -3.2"/>
-      <circle class="td-suck" cx="212.6" cy="32.2" r="2.59"/>
-      <circle class="td-suck" cx="217.9" cy="27.9" r="2.27"/>
-      <circle class="td-suck" cx="223.1" cy="23.6" r="2.05"/>
-      <circle class="td-suck" cx="228.4" cy="19.8" r="1.73"/>
-      <circle class="td-suck" cx="235.0" cy="16.5" r="1.51"/>
-      <circle class="td-suck" cx="241.6" cy="12.8" r="1.19"/>
-      <circle class="td-suck" cx="246.8" cy="8.5" r="0.97"/>
-      <circle class="td-suck" cx="249.5" cy="4.2" r="0.76"/>
-    </g>
-    <g class="tentacle tentacle-c">
-      <path class="td-arm-1" d="M300.0 57.2 C 299.6 49.8 298.3 43.6 296.1 39.9"/>
-      <path class="td-arm-2" d="M296.5 40.5 C 293.9 36.8 291.3 34.3 288.7 31.8"/>
-      <path class="td-arm-3" d="M289.1 32.4 C 287.0 30.0 285.7 27.5 285.2 25.0"/>
-      <path class="td-arm-4" d="M285.2 25.6 C 284.8 23.8 285.2 22.2 286.5 22.0"/>
-      <circle class="td-suck" cx="297.8" cy="42.4" r="1.49"/>
-      <circle class="td-suck" cx="296.1" cy="39.9" r="1.30"/>
-      <circle class="td-suck" cx="294.4" cy="37.4" r="1.18"/>
-      <circle class="td-suck" cx="292.6" cy="35.2" r="0.99"/>
-      <circle class="td-suck" cx="290.5" cy="33.3" r="0.87"/>
-      <circle class="td-suck" cx="288.3" cy="31.2" r="0.68"/>
-      <circle class="td-suck" cx="286.5" cy="28.7" r="0.56"/>
-      <circle class="td-suck" cx="285.7" cy="26.2" r="0.43"/>
-    </g>
-    <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M372.0 57.8 C 372.9 47.0 375.4 38.0 379.7 32.6"/>
-      <path class="td-arm-2" d="M378.8 33.5 C 384.0 28.1 389.1 24.5 394.2 20.9"/>
-      <path class="td-arm-3" d="M393.4 21.8 C 397.6 18.2 400.2 14.6 401.1 11.0"/>
-      <path class="td-arm-4" d="M401.1 11.9 C 401.9 9.2 401.1 6.9 398.5 6.7"/>
-      <circle class="td-suck" cx="376.3" cy="36.2" r="2.16"/>
-      <circle class="td-suck" cx="379.7" cy="32.6" r="1.89"/>
-      <circle class="td-suck" cx="383.1" cy="29.0" r="1.71"/>
-      <circle class="td-suck" cx="386.5" cy="25.8" r="1.44"/>
-      <circle class="td-suck" cx="390.8" cy="23.1" r="1.26"/>
-      <circle class="td-suck" cx="395.1" cy="20.0" r="0.99"/>
-      <circle class="td-suck" cx="398.5" cy="16.4" r="0.81"/>
-      <circle class="td-suck" cx="400.2" cy="12.8" r="0.63"/>
+      <path class="td-arm-1" d="M470 58 C 465.9 53.3 465.7 50.6 458 44.1"/>
+      <path class="td-arm-2" d="M458 44.1 C 447.9 35.6 451.1 38.5 440.3 33"/>
+      <path class="td-arm-3" d="M440.3 33 C 426.2 25.8 430.5 28.0 416.4 22.8"/>
+      <path class="td-arm-4" d="M416.4 22.8 C 397.9 16.0 393.9 15.5 386 13"/>
+      <circle class="td-suck" cx="462.4" cy="52.4" r="2.60"/>
+      <circle class="td-suck" cx="456.4" cy="45.5" r="2.42"/>
+      <circle class="td-suck" cx="448.3" cy="39.7" r="2.24"/>
+      <circle class="td-suck" cx="439.5" cy="34.1" r="2.06"/>
+      <circle class="td-suck" cx="428.1" cy="28.9" r="1.88"/>
+      <circle class="td-suck" cx="416.2" cy="23.8" r="1.70"/>
+      <circle class="td-suck" cx="403.0" cy="18.9" r="1.52"/>
     </g>
     <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M470.0 58.0 C 468.8 45.8 465.3 35.6 459.4 29.5"/>
-      <path class="td-arm-2" d="M460.6 30.5 C 453.6 24.4 446.5 20.3 439.5 16.2"/>
-      <path class="td-arm-3" d="M440.7 17.2 C 434.8 13.2 431.3 9.1 430.1 5.0"/>
-      <path class="td-arm-4" d="M430.1 6.0 C 428.9 3.0 430.1 0.4 433.6 0.1"/>
-      <circle class="td-suck" cx="464.1" cy="33.6" r="2.45"/>
-      <circle class="td-suck" cx="459.4" cy="29.5" r="2.14"/>
-      <circle class="td-suck" cx="454.8" cy="25.4" r="1.94"/>
-      <circle class="td-suck" cx="450.1" cy="21.8" r="1.63"/>
-      <circle class="td-suck" cx="444.2" cy="18.7" r="1.43"/>
-      <circle class="td-suck" cx="438.3" cy="15.2" r="1.12"/>
-      <circle class="td-suck" cx="433.6" cy="11.1" r="0.92"/>
-      <circle class="td-suck" cx="431.3" cy="7.0" r="0.71"/>
-    </g>
-    <g class="tentacle tentacle-c">
-      <path class="td-arm-1" d="M566.0 57.4 C 566.5 49.0 568.2 42.0 570.9 37.8"/>
-      <path class="td-arm-2" d="M570.4 38.5 C 573.6 34.3 576.9 31.5 580.2 28.7"/>
-      <path class="td-arm-3" d="M579.6 29.4 C 582.4 26.6 584.0 23.8 584.6 21.0"/>
-      <path class="td-arm-4" d="M584.6 21.7 C 585.1 19.6 584.6 17.9 582.9 17.6"/>
-      <circle class="td-suck" cx="568.7" cy="40.6" r="1.68"/>
-      <circle class="td-suck" cx="570.9" cy="37.8" r="1.47"/>
-      <circle class="td-suck" cx="573.1" cy="35.0" r="1.33"/>
-      <circle class="td-suck" cx="575.3" cy="32.5" r="1.12"/>
-      <circle class="td-suck" cx="578.0" cy="30.4" r="0.98"/>
-      <circle class="td-suck" cx="580.7" cy="28.0" r="0.77"/>
-      <circle class="td-suck" cx="582.9" cy="25.2" r="0.63"/>
-      <circle class="td-suck" cx="584.0" cy="22.4" r="0.49"/>
+      <path class="td-arm-1" d="M760 58 C 764.3 52.8 764.4 49.8 772.5 42.6"/>
+      <path class="td-arm-2" d="M772.5 42.6 C 783.1 33.2 779.7 36.5 791.1 30.3"/>
+      <path class="td-arm-3" d="M791.1 30.3 C 806.0 22.2 801.4 24.6 816.2 18.8"/>
+      <path class="td-arm-4" d="M816.2 18.8 C 835.5 11.2 839.7 10.8 848 8"/>
+      <circle class="td-suck" cx="767.8" cy="51.8" r="2.60"/>
+      <circle class="td-suck" cx="774.0" cy="44.1" r="2.42"/>
+      <circle class="td-suck" cx="782.5" cy="37.7" r="2.24"/>
+      <circle class="td-suck" cx="791.8" cy="31.5" r="2.06"/>
+      <circle class="td-suck" cx="803.7" cy="25.7" r="1.88"/>
+      <circle class="td-suck" cx="816.3" cy="20.0" r="1.70"/>
+      <circle class="td-suck" cx="830.1" cy="14.5" r="1.52"/>
     </g>
     <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M648.0 57.9 C 648.9 46.6 651.8 37.2 656.5 31.6"/>
-      <path class="td-arm-2" d="M655.5 32.5 C 661.2 26.9 666.8 23.1 672.4 19.3"/>
-      <path class="td-arm-3" d="M671.5 20.3 C 676.2 16.5 679.0 12.8 680.0 9.0"/>
-      <path class="td-arm-4" d="M680.0 9.9 C 680.9 7.1 680.0 4.8 677.1 4.5"/>
-      <circle class="td-suck" cx="652.7" cy="35.3" r="2.26"/>
-      <circle class="td-suck" cx="656.5" cy="31.6" r="1.97"/>
-      <circle class="td-suck" cx="660.2" cy="27.8" r="1.79"/>
-      <circle class="td-suck" cx="664.0" cy="24.5" r="1.50"/>
-      <circle class="td-suck" cx="668.7" cy="21.6" r="1.32"/>
-      <circle class="td-suck" cx="673.4" cy="18.4" r="1.03"/>
-      <circle class="td-suck" cx="677.1" cy="14.6" r="0.85"/>
-      <circle class="td-suck" cx="679.0" cy="10.9" r="0.66"/>
+      <path class="td-arm-1" d="M1044 58 C 1040.2 53.2 1040.1 50.4 1032.9 43.8"/>
+      <path class="td-arm-2" d="M1032.9 43.8 C 1023.5 35.1 1026.5 38.2 1016.4 32.5"/>
+      <path class="td-arm-3" d="M1016.4 32.5 C 1003.2 25.1 1007.3 27.3 994.2 22"/>
+      <path class="td-arm-4" d="M994.2 22 C 977.1 15.0 973.3 14.6 966 12"/>
+      <circle class="td-suck" cx="1036.8" cy="52.3" r="2.60"/>
+      <circle class="td-suck" cx="1031.2" cy="45.2" r="2.42"/>
+      <circle class="td-suck" cx="1023.7" cy="39.3" r="2.24"/>
+      <circle class="td-suck" cx="1015.4" cy="33.6" r="2.06"/>
+      <circle class="td-suck" cx="1004.9" cy="28.3" r="1.88"/>
+      <circle class="td-suck" cx="993.8" cy="23.1" r="1.70"/>
+      <circle class="td-suck" cx="981.7" cy="18.0" r="1.52"/>
     </g>
-    <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M742.0 58.2 C 740.6 45.0 736.5 34.0 729.6 27.4"/>
-      <path class="td-arm-2" d="M731.0 28.5 C 722.8 21.9 714.5 17.5 706.3 13.1"/>
-      <path class="td-arm-3" d="M707.6 14.2 C 700.8 9.8 696.6 5.4 695.3 1.0"/>
-      <path class="td-arm-4" d="M695.3 2.1 C 693.9 -1.2 695.3 -4.0 699.4 -4.3"/>
-      <circle class="td-suck" cx="735.1" cy="31.8" r="2.64"/>
-      <circle class="td-suck" cx="729.6" cy="27.4" r="2.31"/>
-      <circle class="td-suck" cx="724.1" cy="23.0" r="2.09"/>
-      <circle class="td-suck" cx="718.6" cy="19.1" r="1.76"/>
-      <circle class="td-suck" cx="711.8" cy="15.7" r="1.54"/>
-      <circle class="td-suck" cx="704.9" cy="12.0" r="1.21"/>
-      <circle class="td-suck" cx="699.4" cy="7.6" r="0.99"/>
-      <circle class="td-suck" cx="696.6" cy="3.2" r="0.77"/>
-    </g>
-    <g class="tentacle tentacle-c">
-      <path class="td-arm-1" d="M836.0 57.3 C 836.5 49.4 838.0 42.8 840.4 38.8"/>
-      <path class="td-arm-2" d="M839.9 39.5 C 842.8 35.5 845.8 32.9 848.7 30.3"/>
-      <path class="td-arm-3" d="M848.2 30.9 C 850.7 28.3 852.1 25.6 852.6 23.0"/>
-      <path class="td-arm-4" d="M852.6 23.7 C 853.1 21.7 852.6 20.0 851.1 19.8"/>
-      <circle class="td-suck" cx="838.4" cy="41.5" r="1.58"/>
-      <circle class="td-suck" cx="840.4" cy="38.8" r="1.39"/>
-      <circle class="td-suck" cx="842.3" cy="36.2" r="1.25"/>
-      <circle class="td-suck" cx="844.3" cy="33.9" r="1.06"/>
-      <circle class="td-suck" cx="846.7" cy="31.8" r="0.92"/>
-      <circle class="td-suck" cx="849.2" cy="29.6" r="0.73"/>
-      <circle class="td-suck" cx="851.1" cy="27.0" r="0.59"/>
-      <circle class="td-suck" cx="852.1" cy="24.3" r="0.46"/>
-    </g>
-    <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M922.0 58.0 C 921.0 46.2 917.8 36.4 912.7 30.5"/>
-      <path class="td-arm-2" d="M913.7 31.5 C 907.5 25.6 901.2 21.7 895.0 17.8"/>
-      <path class="td-arm-3" d="M896.0 18.8 C 890.8 14.8 887.7 10.9 886.7 7.0"/>
-      <path class="td-arm-4" d="M886.7 8.0 C 885.6 5.0 886.7 2.6 889.8 2.3"/>
-      <circle class="td-suck" cx="916.8" cy="34.4" r="2.35"/>
-      <circle class="td-suck" cx="912.7" cy="30.5" r="2.06"/>
-      <circle class="td-suck" cx="908.5" cy="26.6" r="1.86"/>
-      <circle class="td-suck" cx="904.3" cy="23.2" r="1.57"/>
-      <circle class="td-suck" cx="899.1" cy="20.1" r="1.37"/>
-      <circle class="td-suck" cx="894.0" cy="16.8" r="1.08"/>
-      <circle class="td-suck" cx="889.8" cy="12.9" r="0.88"/>
-      <circle class="td-suck" cx="887.7" cy="9.0" r="0.69"/>
-    </g>
-    <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M1014.0 57.6 C 1014.7 48.0 1016.8 40.0 1020.2 35.2"/>
-      <path class="td-arm-2" d="M1019.5 36.0 C 1023.6 31.2 1027.8 28.0 1031.9 24.8"/>
-      <path class="td-arm-3" d="M1031.2 25.6 C 1034.6 22.4 1036.7 19.2 1037.4 16.0"/>
-      <path class="td-arm-4" d="M1037.4 16.8 C 1038.1 14.4 1037.4 12.4 1035.3 12.2"/>
-      <circle class="td-suck" cx="1017.4" cy="38.4" r="1.92"/>
-      <circle class="td-suck" cx="1020.2" cy="35.2" r="1.68"/>
-      <circle class="td-suck" cx="1022.9" cy="32.0" r="1.52"/>
-      <circle class="td-suck" cx="1025.7" cy="29.2" r="1.28"/>
-      <circle class="td-suck" cx="1029.1" cy="26.7" r="1.12"/>
-      <circle class="td-suck" cx="1032.6" cy="24.0" r="0.88"/>
-      <circle class="td-suck" cx="1035.3" cy="20.8" r="0.72"/>
-      <circle class="td-suck" cx="1036.7" cy="17.6" r="0.56"/>
-    </g>
-    <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M1104.0 58.1 C 1102.7 45.4 1099.0 34.8 1092.7 28.4"/>
-      <path class="td-arm-2" d="M1094.0 29.5 C 1086.5 23.1 1079.0 18.9 1071.5 14.7"/>
-      <path class="td-arm-3" d="M1072.7 15.7 C 1066.5 11.5 1062.7 7.2 1061.5 3.0"/>
-      <path class="td-arm-4" d="M1061.5 4.1 C 1060.2 0.9 1061.5 -1.8 1065.2 -2.1"/>
-      <circle class="td-suck" cx="1097.7" cy="32.7" r="2.54"/>
-      <circle class="td-suck" cx="1092.7" cy="28.4" r="2.23"/>
-      <circle class="td-suck" cx="1087.7" cy="24.2" r="2.01"/>
-      <circle class="td-suck" cx="1082.7" cy="20.5" r="1.70"/>
-      <circle class="td-suck" cx="1076.5" cy="17.2" r="1.48"/>
-      <circle class="td-suck" cx="1070.2" cy="13.6" r="1.17"/>
-      <circle class="td-suck" cx="1065.2" cy="9.4" r="0.95"/>
-      <circle class="td-suck" cx="1062.7" cy="5.1" r="0.74"/>
-    </g>
-    <g class="tentacle tentacle-c">
-      <path class="td-arm-1" d="M1188.0 57.4 C 1188.6 48.8 1190.3 41.6 1193.2 37.3"/>
-      <path class="td-arm-2" d="M1192.6 38.0 C 1196.1 33.7 1199.5 30.8 1203.0 27.9"/>
-      <path class="td-arm-3" d="M1202.4 28.6 C 1205.3 25.8 1207.0 22.9 1207.6 20.0"/>
-      <path class="td-arm-4" d="M1207.6 20.7 C 1208.2 18.6 1207.6 16.8 1205.9 16.5"/>
-      <circle class="td-suck" cx="1190.9" cy="40.2" r="1.73"/>
-      <circle class="td-suck" cx="1193.2" cy="37.3" r="1.51"/>
-      <circle class="td-suck" cx="1195.5" cy="34.4" r="1.37"/>
-      <circle class="td-suck" cx="1197.8" cy="31.9" r="1.15"/>
-      <circle class="td-suck" cx="1200.7" cy="29.6" r="1.01"/>
-      <circle class="td-suck" cx="1203.6" cy="27.2" r="0.79"/>
-      <circle class="td-suck" cx="1205.9" cy="24.3" r="0.65"/>
-      <circle class="td-suck" cx="1207.0" cy="21.4" r="0.50"/>
-    </g>
-
+    <g class="tentacle tentacle-c"></g>
     </svg>
   </div>
   <!-- 点击彩蛋热区：与底部条带同宽（v3.12.7 ①），#app 已留底部 padding，不挡任何上方内容 -->
@@ -582,6 +437,6 @@
     </div>
   </div>
 
-</div>
+</div>
 </body>
 </html>

@@ -171,6 +171,17 @@ function shopUnlocked(u) {
   return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
 }
 
+// v3.12.8 ①：资源仓库（矩阵存储库/饵料仓库/星尘金库/誓约圣龛）不靠「累计 EP」解锁，
+//   旧卡面对它们也写「累计 X EP 解锁」= 骗人（用户因此以为饵料仓库买不了是 EP 不够）。
+//   这里按各自的真实门槛给一句中性说明：只说「什么时候开放」，不写怎么玩。
+function lockedHint(u) {
+  if (u.id === 'rp_vault') return 'EP 溢出一次后开放';
+  if (u.id === 'dm_vault') return '首辆载具后开放';
+  if (u.id === 'pt_vault') return '第 3 章后开放';
+  if (u.id === 'faith_vault') return '信奉宗教后开放';
+  return `累计 ${fmt(u.base * 0.3)} EP 解锁`;
+}
+
 export function renderShop(container) {
   shopContainer = container;
   container.innerHTML = '';
@@ -481,7 +492,7 @@ function makeShopItem(u) {
   if (u.cat === 'purifier') div.title = `净化节点：每秒清除 ${u.rate || 0}% 矩阵腐化；腐化越低，全局产出惩罚越弱（每 60 秒结算一次）。`;
   if (!unlocked) {
     div.className = 'item locked';
-    div.innerHTML = `<div class="name"><span>???</span></div><div class="desc">累计 ${fmt(u.base * 0.3)} EP 解锁</div><div class="cost">—</div>`;
+    div.innerHTML = `<div class="name"><span>???</span></div><div class="desc">${lockedHint(u)}</div><div class="cost">—</div>`;
     return div;
   }
   // v2.0.2：满级锁定——购买入口移除、卡片转满级态（不再参与可购排序灰态刷新）
@@ -670,7 +681,7 @@ function makeThreadItem(u) {
     div.className = 'item locked';
     const lv0 = u.maxLevel ? `Lv.0/${u.maxLevel}` : 'Lv.0';
     div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count mono">${lv0}</span></div>` +
-      `<div class="desc">${signedDesc(u.desc || '')}</div><div class="cost">累计 ${fmt(u.base * 0.3)} EP 解锁</div>`;
+      `<div class="desc">${signedDesc(u.desc || '')}</div><div class="cost">${lockedHint(u)}</div>`;
     return div;
   }
   // v2.0.2 maxLevel：满级锁定——购买入口移除、卡片转满级态（对齐 storage 口径）

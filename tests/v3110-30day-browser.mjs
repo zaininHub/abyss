@@ -20,7 +20,7 @@
 //     长期推演中核对叠层 / 换相位减半 / 上限 20 / 四管线增益与代价 / CPS 同口径；
 //   - 抽象层：状态生命周期单一真源、成就注册表、面板键 / deps 清单在真实浏览器里
 //     核对旧档兼容（无 resonance 字段）、成就逐页渲染、27 面板 / 43 帧系统零异常；
-//   - 内容扩充：主表事件 62 + 线专属 12、研究 55、政策 11 组 33 项、编排 6 条策略、百科 24 章；
+//   - 内容扩充：主表事件 62 + 线专属 12、研究 55、政策 11 组 33 项、编排 4 条策略、百科 24 章；
 //   - UI 侧新增：共鸣开关 / 四焦点按钮的 aria-label / aria-pressed / ≥24×24 点击目标、
 //     窄卡孤字换行（getClientRects）、真实 DOM 点击后读侧同步；排班表升级为 4×6 槽位。
 //
@@ -96,7 +96,7 @@ async function boot(browser, storyline) {
     window.__capCands = qa.UPGRADES.filter(u => ['reserve_bin', 'storage'].includes(u.id));
     window.__tickCount = 0;
     window.__lastPrestigeTick = -9999;
-    window.__orchSeq = ['output', 'research', 'abyss', 'balanced', 'vigil', 'cascade'];
+    window.__orchSeq = ['output', 'research', 'abyss', 'balanced'];
     window.__orchIdx = 0;
     window.__scheduleEdits = 0;
     window.__resFoci = ['ep', 'rp', 'pt', 'dm'];
@@ -377,13 +377,13 @@ async function uiCheck(page) {
       window.__gameDirty.orchestration = true;
       q.sim.render();
       const slots = [...card.querySelectorAll('[data-orch-slot]')];
-      const labelsOk = slots.length === 24 && slots.every(b => !!b.getAttribute('aria-label'));
+      const labelsOk = slots.length === 16 && slots.every(b => !!b.getAttribute('aria-label'));
       const phaseMarks = ((card.innerText || '').match(/▶/g) || []).length;
       const cur = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
       const before = q.effectiveModeId(S);
       // 必须挑一个与当前相位不同的策略，才能证明「点击真的改变了生效策略」
       const curMode = q.orchestrationSchedule(S)[cur];
-      const targetMode = curMode === 'vigil' ? 'output' : 'vigil';
+      const targetMode = curMode === 'research' ? 'output' : 'research';
       const wantEp = q.ORCHESTRATION_MODES.find(m => m.id === targetMode).effects.ep;
       let clickOk = false, after = before, resetOk = false;
       const target = card.querySelector(`[data-orch-slot="${cur}"][data-orch-slot-mode="${targetMode}"]`);
@@ -658,9 +658,9 @@ async function uiCheck(page) {
       achNew: ['另排一班', '随潮而动', '排班表的人'].filter(n => achText.includes(n)),
       achNewUnlocked: ['orch_switch', 'orch_tide', 'chapter25']
         .filter(id => !!(S.achievements && S.achievements[id])),
-      achV390Unlocked: ['orch_vigil', 'schedule_edit', 'projects200', 'event200', 'miles11']
+      achV390Unlocked: ['schedule_edit', 'projects200', 'event200', 'miles11']
         .filter(id => !!(S.achievements && S.achievements[id])),
-      achV3100Unlocked: ['resonance_on', 'resonance_10', 'resonance_20', 'cascade',
+      achV3100Unlocked: ['resonance_on', 'resonance_10', 'resonance_20',
         'chapter35', 'policy11', 'research55']
         .filter(id => !!(S.achievements && S.achievements[id])),
       achV3100Names: ['听见相位', '潮汐级联'].filter(n => achText.includes(n)),
@@ -712,8 +712,8 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  // v3.12.7：成就基线 136 → 140（凝视成就 + 3 条殖民地成就）
-  if (bootState.panels === 27 && bootState.achievements === 140) {
+  // v3.12.8：成就基线 140 → 138（守夜人 / 潮汐级联两条随策略移除）
+  if (bootState.panels === 27 && bootState.achievements === 138) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -852,9 +852,10 @@ try {
     q.setOrchestrationAutoTide(S, true);
     S.tidePhase = 0; const tide0 = q.effectiveModeId(S);
     S.tidePhase = 3; const tide3 = q.effectiveModeId(S);
-    // v3.9.0：改写相位 2 为「值守编排」，核对生效策略与四键倍率，再恢复默认
+    // v3.9.0：改写相位 2，核对生效策略与四键倍率，再恢复默认
+    // v3.12.8：默认表相位 2 = 研究优先，改成深渊优先才能证明「真的写进去了」
     const unlocked = q.scheduleUnlocked(S);
-    const edited = unlocked ? q.setOrchestrationPhaseMode(S, 2, 'vigil') : false;
+    const edited = unlocked ? q.setOrchestrationPhaseMode(S, 2, 'abyss') : false;
     S.tidePhase = 2;
     const editedMode = q.effectiveModeId(S);
     const editedMult = { ep: q.orchestrationMult('ep', S), rp: q.orchestrationMult('rp', S),
@@ -877,16 +878,16 @@ try {
   });
   const orchOk = Object.entries(orchProbe.out).every(([id, v]) =>
     Math.abs(v.cpsRatio - v.ep) < 1e-9);
-  if (orchOk && orchProbe.base > 0) ok('六种编排策略的 CPS 实测倍率与声明值完全一致',
+  if (orchOk && orchProbe.base > 0) ok('四种编排策略的 CPS 实测倍率与声明值完全一致',
     Object.entries(orchProbe.out).map(([k, v]) => `${k} ×${v.cpsRatio.toFixed(2)}`).join(' / '));
   else bad('编排声明值与实测 CPS 不符', JSON.stringify(orchProbe.out));
-  if (orchProbe.tide0 === 'output' && orchProbe.tide3 === 'cascade') ok('默认排班表覆盖全部 6 策略中的 4 档（零数值漂移，值守/级联可用）', `涨潮→产能 / 乱流→级联`);
+  if (orchProbe.tide0 === 'output' && orchProbe.tide3 === 'abyss') ok('默认排班表四相位各挂一条不同策略（零数值漂移）', `涨潮→产能 / 平潮→均衡 / 退潮→研究 / 乱流→深渊`);
   else bad('默认排班映射错误', JSON.stringify({ t0: orchProbe.tide0, t3: orchProbe.tide3 }));
-  if (orchProbe.unlocked && orchProbe.edited && orchProbe.editedMode === 'vigil'
-      && Math.abs(orchProbe.editedMult.ep - 0.90) < 1e-9 && Math.abs(orchProbe.editedMult.rp - 1.30) < 1e-9
-      && Math.abs(orchProbe.editedMult.pt - 1.30) < 1e-9 && Math.abs(orchProbe.editedMult.dm - 1.32) < 1e-9
+  if (orchProbe.unlocked && orchProbe.edited && orchProbe.editedMode === 'abyss'
+      && Math.abs(orchProbe.editedMult.ep - 0.88) < 1e-9 && Math.abs(orchProbe.editedMult.rp - 0.92) < 1e-9
+      && Math.abs(orchProbe.editedMult.pt - 1.40) < 1e-9 && Math.abs(orchProbe.editedMult.dm - 1.25) < 1e-9
       && orchProbe.editedCustomized) {
-    ok('潮汐预案改写后生效策略与四条倍率同口径', '相位 2 → 值守编排 EP×0.90 / RP×1.30 / PT×1.30 / DM×1.32');
+    ok('潮汐预案改写后生效策略与四条倍率同口径', '相位 2 → 深渊优先 EP×0.88 / RP×0.92 / PT×1.40 / DM×1.25');
   } else bad('潮汐预案改写倍率不符', JSON.stringify(orchProbe));
   if (orchProbe.reset && orchProbe.resetMode === 'research' && !orchProbe.resetCustomized) {
     ok('恢复默认排班可一键回退', '相位 2 回到研究优先');
@@ -944,7 +945,7 @@ try {
   else bad('政策数量不符', JSON.stringify({ g: ui.policyGroups, n: ui.policyTotal }));
   if (ui.priceMatch) ok('商店卡面可读取并与真实首购价关联', `${ui.priceMatch.id} = ${fx(ui.priceMatch.cost)} EP`);
   else console.log('  · 商店首卡当前无可购买入口（进度相关，非缺陷）');
-  if (ui.orch.unlocked && ui.orch.visible && ui.orch.textOk && ui.orch.modes === 6) {
+  if (ui.orch.unlocked && ui.orch.visible && ui.orch.textOk && ui.orch.modes === 4) {
     ok('效能编排卡可见，四条倍率文本与读侧一致', ui.orch.text.replace(/\n/g, ' ').slice(0, 90));
   } else if (!ui.orch.unlocked) bad('编排卡未解锁，新玩法对玩家不可见', JSON.stringify(ui.orch));
   else bad('编排卡 UI 与读侧不一致', JSON.stringify(ui.orch));
@@ -957,8 +958,8 @@ try {
     JSON.stringify({ pages: ui.achPages, len: ui.achPanelTextLen, unlocked: ui.achNewUnlocked, visible: ui.achNew }));
   // v3.9.0 潮汐预案 UI（v3.10.0 升级为 4×6 槽位）：aria-label、当前相位 ▶、真实点击与恢复默认
   const s = ui.schedUI || {};
-  if (s.unlocked && s.slots === 24 && s.labelsOk && s.phaseMarks === 1) {
-    ok('潮汐预案排班表 UI 完整（4 相位 × 6 策略 / aria-label / 当前相位 ▶）', `${s.slots} 个槽位按钮`);
+  if (s.unlocked && s.slots === 16 && s.labelsOk && s.phaseMarks === 1) {
+    ok('潮汐预案排班表 UI 完整（4 相位 × 4 策略 / aria-label / 当前相位 ▶）', `${s.slots} 个槽位按钮`);
   } else bad('排班表 UI 不完整', JSON.stringify(s));
   if (s.clickOk && s.resetOk) ok('排班表真实点击后读侧同步，恢复默认按钮生效',
     `${s.before} → ${s.after} → 默认排班`);
@@ -980,8 +981,8 @@ try {
   if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
-  // v3.12.7：成就总数基线上移至 140（136 + 凝视成就 + 3 条殖民地成就）
-  if (ui.achTotal === 140) ok('成就注册表 140 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  // v3.12.8：基线下移到 138（删除 orch_vigil / cascade 两条随策略一并移除的成就）
+  if (ui.achTotal === 138) ok('成就注册表 138 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
     ui.achV3100Unlocked.join(', '));

@@ -129,9 +129,9 @@ function renderOrchestrationPanel() {
   if (el._orchSig === sig) return;
   el._orchSig = sig;
 
+  // v3.12.8 ④：策略描述按需渲染——「均衡编排」无增益无代价，不再补一句说明文字。
   let html = `<div style="color:var(--text-2);font-size:11.5px;line-height:1.6;margin-bottom:8px">
-    当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}<br>
-    <span style="color:var(--text-3)">${active.desc}</span></div>`;
+    当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}${active.desc ? '<br><span style="color:var(--text-3)">' + active.desc + '</span>' : ''}</div>`;
 
   html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">`;
   for (const m of ORCHESTRATION_MODES) {
@@ -154,8 +154,7 @@ function renderOrchestrationPanel() {
     const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
     // 标题与操作提示分行：窄卡内同行会把提示挤成「孤字」换行（实测末字单独占一行）
     html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
-      <div style="font-size:11.5px;color:var(--text-2)">潮汐预案 · 四相位排班表</div>
-      <div style="color:var(--text-3);font-size:10.5px;margin:2px 0 7px">点相位下的策略即可改写</div>`;
+      <div style="font-size:11.5px;color:var(--text-2);margin-bottom:7px">潮汐预案 · 四相位排班表</div>`;
     for (let i = 0; i < 4; i++) {
       const nowOn = curPhase === i;
       // 槽位按钮放大到 24×24（可访问性点击目标下限），相位标签/间距相应收窄，保持单行不换行
@@ -175,8 +174,7 @@ function renderOrchestrationPanel() {
   // 按钮点击目标 28×28 且带 aria-label / aria-pressed（可访问性），焦点态只用既有强调色。
   if (res.unlocked) {
     html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
-      <div style="font-size:11.5px;color:var(--text-2)">相位共鸣 · ${res.layers}/${res.maxLayers} 层</div>
-      <div style="font-size:10.5px;color:var(--text-3);margin:2px 0 7px">同一相位停留越久叠得越高，换相位减半</div>
+      <div style="font-size:11.5px;color:var(--text-2);margin-bottom:7px">相位共鸣 · ${res.layers}/${res.maxLayers} 层</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
         <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" style="min-height:28px;min-width:28px">共鸣：${res.enabled ? '开' : '关'}</button>
         <span style="font-size:10.5px;color:var(--text-3)">焦点每层 +1.5%，其余各 -0.2%</span>

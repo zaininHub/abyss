@@ -251,13 +251,14 @@ test('C5 __qa 暴露帧系统 / 面板注册表 / 潮汐预案钩子', () => {
 console.log('[D] 潮汐预案读侧单一真源');
 
 test('D1 默认排班表与 v3.8.0 固定映射逐字一致（零数值漂移）', () => {
-  assert.deepEqual([...orch.TIDE_ORCHESTRATION], ['output', 'vigil', 'research', 'cascade']);
+  // v3.12.8 ③：删掉值守/级联后，默认排班回到四档全覆盖
+  assert.deepEqual([...orch.TIDE_ORCHESTRATION], ['output', 'balanced', 'research', 'abyss']);
   assert.equal(orch.TIDE_PHASE_NAMES.length, 4);
-  assert.deepEqual(defaultState().orchestration.schedule, ['output', 'vigil', 'research', 'cascade']);
+  assert.deepEqual(defaultState().orchestration.schedule, ['output', 'balanced', 'research', 'abyss']);
   const S = { projectsDone: 3, orchestration: { mode: 'abyss', autoTide: true } };
   assert.deepEqual([0, 1, 2, 3].map(p => orch.effectiveModeId({ ...S, tidePhase: p })),
-    ['output', 'vigil', 'research', 'cascade']);
-  assert.equal(orch.effectiveModeId({ ...S, tidePhase: 99 }), 'cascade', '越界相位取模而非崩溃（相位 3 = 级联）');
+    ['output', 'balanced', 'research', 'abyss']);
+  assert.equal(orch.effectiveModeId({ ...S, tidePhase: 99 }), 'abyss', '越界相位取模而非崩溃（相位 3 = 深渊优先）');
   assert.equal(SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
 });
 
@@ -269,8 +270,9 @@ test('D2 未解锁 / 旧档 / 非法存档 / 越界 id 一律回落默认', () =
   assert.deepEqual(orch.orchestrationSchedule({ projectsDone: 20, orchestration: { autoTide: true } }), def,
     '旧档无 schedule 字段应回落');
   assert.deepEqual(orch.orchestrationSchedule({ projectsDone: 20, orchestration: { autoTide: true, schedule: 'bogus' } }), def);
+  // v3.12.8：旧档排班里的 vigil（已删除策略）按位回落到默认表，不放大数值
   assert.deepEqual(orch.orchestrationSchedule({ projectsDone: 20, orchestration: { autoTide: true,
-    schedule: ['bogus', 'vigil', null, 'output', 'extra'] } }), ['output', 'vigil', 'research', 'output']);
+    schedule: ['bogus', 'vigil', null, 'output', 'extra'] } }), ['output', 'balanced', 'research', 'output']);
   assert.deepEqual(orch.orchestrationState({ orchestration: { schedule: ['x'], mode: 'bogus', autoTide: 'yes' } }),
     { mode: 'balanced', autoTide: true }, '读侧状态保持 v3.8.0 二字段口径，不破坏旧档断言');
 });
@@ -289,16 +291,16 @@ test('D4 逐相位改写即时生效，手动策略不丢失，恢复默认可�
   const S = { projectsDone: 20, tidePhase: 1,
     orchestration: { mode: 'abyss', autoTide: true, schedule: ['output', 'balanced', 'research', 'abyss'] } };
   assert.equal(orch.effectiveModeId(S), 'balanced');
-  assert.equal(orch.setOrchestrationPhaseMode(S, 1, 'vigil'), true);
-  assert.equal(orch.effectiveModeId(S), 'vigil');
-  assert.equal(orch.orchestrationMult('ep', S), 0.90);
-  assert.equal(orch.orchestrationMult('rp', S), 1.30);
-  assert.equal(orch.orchestrationMult('pt', S), 1.30);
-  assert.equal(orch.orchestrationMult('dm', S), 1.32);
+  assert.equal(orch.setOrchestrationPhaseMode(S, 1, 'research'), true);
+  assert.equal(orch.effectiveModeId(S), 'research');
+  assert.equal(orch.orchestrationMult('ep', S), 0.92);
+  assert.equal(orch.orchestrationMult('rp', S), 1.40);
+  assert.equal(orch.orchestrationMult('pt', S), 0.92);
+  assert.equal(orch.orchestrationMult('dm', S), 1);
   assert.equal(orch.orchestrationState(S).mode, 'abyss', '手动策略不得被排班改写');
   assert.equal(orch.scheduleCustomized(S), true);
   assert.equal(orch.resetOrchestrationSchedule(S), true);
-  assert.equal(orch.effectiveModeId(S), 'vigil');
+  assert.equal(orch.effectiveModeId(S), 'balanced', '相位 1 回到默认表的均衡');
   assert.equal(orch.scheduleCustomized(S), false);
   assert.equal(orch.orchestrationState(S).mode, 'abyss');
   S.tidePhase = 0;
@@ -309,12 +311,12 @@ test('D4 逐相位改写即时生效，手动策略不丢失，恢复默认可�
 test('D5 非法写入不污染状态（未解锁 / 越界 / 非法 id）', () => {
   const locked = { projectsDone: 3, orchestration: { mode: 'balanced', autoTide: false } };
   const before = JSON.stringify(locked);
-  assert.equal(orch.setOrchestrationPhaseMode(locked, 0, 'vigil'), false);
+  assert.equal(orch.setOrchestrationPhaseMode(locked, 0, 'research'), false);
   assert.equal(orch.resetOrchestrationSchedule(locked), false);
   assert.equal(JSON.stringify(locked), before);
   const S = { projectsDone: 20, orchestration: { mode: 'balanced', autoTide: false,
     schedule: ['output', 'balanced', 'research', 'abyss'] } };
-  for (const [p, id] of [[-1, 'vigil'], [4, 'vigil'], [1.5, 'vigil'], [1, 'bogus'], ['1', 'vigil'], [1, null]]) {
+  for (const [p, id] of [[-1, 'research'], [4, 'research'], [1.5, 'research'], [1, 'bogus'], ['1', 'research'], [1, null]]) {
     assert.equal(orch.setOrchestrationPhaseMode(S, p, id), false, `非法写入 ${p}/${id} 应被拦截`);
   }
   assert.deepEqual(S.orchestration.schedule, ['output', 'balanced', 'research', 'abyss']);
@@ -323,22 +325,23 @@ test('D5 非法写入不污染状态（未解锁 / 越界 / 非法 id）', () =>
 
 test('D6 改模式 / 切开关都保留已排班表，不丢玩家配置', () => {
   const S = { projectsDone: 20, tidePhase: 0,
-    orchestration: { mode: 'balanced', autoTide: false, schedule: ['vigil', 'vigil', 'vigil', 'vigil'] } };
+    orchestration: { mode: 'balanced', autoTide: false, schedule: ['research', 'research', 'research', 'research'] } };
   assert.equal(orch.setOrchestrationMode(S, 'output'), true);
-  assert.deepEqual(S.orchestration.schedule, ['vigil', 'vigil', 'vigil', 'vigil']);
+  assert.deepEqual(S.orchestration.schedule, ['research', 'research', 'research', 'research']);
   assert.equal(orch.setOrchestrationAutoTide(S, true), true);
-  assert.deepEqual(S.orchestration.schedule, ['vigil', 'vigil', 'vigil', 'vigil']);
-  assert.equal(orch.effectiveModeId(S), 'vigil');
+  assert.deepEqual(S.orchestration.schedule, ['research', 'research', 'research', 'research']);
+  assert.equal(orch.effectiveModeId(S), 'research');
   assert.equal(orch.setOrchestrationMode(S, 'bogus'), false);
   assert.equal(orch.orchestrationState(S).mode, 'output');
 });
 
-test('D7 第 5 条策略 vigil 四键数值正确，且增益与代价成对', () => {
-  assert.equal(orch.ORCHESTRATION_MODES.length, 6);
+test('D7 四档策略四键数值正确，且增益与代价成对', () => {
+  assert.equal(orch.ORCHESTRATION_MODES.length, 4, 'v3.12.8：值守/级联已删除');
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
-  const v = orch.ORCHESTRATION_MODES.find(m => m.id === 'vigil');
-  assert.ok(v && v.name && v.icon && v.short && v.desc);
-  assert.deepEqual(v.effects, { ep: 0.90, rp: 1.30, pt: 1.30, dm: 1.32 });
+  assert.deepEqual(orch.ORCHESTRATION_MODES.map(m => m.id), ['balanced', 'output', 'research', 'abyss']);
+  const ab = orch.ORCHESTRATION_MODES.find(m => m.id === 'abyss');
+  assert.ok(ab && ab.name && ab.icon && ab.short && ab.desc);
+  assert.deepEqual(ab.effects, { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 });
   for (const m of orch.ORCHESTRATION_MODES) {
     if (m.id === 'balanced') continue;
     assert.ok(Object.values(m.effects).some(x => x > 1), `${m.id} 应有增益`);
@@ -375,7 +378,7 @@ test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷
 });
 
 test('E2 v3.10.0 新增 17 条成就全部注册（判定只读已持久化字段）', () => {
-  for (const id of ['resonance_on', 'resonance_10', 'resonance_20', 'resonance_focus', 'cascade',
+  for (const id of ['resonance_on', 'resonance_10', 'resonance_20', 'resonance_focus',
     'chapter35', 'chapter38', 'policy11', 'research55', 'miles13', 'event300',
     'projects400', 'rift40', 'es100k', 'dm1b', 'exped100', 'thread100']) {
     assert.ok(ACHIEVEMENT_IDS.includes(id), `缺成就 ${id}`);
@@ -388,7 +391,7 @@ test('E2 v3.10.0 新增 17 条成就全部注册（判定只读已持久化字�
 test('E3 新增 4 章 Wiki 与 2 档里程碑渲染 / 数值合法', async () => {
   const { WIKI_SECTIONS } = await import('../src/data/wiki.js');
   const { BALANCE } = await import('../src/data/balance.js');
-  for (const id of ['schedule', 'watch', 'chronicle2', 'resonance', 'cascade', 'chronicle3', 'longline']) {
+  for (const id of ['schedule', 'watch', 'chronicle2', 'resonance', 'chronicle3', 'longline']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec, `缺百科章节 ${id}`);
     const html = sec.body();

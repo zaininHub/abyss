@@ -22,9 +22,12 @@ export const ORCHESTRATION_KEY_LABELS = Object.freeze({
 export const TIDE_PHASE_NAMES = Object.freeze(['涨潮', '平潮', '退潮', '乱流']);
 
 // effects 为「倍率」：1 表示不变。增益与代价成对，任何策略都存在明确的取舍。
+// v3.12.8：按反馈删除「值守编排(vigil)」与「潮汐级联(cascade)」两档，策略回到四档
+//   （均衡 / 产能 / 研究 / 深渊）。旧档里 mode 或排班表残留这两个 id 时，
+//   orchestrationState / orchestrationSchedule 自动回落到安全值，不会放大数值。
 export const ORCHESTRATION_MODES = Object.freeze([
   { id: 'balanced', name: '均衡编排', icon: '◈', short: '均衡',
-    desc: '四条管线各按默认节奏运转，没有增益，也没有代价。',
+    desc: '',
     effects: { ep: 1, rp: 1, pt: 1, dm: 1 } },
   { id: 'output', name: '产能优先', icon: '▲', short: '产能',
     desc: '把算力压到基础产出上：EP 更旺，但蒸馏、孵化与探采都慢下来。',
@@ -35,18 +38,6 @@ export const ORCHESTRATION_MODES = Object.freeze([
   { id: 'abyss', name: '深渊优先', icon: '◆', short: '深渊',
     desc: '把管线接到裂隙一侧：孵化与探采大幅提速，基础产出相应让位。',
     effects: { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 } },
-  // v3.9.0 第 5 条（4→5，+25%）：面向长夜挂机的「守夜」取舍——基础产出略降，
-  // 换取三条转化管线同时提速。与产能优先形成互补，专供自定义排班表填夜间相位。
-  // v3.10.5 ⑥：转化提速由 18%/18%/20% 上调到 30%/30%/32%，代价 EP 0.94→0.90，让守夜策略更有竞争力。
-  { id: 'vigil', name: '值守编排', icon: '☾', short: '值守',
-    desc: '把算力留给值守与维护：基础产出略降，蒸馏、孵化与探采同步提速。',
-    effects: { ep: 0.90, rp: 1.30, pt: 1.30, dm: 1.32 } },
-  // v3.10.0 第 6 条（5→6，+20%）：面向「相位共鸣」的折中档——基础产出与蒸馏小幅提速，
-  // 孵化与探采让位；专供只想守一个相位叠层的玩家，与产能优先/值守编排形成三角取舍。
-  // v3.10.5 ⑥：EP/RP 由 1.10/1.12 上调到 1.15/1.20，代价 PT/DM 0.88/0.90→0.90/0.92，让它真能撑起「守相位叠层」玩法。
-  { id: 'cascade', name: '潮汐级联', icon: '≋', short: '级联',
-    desc: '把相位里攒下的算力接回主线：产出与蒸馏小幅提速，孵化、探采相应收窄。',
-    effects: { ep: 1.15, rp: 1.20, pt: 0.90, dm: 0.92 } },
 ]);
 
 const MODE_BY_ID = new Map(ORCHESTRATION_MODES.map(m => [m.id, m]));
@@ -54,10 +45,8 @@ export const DEFAULT_MODE = 'balanced';
 
 // 潮汐相位 → 策略（与 balance.tide.phases 的 0 涨潮 / 1 平潮 / 2 退潮 / 3 乱流 对应）
 // 同时是「默认排班表」：旧档无 schedule 字段、或未解锁预案时一律回落到此映射。
-// v3.10.3：默认排班表改为覆盖全部 6 种策略中的 4 档，确保「值守编排(vigil)」与「潮汐级联(cascade)」
-//   在随潮汐排班下也能被真实触发（旧默认只用 output/balanced/research/abyss，导致 vigil/cascade 永远用不到）。
-//   玩家仍可在「潮汐预案」中自由改写四相位，把 abyss/balanced 配回去。
-export const TIDE_ORCHESTRATION = Object.freeze(['output', 'vigil', 'research', 'cascade']);
+// v3.12.8：策略收敛到四档后，默认排班回到 v3.8.0 的四档全覆盖（各相位一条不同策略）。
+export const TIDE_ORCHESTRATION = Object.freeze(['output', 'balanced', 'research', 'abyss']);
 
 // v3.9.0 数值配置：改写排班表的解锁门槛（两项满足其一）。
 // 取「任务链已跑通」为可达口径：30 天 mock 推演中第 8 个任务在开局数小时内即达成。
