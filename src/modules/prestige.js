@@ -36,6 +36,9 @@ export function doPrestige(talentId) {
   S.upgrades = keepUpgrades;
   // v3.12.0 反馈⑪：本次晋升的 RP 奖励在重置之后发放（否则会被清零），仍受新上限约束。
   addRp(rpg);
+  // v3.12.12 反馈⑥：永恒摇篮——开局 RP 启动资金，提前启动研究点扩展玩法（受 RP 上限钳制）
+  const smoothRp = elv('smooth') * 12;
+  if (smoothRp > 0) addRp(smoothRp);
   // v3.12.0 反馈⑫：晋升推动故事线——驻留计时回拨，让「条件已满足」的下一章立即推进，
   // 但章节条件仍由 chapters.js 逐章判定，不会无条件跳章。
   S.chapterEnteredAt = Date.now() - 3 * 86400000;

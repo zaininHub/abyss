@@ -55,20 +55,21 @@ function compact(n) {
 
 console.log('[D] 内容完整性与卡面数值');
 
-test('D1 研究项 21 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
-  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
+test('D1 研究项 22 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
+  assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内 id 不重复');
   assert.equal(grouped.length, defined.length, '分组数与研究项数不一致');
   for (const id of defined) assert.ok(grouped.includes(id), `${id} 未进分组 → 面板不可见/买不到`);
   for (const id of grouped) assert.ok(defined.includes(id), `分组引用了幽灵 id ${id}`);
-  assert.equal(RP_GROUPS.length, 4);
+  assert.equal(RP_GROUPS.length, 5); // v3.12.12 ⑧：prod/res/abyss/ai/star
 });
 
 test('D2 所有研究项 fx.key 都有 researchMult 消费点（无死升级）', () => {
   const consumed = new Set([...SRC.matchAll(/researchMult\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)/g)].map(m => m[1]));
   for (const u of BALANCE.researchUpgs) {
+    if (!u.fx) continue; // v3.12.12 ⑧：fx=null 为授予型研究（rp_ai_unit 购买即 +1 助手）
     assert.ok(consumed.has(u.fx.key), `${u.id} 的 fx.key=${u.fx.key} 无消费点`);
   }
   assert.ok(consumed.has('policy'), 'rp_policy 必须走标准研究读侧');

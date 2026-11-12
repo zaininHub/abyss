@@ -110,20 +110,20 @@ test('⑤ 300ms 快刷原地维护按钮：不足→充足，sig 去重不重复
   assert.doesNotThrow(() => refreshAssistantAffordability(), '面板未渲染/未解锁时安全跳过');
 });
 
-test('⑥ 接线：渲染、点击、快刷共用单一真源，且挂在 300ms 快刷链', () => {
-  assert.ok(/export function assistantBuyState\(\)/.test(AI));
-  assert.ok(/export function refreshAssistantAffordability\(\)/.test(AI));
-  assert.ok(/data-assist-buy data-afford-sig="\$\{st\.sig\}"/.test(AI));
-  assert.ok(/\$\{st\.disabled \? 'disabled' : ''\}/.test(AI));
-  // 点击兜底与快刷同一函数
-  assert.ok(/const st = assistantBuyState\(\);/.test(AI));
-  assert.ok(/if \(!st\.disabled\)/.test(AI));
-  assert.ok(/S\.ep -= st\.cost/.test(AI));
-  // v3.9.0：快刷链由 affordability 帧系统声明（300ms 节流），主循环只消费 FRAME 阶段
-  const FRAME_SYS = read('src/systems/frameSystems.js');
-  assert.match(FRAME_SYS, /refreshAssistantAffordability\(\);/, 'AI 助手灰显必须挂在统一快刷系统内');
-  assert.match(FRAME_SYS, /id: 'affordability'[\s\S]{0,200}intervalMs: 300/, '快刷系统必须声明 300ms 节流');
-  assert.match(MAIN, /runSystems\(frameCtx, FRAME_PHASES\.FRAME\);/, '主循环应消费 FRAME 阶段快刷系统');
-  // CSS 灰显
-  assert.match(CSS, /#ai-panel \[data-assist-buy\]:disabled \{[^}]*opacity: \.45/);
+test('⑥ 接线：EP 购买按钮已删除，预留线并入助手行，扩编走研究点 rp_ai_unit', () => {
+  // v3.12.12 反馈⑧：购买按钮从 UI 删除——助手扩编唯一玩家入口是研究点「助手扩编协议」
+  assert.ok(!/data-assist-buy data-afford-sig/.test(AI), 'EP 购买按钮应已从助手行移除');
+  assert.ok(/data-ai-reserve="\$\{r\}"/.test(AI), '预留线按钮应并入助手行（与助手数量同处一行）');
+  assert.ok(/ai-assist-hint/.test(AI), '助手行应提示「研究点扩编」入口');
+  // 扩编协议：研究点购买 → 每级 +1 助手，需 ai_core 解锁（解锁仍在升级商店科技树）
+  const SHOP = read('src/modules/shop.js');
+  const BAL = read('src/data/balance.js');
+  assert.match(BAL, /id: 'rp_ai_unit'[\s\S]{0,220}requiresTech: 'ai_core'/, '扩编协议需 ai_core（升级商店解锁）');
+  assert.ok(SHOP.includes("'rp_ai_unit'") && SHOP.includes('assistants = (S.ai.assistants || 0) + 1'),
+    '研究点购买 rp_ai_unit 应授予 +1 助手');
+  assert.ok(SHOP.includes('dirty.ai = true'), '授予助手后应置 dirty.ai 即时刷新 AI 面板');
+  // buyAssistant 保留为 30 天推演/QA 自动化入口（不再有 UI 按钮）
+  assert.ok(/export function buyAssistant\(\)/.test(AI), 'buyAssistant 保留为推演自动化入口');
+  // CSS：预留线并入标题行后命中目标仍 >=24x24
+  assert.match(CSS, /\.ai-reserve-btn \{[^}]*min-height: 24/);
 });

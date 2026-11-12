@@ -18,7 +18,7 @@ export function renderStoryBar(container) {
   const ch = currentChapter(S);
   container.innerHTML = `<span class="ch-label">剧情</span>
     <span id="ch-name" style="color:var(--purple);font-weight:600">${ch.name}</span>
-    <span id="ch-desc" style="color:var(--text-3);font-size:10.5px;margin-left:8px;max-width:600px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ch.desc}</span>`;
+    <span id="ch-desc" style="color:var(--text-3);font-size:10.5px;margin-left:8px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ch.desc}</span>`;
 }
 
 export { currentChapter };

@@ -243,28 +243,17 @@ function storylineBodyHtml() {
   const crossById = (BALANCE.crossroadBuildings || []).find(b => b.id === S.crossroadLockedBy);
   // v3.3.1 反馈⑧：面板标题已在 index.html（#storyline-h3）——此处不再重复输出「故事线」行
   let html = '';
-  // v2.3 顺延小修：线名中文映射（getCurrentStoryline 返回 id，直接展示对玩家不可读）
-  const lineName = getStorylinePackage(current)?.name || current;
-  // v3.2.1 反馈③：展示当前进度——已解锁剧情章节数（含顺次可见）占该线总章节数
-  let progTxt = '';
-  const curPkg = getStorylinePackage(current);
-  const curChs = (curPkg && curPkg.data && curPkg.data.chapters && curPkg.data.chapters.append) || [];
-  if (curChs.length > 0) {
-    const seen = (S.chaptersUnlocked && S.chaptersUnlocked[current]) || [];
-    let unlockedN = 0;
-    // v3.12.6 ⑦：只统计「真的解锁过」的章节——原实现里 prevOk 初值为 true，
-    //   于是第一章永远成立、顺次把整条线都算成已解锁（进度恒满、树恒全亮）。
-    for (const ch of curChs) {
-      let ok = false;
-      try { ok = !!ch.cond(S); } catch (e) { /* 未解锁 */ }
-      const code = chapterCode(ch.id);
-      // v3.7.0：新编码 + 旧档数字双向兼容
-      if (seen.includes(code) || seen.includes(chapterSeq(ch.id))) ok = true;
-      if (ok) unlockedN++;
-    }
-    progTxt = ` · 剧情进度 ${unlockedN}/${curChs.length} 章`;
-  }
-  html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">当前路线：<b style="color:var(--purple)">${lineName}</b>${progTxt}</div>`;
+  // v3.12.12 反馈⑨：故事线改为「章节树状结构」——主干按 S.chapter 渲染主线章节
+  //   （第一章（剧情）/ 第二章（剧情）/ …），与具体故事线解耦，为将来岔路做铺垫；
+  //   选定故事线后其变体章节作为分支挂在主干之后（同 .sl-forest 结构）。
+  const cur = currentChapter(S, CHAPTERS);              // 主干当前章节（含 S.chapter 权威下限）
+  const curName = getStorylinePackage(current)?.name || current;
+  const storedNum = parseInt(S.chapter, 10) || 1;
+  const mainIndex = Math.max(
+    storedNum,
+    typeof cur.id === 'number' ? cur.id : (parseInt(String(cur.id), 10) || storedNum)
+  );
+  html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">当前剧情：<b style="color:var(--purple)">${cur.name}</b>${current !== 'default' ? ` · 路线：<b>${curName}</b>` : ''}</div>`;
   if (crossById) {
     html += `<div style="color:var(--text-2);font-size:11.5px;margin-bottom:8px">立誓建筑：<b>${crossById.name}</b>（本轮锁定该命运线，转生后岔路口重新开放）</div>`;
   } else if (S.crossroad === 'open') {
@@ -276,20 +265,33 @@ function storylineBodyHtml() {
   if (completed.length > 0) {
     html += `<div style="margin-top:12px;color:var(--text-2);font-size:11px">已完成：${completed.map(id => getStorylinePackage(id)?.name || id).join('、')}</div>`;
   }
-  // v3.12.3 反馈①：故事线只记录「已解锁的章节」，并按分支树结构展示；
-  // 原「历史周期走向（政策选择）」整块移除——故事线只记故事，不记政策。
+  // v3.12.12 反馈⑨：先渲染主干（主线章节，与故事线解耦），再挂选定故事线的变体分支。
+  const mainChs = CHAPTERS.filter(ch => typeof ch.id === 'number' && ch.id <= mainIndex);
   const ALL_LINES = ['line_abyss', 'line_order', 'line_faith'];
-  const unlockedLines = ALL_LINES.filter(id => id === current || completed.includes(id));
-  if (unlockedLines.length > 0) {
+  const branchLines = ALL_LINES.filter(id => id === current || completed.includes(id));
+  if (mainChs.length > 0 || branchLines.length > 0) {
     html += `<div class="sl-forest">`;
-    for (const id of unlockedLines) {
+    // —— 主干：主线章节 1..mainIndex ——
+    if (mainChs.length > 0) {
+      html += `<div class="sl-line"><div class="sl-line-name">主线剧情</div><div class="sl-tree">`;
+      mainChs.forEach((ch, i) => {
+        const last = i === mainChs.length - 1;
+        const mark = ch.id === mainIndex ? '<span class="sl-cur">当前</span>' : '';
+        const label = (ch.id >= 1 && ch.id <= 18) ? `第${ch.id}章（剧情）` : ch.name;
+        const theme = ch.name.replace(/^第[^·]*·\s*/, '');
+        html += `<div class="sl-node${last ? ' last' : ''}"><div class="sl-ch-name">${label}${mark}</div>`;
+        html += `<div class="sl-ch-desc">${theme}：${ch.desc}</div></div>`;
+      });
+      html += `</div></div>`;
+    }
+    // —— 分支：选定故事线的变体章节（为岔路铺垫）——
+    for (const id of branchLines) {
       const pkg = getStorylinePackage(id);
       if (!pkg) continue;
       const chs = (pkg.data && pkg.data.chapters && pkg.data.chapters.append) || []; // 章节数据在 pkg.data.chapters 下
       const seenChs = (S.chaptersUnlocked && S.chaptersUnlocked[id]) || [];
       const nodes = [];
-      // v3.12.6 ⑦：树只挂「已解锁」的章节（cond 成立 或 写进 chaptersUnlocked），
-      //   不再顺次外推——否则第一章成立就把整条线全渲染出来，「只记录解锁的章节」形同虚设。
+      // v3.12.6 ⑦：树只挂「已解锁」的章节（cond 成立 或 写进 chaptersUnlocked），不再顺次外推。
       for (const ch of chs) {
         let ok = false;
         try { ok = !!ch.cond(S); } catch (e) { /* cond 内部异常按未解锁处理 */ }
@@ -870,7 +872,7 @@ function renderProjects() {
       const rw = r.kind === 'ep' ? `+${fmt(r.amount)} EP` : r.kind === 'rp' ? `+${r.amount} RP` : r.kind === 'buff' ? `${r.dur / 60}分钟全局+${Math.round((r.buffMult - 1) * 100)}%` : `任务期间产出-${Math.round((1 - r.buffMult) * 100)}%`;
       const rwColor = r.kind === 'debuff' ? 'var(--bad)' : 'var(--good)';
       div.innerHTML = `<div class="pn"><span>${p.name}</span><span class="mono" style="color:${rwColor}">${rw}</span></div>
-        <div class="prog-txt" style="font-size:11px;color:var(--text-2)">${p.desc}：${Math.floor(p.progress)}/${p.goal}（${pct.toFixed(0)}%）</div>
+        <div class="prog-txt" style="font-size:11px;color:var(--text-2)">${p.desc}（${pct.toFixed(0)}%）</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
           <div class="pt" style="flex:1"><div style="width:${pct}%"></div></div>
           <div class="pr mono deadline-left" style="font-size:11px;min-width:60px;text-align:right">${fmtTime(left)}</div>
@@ -896,7 +898,7 @@ function updateProjectProgress() {
       const bar = div.querySelector('.pt > div');
       if (bar) bar.style.width = pct + '%';
       const txt = div.querySelector('.prog-txt');
-      if (txt) txt.textContent = `${p.desc}：${Math.floor(p.progress)}/${p.goal}（${pct.toFixed(0)}%）`;
+      if (txt) txt.textContent = `${p.desc}（${pct.toFixed(0)}%）`;
       const leftEl = div.querySelector('.deadline-left');
       if (leftEl) leftEl.textContent = fmtTime(Math.max(0, Math.ceil((p.deadline - now) / 1000)));
     }
@@ -1819,6 +1821,46 @@ function bindEvents() {
   }
   document.getElementById('save-list')?.addEventListener('click', onSaveListClick);
   renderSaveList(); // 首屏预渲染（下拉展开时再刷新一次）
+
+  // v3.12.12 反馈⑥：皮肤菜单（暂停左侧）——悬停展开（CSS :hover）+ 键盘 .kbd-open，
+  //   点击切换 documentElement 主题类并持久化 localStorage（独立键，不入存档模式结构）。
+  //   light 主题同步挂 .light 类，让 abyssGaze.js 既有的浅色检测真正生效。
+  const skinMenuEl = document.getElementById('skin-menu');
+  if (skinMenuEl) {
+    const SKINS = ['abyss', 'light', 'ember'];
+    const SKIN_KEY = 'abyss_skin';
+    const applySkin = (name) => {
+      if (!SKINS.includes(name)) name = 'abyss';
+      const root = document.documentElement;
+      SKINS.forEach(s => root.classList.toggle(`theme-${s}`, s === name));
+      root.classList.toggle('light', name === 'light');
+      try { localStorage.setItem(SKIN_KEY, name); } catch (e) { /* 隐私模式等忽略 */ }
+      document.querySelectorAll('#skin-pop .skin-opt').forEach(b => b.classList.toggle('on', b.dataset.skin === name));
+    };
+    const skinBtn = document.getElementById('skin-menu-btn');
+    const setSkinOpen = (open) => skinBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    skinMenuEl.addEventListener('mouseenter', () => setSkinOpen(true));
+    skinMenuEl.addEventListener('mouseleave', () => { if (!skinMenuEl.classList.contains('kbd-open')) setSkinOpen(false); });
+    skinMenuEl.addEventListener('focusin', (e) => {
+      setSkinOpen(true);
+      if (e.target.matches(':focus-visible')) skinMenuEl.classList.add('kbd-open');
+    });
+    skinMenuEl.addEventListener('focusout', () => {
+      requestAnimationFrame(() => {
+        if (!skinMenuEl.contains(document.activeElement)) {
+          skinMenuEl.classList.remove('kbd-open');
+          setSkinOpen(false);
+        }
+      });
+    });
+    document.getElementById('skin-pop')?.addEventListener('click', (e) => {
+      const opt = e.target.closest('[data-skin]');
+      if (opt) applySkin(opt.dataset.skin);
+    });
+    let savedSkin = 'abyss';
+    try { savedSkin = localStorage.getItem(SKIN_KEY) || 'abyss'; } catch (e) { /* 忽略 */ }
+    applySkin(savedSkin); // 启动即恢复上次选择的主题
+  }
 
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）
 

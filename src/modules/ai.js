@@ -17,7 +17,7 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   hasTech, computeCps, globalMult, epStorageCap, staffCost, staffNetPerSec,
-  fmt, unitCost, costMult, addEp, techCostOf, researchMult, // v2.8.22 ②：自动研究按多资源成本购买；v3.10.5：「拟我协议」rp_ai 提升助手性价比（摊薄购买价）
+  fmt, unitCost, costMult, addEp, techCostOf, researchMult, elv, // v2.8.22 ②：自动研究按多资源成本购买；v3.10.5：「拟我协议」rp_ai 提升助手性价比（摊薄购买价）；v3.12.12 ⑥：永恒拟我缩短决策间隔
 } from './economy.js';
 import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
@@ -334,6 +334,9 @@ export function tickAI(dt) {
   // v2.7.0 遗物：混沌触须——AI 决策间隔 -10%/级（下限 50% 原间隔）
   const tentLv = relicLevel('tentacle');
   if (tentLv > 0) interval = Math.max(BALANCE.ai.interval * 0.5, interval * (1 - 0.1 * tentLv));
+  // v3.12.12 反馈⑥：永恒拟我——AI 能力提升：决策间隔 -8%/级（与其他间隔缩减同口径，下限 40% 原间隔）
+  const aiEt = elv('ai');
+  if (aiEt > 0) interval = Math.max(BALANCE.ai.interval * 0.4, interval * (1 - 0.08 * aiEt));
   if (ai.timer < interval) return false;
   ai.timer -= interval;
 
@@ -463,26 +466,28 @@ export function refreshAssistantAffordability() {
   btn.title = st.title;
 }
 
-// v3.12.0 反馈②：助手区精简为「总量/占编/空闲 + 购买 + 台账」三行，
-// 原 head/crewInfo/说明/预留线多处重复且夹着一个多余的 </div>，一并收敛。
+// v3.12.12 反馈⑧：删除 EP 购买按钮（「购买助手」改走研究点「助手扩编协议」rp_ai_unit）；
+// 预留线从面板独立区块移入助手行，与助手数量同处一行。
 function renderAssistantSection() {
   const n = assistantCount();
-  const st = assistantBuyState();
   const idle = crewIdle();
   const bound = crewBoundTotal();
   const counts = actionCounts();
   const unstaffed = (assistantCount() > 0 ? enabledActions(S.ai) : []).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
   const unstaffedHtml = unstaffed.length
-    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 ＋ 绑定或购买助手后自动补员。</div>`
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 ＋ 绑定或研究点扩编后自动补员。</div>`
     : '';
-  // v3.12.5 反馈④：面板上的「常驻班组/涨价」说明与「本局已执行…」台账整段移除——
-  // 玩法口径交给玩家自己发现（已写进 Wiki）。台账数值改为悬浮在助手行上，需要时才看，不占版面。
+  // v3.12.5 反馈④：台账数值改为悬浮在助手行上，需要时才看，不占版面。
   const ledgerTip = `空闲 ${idle} · 占编 ${bound} · 共 ${n} 名｜本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}`;
-  // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），购买按钮贴最右，
-  //   整行落进面板标题 <h3>（见 renderAiPanel），卡片区不再被这块占三行。
-  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
-  const buyHtml = aiUnlocked() ? `<button class="btn ai-assist-buy ${st.disabled ? 'disabled' : ''}" data-assist-buy data-afford-sig="${st.sig}" ${st.disabled ? 'disabled' : ''} title="${st.title}">${st.label}</button>` : '';
-  return { rowHtml: head + buyHtml, stallHtml: unstaffedHtml };
+  // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），落进面板标题 <h3>。
+  // v3.12.12 ⑧：追加「研究点扩编」提示（玩家获取助手的唯一入口已移至研究点）。
+  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span><span class="ai-assist-hint" style="font-size:10px;color:var(--text-3);margin-left:6px">研究点扩编</span></span>`;
+  // 预留线：并入助手行（反馈⑧）——EP 上限预留比例；按钮点击仍由 #ai-card 委托处理。
+  const ai = S.ai;
+  const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
+    `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
+  const reserveHtml = `<span class="ai-reserve-inline" style="margin-left:8px;font-size:10px;color:var(--text-3)">预留线 EP 上限 <span class="ai-reserve-opts">${reserveOpts}</span></span>`;
+  return { rowHtml: head + reserveHtml, stallHtml: unstaffedHtml };
 }
 
 // ========== 面板 ==========
@@ -530,8 +535,6 @@ export function renderAiPanel(container) {
       </div>
       ${extra}
     </div>`;
-  const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
-    `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
 
   // 进阶：自动研究（科技树「自动研究」）/ 自动购建（全资源点解锁后可激活）
   // v3.12.3 反馈⑨：两项都在「真正解锁后」才渲染，未解锁既不显示卡片、也不显示任何锁定文案。
@@ -566,12 +569,9 @@ export function renderAiPanel(container) {
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
     <div class="ai-action-grid">${basicHtml}</div>
     ${advancedHtml}
-    ${section.stallHtml}
-    <div class="ai-reserve-row">
-      <span>预留线 · EP 上限 ${Math.round((ai.reserve ?? BALANCE.ai.defaultReserve) * 100)}%</span>${reserveOpts}
-    </div>`;
+    ${section.stallHtml}`;
 
-  // 点击委托挂在 #ai-card 上（购买按钮在标题行，不在 #ai-panel 内，否则收不到事件）
+  // 点击委托挂在 #ai-card 上（助手行含预留线按钮，在标题行 slot 内，不在 #ai-panel 内，否则收不到事件）
   const delegateHost = card || container;
   if (!delegateHost.dataset.v13Delegated) {
     delegateHost.dataset.v13Delegated = '1';

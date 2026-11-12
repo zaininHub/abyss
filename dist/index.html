@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.11</title>
+<title>深渊效能工作台 v3.12.12</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-KH-38iQQ.js"></script>
-  <link rel="stylesheet" href="./assets/index-Df1uWt9m.css">
+  <script defer src="./assets/index-CZl5y7kS.js"></script>
+  <link rel="stylesheet" href="./assets/index-BoWZreVw.css">
 </head>
 <body>
 <div id="app">
@@ -40,6 +40,17 @@
   <div class="chapter-row">
     <div id="chapter-bar" class="ch-bar"></div>
     <div class="sys-btns">
+      <!-- v3.12.12 反馈⑥：皮肤菜单（暂停左侧）——切换界面色彩/风格主题，悬停展开（复用存档菜单交互范式）。
+           独立 .skin-menu 类：不占用 .save-menu 首位匹配（存档菜单测试按 .save-menu 查询） -->
+      <div class="skin-menu" id="skin-menu">
+        <button class="btn" id="skin-menu-btn" aria-label="皮肤：悬停展开主题列表" aria-haspopup="true" aria-expanded="false">🎨 皮肤</button>
+        <div class="save-menu-pop" id="skin-pop">
+          <div class="save-list-label">界面主题</div>
+          <button class="btn skin-opt on" data-skin="abyss" title="深紫黑基调（默认）">🌑 深渊暗夜</button>
+          <button class="btn skin-opt" data-skin="light" title="晨光白昼（浅色主题）">🌤 晨光白昼</button>
+          <button class="btn skin-opt" data-skin="ember" title="余烬琥珀（暖色暗色主题）">🔥 余烬琥珀</button>
+        </div>
+      </div>
       <button class="btn" id="pauseBtn">暂停</button>
       <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
       <div class="save-menu">
@@ -165,7 +176,7 @@
     <!-- 中列：标签页 -->
     <div class="right-col">
       <div class="tabs">
-        <button class="btn on" id="btn-shop">升级商店</button>
+        <button class="btn on" id="btn-shop">商店</button>
         <button class="btn" id="btn-tech">科技树</button>
         <button class="btn" id="btn-rp">研究点</button>
         <button class="btn" id="btn-relics">遗物</button>
@@ -206,7 +217,7 @@
         <div class="tab-pane" id="tab-tech">
           <h3>科技树 · 当前 <span id="tech-rp" class="mono" style="color:var(--cyan)">0</span> RP</h3>
           <div id="tech-tree" class="tech-grid"></div>
-          <h3 style="margin-top:12px" id="eternal-title">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES</h3>
+          <h3 style="margin-top:12px" id="eternal-title">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES <span style="font-size:10.5px;color:var(--text-3);font-weight:400;margin-left:6px">主打 AI 能力与前期丝滑</span></h3>
           <div id="eternal-list" class="tech-grid"></div>
           <!-- v3.3.9 反馈⑤：裂隙等级（EP + DM 无限升级）自余烬升级树移入科技树 -->
           <h3 style="margin-top:12px" id="rift-tech-title">裂隙等级（EP + DM 购买）</h3>

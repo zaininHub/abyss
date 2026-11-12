@@ -40,9 +40,9 @@ export function sealMaxLevel() {
   return max;
 }
 
-// v3.0.3 后续反馈⑦：宗教升级再涨价——圣印 500 起步 ×2.9/级（原 100×2.5）
+// v3.12.12 反馈②：圣印 FP 消耗大幅提高——起步 500 → 4000（×2.9/级不变），压低早期连点、拔高终局门槛
 export function sealUpgradeCost(level) {
-  return Math.round(500 * Math.pow(2.9, level));
+  return Math.round(4000 * Math.pow(2.9, level));
 }
 
 // 圣所（信仰产出建筑）：EP 购买，每级 +0.01 信仰/s，无等级上限（v3.12.10 ③ 由 0.05 下调）

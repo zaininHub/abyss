@@ -1628,27 +1628,38 @@ export function buyResearchUpgrade(id) {
   S.rp -= cost;
   S.rpTheories = S.rpTheories || {};
   S.rpTheories[id] = lv + 1;
+  // v3.12.12 反馈⑧：研究点「助手扩编协议」每购买一级即授予 1 名 AI 助手（与旧 EP 购买同一落点 S.ai.assistants）
+  if (u.id === 'rp_ai_unit') {
+    S.ai = S.ai || {};
+    S.ai.assistants = (S.ai.assistants || 0) + 1;
+    dirty.ai = true; // 即时刷新 AI 面板（助手数量行）
+  }
   save(S);
   return { ok: true };
 }
 // v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
-// 批次：产出强化（开局显现）→ 资源与消耗（累计 4 级）→ 深渊终局 / 星际与拟我（并列，累计 4 级）
+// 批次：产出强化（开局显现）→ 玩法扩展与配套（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（并列，累计 4 级）
 export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部有归属分组」
   // v3.0.3：许愿池 wish_well 已从研究升级移入通用设施（BALANCE.buildings）——不再在研究点 tab 渲染
   // v3.4.2：研究菜单扩充——各批次新增条目（ep/thread/global/offline 等）并入对应轴
-  // v3.6.0 方向①：研究菜单由 3 组 20 项扩到 4 组 30 项——新增「星际与拟我」整组，
+  // v3.6.0 方向①：研究菜单扩充——新增「星际」整组，
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
   { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
   // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
   //   prod = 开局显现的产出/全局/离线基础项；res = 玩法扩展与配套（资源/政策/项目/班组/远征/集市）；
-  //   abyss = 深渊终局两根核心轴；star = 星际与拟我（研究点已解锁 + 星图已开启 双门控）。
+  //   abyss = 深渊终局两根核心轴；ai = AI 助手（效率 + 扩编）；star = 星际（研究点已解锁 + 星图已开启 双门控）。
   { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar'], unlock: { prev: 'prod', need: 4 } },
-  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
+  { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
+  // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），
+  // 「自动能力」与「购买」同处一个研究点类目，解锁仍留在升级商店科技树。
+  //   拟我协议不挂 ai_core：前瞻研究可提前买入，扩编协议必须先解锁核心（组内其余项保底可显示）。
+  { key: 'ai',    name: 'AI 助手',   ids: ['rp_ai', 'rp_ai_unit'],                                                                                             unlock: { prev: 'res', need: 4 } },
   // v3.12.0 反馈⑤：本组需要「研究点已解锁 + 星图已开启」双门控，过去只看前组累计 4 级，
-  //   导致星图还没开，研究点里就冒出「星际与拟我」一整组。
-  { key: 'star',  name: '星际与拟我', anchor: 'rp', requireStar: true, ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_sync'],                unlock: { prev: 'res', need: 4 } },
+  //   导致星图还没开，研究点里就冒出「星际」一整组。
+  // v3.12.12 ⑧：拟我移入独立 AI 组后，本组更名「星际」（v3.6.0 时旧名「星际与拟我」）。
+  { key: 'star',  name: '星际',      anchor: 'rp', requireStar: true, ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_sync'],                      unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 

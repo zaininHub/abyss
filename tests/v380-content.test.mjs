@@ -62,7 +62,7 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   }
   assert.equal(CHAPTERS.length, 51);
   assert.equal(EVENTS.length, 82);
-  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
+  assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
   assert.equal(BALANCE.miles.length, 16);
@@ -117,6 +117,7 @@ test('F1 68 项研究全部归属 RP_GROUPS，分组无幽灵 id，fx.key 有消
   for (const id of grouped) assert.ok(defined.includes(id), `分组引用幽灵 id ${id}`);
   const consumed = new Set([...ALL_SRC.matchAll(/researchMult\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)/g)].map(m => m[1]));
   for (const u of BALANCE.researchUpgs) {
+    if (!u.fx) continue; // v3.12.12 ⑧：fx=null 为授予型研究（rp_ai_unit 购买即 +1 助手）
     assert.ok(consumed.has(u.fx.key), `${u.id} 的 fx.key=${u.fx.key} 无消费点（死升级）`);
     assert.ok(u.cap > 0 && u.base > 0 && u.growth > 1, `${u.id} 曲线参数非法`);
   }

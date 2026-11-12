@@ -232,17 +232,20 @@ try {
     // ⑤ 四态（v3.12.9）：无 RP 锚点 → 有锚点但星图未开 → 有深空探测但宠物未解锁 → 四项前置齐备。
     // star 组自带 unlock: { prev:'res', need:4 }，夹具需先备齐该既有前置再单独考察星图维度。
     // 星图 tab 已加「宠物/PT 锚点」硬前置，研究分组读同一谓词，故此处必须显式点亮 PT。
+    // v3.12.11 ①：starChartUnlocked 追加「章节 ≥3」硬门控——矩阵统一抬到第 3 章考察星图维度本身；
+    // v3.12.7 起 PT 锚点 = 宠物解锁唯一判定源，techOnly 态需显式清零 PT 资源（否则 pt>0 误放行）。
     const snap5 = JSON.stringify(S);
     try {
       const resIds = q.RP_GROUPS.find(g => g.key === 'res').ids.slice(0, 4);
       S.rpTheories = Object.fromEntries(resIds.map(id => [id, 1]));
       S.upgrades = {}; S.tech = {}; S.expeditionsDone = 0; S.expeditions = [];
+      S.chapter = '3'; S.pt = 0;
       D.rp = true; q.sim.render();
       const off = starShown();
       S.upgrades = { rp_vault: 1 }; D.rp = true; q.sim.render();
       const anchorOnly = starShown();
       S.tech = { deep_space: true }; D.rp = true; q.sim.render();
-      const techOnly = starShown(); // 宠物未解锁：星图仍锁，研究组也不该出现
+      const techOnly = starShown(); // 宠物未解锁（PT=0 且无仓库）：星图仍锁，研究组也不该出现
       S.upgrades = { rp_vault: 1, pt_vault: 1 }; D.rp = true; q.sim.render();
       const both = starShown();
       item5 = { off, anchorOnly, techOnly, both, resLv: resIds.length };
@@ -349,7 +352,7 @@ try {
   // ⑤ 星图 / 研究点双门控
   const m5 = M.item5;
   if (m5 && !m5.off && !m5.anchorOnly && !m5.techOnly && m5.both)
-    ok('⑤ 星际与拟我需 RP + 宠物 + 星图三级门控（res 组前置已备齐的四态矩阵）',
+    ok('⑤ 星际组需 RP + 宠物 + 星图三级门控（res 组前置已备齐的四态矩阵）',
       `无锚点 ${m5.off} / 无星图 ${m5.anchorOnly} / 无宠物 ${m5.techOnly} / 全开 ${m5.both}`);
   else bad('⑤ 星图研究组门控异常', JSON.stringify(m5));
 

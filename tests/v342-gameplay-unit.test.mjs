@@ -73,7 +73,8 @@ const CONSUMED = (() => {
 })();
 test('研究升级：所有 fx.key 均被 researchMult 消费（无「死升级」）', () => {
   for (const u of BALANCE.researchUpgs) {
-    assert.ok(u.fx, `研究升级 ${u.id} 缺 fx`);
+    // v3.12.12 ⑧：fx=null 的是「授予型」研究（rp_ai_unit 购买即 +1 助手），不走 researchMult 乘区
+    if (!u.fx) continue;
     assert.ok(CONSUMED.has(u.fx.key), `研究升级 ${u.id} 的 fx.key=${u.fx.key} 未被任何生产/加成链路消费`);
   }
 });

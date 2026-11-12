@@ -62,7 +62,7 @@ const rect = (page, sel) => page.evaluate(s => {
   return { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right, bottom: r.bottom,
            display: cs.display, pointer: cs.pointerEvents, z: Number(cs.zIndex) || 0, pos: cs.position };
 }, sel);
-const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySelector('.save-menu-pop')).display);
+const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySelector('#save-pop')).display);
 
 // ==================== ① 存档：纯 hover 展开 ====================
 {
@@ -80,7 +80,7 @@ const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySe
   else bad('① hover 断档仍导致闪收', await popDisplay(page));
 
   // 横向桥接：菜单宽 280 右对齐，按钮仅 67px；移到菜单左端仍要展开
-  const pop = await rect(page, '.save-menu-pop');
+  const pop = await rect(page, '#save-pop'); // v3.12.12 ⑥：皮肤菜单同样用 .save-menu-pop，查询必须锚定存档下拉自身
   await page.mouse.move(pop.x + 12, pop.y + 16); await sleep(180);
   if (await popDisplay(page) === 'flex') ok('① 横向移到菜单左端仍保持展开（桥接覆盖整宽）');
   else bad('① 横向移动掉出 hover 区', await popDisplay(page));
@@ -106,7 +106,7 @@ const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySe
   await page.keyboard.press('Tab'); await sleep(120);
   const inPop = await page.evaluate(() => ({
     id: document.activeElement?.id,
-    inside: !!document.activeElement?.closest?.('.save-menu-pop'),
+    inside: !!document.activeElement?.closest?.('#save-pop'),
   }));
   const kbd2 = await popDisplay(page);
   if (hitBtn && kbd1 === 'flex' && inPop.inside && kbd2 === 'flex') ok('① 键盘 Tab 可进入下拉菜单且菜单不收起（a11y 不降级）', `焦点=${inPop.id}`);

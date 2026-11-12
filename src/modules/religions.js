@@ -377,13 +377,13 @@ export function renderReligionPanel(container) {
     <div class="off-stat"><span>FP 余额</span><b>${(S.faith || 0).toFixed(2)} / ${faithCap()}</b></div>
     <div class="off-stat"><span>FP 产出</span><b>+${templeFaithPerSec().toFixed(3)}/s（圣所）${fpStatusTag()}</b></div>
     <div class="off-stat"><span>满仓耗时</span><b>${Number.isFinite(fpCapFillSec()) ? `≈ ${(fpCapFillSec() / 3600).toFixed(1)} 小时` : '—'}</b></div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 圣印（全局产出 +8%/级）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">圣印（全局产出 +8%/级）</div>
     <div class="religion-seal-row">
       <span>Lv.${seal}/${sealMax}</span>
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗 FP 升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} FP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(3)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 当前 -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（ 下一级 +${TEMPLE.faithPerSec.toFixed(3)} FP/s  - ${fmt(templeEpPerUnit())} EP    总计 +${templeFaithPerSec().toFixed(3)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
@@ -410,7 +410,7 @@ export function renderReligionPanel(container) {
     </div>` : ''}
     ` : ''}
     ${transcendLevel() >= 1 ? `
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">隐密圣学（跨周期保留 · 门槛每轮重达）</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">隐密圣学</div>
     ${SECRET_SANCTUMS.map(s2 => {
       const lv = secretSanctumLv(s2.id);
       const cost = secretSanctumCost(s2.id);
@@ -423,7 +423,8 @@ export function renderReligionPanel(container) {
     }).join('')}
     ` : ''}
     ${sealLevel() >= 3 || ((S.religion && S.religion.temple) || 0) >= 5 ? `
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">升级点 · 神谕塔与圣战军</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">神谕塔与圣战军</div>
+    <div style="font-size:11px;color:var(--text-3);margin:-4px 0 6px">建造神学相关的建筑，提升 FP 上限或获取速度，消耗大量 FP 建造</div>
     ${sealLevel() >= 3 ? `
     <div class="religion-seal-row">
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ${fmtMultDelta(1 + ORACLE.effect * oracleLevel())}）</span>

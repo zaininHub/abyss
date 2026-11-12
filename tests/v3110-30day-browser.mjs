@@ -571,6 +571,9 @@ async function uiCheck(page) {
         try {
           S.upgrades = { rp_vault: 1 };
           S.tech = { deep_space: true };
+          // v3.12.11 ①：星图带「第 3 章」硬门控——夹具只考察 PT 维度，统一抬到第 3 章，
+          //   否则 1 天灰度（章节=1）时 after.gate 恒 false 使矩阵失真。
+          S.chapter = String(Math.max(3, parseInt(String(S.chapter || '1'), 10) || 3));
           S.pt = 0; S.expeditionsDone = 3; S.expeditions = []; S.starCps = 12;
           render();
           const before = read();
@@ -979,7 +982,8 @@ try {
   if (ui.wikiOk) ok('Wiki（含 v3.11.0 五个新章节）渲染无 undefined / NaN');
   else bad('Wiki 渲染出现 undefined / NaN');
   const rTotal = ui.researchGroups.reduce((a, g) => a + g.n, 0);
-  if (rTotal === ui.researchTotal && ui.researchTotal === 68) ok('研究面板分组覆盖全部 68 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
+  // v3.12.11 反馈②：研究菜单 68→21；v3.12.12 ⑧新增「助手扩编协议」→ 22（5 组）
+  if (rTotal === ui.researchTotal && ui.researchTotal === 22) ok('研究面板分组覆盖全部 22 项', ui.researchGroups.map(g => `${g.key}:${g.n}`).join(' '));
   else bad('研究分组与配置不一致', `${rTotal} vs ${ui.researchTotal}`);
   if (ui.policyGroups === 13 && ui.policyTotal === 39) ok('政策面板 13 组 39 项全部注册', `组 ${ui.policyGroups} / 项 ${ui.policyTotal}`);
   else bad('政策数量不符', JSON.stringify({ g: ui.policyGroups, n: ui.policyTotal }));

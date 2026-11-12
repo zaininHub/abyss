@@ -469,15 +469,19 @@ export const BALANCE = {
     { id: 'rp_crew',        name: '班组扩编',   cap: 8,  base: 3200, growth: 1.88, fx: { key: 'crew',    v: 0.10 }, desc: '班组全局加成 +10%/级' },
     { id: 'rp_expedition',  name: '远征后勤',   cap: 8,  base: 4000, growth: 1.90, fx: { key: 'expedition', v: 0.12 }, desc: '远征收益 +12%/级' },
     { id: 'rp_bazaar',      name: '集市协议',   cap: 8,  base: 4800, growth: 1.92, fx: { key: 'bazaar',  v: 0.12 }, desc: '集市交易收益 +12%/级' },
-    // —— 深渊终局（累计 4 级后显现）——
-    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650,  growth: 1.8,  fx: { key: 'delve',   v: 0.10 }, desc: '深潜产出 +10%/级' },
-    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800,  growth: 1.8,  fx: { key: 'rift',    v: 0.15 }, desc: '裂隙余烬 +15%/级' },
-    // —— 星际与拟我（研究点已解锁 + 星图已开启 双门控）——
+    // —— 深渊扩展（累计 4 级后显现）——反馈⑤：深渊研究定位为「扩展玩法」而非单纯 +X%/级，
+    //   desc 改写为解锁/推进深渊玩法机制，但仍保留 delve/rift 乘区供既有消费点读取（不破 v342/v360 断言）。
+    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650,  growth: 1.8,  fx: { key: 'delve',   v: 0.10 }, desc: '深潜观测协议：每层 +10% 深潜产出，并拓展一层可观测深潜区' },
+    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800,  growth: 1.8,  fx: { key: 'rift',    v: 0.15 }, desc: '裂隙数学：每层 +15% 余烬析出，并稳定一层裂隙相位' },
+    // —— 星际（研究点已解锁 + 星图已开启 双门控；拟我已移入独立 AI 助手组）——
     { id: 'rp_jump',        name: '跃迁理论',   cap: 8,  base: 600,  growth: 1.70, fx: { key: 'jump',    v: 0.06 }, desc: '星际跃迁效率 +6%/级' },
     { id: 'rp_starres',     name: '星蕴提纯',   cap: 8,  base: 700,  growth: 1.70, fx: { key: 'starres', v: 0.06 }, desc: '星际专属资源产出 +6%/级' },
     { id: 'rp_colony2',     name: '星殖民拓',   cap: 8,  base: 800,  growth: 1.75, fx: { key: 'colony',  v: 0.08 }, desc: '星殖民产出 +8%/级' },
     { id: 'rp_cosmos2',     name: '宇宙工程',   cap: 8,  base: 1100, growth: 1.80, fx: { key: 'cosmos',  v: 0.08 }, desc: '宇宙工程星力 +8%/级' },
     { id: 'rp_ai',          name: '拟我协议',   cap: 8,  base: 900,  growth: 1.75, fx: { key: 'ai',      v: 0.08 }, desc: 'AI 助手效率 +8%/级' },
+    // v3.12.12 反馈⑧：AI 助手「购买（扩编）」从 EP 直接购买按钮迁至研究点单独类目——
+    // 每级 +1 名助手（绑定动作后自动执行），需先研究科技树「AI 管理核心」（解锁仍留在升级商店）。
+    { id: 'rp_ai_unit',     name: '助手扩编协议', cap: 20, base: 200, growth: 1.15, fx: null, requiresTech: 'ai_core', desc: '每级 +1 名 AI 助手（绑定动作后自动执行）' },
     { id: 'rp_sync',        name: '星图同调',   cap: 1,  base: 2000, growth: 1.5,  fx: { key: 'sync', v: 1 }, requiresTech: 'deep_space', desc: '启用 RP/PT 上限随 EP 上限联动（产出基座）' },
   ],
   corruption: {

@@ -13,6 +13,7 @@ globalThis.localStorage = globalThis.localStorage || {
 const { BALANCE } = await import('../src/data/balance.js');
 const { UPGRADES } = await import('../src/data/upgrades.js');
 const { RP_GROUPS } = await import('../src/modules/shop.js');
+const { ACHIEVEMENTS } = await import('../src/data/achievements.js'); // v3.12.12：清单已下沉 core/data，不再从 main.js 源码刮取
 const E = await import('../src/modules/expedition.js');
 
 const CHROME = process.env.CHROME_PATH || '/usr/local/bin/chromium';
@@ -26,18 +27,17 @@ const check = (cond, name, detail = '') => cond ? ok(name, detail) : bad(name, d
 // ===================== Node 侧：静态结构断言 =====================
 {
   const all = RP_GROUPS.flatMap(g => g.ids);
-  check(RP_GROUPS.length === 4 && all.length === 21, '① 研究菜单 4 组 21 项', `${RP_GROUPS.length} 组 / ${all.length} 项`);
+  // v3.12.11 反馈②：研究裁剪为 21 项；v3.12.12 ⑧：新增「AI 助手」独立分组（5 组 22 项）
+  check(RP_GROUPS.length === 5 && all.length === 22, '① 研究菜单 5 组 22 项', `${RP_GROUPS.length} 组 / ${all.length} 项`);
   check(BALANCE.researchUpgs.every(u => all.includes(u.id)), '① 全部研究项都挂在面板分组（可购）');
   check(RP_GROUPS.some(g => g.key === 'star'), '① 新增「星际与拟我」菜单组');
 
-  const assist = UPGRADES.find(u => u.id === 'ai_assist');
-  check(!!assist && assist.maxLevel === 8, '⑨ 升级商店含「AI 助手编队」（上限 8 槽）', assist && `${assist.name} Lv.${assist.maxLevel}`);
-  check(Object.keys(BALANCE.ai.assistants.typeLabels || {}).length === 8, '⑨ 8 类助手分配项均有中文标签');
+  // v3.12.12 ⑧：助手编队升级（ai_assist）已于 v3.10.5 移除，扩编改走研究点「助手扩编协议」
+  const aiUnit = BALANCE.researchUpgs.find(u => u.id === 'rp_ai_unit');
+  check(!!aiUnit && aiUnit.requiresTech === 'ai_core', '⑨ 研究点含「助手扩编协议」（需 ai_core 解锁）', aiUnit && `${aiUnit.name} cap=${aiUnit.cap}`);
 
-  // 成就定义：从 main.js 源码中截取 ACHIEVEMENTS 数组，校验数量与 id 唯一
-  const src = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  const seg = src.slice(src.indexOf('const ACHIEVEMENTS'), src.indexOf('function checkAch'));
-  const ids = [...seg.matchAll(/\{\s*id:\s*'([a-z0-9_]+)'/g)].map(m => m[1]);
+  // 成就定义：v3.10.0 起清单在 src/data/achievements.js（单一真源），校验数量与 id 唯一
+  const ids = ACHIEVEMENTS.map(a => a.id);
   check(ids.length >= 78, '② 成就定义扩充至 ≥78 项', `${ids.length} 项`);
   check(new Set(ids).size === ids.length, '② 成就 id 全局唯一（无重复解锁）');
 
@@ -60,10 +60,14 @@ await page.evaluateOnNewDocument(() => {
     chapter: '5', chapterEnteredAt: Date.now(), startedAt: Date.now() - 5 * 86400000,
     ep: 1e15, rp: 1e12, pt: 1e9, dm: 1e9, es: 1e4, faith: 1e5, starCps: 1e6,
     // storage 120 → EP 上限 ~1e13，与助手编队第 4~5 槽成本（1e9~1e10）匹配，商店卡不会灰态拦截
-    upgrades: { storage: 120, rp_vault: 6, pt_vault: 6, ai_assist: 3 },
+    upgrades: { storage: 120, rp_vault: 6, pt_vault: 6 },
+    // v3.12.12 ⑨：常驻班组模型需要空闲助手供占编 +/− 交互
+    ai: { assistants: 6 },
     buildings: {}, tech: { ai_core: true, deep_space: true, prestige2: true },
     rpTheories: { rp_entropy: 4, rp_wage: 4 },
     achievements: {}, colonies: {}, starRes: { stardust: 500 },
+    // v3.12.7 ⑦：殖民入口只列「探索回来过」的星系——夹具预置月球已完成一次探索
+    galaxyDone: { moon: 1 },
     policies: {}, religion: { unlocked: true, branch: 'sun', sun: true, temple: 3 },
     resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: true, faith: true, pt: true, dm: true },
     cultists: [{ id: 1, name: 'T', output: 30, mood: '正常', moodTimer: 60 }],
@@ -73,58 +77,56 @@ await page.evaluateOnNewDocument(() => {
 await page.goto(PAGE_URL, { waitUntil: 'load' });
 await sleep(1800);
 
-// ---- ⑨ AI 助手编队：面板可见、8 类中文标签 ----
+// ---- ⑨ AI 助手：面板可见、动作卡 + 助手行（扩编提示 / 预留线并入 / 无购买按钮） ----
 const aiUi = await page.evaluate(() => ({
   visible: document.getElementById('ai-card')?.style.display !== 'none',
   text: document.getElementById('ai-panel')?.innerText || '',
-  slots: window.S.upgrades?.ai_assist || 0,
+  headText: document.querySelector('[data-ai-assist-slot]')?.innerText || '',
+  reserveInHead: !!document.querySelector('[data-ai-assist-slot] [data-ai-reserve]'),
+  hasBuyBtn: !!document.querySelector('[data-assist-buy]'),
+  actionCards: [...document.querySelectorAll('[data-ai-action]')].map(c => c.dataset.aiAction),
+  assistants: window.S.ai?.assistants || 0,
 }));
-check(aiUi.visible && /AI 助手编队/.test(aiUi.text), '⑨ AI 面板渲染「AI 助手编队」', `${aiUi.slots} 槽`);
-const missingLabels = ['升级商店', '效能建筑', '星系殖民', '宇宙工程', '科技研究', '政策颁行', '裂隙升级', '宗教圣所']
-  .filter(t => !aiUi.text.includes(t));
-check(missingLabels.length === 0, '⑨ 8 类自动购买分配项均为中文标签', missingLabels.length ? '缺: ' + missingLabels.join(',') : '');
+check(aiUi.visible && aiUi.actionCards.length >= 3, '⑨ AI 面板渲染自动化动作卡', `${aiUi.actionCards.length} 张`);
+check(!aiUi.hasBuyBtn, '⑧ EP 购买助手按钮已删除（扩编走研究点）');
+check(/研究点扩编/.test(aiUi.headText), '⑧ 助手行提示「研究点扩编」入口', aiUi.headText.slice(0, 40));
+check(aiUi.reserveInHead, '⑧ 预留线并入助手行（与助手数量同处一行）');
 
-// ---- ⑨ 分配 + / − 交互 ----
+// ---- ⑨ 占编 + / − 交互（v3.11 常驻班组模型） ----
 const alloc = await page.evaluate(() => {
-  document.querySelector('[data-assist-inc="upgrade"]')?.click();
-  const inc = window.S.ai.alloc?.upgrade || 0;
-  document.querySelector('[data-assist-dec="upgrade"]')?.click();
-  const dec = window.S.ai.alloc?.upgrade || 0;
+  document.querySelector('[data-ai-crew-inc="upgrade"]')?.click();
+  const inc = window.S.ai.crew?.upgrade || 0;
+  document.querySelector('[data-ai-crew-dec="upgrade"]')?.click();
+  const dec = window.S.ai.crew?.upgrade || 0;
   return { inc, dec };
 });
-check(alloc.inc === 1 && alloc.dec === 0, '⑨ 面板 +/− 分配助手即时写入存档', `+ → ${alloc.inc}, − → ${alloc.dec}`);
+check(alloc.inc === 1 && alloc.dec === 0, '⑨ 面板 +/− 占编助手即时写入存档', `+ → ${alloc.inc}, − → ${alloc.dec}`);
 
-// ---- ⑨ AI 面板购买编队（与商店同价） ----
+// ---- ⑨ 研究点购买「助手扩编协议」→ 助手 +1（扩编唯一玩家入口） ----
 const panelBuy = await page.evaluate(() => {
-  window.S.ep = 1e15; // 主循环每帧把 EP 钳回存储上限；购买前同步补足
-  const before = { lv: window.S.upgrades.ai_assist || 0, ep: window.S.ep };
-  document.querySelector('[data-assist-buy]')?.click();
-  return { before, lv: window.S.upgrades.ai_assist || 0, ep: window.S.ep, dirtyShop: window.__gameDirty.shop };
-});
-check(panelBuy.lv === panelBuy.before.lv + 1 && panelBuy.ep < panelBuy.before.ep,
-  '⑨ AI 面板购买编队 +1 槽并扣 EP', `Lv.${panelBuy.before.lv} → Lv.${panelBuy.lv}`);
-check(panelBuy.dirtyShop === true, '⑨ 面板购买后主商店卡同步置脏');
-
-// ---- ⑨ 升级商店购买编队 + AI 面板刷新 ----
-const shopBuy = await page.evaluate(() => {
-  window.S.ep = 1e15;
-  const card = document.querySelector('[data-buy="ai_assist"]');
+  window.S.rp = Math.max(window.S.rp || 0, 1e6);
+  const card = document.querySelector('[data-research="rp_ai_unit"]');
   if (!card) return { found: false };
-  const before = window.S.upgrades.ai_assist || 0;
+  const before = { assistants: window.S.ai?.assistants || 0, rp: window.S.rp, lv: window.S.rpTheories?.rp_ai_unit || 0 };
   card.click();
-  return { found: true, before, after: window.S.upgrades.ai_assist || 0, dirtyAi: window.__gameDirty.ai, text: card.innerText };
+  return { found: true, before,
+    after: { assistants: window.S.ai?.assistants || 0, rp: window.S.rp, lv: window.S.rpTheories?.rp_ai_unit || 0 },
+    dirtyAi: window.__gameDirty.ai };
 });
-check(shopBuy.found && /AI 助手编队/.test(shopBuy.text || ''), '⑨ 升级商店渲染「AI 助手编队」卡');
-check(shopBuy.after === shopBuy.before + 1, '⑨ 商店点击购买编队 +1 槽', `Lv.${shopBuy.before} → Lv.${shopBuy.after}`);
-check(shopBuy.dirtyAi === true, '⑨ 商店购买后 AI 面板即时置脏（槽位同步）');
+check(panelBuy.found, '⑨ 研究点渲染「助手扩编协议」卡');
+check(panelBuy.found && panelBuy.after.assistants === panelBuy.before.assistants + 1 && panelBuy.after.rp < panelBuy.before.rp,
+  '⑨ 研究点购买扩编协议：助手 +1 且扣 RP', `Lv.${panelBuy.before?.lv} → Lv.${panelBuy.after?.lv}`);
+check(panelBuy.found && panelBuy.after.lv === panelBuy.before.lv + 1 && panelBuy.dirtyAi === true,
+  '⑨ 购买后 AI 面板即时置脏（助手数量同步）');
 
-// ---- ① 研究点面板：4 组 + 新研究项可见 ----
+// ---- ① 研究点面板：5 组 + 新研究项可见 ----
 await page.evaluate(() => document.getElementById('btn-rp')?.click());
 await sleep(400);
 const rpUi = await page.evaluate(() => document.getElementById('research-upgrade-list')?.innerText || '');
-check(/产出强化/.test(rpUi) && /资源与消耗/.test(rpUi) && /深渊终局/.test(rpUi) && /星际与拟我/.test(rpUi),
-  '① 研究点面板渲染 4 个分组菜单');
-const newResearch = ['跃迁理论', '星蕴提纯', '律令演绎', '神性共振', '拟我协议', '熵流增幅'];
+// v3.12.12 ⑧：分组名改为「玩法扩展与配套 / 深渊扩展」，并新增「AI 助手」独立组
+check(/产出强化/.test(rpUi) && /玩法扩展与配套/.test(rpUi) && /深渊扩展/.test(rpUi) && /AI 助手/.test(rpUi) && /星际/.test(rpUi),
+  '① 研究点面板渲染 5 个分组菜单');
+const newResearch = ['跃迁理论', '星蕴提纯', '律令演绎', '拟我协议', '熵减研究', '助手扩编协议'];
 const missingRp = newResearch.filter(t => !rpUi.includes(t));
 check(missingRp.length === 0, '① 新增研究项在研究点面板可见可购买', missingRp.length ? '缺: ' + missingRp.join(',') : '');
 
@@ -190,12 +192,16 @@ const story = await page.evaluate(() => {
 });
 check(String(story.chapter) === '5', '⑥ 刚进入第 5 章时不因条件满足而连跳（3-7 天/章）', `当前第 ${story.chapter} 章`);
 
-// ---- ② 成就：页头总数 ----
+// ---- ② 成就：页头总数（总数随版本增长，动态对齐数据表；计数在 #achievement-h3 常驻头部） ----
 const ach = await page.evaluate(() => {
   document.getElementById('btn-achievement')?.click();
-  return document.getElementById('achievement-panel')?.innerText || '';
+  return {
+    panel: document.getElementById('achievement-panel')?.innerText || '',
+    head: document.getElementById('achievement-h3')?.innerText || '',
+  };
 });
-check(/\/78/.test(ach), '② 成就面板显示总数 78', ach.match(/\d+\/\d+/)?.[0] || ach.slice(0, 60));
+check(ach.head.includes(`/${ACHIEVEMENTS.length}`), '② 成就面板头部显示总数与数据表一致',
+  `${ACHIEVEMENTS.length} 项 · ${ach.head.slice(0, 40)}`);
 
 check(errs.length === 0, '全流程页面无 JS 报错', errs.slice(0, 2).join(' | '));
 

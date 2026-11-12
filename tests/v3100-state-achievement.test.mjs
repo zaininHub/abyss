@@ -409,7 +409,7 @@ test('E3 红包数值回归数据表单一真源', () => {
 test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(CHAPTERS.length, 51); // v3.12.9 并行审查内容扩充：46→51 章
   assert.equal(EVENTS.length, 82);    // v3.12.9：74→82 事件
-  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
+  assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(BALANCE.miles.length, 16);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
   assert.equal(POLICY_GROUPS.length, 13);

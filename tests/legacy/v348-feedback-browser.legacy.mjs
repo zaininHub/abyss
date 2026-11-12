@@ -8,16 +8,17 @@
 // ⑦ 删除升级商店「消耗优化」整组（subsist1/2/3、mem、cache）
 // ⑧ 圣所 EP 不足时暂停产出（v3.4.9 已回退 v3.4.8 的折算口径）
 import puppeteer from 'puppeteer-core';
-import { readFileSync } from 'fs';
-const { BALANCE } = await import('../src/data/balance.js');
-const { UPGRADES } = await import('../src/data/upgrades.js');
-const { S } = await import('../src/state.js');
-const { TEMPLE, templeCost } = await import('../src/data/religions.js');
-const { templeEpPerUnit, templeFaithPerSec, tickReligion } = await import('../src/modules/religions.js');
-const { riftDelveEpPerSec, riftDelveTotalEp } = await import('../src/modules/rift.js');
-const { GALAXIES } = await import('../src/modules/expedition.js');
-const { staffOutputPerSec, staffSalaryPerSec } = await import('../src/modules/economy.js');
-const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
+import { readFileSync } from 'node:fs';
+const { BALANCE } = await import('../../src/data/balance.js');
+const { UPGRADES } = await import('../../src/data/upgrades.js');
+const { S } = await import('../../src/state.js');
+const { TEMPLE, templeCost } = await import('../../src/data/religions.js');
+const { templeEpPerUnit, templeFaithPerSec, tickReligion } = await import('../../src/modules/religions.js');
+const { riftDelveEpPerSec, riftDelveTotalEp } = await import('../../src/modules/rift.js');
+const { GALAXIES } = await import('../../src/modules/expedition.js');
+const { staffOutputPerSec, staffSalaryPerSec } = await import('../../src/modules/economy.js');
+import { chromePath } from '../_chrome.mjs';
+const CHROME = chromePath(); // v3.12.12：Chrome 路径单一真源
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;

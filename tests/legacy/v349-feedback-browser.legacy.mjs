@@ -13,14 +13,15 @@ import puppeteer from 'puppeteer-core';
 globalThis.localStorage = globalThis.localStorage || {
   _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = String(v); }, removeItem(k) { delete this._d[k]; },
 };
-const { BALANCE } = await import('../src/data/balance.js');
-const { S } = await import('../src/state.js');
-const { epStorageCap, computeCps, rpCap, ptCap } = await import('../src/modules/economy.js');
-const { riftRewardMult, riftPurgeCostMult, riftUpgradeCost, buyRiftUpgrade } = await import('../src/modules/rift.js');
-const { GALAXIES } = await import('../src/modules/expedition.js');
-const { faithCap } = await import('../src/data/religions.js');
+const { BALANCE } = await import('../../src/data/balance.js');
+const { S } = await import('../../src/state.js');
+const { epStorageCap, computeCps, rpCap, ptCap } = await import('../../src/modules/economy.js');
+const { riftRewardMult, riftPurgeCostMult, riftUpgradeCost, buyRiftUpgrade } = await import('../../src/modules/rift.js');
+const { GALAXIES } = await import('../../src/modules/expedition.js');
+const { faithCap } = await import('../../src/data/religions.js');
 
-const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
+import { chromePath } from '../_chrome.mjs';
+const CHROME = chromePath(); // v3.12.12：Chrome 路径单一真源
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
