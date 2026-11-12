@@ -20,6 +20,7 @@ const { LINE_RULE_KEYS, LINE_RULE_LABELS, LINE_RULE_SOURCES, lineRule, lineFlag,
 const provider = await import('../src/core/provider.js');
 const content = await import('../src/core/storylineContent.js');
 const { CHAPTERS, currentChapter } = await import('../src/data/chapters.js');
+const { EVENTS } = await import('../src/data/events.js'); // v3.12.9：事件池数量断言从数据表派生
 
 const orderPkg = (await import('../src/storylines/line_order.js')).default;
 const abyssPkg = (await import('../src/storylines/line_abyss.js')).default;
@@ -144,11 +145,11 @@ test('B2 同一故事线重复注册同一张表不叠加（A→B→A 切换防�
   provider._resetProvider();
 });
 
-test('B3 事件池 = 主表 74 + 当前线 14（另一线的事件不串入）', () => {
+test('B3 事件池 = 主表 + 当前线专属（另一线的事件不串入）', () => {
   for (const pkg of LINE_PKGS) {
     withLine(pkg.id, () => {
       const evs = content.getStorylineEvents();
-      assert.equal(evs.length, 88, `${pkg.id} 事件池应为 74+14`);
+      assert.equal(evs.length, EVENTS.length + pkg.data.events.append.length, `${pkg.id} 事件池口径`);
       assert.equal(new Set(evs.map(e => e.id)).size, evs.length, '事件 id 不重复');
       const lineIds = pkg.data.events.append.map(e => e.id);
       for (const id of lineIds) assert.ok(evs.some(e => e.id === id), `${pkg.id} 缺 ${id}`);
@@ -159,10 +160,10 @@ test('B3 事件池 = 主表 74 + 当前线 14（另一线的事件不串入）',
   });
 });
 
-test('B4 默认线事件池 74 项且全部通过 validateEvent', () => {
+test('B4 默认线事件池与主表同源且全部通过 validateEvent', () => {
   withLine('default', () => {
     const evs = content.getStorylineEvents();
-    assert.equal(evs.length, 74);
+    assert.equal(evs.length, EVENTS.length);
     for (const e of evs) assert.deepEqual(content.validateEvent(e), [], `${e.id} 非法：${content.validateEvent(e)}`);
   });
 });
@@ -202,12 +203,12 @@ test('B7 线专属异兽在数据完整的前提下按线可见', () => {
   }
 });
 
-test('B8 章节变体表按线合并，主线 46 章 + 该线 18 章', () => {
-  withLine('default', () => assert.equal(provider.getChapters().length, 46));
+test('B8 章节变体表按线合并（数量由数据表派生）', () => {
+  withLine('default', () => assert.equal(provider.getChapters().length, CHAPTERS.length));
   for (const pkg of LINE_PKGS) {
     withLine(pkg.id, () => {
       const chs = provider.getChapters();
-      assert.equal(chs.length, 64, `${pkg.id} 章节表应为 46+18`);
+      assert.equal(chs.length, CHAPTERS.length + pkg.data.chapters.append.length, `${pkg.id} 章节表口径`);
       const ids = chs.map(c => String(c.id));
       assert.equal(new Set(ids).size, ids.length, `${pkg.id} 章节 id 不重复`);
     });
@@ -240,9 +241,8 @@ test('C3 currentChapter 绝不回退到低于 S.chapter', () => {
   assert.ok(parseInt(String(ch.id), 10) >= 12, `不应回退，实际 ${ch.id}`);
 });
 
-test('C4 主线 46 章 id 唯一且每章都有 minDays 与文案', () => {
-  assert.equal(CHAPTERS.length, 46);
-  assert.equal(new Set(CHAPTERS.map(c => c.id)).size, 46);
+test('C4 主线章节 id 唯一且每章都有 minDays 与文案', () => {
+  assert.equal(new Set(CHAPTERS.map(c => c.id)).size, CHAPTERS.length);
   for (const c of CHAPTERS) {
     assert.equal(typeof c.minDays, 'number', `第 ${c.id} 章缺 minDays`);
     assert.ok(c.name && c.desc, `第 ${c.id} 章缺文案`);

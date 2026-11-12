@@ -353,7 +353,7 @@ test('D7 四档策略四键数值正确，且增益与代价成对', () => {
 
 console.log('[E] 新增内容无死数据（真实调用链）');
 
-test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷阱', async () => {
+test('E1 新增章节进入真实章节链，防「data 层同名双实现」陷阱', async () => {
   const provider = await import('../src/core/provider.js');
   const story = await import('../src/modules/story.js');
   assert.ok(read('modules/story.js').includes("from '../data/chapters.js'"),
@@ -361,8 +361,8 @@ test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷
   provider._resetProvider();
   provider.setStoryline('default');
   const chs = provider.getChapters();
-  assert.equal(chs.length, 46);
-  for (const id of [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46]) {
+  assert.equal(chs.length, 51); // v3.12.9：并行审查又补了 47~51 章
+  for (const id of Array.from({ length: 19 }, (_, i) => 33 + i)) {
     assert.ok(chs.some(c => String(c.id) === String(id)), `第 ${id} 章未进入真实章节表`);
   }
   // v3.10.0 新增 6 章均带 minDays 5~7 的驻留门控；chapterEnteredAt 必须是真实的过去时间戳
@@ -373,7 +373,7 @@ test('E1 新增 6 章进入真实章节链，防「data 层同名双实现」陷
     riftEmber: 1e9, tech: {}, buildings: {}, unlockedBuildings: {}, upgrades: {}, religion: {},
     wageState: { state: 'ok' }, resonance: { enabled: true, layers: 20, focus: 'rp' } };
   const cur = story.currentChapter(rich);
-  assert.equal(Number.parseInt(String(cur.id), 10), 46, `真实推进应能走完新增章节，实际 ${cur.id}`);
+  assert.equal(Number.parseInt(String(cur.id), 10), 51, `真实推进应能走完新增章节，实际 ${cur.id}`);
   provider._resetProvider();
 });
 

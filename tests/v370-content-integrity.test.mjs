@@ -124,15 +124,17 @@ test('D6 事件数值在既有天花板内，不破坏平衡', () => {
   }
 });
 
-test('D7 章节 id 全局唯一（主线 46 + 三线各 18）', () => {
+test('D7 章节 id 全局唯一（主线 + 三线变体，按数据表派生）', () => {
   const all = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(all.length, 100);
+  const expected = CHAPTERS.length + LINE_PKGS.reduce((n, p) => n + p.data.chapters.append.length, 0);
+  assert.equal(all.length, expected);
   assert.equal(new Set(all).size, all.length, '章节 id 撞号');
 });
 
-test('D8 事件 id 全局唯一（主表 74 + 三线各 14）', () => {
+test('D8 事件 id 全局唯一（主表 + 三线专属，按数据表派生）', () => {
   const all = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(all.length, 116);
+  const expected = EVENTS.length + LINE_PKGS.reduce((n, p) => n + p.data.events.append.length, 0);
+  assert.equal(all.length, expected);
   assert.equal(new Set(all).size, all.length, '事件 id 撞号');
 });
 

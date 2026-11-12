@@ -48,8 +48,9 @@ console.log('[E] 扩充幅度与全局唯一性');
 
 test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   const rows = [
-    ['主线章节', CHAPTERS.length, 38],
-    ['主事件', EVENTS.length, 62],
+    // v3.12.9：before 基线上移到上一版（46 章 / 74 事件），否则累计幅度会误判越界
+    ['主线章节', CHAPTERS.length, 46],
+    ['主事件', EVENTS.length, 74],
     ['研究项', BALANCE.researchUpgs.length, 56],
     ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33],
     ['百科章节', WIKI_SECTIONS.length, 24],
@@ -60,8 +61,8 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
     assert.ok(pct >= 10 && pct <= 30, `${name} 扩充 ${pct.toFixed(1)}% 超出 10~30%：${before}→${now}`);
     assert.ok(now > before, `${name} 未扩充`);
   }
-  assert.equal(CHAPTERS.length, 46);
-  assert.equal(EVENTS.length, 74);
+  assert.equal(CHAPTERS.length, 51);
+  assert.equal(EVENTS.length, 82);
   assert.equal(BALANCE.researchUpgs.length, 68);
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
@@ -74,10 +75,10 @@ test('E2 三线变体章节 16→18、事件 12→14，章节/事件 id 全局�
     assert.equal(pkg.data.events.append.length, 14, `${pkg.id} 事件数`);
   }
   const chIds = [...CHAPTERS.map(c => String(c.id)), ...LINE_PKGS.flatMap(p => p.data.chapters.append.map(c => String(c.id)))];
-  assert.equal(chIds.length, 100);
+  assert.equal(chIds.length, CHAPTERS.length + 3 * 18);
   assert.equal(new Set(chIds).size, chIds.length, '章节 id 撞号');
   const evIds = [...EVENTS.map(e => e.id), ...LINE_PKGS.flatMap(p => p.data.events.append.map(e => e.id))];
-  assert.equal(evIds.length, 116);
+  assert.equal(evIds.length, EVENTS.length + 3 * 14);
   assert.equal(new Set(evIds).size, evIds.length, '事件 id 撞号');
 });
 
@@ -158,7 +159,7 @@ test('F3 全部事件数值在主表天花板内，且 type 都有 applyEvent �
     if (e.type === 'ep') assert.ok((e.amount || 0) <= 14400, `${e.id} 产出秒数越界`);
     if (e.type === 'debuff') assert.ok(e.mult >= 0.3 && e.mult < 1, `${e.id} debuff 倍率异常`);
   }
-  assert.equal(all.length, 116);
+  assert.equal(all.length, EVENTS.length + 3 * 14);
 });
 
 test('F4 里程碑只追加不重排，既有 cps 键与奖励完全不变', () => {

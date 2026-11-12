@@ -722,6 +722,7 @@ try {
     saveRawHasResonance: window.__rawSaveHasResonance,
     panels: window.__qa.allPanels().length, systems: Object.keys(window.__qa.systemStats()).length,
     achievements: window.__qa.ACHIEVEMENTS.length,
+    events: window.__qa.getStorylineEvents().length, // v3.12.9：事件池基线从读侧取，扩内容不再改断言
   }));
   const initialCps = await page.evaluate(() => window.__qa.computeCps());
   const t0 = Date.now();
@@ -770,7 +771,9 @@ try {
   else bad('终局数值异常', JSON.stringify({ ep: last.ep, cps: last.cps }));
   if (last.chapter !== '1') ok('故事线章节随进度推进', `至第 ${last.chapter} 章 / 晋升 ${last.prestige} 次`);
   else console.log(`  · 章节停留第 1 章：自动玩家仅晋升 ${last.prestige} 次，未达第 2 章门槛（设计如此，非缺陷）`);
-  if (last.storyEvents === 88 && last.linePets === 7) ok('故事线变体接线生效（74 主表 + 14 线专属事件 / 7 异兽）', `事件池 ${last.storyEvents}`);
+  // v3.12.9：主表事件 74→82。事件池基线取自启动期读侧，比对「推演过程中池子不变」
+  if (last.storyEvents === bootState.events && last.linePets === 7)
+    ok('故事线变体接线生效（主表 + 线专属事件 / 7 异兽）', `事件池 ${last.storyEvents}`);
   else bad('故事线变体数量不符', JSON.stringify({ ev: last.storyEvents, pet: last.linePets }));
   if (last.eventsSeen > 0) ok('新增事件池在 30 天内被真实触发', `累计 ${last.eventsSeen} 次随机事件`);
   else console.log('  · 推演期内未触发随机事件（随机性，非缺陷）');

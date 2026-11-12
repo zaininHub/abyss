@@ -407,8 +407,8 @@ test('E3 红包数值回归数据表单一真源', () => {
 });
 
 test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
-  assert.equal(CHAPTERS.length, 46);
-  assert.equal(EVENTS.length, 74);
+  assert.equal(CHAPTERS.length, 51); // v3.12.9 并行审查内容扩充：46→51 章
+  assert.equal(EVENTS.length, 82);    // v3.12.9：74→82 事件
   assert.equal(BALANCE.researchUpgs.length, 68);
   assert.equal(BALANCE.miles.length, 16);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
