@@ -383,7 +383,7 @@ export function renderReligionPanel(container) {
       <button class="btn ${cost === null || (S.faith || 0) < cost ? 'disabled' : ''}" data-religion-seal="1"
         title="消耗 FP 升级；等级上限随资源点解锁提升">${cost === null ? `已达上限（解锁更多资源点）` : `升级（${fmt(cost)} FP）`}</button>
     </div>
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(3)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 本级 -${fmt(templeEpPerUnit() * TEMPLE.faithPerSec)} EP/s · 总计 +${(faithDrainPerSec() / Math.max(1, templeEpPerUnit())).toFixed(2)} FP/s -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">信仰圣所（只产信仰 · 每级 +${TEMPLE.faithPerSec.toFixed(3)} FP/s · 单位 FP ${fmt(templeEpPerUnit())} EP · 当前 -${fmt(faithDrainPerSec())} EP/s）${(S.religion && S.religion.templeOff) ? `<span style="color:var(--text-3)"> · 已关闭（停止产出/不消耗 EP）</span>` : ''}</div>
     <div class="religion-seal-row">
       <span>Lv.${templeLv}</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
