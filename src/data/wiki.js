@@ -2,7 +2,7 @@
 // v3.1.1 反馈⑥：定位升级为「玩家手册 + 研发手册」——全部章节无条件展示（不管是否解锁），
 // 各资源/特殊建筑/功能点写明解锁条件；版本机制变更后同步更新本文件
 import { S } from '../state.js';
-import { BALANCE } from './balance.js';
+import { BALANCE, FP_BALANCE } from './balance.js';
 import { MOOD_MULT } from './threads.js'; // v3.6.3 ⑥：心情倍率文案改读数据源，消除硬编码漂移
 import { PRAISE, SECRET_SANCTUMS, RELIGIONS, sealMaxLevel, faithCap, devotionMult, transcendCost } from './religions.js';
 import { POLICY_GROUPS } from './policies.js';
@@ -132,7 +132,8 @@ export const WIKI_SECTIONS = [
     <ul>
       <li>赞颂转化率 = 1 + 0.25 × 超验层级²</li>
       <li>虔诚全局加成 = √虔诚 × ${PRAISE.devPerSqrt}（软上限 +${PRAISE.devSoftCap*100}%，超 ${PRAISE.devSoftAfter} 衰减 50%；黑曜圣所 +10%/座）</li>
-      <li>信仰容量 = ${faithCap()}（圣所×50 + 圣印×20 + 虚空祭坛 ×1.5/座）</li>
+      <li>信仰容量 = ${faithCap()}（基础 ${FP_BALANCE.capBase} + 誓约圣龛首级 +${FP_BALANCE.capPerVaultLv}、逐级 +${Math.round((FP_BALANCE.capVaultGrowth - 1) * 100)}% + 圣印×${FP_BALANCE.sealCapPerLv} + 虚空祭坛 ×1.5/座）</li>
+      <li>节奏口径：圣所每级 +${FP_BALANCE.ratePerTempleLv} FP/s，上限按「同等级约 ${FP_BALANCE.targetFillSec / 3600} 小时产出」标定；单位 FP 的 EP 消耗不变，攒够升级价格需要时间</li>
     </ul>
     <h4>隐密圣学（跨周期保留，解锁科技每轮重研）</h4>
     ${SECRET_SANCTUMS.map(s => `<p>· <b>${s.name}</b>（超验 ≥${s.needTranscend}，虔诚门槛 ${s.devGate}）：${s.desc}</p>`).join('')}

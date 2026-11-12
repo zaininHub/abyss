@@ -167,6 +167,47 @@ try {
     };
   });
 
+  // v3.12.10 ②：1/2/3 级分别显 1/2/3 条触手（完整快照 + finally 恢复）
+  const tiers = await page.evaluate(() => {
+    const S = window.S, D = window.__gameDirty;
+    const deco = document.getElementById('tentacle-deco');
+    const saved = S.buildings && S.buildings.abyss_fishbowl;
+    const read = () => ({
+      display: getComputedStyle(deco).display,
+      shown: [...deco.querySelectorAll('.td-arm')]
+        .filter(a => getComputedStyle(a).display !== 'none').length,
+    });
+    const out = [];
+    try {
+      S.buildings = S.buildings || {};
+      for (const lv of [0, 1, 2, 3]) {
+        S.buildings.abyss_fishbowl = lv;
+        D.all = true; window.__qa.sim.render();
+        out.push({ lv, ...read() });
+      }
+      return { ok: true, out };
+    } catch (e) { return { ok: false, reason: String(e).slice(0, 120) }; }
+    finally {
+      S.buildings.abyss_fishbowl = saved;
+      D.all = true; window.__qa.sim.render();
+    }
+  });
+
+  // v3.12.10 ②：点击条带必须给出可见反馈（静态反馈在无障碍降级模式下同样生效）
+  const tapProbe = await page.evaluate(async () => {
+    const deco = document.getElementById('tentacle-deco');
+    const rim = deco.querySelector('.td-rim');
+    const read = () => ({ tap: deco.classList.contains('tap'), filter: getComputedStyle(deco).filter,
+      rim: getComputedStyle(rim).stroke, anim: getComputedStyle(deco.querySelector('.td-arm')).animationName });
+    const before = read();
+    document.getElementById('tentacle-tap-zone').click();
+    await new Promise(r => setTimeout(r, 130));
+    const during = read();
+    await new Promise(r => setTimeout(r, 700));
+    const after = read();
+    return { before, during, after };
+  });
+
   // hover 后校验自定义气泡（原生 title 已移除，不能双弹窗）
   await page.hover('#wage-help-zone');
   const hoverTip = await page.evaluate(() => {
@@ -269,13 +310,27 @@ try {
   // ⑭
   const d = R.item14;
   const h = parseFloat(d.decoH), gh = parseFloat(d.gazeH);
-  // v3.12.1 ②③：凝视上移为 HUD 徽记（不再 56px 同高，且已改为可点击彩蛋 pointer-events:auto），
+  // v3.12.10 ②：条带压缩到 32px；v3.12.1 ②③：凝视上移为 HUD 徽记（可点击彩蛋 pointer-events:auto），
   // 许愿池改浮窗后右侧留白全部回收
-  if (d.cssVar === '56px' && h === 56 && gh > 0 && d.decoPointer === 'none'
+  if (d.cssVar === '32px' && h === 32 && gh > 0 && d.decoPointer === 'none'
       && d.gazePointer === 'auto' && d.appPadRight === '8px' && d.tapZone)
-    ok('⑭ 触手独占 56px 底部条带、凝视上移、四列铺满',
+    ok('⑭ 触手独占 32px 底部条带、凝视上移、四列铺满',
       `触手 ${d.decoH}×${d.decoW} / 凝视 ${d.gazeH} / padding-right ${d.appPadRight} / bottom ${d.appPadBottom}`);
   else bad('⑭ 底部动画或页面宽度异常', JSON.stringify(d));
+
+  const tr = tiers.out || [];
+  if (tiers.ok && tr.length === 4 && tr[0].display === 'none'
+      && tr[1].shown === 1 && tr[2].shown === 2 && tr[3].shown === 3)
+    ok('⑭ 鱼缸 1/2/3 级分别显 1/2/3 条触手（0 级整块隐藏）',
+      tr.map(x => `Lv.${x.lv}:${x.display === 'none' ? '隐藏' : x.shown + ' 条'}`).join(' / '));
+  else bad('⑭ 触手等级显隐矩阵异常', JSON.stringify(tiers));
+
+  const tp = tapProbe;
+  if (!tp.before.tap && tp.during.tap && /brightness/.test(tp.during.filter)
+      && tp.during.rim !== tp.before.rim && !tp.after.tap)
+    ok('⑭ 点击条带有可见反馈（提亮 + 冷光转青，600ms 后复位）',
+      `静态 ${tp.before.rim} → 点击 ${tp.during.rim} / ${tp.during.filter.slice(0, 42)}`);
+  else bad('⑭ 触手点击反馈异常', JSON.stringify(tp));
 
   // ⑮
   const e = R.item15;

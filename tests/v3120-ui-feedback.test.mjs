@@ -148,14 +148,14 @@ test('C4 底部装饰 / 页面宽度（v3.12.0 ⑭ + v3.12.1 ②③ 随设计更
   const css = src('src/style.css');
   const html = src('index.html');
   const gaze = src('src/modules/abyssGaze.js');
-  assert.ok(css.includes('--bottom-deco-h: 56px'), '底部条带高度变量');
+  assert.ok(css.includes('--bottom-deco-h: 32px'), 'v3.12.10 ②：底部条带压缩到 32px');
   assert.ok(css.includes('.tentacle-deco {') && css.includes('pointer-events: none'), '触手不阻挡');
   // v3.12.1 ②：凝视不再与触手同高，改为挂到系统按钮行的 HUD 徽记
   assert.ok(gaze.includes('.sys-btns') && gaze.includes('position:relative'), '凝视上移、离开底部条带');
-  assert.ok(html.includes('viewBox="0 0 1200 56"'), '触手改横向低矮形态');
+  assert.ok((html.match(/viewBox="0 0 140 32"/g) || []).length === 3, '三条独立、不横向拉伸的触手 SVG');
   assert.ok(html.includes('tentacle-tap-zone'), '点击彩蛋迁移到不遮挡的专用热区');
   // v3.12.1 ③：许愿池改可收起/可拖动浮窗，右侧 112px 留白全部回收
-  assert.ok(css.includes('padding: 10px 8px 62px 8px'), '四列铺满视口宽度');
+  assert.ok(css.includes('padding: 10px 8px 38px 8px'), '四列铺满视口宽度，底部让位 32px 条带');
 });
 
 test('C5 反馈⑯：薪资四态说明整块触发', () => {

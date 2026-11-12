@@ -16,6 +16,26 @@ const aPct = (key, value) => Math.round((key === 'globalMul' ? value - 1 : value
 const aGain = (key, value) => ({ fx: { key, value }, desc: `每级全局产出 +${aPct(key, value)}%` });
 const aBase = (key, value) => aPct(key, value) * A_UNIT_PRICE;
 
+// ===== v3.12.10 ③：资源节奏基准（先落在 FP，后续资源沿用同一口径）=====
+// 玩家口径：获取速度谨慎 · 购买价格要累计一段时间才够 · 上限 ≈ 同等级 1 小时产出满仓。
+// 推导（同等级 = 圣所 Lv.n 与誓约圣龛 Lv.n）：
+//   中盘有效乘区按 5× 估，圣所每级 0.01 FP/s → 同等级 1 小时产出 = 0.01 × 3600 × 5 = 180 FP，
+//   正好是「誓约圣龛」每级新增的容量。首级 100 + 180 = 280，乘区 5~8× 时约 1.0~1.6 小时满仓；
+//   旧值（0.05 FP/s、+50/级）在同样乘区下只有 6~11 分钟就满仓，FP 升级价格却要几千点，
+//   于是「获取 / 上限扩容 / FP 升级」三条速度完全脱节。
+// 「1 小时」是中盘（乘区 5~8×）的锚点：前期乘区低会慢于 1 小时，这符合「获取速度谨慎」；
+//   终局乘区极高时仍会短于 1 小时，若要全程锁死需让上限随有效产出动态联动（会随研究/政策跳变并钳余额），
+//   本轮刻意不做，保留上限只由「誓约圣龛」逐级购买决定的可预期性。
+export const FP_BALANCE = Object.freeze({
+  targetFillSec: 3600,        // 上限目标：约 1 小时产出
+  referenceRateMult: 5,       // 中盘有效乘区参考值（研究 / 遗物 / 政策 / 班组叠加）
+  ratePerTempleLv: 0.01,      // 原 0.05 → 降低获取速度
+  capBase: 100,
+  capPerVaultLv: 180,         // 原 50 → 提高购买上限所加的值 = rate × 3600 × referenceRateMult
+  capVaultGrowth: 1.15,       // 与其它仓库一致：逐级 +15%
+  sealCapPerLv: 20,
+});
+
 export const BALANCE = {
   // 初始与前期
   initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）

@@ -15,26 +15,33 @@ const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
 const schema = readFileSync(new URL('../src/core/stateSchema.js', import.meta.url), 'utf8');
 
 // ===== ① 触手 =====
-// v3.12.0 反馈⑭：触手由「右下角竖立章鱼触手」改为「56px 横向低矮卷须底部条带」，
-// 旧断言（贝塞尔折点 / 描边色值 / steps(6) 六帧抽摆）编码旧形态，改校验新形态不变量。
-// v3.12.7 ①：横向卷须认不出是触手 → 重画为「从底边升起的章鱼臂」：
-//   四段递减粗细 + 吸盘 + 竖向渐变；旧「td-base / td-mid-* 三层横向描边」断言按设计变更替换。
+// v3.12.10 ②：触手整体重做——1/2/3 级依次 1/2/3 条、条带压缩到 32px、
+//   三条独立的 140×32 SVG（不再横向拉伸）、填充式锥形剪影 + 吸盘 + 冷光边缘。
+//   旧断言（1200×56 viewBox / 四段描边宽度 / 竖向渐变）编码旧形态，按设计变更替换成结构不变量。
 const gaze = readFileSync(new URL('../src/modules/abyssGaze.js', import.meta.url), 'utf8');
-// v3.12.8 ②：臂身调粗（32/23/15/7）后，断言改为校验「四段递减」这一结构不变量，
-//   不再硬编码具体像素，免得每次调粗细都要改测试。
-const armWidths = [...css.matchAll(/\.td-arm-([123]) \{ stroke: url\(#td-grad-arm\); stroke-width: ([\d.]+); \}/g)]
-  .map(m => ({ i: +m[1], w: +m[2] })).sort((a, b) => a.i - b.i).map(x => x.w);
-rec('V1 章鱼臂：四段递减粗细的臂 + 沿线吸盘',
-  html.includes('viewBox="0 0 1200 56"') && html.includes('class="td-arm-1"') && html.includes('class="td-arm-4"')
-  && html.includes('class="td-suck"') && armWidths.length === 3
-  && armWidths[0] > armWidths[1] && armWidths[1] > armWidths[2]
-  && /\.td-arm-4 \{ stroke: #c4b5fd/.test(css), `widths=${armWidths.join('/')}`);
-rec('V1 触手无棱角折线（弃用 L 阶梯折线）', !html.includes('L30 106 L46 100 L41 84 L56 70') && !html.includes('L95 104 L112 98'), '');
-rec('V1 竖向渐变着色臂身（底暗紫 → 尖端亮紫）', html.includes('id="td-grad-arm"') && html.includes('gradientUnits="userSpaceOnUse"') && css.includes('.td-suck { fill: rgba(240, 219, 255, .5); }'), '');
-// v3.12.1 反馈②：凝视上移到系统按钮行（HUD 徽记），56px 底部条带由触手独占；旧「同高」断言已过期
-rec('V1 触手独占 56px 底部条带，凝视已上移且不阻挡页面', css.includes('--bottom-deco-h: 56px') && css.includes('pointer-events: none') && gaze.includes('.sys-btns') && gaze.includes('position:relative') && html.includes('tentacle-tap-zone'), '');
-// v3.12.7 ①：点击热区必须与触手同宽，否则「点触手没反应」
-rec('V1 触手点击热区铺满底部条带', css.includes('.tentacle-tap-zone {') && /\.tentacle-tap-zone \{[^}]*width: 100%/.test(css), '');
+const armCount = (html.match(/class="td-arm tentacle-/g) || []).length;
+const svgCount = (html.match(/viewBox="0 0 140 32"/g) || []).length;
+rec('V1 三条独立、不拉伸的锥形剪影臂 + 沿线吸盘',
+  armCount === 3 && svgCount === 3
+  && (html.match(/class="td-body"/g) || []).length === 3
+  && (html.match(/class="td-suck"/g) || []).length >= 15
+  && html.includes('preserveAspectRatio="xMidYMax meet"') && !html.includes('preserveAspectRatio="none"')
+  && html.includes('class="td-rim"') && html.includes('class="td-glint"'),
+  `arms=${armCount} svg=${svgCount}`);
+rec('V1 鱼缸 1/2/3 级显 1/2/3 条（隐藏臂不占位，可见臂自动居中）',
+  css.includes('.td-arm.tentacle-b, .td-arm.tentacle-c { display: none; }')
+  && css.includes('.tentacle-deco.tentacle-2 .td-arm.tentacle-b')
+  && css.includes('.tentacle-deco.tentacle-3 .td-arm.tentacle-c')
+  && css.includes('justify-content: center'), '');
+rec('V1 条带压到 32px、凝视上移、装饰不阻挡页面',
+  css.includes('--bottom-deco-h: 32px') && css.includes('pointer-events: none')
+  && gaze.includes('.sys-btns') && gaze.includes('position:relative')
+  && html.includes('tentacle-tap-zone'), '');
+rec('V1 触手点击热区铺满底部条带',
+  css.includes('.tentacle-tap-zone {') && /\.tentacle-tap-zone \{[^}]*width: 100%/.test(css), '');
+rec('V1 点击动画一次性轻抬 + 冷光转青（不再有常驻 glow）',
+  css.includes('@keyframes td-tap') && css.includes('.tentacle-deco.tap .td-glint')
+  && css.includes('.tentacle-deco.tap .td-rim') && !css.includes('tentacleGlow'), '');
 
 // ===== ② AI 激活按钮 =====
 rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP

@@ -130,7 +130,7 @@ const popDisplay = page => page.evaluate(() => getComputedStyle(document.querySe
   else bad('② 凝视仍在底部', JSON.stringify(gaze));
   if (gaze && tent && gaze.bottom <= tent.y + 0.5) ok('② 凝视与触手不再重叠', `凝视底 ${Math.round(gaze.bottom)} ≤ 触手顶 ${Math.round(tent.y)}`);
   else bad('② 仍与触手重叠', JSON.stringify({ gaze, tent }));
-  if (tent && tent.y >= vh - 60 && Math.abs(tent.h - 56) < 0.5 && tent.pointer === 'none') ok('② 触手效果原样保留（56px 全宽底部条带、不接指针）', `y=${Math.round(tent.y)} h=${Math.round(tent.h)}`);
+  if (tent && tent.y >= vh - 40 && Math.abs(tent.h - 32) < 0.5 && tent.pointer === 'none') ok('② 触手条带压缩到 32px、全宽、不接指针', `y=${Math.round(tent.y)} h=${Math.round(tent.h)}`);
   else bad('② 触手被改动', JSON.stringify(tent));
   if (gaze && gaze.pointer === 'auto' && gaze.z === 0) ok('② 凝视已支持点击交互（pointer-events:auto、无额外层级）');
   else bad('② 凝视点击交互异常', JSON.stringify(gaze));

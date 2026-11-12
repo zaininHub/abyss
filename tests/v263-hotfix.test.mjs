@@ -26,7 +26,7 @@ rec('V2 AI 面板混沌心智生效提示（开关区不再渲染）', ai.includ
 
 // ③ 触手协议动画
 rec('V3 触手触发拍动动画 class（tap）', main.includes("deco.classList.add('tap')") && main.includes("clearTimeout(S._tentacleTapTimer)"), '');
-rec('V3 tap 动画样式（steps 拍动 + 错峰延迟）', css.includes('.tentacle-deco.tap .tentacle') && css.includes('tentacle-tap .45s steps(3, end)') && css.includes('.tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }'), '');
+rec('V3 tap 动画样式（一次性轻抬 + 冷光 + 错峰延迟）', css.includes('.tentacle-deco.tap .td-arm') && css.includes('@keyframes td-tap') && css.includes('.tentacle-deco.tap .td-glint') && css.includes('animation-delay: .04s !important'), '');
 
 const failed = results.filter(r => !r.ok);
 console.log(`\n===== v2.6.3 三项反馈源码断言：${results.length - failed.length}/${results.length} 通过 =====`);

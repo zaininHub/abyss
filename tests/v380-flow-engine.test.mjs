@@ -148,9 +148,9 @@ test('C1 四条策略、四个倍率键，增益与代价成对', () => {
   const ids = new Set();
   for (const m of orch.ORCHESTRATION_MODES) {
     ids.add(m.id);
-    // v3.12.8 ④：均衡编排不再配说明文案（用户要求删掉「没有增益，也没有代价」那句）
+    // v3.12.10 ①：全部策略解释文案删除，取舍只由卡面四条倍率表达
     assert.ok(m.name && typeof m.desc === 'string' && m.icon && m.short, `${m.id} 缺展示字段`);
-    if (m.id !== 'balanced') assert.ok(m.desc.length > 0, `${m.id} 缺策略说明`);
+    assert.equal(m.desc, '', `${m.id} 不应再带说明文案`);
     for (const k of orch.ORCHESTRATION_KEYS) {
       assert.ok(Number.isFinite(m.effects[k]) && m.effects[k] > 0, `${m.id}.${k} 非法`);
     }

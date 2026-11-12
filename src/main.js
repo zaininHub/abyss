@@ -131,7 +131,7 @@ function renderOrchestrationPanel() {
 
   // v3.12.8 ④：策略描述按需渲染——「均衡编排」无增益无代价，不再补一句说明文字。
   let html = `<div style="color:var(--text-2);font-size:11.5px;line-height:1.6;margin-bottom:8px">
-    当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}${active.desc ? '<br><span style="color:var(--text-3)">' + active.desc + '</span>' : ''}</div>`;
+    当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}</div>`;
 
   html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">`;
   for (const m of ORCHESTRATION_MODES) {

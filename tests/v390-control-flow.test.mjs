@@ -340,7 +340,8 @@ test('D7 四档策略四键数值正确，且增益与代价成对', () => {
   assert.deepEqual([...orch.ORCHESTRATION_KEYS], ['ep', 'rp', 'pt', 'dm']);
   assert.deepEqual(orch.ORCHESTRATION_MODES.map(m => m.id), ['balanced', 'output', 'research', 'abyss']);
   const ab = orch.ORCHESTRATION_MODES.find(m => m.id === 'abyss');
-  assert.ok(ab && ab.name && ab.icon && ab.short && ab.desc);
+  assert.ok(ab && ab.name && ab.icon && ab.short);
+  assert.equal(ab.desc, '', 'v3.12.10 ①：策略解释文案已全部删除');
   assert.deepEqual(ab.effects, { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 });
   for (const m of orch.ORCHESTRATION_MODES) {
     if (m.id === 'balanced') continue;

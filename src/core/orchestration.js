@@ -25,19 +25,17 @@ export const TIDE_PHASE_NAMES = Object.freeze(['涨潮', '平潮', '退潮', '�
 // v3.12.8：按反馈删除「值守编排(vigil)」与「潮汐级联(cascade)」两档，策略回到四档
 //   （均衡 / 产能 / 研究 / 深渊）。旧档里 mode 或排班表残留这两个 id 时，
 //   orchestrationState / orchestrationSchedule 自动回落到安全值，不会放大数值。
+// v3.12.10 ①：按反馈删除全部策略解释文案。取舍由卡面四条倍率直接表达，
+//   desc 统一为空串（保留字段供旧档/测试读取），面板不再渲染说明行。
 export const ORCHESTRATION_MODES = Object.freeze([
   { id: 'balanced', name: '均衡编排', icon: '◈', short: '均衡',
-    desc: '',
-    effects: { ep: 1, rp: 1, pt: 1, dm: 1 } },
+    desc: '', effects: { ep: 1, rp: 1, pt: 1, dm: 1 } },
   { id: 'output', name: '产能优先', icon: '▲', short: '产能',
-    desc: '把算力压到基础产出上：EP 更旺，但蒸馏、孵化与探采都慢下来。',
-    effects: { ep: 1.25, rp: 0.80, pt: 0.85, dm: 0.90 } },
+    desc: '', effects: { ep: 1.25, rp: 0.80, pt: 0.85, dm: 0.90 } },
   { id: 'research', name: '研究优先', icon: '◇', short: '研究',
-    desc: '腾出带宽做推演：RP 蒸馏更快，代价是 EP 与孵化略微收窄。',
-    effects: { ep: 0.92, rp: 1.40, pt: 0.92, dm: 1 } },
+    desc: '', effects: { ep: 0.92, rp: 1.40, pt: 0.92, dm: 1 } },
   { id: 'abyss', name: '深渊优先', icon: '◆', short: '深渊',
-    desc: '把管线接到裂隙一侧：孵化与探采大幅提速，基础产出相应让位。',
-    effects: { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 } },
+    desc: '', effects: { ep: 0.88, rp: 0.92, pt: 1.40, dm: 1.25 } },
 ]);
 
 const MODE_BY_ID = new Map(ORCHESTRATION_MODES.map(m => [m.id, m]));

@@ -16,7 +16,8 @@
   --good: #3fb950;
   --bad: #f85149;
   --warn: #d29922;
-  --bottom-deco-h: 56px; /* v3.12.0 反馈⑭：底部装饰条高度（触手）；v3.12.1 ② 凝视已上移到系统按钮行，不再占底部条带 */
+  /* v3.12.10 ②：底部装饰条 56px → 32px —— 压缩触手高度，把 24px 还给主面板 */
+  --bottom-deco-h: 32px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1093,8 +1094,8 @@ body.paused .pet-grid .pet-card {
     flex-direction: column;
     overflow: hidden;
     /* v3.12.1 反馈③：许愿池改为可拖动 / 可收起的顶层浮窗，不再需要右侧固定留白，
-       原 112px 全部回收给四列 → 页面平铺满视口宽度；底部 62px 仍为 56px 触手条带 + 6px 余量。 */
-    padding: 10px 8px 62px 8px;
+       原 112px 全部回收给四列 → 页面平铺满视口宽度；v3.12.10 ② 底部 38px = 32px 触手条带 + 6px 余量。 */
+    padding: 10px 8px 38px 8px;
   }
   .topbar { flex: 0 0 auto; }
   .ch-bar { flex: 0 0 auto; }
@@ -1233,51 +1234,52 @@ body.paused .pet-grid .pet-card {
 }
 .proj { user-select: none; }
 
-/* v3.12.0 反馈⑭：触手为 56px 全宽底部条带——平铺在页面预留的底部空白内，
-   pointer-events:none 不阻挡上方四列。
-   v3.12.7 ①：原「横向卷须」看不出是触手，重画为从底边升起的章鱼臂——
-   每条臂由四段递减粗细的圆头路径叠成锥形（26→17→10→4.5），沿线布吸盘，
-   底暗紫、尖端亮紫的竖向渐变；摆动幅度收到 1.6px / .22deg（原来 3px / .4deg）。 */
+/* ===== v3.12.10 ②：底部触手（重做）=====
+   设计口径：装饰严格服从信息层。条带压到 32px，只露 1~3 条低矮的锥形臂。
+   旧版用单个 viewBox + preserveAspectRatio="none" 横向拉伸粗描边，宽屏下臂被拉成斜线，
+   再叠一层青色 glow 动画，观感廉价；现在改成三条各自独立的 140×32 SVG，形状永不失真。
+   鱼缸 1/2/3 级依次显示 1/2/3 条：隐藏项 display:none，flex 会把可见臂自动重新居中。 */
 .tentacle-deco {
   position: fixed; left: 0; right: 0; bottom: 0;
-  width: 100%; height: var(--bottom-deco-h, 56px);
+  width: 100%; height: var(--bottom-deco-h, 32px);
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
-  opacity: .84;
-  filter: drop-shadow(0 0 7px rgba(168, 85, 247, .26));
+  background: linear-gradient(180deg, rgba(18,7,36,0) 0%, rgba(24,9,48,.30) 55%, rgba(15,6,32,.82) 100%);
+  transition: filter .2s ease-out;
 }
-.tentacle-deco svg { display: block; width: 100%; height: 100%; overflow: hidden; }
-.tentacle-deco path { fill: none; stroke-linecap: round; }
-.tentacle-deco .td-arm-1 { stroke: url(#td-grad-arm); stroke-width: 32; }
-.tentacle-deco .td-arm-2 { stroke: url(#td-grad-arm); stroke-width: 23; }
-.tentacle-deco .td-arm-3 { stroke: url(#td-grad-arm); stroke-width: 15; }
-.tentacle-deco .td-arm-4 { stroke: #c4b5fd; stroke-width: 7; }
-.tentacle-deco .td-suck { fill: rgba(240, 219, 255, .5); }
-.tentacle-deco .td-glow-rim { stroke: rgba(77, 208, 225, .55); stroke-width: 1.4; }
-/* transform-box: fill-box —— 让每条臂绕自己的根部摆动；默认用整个 viewBox 作参照，
-   会让所有臂像一块板子一起倾斜（旧版「看不出是触手」的观感来源之一）。 */
-.tentacle-deco .tentacle {
-  transform-box: fill-box;
+.td-arms {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: clamp(40px, 12vw, 190px);
+}
+.td-arm {
+  flex: 0 0 auto; width: 140px; height: 100%;
   transform-origin: 50% 100%;
-  animation: tentacle-sway 7s ease-in-out infinite;
+  animation: td-sway 9s ease-in-out infinite;
 }
-.tentacle-deco .tentacle-b { animation-duration: 9s; animation-delay: .8s; }
-.tentacle-deco .tentacle-c { animation-duration: 11s; animation-delay: 1.6s; }
-.tentacle-deco .tentacle-b { opacity: 0; }
-.tentacle-deco.tentacle-2 .tentacle-b, .tentacle-deco.tentacle-3 .tentacle-b { opacity: .88; }
-.tentacle-deco .tentacle-c { opacity: 0; }
-.tentacle-deco.tentacle-3 .tentacle-c { opacity: .82; }
-@keyframes tentacle-sway {
-  0%, 100% { transform: translateY(0) rotate(-.22deg); }
-  50%      { transform: translateY(-1.6px) rotate(.22deg); }
+.td-arm svg { display: block; width: 100%; height: 100%; }
+.td-arm.tentacle-b { animation-duration: 11s; animation-delay: -3s; }
+.td-arm.tentacle-c { animation-duration: 13s; animation-delay: -6s; }
+.td-arm.tentacle-b, .td-arm.tentacle-c { display: none; }
+.tentacle-deco.tentacle-2 .td-arm.tentacle-b,
+.tentacle-deco.tentacle-3 .td-arm.tentacle-b,
+.tentacle-deco.tentacle-3 .td-arm.tentacle-c { display: block; }
+.td-body  { opacity: .92; } /* fill 由每个 SVG 内联渐变给出，臂形才有明暗层次 */
+.td-sheen { fill: #f0dcff; opacity: .10; }
+.td-rim   { fill: none; stroke: #e2caff; stroke-width: 1.1; opacity: .46; stroke-linecap: round; stroke-linejoin: round;
+            transition: stroke .18s ease-out, opacity .18s ease-out; }
+.td-suck  { fill: #f3e6ff; opacity: .52; }
+.td-tip   { fill: #ead5ff; opacity: .72; }
+.td-glint { fill: #9be7ee; opacity: 0; transform-box: fill-box; transform-origin: center; }
+@keyframes td-sway {
+  0%, 100% { transform: translateY(0) rotate(-.35deg); }
+  50%      { transform: translateY(-1px) rotate(.35deg); }
 }
-/* 点击彩蛋热区：v3.12.7 ① 铺满整条底部条带（原来只有右下 120×56）——
-   玩家点的是眼睛看到的触手，热区必须与触手同宽，否则「点了没反应」。
-   条带本身在 #app padding-bottom 预留的空白里，铺满不会压住任何面板。 */
+/* 点击彩蛋热区：与条带同宽同高，32px 仍 ≥24px 原生点击目标下限。 */
 .tentacle-tap-zone {
   position: fixed; left: 0; right: 0; bottom: 0;
-  width: 100%; height: var(--bottom-deco-h, 56px);
+  width: 100%; height: var(--bottom-deco-h, 32px);
   z-index: 2; pointer-events: auto; cursor: pointer;
 }
 
@@ -1335,19 +1337,24 @@ body.paused .pet-grid .pet-card {
 .rift-upg-row .btn { flex-shrink: 0; }
 #rift-tab-panel .btn.disabled { opacity: .45; cursor: not-allowed; }
 
-/* v2.6.3 反馈③：触手协议触发拍动动画（叠加于常驻摆动）
-   v3.12.7 ①：幅度收到 3px、只播一次——原来 infinite 会让整条触手连续跳 600ms，观感是「抖」。 */
-.tentacle-deco.tap .tentacle { animation: tentacle-tap .45s steps(3, end) !important; }
-.tentacle-deco.tap .tentacle-b { animation-delay: 0.05s; }
-.tentacle-deco.tap .tentacle-c { animation-delay: 0.1s; }
-/* v3.12.8 ②：点击反馈加强——整组先亮一下再弹起再落回（原来只有 3px 位移，几乎看不到）。
-   位移/旋转放大到 9px / 1.1deg，并叠加一层紫色辉光；0.45s 三拍结束，不干扰挂机视觉。 */
-.tentacle-deco { transition: filter .18s ease-out; }
-.tentacle-deco.tap { filter: drop-shadow(0 0 12px rgba(176, 108, 245, .62)) brightness(1.22); }
-@keyframes tentacle-tap {
-  0%, 100% { transform: translateY(0) rotate(0deg) scaleY(1); }
-  33% { transform: translateY(-9px) rotate(-1.1deg) scaleY(1.06); }
-  66% { transform: translateY(-3px) rotate(1.1deg) scaleY(1.02); }
+/* v3.12.10 ②：点击反馈——整组轻抬一次、边缘冷光转青、尖端一点闪光，0.5s 内收敛。
+   只动 transform / opacity / filter，符合「克制动效」口径；.tap 由 main.js 在 600ms 后摘除。 */
+.tentacle-deco.tap { filter: brightness(1.38) drop-shadow(0 0 8px rgba(139, 224, 232, .38)); }
+.tentacle-deco.tap .td-arm { animation: td-tap .5s cubic-bezier(.16,1,.3,1) 1 !important; }
+.tentacle-deco.tap .td-arm.tentacle-b { animation-delay: .04s !important; }
+.tentacle-deco.tap .td-arm.tentacle-c { animation-delay: .08s !important; }
+.tentacle-deco.tap .td-rim { stroke: #8be0e8; opacity: .82; }
+.tentacle-deco.tap .td-glint { animation: td-glint .5s ease-out 1; }
+@keyframes td-tap {
+  0%   { transform: translateY(0) rotate(0deg); }
+  35%  { transform: translateY(-7px) rotate(-1.1deg) scaleY(1.04); }
+  70%  { transform: translateY(-1px) rotate(.5deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes td-glint {
+  0%   { opacity: 0; transform: scale(.4); }
+  40%  { opacity: .9; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(.8); }
 }
 
 /* ========== v2.7.0 整体页面优化：像素克苏鲁赛博风 ==========
@@ -1389,7 +1396,6 @@ body {
 .group-title { color: var(--text-2); letter-spacing: 1px; font-size: 11px; }
 .item:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
 .modal { backdrop-filter: blur(2px); }
-.tentacle-deco { filter: drop-shadow(0 0 6px rgba(57, 197, 207, 0.35)); }
 .relic-card { transition: border-color .15s, box-shadow .15s; }
 .relic-card:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
 
@@ -1633,13 +1639,7 @@ body {
 /* ========== v2.9.1 impeccable：触手 / 宠物 / 许愿池 / 粒子雨 动画打磨 ==========
    守卫：仅动画 transform/opacity/filter（GPU-only）；prefers-reduced-motion 全部降级；不破坏既有 steps(6) 主摆动断言 */
 
-/* 触手：吸盘呼吸（SVG 内 ellipse fill 由 opacity 脉冲呈现生命感）+ hover 光晕脉冲 */
-.tentacle-deco .tentacle ellipse { animation: tentacleSuckler 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.tentacle-deco .tentacle-b ellipse { animation-delay: .4s; }
-.tentacle-deco .tentacle-c ellipse { animation-delay: .8s; }
-@keyframes tentacleSuckler { 0%,100% { opacity: .85; } 50% { opacity: 1; } }
-.tentacle-deco { animation: tentacleGlow 4s ease-in-out infinite; }
-@keyframes tentacleGlow { 0%,100% { filter: drop-shadow(0 0 5px rgba(77,208,225,.25)); } 50% { filter: drop-shadow(0 0 9px rgba(77,208,225,.45)); } }
+/* v3.12.10 ②：触手的吸盘呼吸 / 青色 glow 与新的克制剪影冲突，已移除。 */
 
 /* 宠物网格卡：icon 呼吸 + hover 3D tilt + 出战态光环 */
 .pet-grid .pet-card .icon { display: inline-block; animation: petIconBreathe 3s ease-in-out infinite; will-change: transform; }
@@ -1696,7 +1696,8 @@ body {
 
 /* v2.9.1 统一降级：所有装饰动画在 reduced-motion 下停止/收敛 */
 @media (prefers-reduced-motion: reduce) {
-  .tentacle-deco, .tentacle-deco .tentacle ellipse, .tentacle-deco .tentacle,
+  .tentacle-deco .td-arm, .tentacle-deco .td-glint,
+  .tentacle-deco.tap .td-arm, .tentacle-deco.tap .td-glint,
   .pet-grid .pet-card .icon, .pet-grid .pet-card.on::after,
   .pet-float .pet-item::before,
   .wish-water, .wish-well.win::after, .wish-well, .pet-float .pet-item, .farewell-gift {

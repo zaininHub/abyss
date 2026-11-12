@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v3.12.9</title>
+<title>深渊效能工作台 v3.12.10</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -290,73 +290,67 @@
   <!-- 浮动异兽 -->
   <div id="pet-float" class="pet-float"></div>
 
-  <!-- v3.12.8 ②：触手收敛到 4 条（鱼缸 1 级 3 条 / 2 级起 4 条；3 级不再加第五条）——
-       每条臂仍是四段递减粗细的圆头叠成锥形 + 沿线吸盘，底暗紫到尖端亮紫的竖向渐变。
-       点击热区（#tentacle-tap-zone）与条带同宽，点任意位置都会触发整组拍动（幅度见 style.css 的 tentacle-tap）。 -->
+  <!-- v3.12.10 ②：底部触手重做——鱼缸 1/2/3 级依次显 1/2/3 条，条带 56px → 32px。
+       三条臂是各自独立的 140×32 SVG（不随视口横向拉伸），填充式锥形剪影 + 内侧微光 + 稀疏吸盘，
+       由 .td-arms 的 flex 居中排布；隐藏的臂用 display:none，可见臂自动重新居中。
+       点击热区仍铺满整条底带，点任意位置触发整组拍动与冷光。 -->
   <div id="tentacle-deco" class="tentacle-deco" style="display:none" aria-hidden="true">
-    <svg viewBox="0 0 1200 56" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="td-grad-arm" x1="0" y1="56" x2="0" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#170533"/>
-          <stop offset="38%" stop-color="#3f1178"/>
-          <stop offset="72%" stop-color="#6d28d9"/>
-          <stop offset="100%" stop-color="#b06cf5"/>
-        </linearGradient>
-      </defs>
-    <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M168 58 C 172.7 52.8 172.9 49.8 181.7 42.6"/>
-      <path class="td-arm-2" d="M181.7 42.6 C 193.2 33.2 189.5 36.5 201.9 30.3"/>
-      <path class="td-arm-3" d="M201.9 30.3 C 218.1 22.2 213.2 24.6 229.3 18.8"/>
-      <path class="td-arm-4" d="M229.3 18.8 C 250.4 11.2 255.0 10.8 264 8"/>
-      <circle class="td-suck" cx="176.3" cy="51.8" r="2.60"/>
-      <circle class="td-suck" cx="183.1" cy="44.1" r="2.42"/>
-      <circle class="td-suck" cx="192.4" cy="37.7" r="2.24"/>
-      <circle class="td-suck" cx="202.5" cy="31.5" r="2.06"/>
-      <circle class="td-suck" cx="215.5" cy="25.7" r="1.88"/>
-      <circle class="td-suck" cx="229.2" cy="20.0" r="1.70"/>
-      <circle class="td-suck" cx="244.4" cy="14.5" r="1.52"/>
-    </g>
-    <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M470 58 C 465.9 53.3 465.7 50.6 458 44.1"/>
-      <path class="td-arm-2" d="M458 44.1 C 447.9 35.6 451.1 38.5 440.3 33"/>
-      <path class="td-arm-3" d="M440.3 33 C 426.2 25.8 430.5 28.0 416.4 22.8"/>
-      <path class="td-arm-4" d="M416.4 22.8 C 397.9 16.0 393.9 15.5 386 13"/>
-      <circle class="td-suck" cx="462.4" cy="52.4" r="2.60"/>
-      <circle class="td-suck" cx="456.4" cy="45.5" r="2.42"/>
-      <circle class="td-suck" cx="448.3" cy="39.7" r="2.24"/>
-      <circle class="td-suck" cx="439.5" cy="34.1" r="2.06"/>
-      <circle class="td-suck" cx="428.1" cy="28.9" r="1.88"/>
-      <circle class="td-suck" cx="416.2" cy="23.8" r="1.70"/>
-      <circle class="td-suck" cx="403.0" cy="18.9" r="1.52"/>
-    </g>
-    <g class="tentacle tentacle-a">
-      <path class="td-arm-1" d="M760 58 C 764.3 52.8 764.4 49.8 772.5 42.6"/>
-      <path class="td-arm-2" d="M772.5 42.6 C 783.1 33.2 779.7 36.5 791.1 30.3"/>
-      <path class="td-arm-3" d="M791.1 30.3 C 806.0 22.2 801.4 24.6 816.2 18.8"/>
-      <path class="td-arm-4" d="M816.2 18.8 C 835.5 11.2 839.7 10.8 848 8"/>
-      <circle class="td-suck" cx="767.8" cy="51.8" r="2.60"/>
-      <circle class="td-suck" cx="774.0" cy="44.1" r="2.42"/>
-      <circle class="td-suck" cx="782.5" cy="37.7" r="2.24"/>
-      <circle class="td-suck" cx="791.8" cy="31.5" r="2.06"/>
-      <circle class="td-suck" cx="803.7" cy="25.7" r="1.88"/>
-      <circle class="td-suck" cx="816.3" cy="20.0" r="1.70"/>
-      <circle class="td-suck" cx="830.1" cy="14.5" r="1.52"/>
-    </g>
-    <g class="tentacle tentacle-b">
-      <path class="td-arm-1" d="M1044 58 C 1040.2 53.2 1040.1 50.4 1032.9 43.8"/>
-      <path class="td-arm-2" d="M1032.9 43.8 C 1023.5 35.1 1026.5 38.2 1016.4 32.5"/>
-      <path class="td-arm-3" d="M1016.4 32.5 C 1003.2 25.1 1007.3 27.3 994.2 22"/>
-      <path class="td-arm-4" d="M994.2 22 C 977.1 15.0 973.3 14.6 966 12"/>
-      <circle class="td-suck" cx="1036.8" cy="52.3" r="2.60"/>
-      <circle class="td-suck" cx="1031.2" cy="45.2" r="2.42"/>
-      <circle class="td-suck" cx="1023.7" cy="39.3" r="2.24"/>
-      <circle class="td-suck" cx="1015.4" cy="33.6" r="2.06"/>
-      <circle class="td-suck" cx="1004.9" cy="28.3" r="1.88"/>
-      <circle class="td-suck" cx="993.8" cy="23.1" r="1.70"/>
-      <circle class="td-suck" cx="981.7" cy="18.0" r="1.52"/>
-    </g>
-    <g class="tentacle tentacle-c"></g>
-    </svg>
+    <div class="td-arms">
+      <div class="td-arm tentacle-a">
+      <svg viewBox="0 0 140 32" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs><linearGradient id="td-grad-0" x1="0" y1="32" x2="0" y2="2" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#41207a"/><stop offset="45%" stop-color="#7142bd"/><stop offset="100%" stop-color="#c39bff"/>
+        </linearGradient></defs>
+        <path class="td-body" fill="url(#td-grad-0)" d="M 79.9 47.6 L 81.5 44.5 L 82.4 41.1 L 82.8 37.7 L 82.4 34.4 L 81.5 31.5 L 80.3 29.1 L 78.9 27.0 L 77.4 25.3 L 75.9 23.8 L 74.2 22.4 L 72.6 21.2 L 71.0 20.1 L 69.3 19.0 L 67.6 18.0 L 66.0 17.1 L 64.3 16.2 L 62.7 15.3 L 61.1 14.5 L 59.6 13.7 L 58.2 12.9 L 56.9 12.1 L 55.6 11.4 L 54.5 10.8 L 53.5 10.2 L 52.7 9.6 L 52.0 9.1 L 51.5 8.7 L 51.1 8.4 L 50.8 8.1 L 50.6 7.8 L 50.6 7.3 L 50.8 6.6 L 51.5 5.8 L 52.5 5.0 L 51.5 3.0 L 50.0 3.6 L 48.7 4.4 L 47.6 5.3 L 46.7 6.4 L 46.1 7.8 L 45.9 9.3 L 46.0 10.8 L 46.3 12.3 L 46.9 13.7 L 47.6 15.1 L 48.4 16.5 L 49.3 17.9 L 50.3 19.3 L 51.4 20.7 L 52.5 22.1 L 53.6 23.5 L 54.8 24.9 L 55.9 26.3 L 57.0 27.7 L 58.1 29.1 L 59.0 30.4 L 59.9 31.7 L 60.6 32.9 L 61.2 34.0 L 61.6 35.1 L 61.7 35.9 L 61.7 36.5 L 61.4 36.9 L 61.0 36.8 L 60.5 36.3 L 60.2 35.4 L 60.0 34.3 L 60.0 33.2 L 60.1 32.4 Z"/>
+        <path class="td-sheen" d="M 75.2 44.0 L 76.3 41.8 L 77.1 39.5 L 77.3 37.1 L 77.2 34.9 L 76.6 32.8 L 75.8 31.0 L 74.8 29.3 L 73.7 27.8 L 72.4 26.5 L 71.1 25.2 L 69.7 24.0 L 68.3 22.9 L 66.8 21.8 L 65.3 20.7 L 63.8 19.6 L 62.3 18.6 L 60.8 17.6 L 59.3 16.6 L 57.9 15.7 L 56.6 14.8 L 55.3 13.9 L 54.1 13.0 L 53.0 12.2 L 52.1 11.4 L 51.3 10.6 L 50.7 9.9 L 50.2 9.2 L 49.9 8.6 L 49.7 8.1 L 49.7 7.5 L 49.9 6.8 L 50.3 6.1 L 51.1 5.3 L 52.3 4.5 L 51.7 3.5 L 50.4 4.2 L 49.2 4.9 L 48.3 5.7 L 47.6 6.7 L 47.2 7.9 L 47.1 9.1 L 47.3 10.3 L 47.7 11.5 L 48.3 12.7 L 49.0 13.9 L 49.9 15.2 L 50.8 16.4 L 51.9 17.6 L 53.0 18.9 L 54.2 20.1 L 55.4 21.4 L 56.7 22.6 L 57.9 23.9 L 59.2 25.2 L 60.4 26.4 L 61.5 27.7 L 62.5 28.9 L 63.5 30.1 L 64.3 31.3 L 65.0 32.4 L 65.5 33.4 L 65.8 34.3 L 66.0 35.0 L 65.9 35.5 L 65.8 35.8 L 65.6 35.9 L 65.4 35.9 L 65.2 35.9 L 64.8 36.0 Z"/>
+        <path class="td-rim" d="M 81.8 40.9 L 82.1 37.6 L 81.7 34.5 L 80.9 31.7 L 79.8 29.3 L 78.4 27.3 L 76.9 25.6 L 75.4 24.1 L 73.9 22.8 L 72.2 21.6 L 70.6 20.4 L 69.0 19.4 L 67.3 18.4 L 65.7 17.4 L 64.1 16.5 L 62.5 15.6 L 60.9 14.7 L 59.4 13.9 L 58.0 13.1 L 56.7 12.4 L 55.4 11.6 L 54.3 10.9 L 53.4 10.3 L 52.5 9.7 L 51.9 9.2 L 51.4 8.8 L 51.0 8.4 L 50.7 8.1 L 50.5 7.8 L 50.5 7.2 L 50.8 6.5 L 51.4 5.7"/>
+        <ellipse class="td-suck" cx="67.0" cy="35.3" rx="2.1" ry="1.7"/>
+        <ellipse class="td-suck" cx="65.0" cy="30.7" rx="1.9" ry="1.5"/>
+        <ellipse class="td-suck" cx="59.6" cy="24.6" rx="1.7" ry="1.3"/>
+        <ellipse class="td-suck" cx="53.4" cy="18.5" rx="1.5" ry="1.2"/>
+        <ellipse class="td-suck" cx="48.6" cy="12.5" rx="1.3" ry="1.0"/>
+        <ellipse class="td-suck" cx="47.8" cy="6.8" rx="1.0" ry="0.8"/>
+        <circle class="td-tip" cx="52.0" cy="4.0" r="1.0"/>
+        <circle class="td-glint" cx="52.0" cy="4.0" r="3.2"/>
+      </svg>
+      </div>
+      <div class="td-arm tentacle-b">
+      <svg viewBox="0 0 140 32" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs><linearGradient id="td-grad-1" x1="0" y1="32" x2="0" y2="2" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#41207a"/><stop offset="45%" stop-color="#7142bd"/><stop offset="100%" stop-color="#c39bff"/>
+        </linearGradient></defs>
+        <path class="td-body" fill="url(#td-grad-1)" d="M 79.4 32.8 L 79.4 33.5 L 79.4 34.4 L 79.2 35.4 L 78.9 36.2 L 78.4 36.6 L 78.1 36.6 L 77.8 36.3 L 77.8 35.6 L 78.1 34.8 L 78.5 33.7 L 79.1 32.6 L 79.8 31.4 L 80.7 30.1 L 81.7 28.8 L 82.7 27.4 L 83.9 26.1 L 85.0 24.7 L 86.2 23.3 L 87.3 21.9 L 88.5 20.6 L 89.5 19.2 L 90.6 17.8 L 91.5 16.4 L 92.3 15.0 L 93.0 13.6 L 93.6 12.2 L 93.9 10.7 L 94.0 9.2 L 93.8 7.8 L 93.2 6.4 L 92.4 5.3 L 91.3 4.4 L 90.0 3.7 L 88.5 3.0 L 87.5 5.0 L 88.5 5.8 L 89.2 6.6 L 89.5 7.3 L 89.4 7.8 L 89.3 8.1 L 89.0 8.4 L 88.6 8.8 L 88.1 9.2 L 87.4 9.7 L 86.6 10.3 L 85.6 10.9 L 84.5 11.6 L 83.3 12.3 L 82.0 13.1 L 80.5 13.9 L 79.0 14.7 L 77.5 15.6 L 75.9 16.4 L 74.3 17.4 L 72.6 18.3 L 71.0 19.3 L 69.3 20.4 L 67.7 21.5 L 66.1 22.7 L 64.5 24.1 L 63.0 25.6 L 61.5 27.3 L 60.2 29.3 L 59.0 31.7 L 58.2 34.5 L 57.9 37.6 L 58.2 40.9 L 59.1 44.2 L 60.6 47.2 Z"/>
+        <path class="td-sheen" d="M 74.9 36.3 L 74.5 36.1 L 74.3 36.0 L 74.1 36.0 L 73.9 35.8 L 73.8 35.5 L 73.8 34.9 L 73.9 34.1 L 74.3 33.2 L 74.8 32.2 L 75.5 31.1 L 76.3 29.9 L 77.3 28.7 L 78.4 27.5 L 79.5 26.3 L 80.7 25.0 L 81.9 23.8 L 83.2 22.5 L 84.5 21.2 L 85.7 20.0 L 86.9 18.8 L 88.0 17.5 L 89.1 16.3 L 90.1 15.1 L 90.9 13.9 L 91.7 12.7 L 92.2 11.5 L 92.6 10.3 L 92.8 9.0 L 92.7 7.9 L 92.3 6.7 L 91.7 5.8 L 90.8 4.9 L 89.6 4.2 L 88.3 3.5 L 87.7 4.5 L 88.9 5.3 L 89.7 6.1 L 90.2 6.8 L 90.4 7.5 L 90.3 8.1 L 90.2 8.6 L 89.9 9.2 L 89.4 9.9 L 88.8 10.6 L 88.0 11.4 L 87.0 12.2 L 86.0 13.1 L 84.8 14.0 L 83.5 14.9 L 82.2 15.8 L 80.8 16.8 L 79.3 17.7 L 77.8 18.8 L 76.3 19.8 L 74.8 20.8 L 73.3 21.9 L 71.9 23.0 L 70.4 24.2 L 69.1 25.4 L 67.8 26.6 L 66.6 28.0 L 65.5 29.5 L 64.5 31.1 L 63.7 32.9 L 63.2 34.9 L 63.0 37.1 L 63.3 39.4 L 64.0 41.6 L 65.1 43.7 Z"/>
+        <path class="td-rim" d="M 78.7 34.6 L 78.6 35.5 L 78.2 36.2 L 77.8 36.5 L 77.5 36.4 L 77.4 36.0 L 77.4 35.3 L 77.7 34.4 L 78.1 33.4 L 78.7 32.3 L 79.5 31.0 L 80.4 29.8 L 81.4 28.5 L 82.5 27.1 L 83.6 25.8 L 84.8 24.4 L 86.0 23.1 L 87.1 21.7 L 88.3 20.3 L 89.3 19.0 L 90.4 17.6 L 91.3 16.2 L 92.1 14.9 L 92.8 13.5 L 93.4 12.1 L 93.8 10.7 L 93.9 9.2 L 93.7 7.8 L 93.1 6.5 L 92.3 5.3 L 91.2 4.4 L 89.9 3.7"/>
+        <ellipse class="td-suck" cx="64.7" cy="33.1" rx="2.0" ry="1.6"/>
+        <ellipse class="td-suck" cx="69.7" cy="25.9" rx="1.8" ry="1.4"/>
+        <ellipse class="td-suck" cx="76.7" cy="20.3" rx="1.6" ry="1.3"/>
+        <ellipse class="td-suck" cx="83.8" cy="15.2" rx="1.4" ry="1.1"/>
+        <ellipse class="td-suck" cx="89.0" cy="10.8" rx="1.2" ry="1.0"/>
+        <ellipse class="td-suck" cx="90.5" cy="7.4" rx="1.0" ry="0.8"/>
+        <circle class="td-tip" cx="88.0" cy="4.0" r="1.0"/>
+        <circle class="td-glint" cx="88.0" cy="4.0" r="3.2"/>
+      </svg>
+      </div>
+      <div class="td-arm tentacle-c">
+      <svg viewBox="0 0 140 32" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs><linearGradient id="td-grad-2" x1="0" y1="32" x2="0" y2="2" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#41207a"/><stop offset="45%" stop-color="#7142bd"/><stop offset="100%" stop-color="#c39bff"/>
+        </linearGradient></defs>
+        <path class="td-body" fill="url(#td-grad-2)" d="M 79.6 44.5 L 80.2 42.2 L 80.6 40.0 L 80.7 37.8 L 80.7 35.7 L 80.5 33.7 L 80.2 31.8 L 79.8 30.1 L 79.2 28.4 L 78.6 26.8 L 77.9 25.4 L 77.2 24.0 L 76.5 22.7 L 75.8 21.5 L 75.1 20.4 L 74.4 19.3 L 73.7 18.3 L 73.0 17.4 L 72.4 16.5 L 71.8 15.7 L 71.2 14.9 L 70.7 14.2 L 70.3 13.6 L 69.9 13.0 L 69.6 12.5 L 69.4 12.0 L 69.2 11.5 L 69.0 11.1 L 69.0 10.6 L 69.1 10.1 L 69.3 9.5 L 69.7 8.8 L 70.4 8.2 L 71.2 7.5 L 72.3 6.9 L 71.7 5.1 L 70.3 5.4 L 69.0 5.8 L 67.9 6.2 L 66.8 6.8 L 65.9 7.5 L 65.0 8.3 L 64.3 9.2 L 63.7 10.3 L 63.2 11.4 L 62.9 12.6 L 62.7 13.8 L 62.6 15.0 L 62.6 16.3 L 62.7 17.5 L 62.8 18.7 L 62.9 19.9 L 63.0 21.1 L 63.2 22.3 L 63.3 23.5 L 63.4 24.7 L 63.5 25.8 L 63.6 27.0 L 63.6 28.0 L 63.5 29.1 L 63.5 30.1 L 63.3 31.0 L 63.1 31.8 L 62.9 32.6 L 62.5 33.2 L 62.2 33.8 L 61.8 34.3 L 61.4 34.8 L 60.9 35.1 L 60.4 35.5 Z"/>
+        <path class="td-sheen" d="M 75.0 42.3 L 75.6 40.5 L 76.0 38.7 L 76.2 37.0 L 76.3 35.3 L 76.2 33.6 L 76.0 32.0 L 75.8 30.5 L 75.4 29.0 L 75.0 27.6 L 74.5 26.3 L 74.0 25.0 L 73.4 23.7 L 72.9 22.6 L 72.3 21.4 L 71.7 20.3 L 71.1 19.3 L 70.6 18.3 L 70.1 17.3 L 69.6 16.4 L 69.2 15.5 L 68.8 14.7 L 68.5 13.9 L 68.2 13.2 L 68.0 12.5 L 67.9 11.9 L 67.8 11.2 L 67.9 10.6 L 68.0 10.0 L 68.3 9.4 L 68.7 8.8 L 69.3 8.2 L 70.0 7.6 L 71.0 7.0 L 72.2 6.5 L 71.8 5.5 L 70.5 5.9 L 69.4 6.3 L 68.3 6.9 L 67.4 7.4 L 66.6 8.1 L 65.9 8.8 L 65.4 9.7 L 65.0 10.6 L 64.7 11.6 L 64.5 12.6 L 64.5 13.6 L 64.5 14.7 L 64.6 15.8 L 64.7 16.9 L 64.9 18.0 L 65.2 19.1 L 65.4 20.2 L 65.7 21.4 L 65.9 22.5 L 66.2 23.7 L 66.5 24.8 L 66.7 25.9 L 66.9 27.1 L 67.0 28.2 L 67.1 29.3 L 67.1 30.3 L 67.1 31.4 L 67.0 32.4 L 66.9 33.3 L 66.6 34.3 L 66.3 35.2 L 66.0 36.0 L 65.5 36.8 L 65.0 37.7 Z"/>
+        <path class="td-rim" d="M 80.0 39.8 L 80.2 37.7 L 80.2 35.7 L 80.0 33.7 L 79.7 31.9 L 79.3 30.1 L 78.7 28.5 L 78.2 26.9 L 77.5 25.5 L 76.8 24.1 L 76.1 22.9 L 75.4 21.7 L 74.7 20.5 L 74.0 19.4 L 73.3 18.4 L 72.7 17.5 L 72.1 16.6 L 71.5 15.8 L 71.0 15.0 L 70.5 14.3 L 70.1 13.6 L 69.7 13.0 L 69.4 12.5 L 69.2 12.0 L 69.0 11.5 L 68.9 11.0 L 68.9 10.5 L 69.0 10.0 L 69.2 9.4 L 69.7 8.8 L 70.3 8.1 L 71.2 7.5"/>
+        <ellipse class="td-suck" cx="67.8" cy="33.4" rx="1.8" ry="1.5"/>
+        <ellipse class="td-suck" cx="67.7" cy="28.0" rx="1.6" ry="1.3"/>
+        <ellipse class="td-suck" cx="66.5" cy="22.3" rx="1.5" ry="1.2"/>
+        <ellipse class="td-suck" cx="65.2" cy="16.7" rx="1.3" ry="1.0"/>
+        <ellipse class="td-suck" cx="65.0" cy="11.6" rx="1.1" ry="0.9"/>
+        <ellipse class="td-suck" cx="67.5" cy="7.6" rx="0.9" ry="0.7"/>
+        <circle class="td-tip" cx="72.0" cy="6.0" r="0.9"/>
+        <circle class="td-glint" cx="72.0" cy="6.0" r="3.2"/>
+      </svg>
+      </div>
+    </div>
   </div>
   <!-- 点击彩蛋热区：与底部条带同宽（v3.12.7 ①），#app 已留底部 padding，不挡任何上方内容 -->
   <div id="tentacle-tap-zone" class="tentacle-tap-zone" aria-hidden="true"></div>

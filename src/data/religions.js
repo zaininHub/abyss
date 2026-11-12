@@ -5,6 +5,8 @@
 // 章节 6「神格」条件（faith≥1 或 religion 非空）与 line_faith 故事线直接沿用。
 import { S } from '../state.js';
 import { relicMult } from './relics.js'; // v2.7.0：永暗祷文——信仰产出乘区
+import { FP_BALANCE } from './balance.js'; // v3.12.10 ③：FP 节奏基准（产出 / 上限同源）
+import { geomSeriesSum } from '../core/pricing.js'; // 仓库逐级增量统一走几何级数原语
 
 // 分支定义（可见性随进度；选一锁定，跨转生保留——crossRun 含 religion）
 export const RELIGIONS = [
@@ -43,10 +45,13 @@ export function sealUpgradeCost(level) {
   return Math.round(500 * Math.pow(2.9, level));
 }
 
-// 圣所（信仰产出建筑）：EP 购买，每级 +0.05 信仰/s，无等级上限
+// 圣所（信仰产出建筑）：EP 购买，每级 +0.01 信仰/s，无等级上限（v3.12.10 ③ 由 0.05 下调）
 // v3.4.8 反馈②：升级曲线大幅变陡（growth 1.35→1.70）——Lv1 85 万 / Lv5 710 万 / Lv10 1.0 亿 / Lv15 14 亿 EP，
 //   配合「单位 FP 的 EP 消耗随级递增」双管，避免无限连点堆等级（此前 1.35 每级只贵 35%，可买几十级）
-export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 5e5, growth: 1.70, cap: Infinity, faithPerSec: 0.05, faithEpPerUnit: 2000, epPerUnitGrowth: 0.35 };
+// v3.12.10 ③：每级 FP 产出 0.05 → 0.01（降低获取速度）；单位 FP 的 EP 消耗保持 2000 不变，
+//   于是「攒到某价格要多少 EP」没变，只是时间拉长——这正是「购买价格需要累计一段时间」的落点。
+export const TEMPLE = { id: 'faith_temple', name: '信仰圣所', base: 5e5, growth: 1.70, cap: Infinity,
+  faithPerSec: FP_BALANCE.ratePerTempleLv, faithEpPerUnit: 2000, epPerUnitGrowth: 0.35 };
 export function templeCost() {
   const lv = (S.religion && S.religion.temple) || 0;
   return Math.round(TEMPLE.base * Math.pow(TEMPLE.growth, lv));
@@ -111,20 +116,26 @@ export function praiseRate() {
   const t = transcendLevel();
   return PRAISE.rateBase + PRAISE.ratePerTranscend * t * t;
 }
-// 信仰存储上限：基础 100 + 圣所×50 + 圣印×20，虚空祭坛 ×(1+0.5/座)
+// 信仰存储上限：基础 100 + 誓约圣龛逐级扩容 + 圣印×20，虚空祭坛 ×(1+0.5/座)
 // v3.5.0 反馈②：FP 上限拆成独立建筑「誓约圣龛」（升级商店，EP 购买）——
 //   圣所只负责产出信仰，不再顺带给上限；圣印仍按每级 +20 提供少量上限。
+// v3.12.10 ③：首级增量 50 → 180，且改从 FP_BALANCE / 升级卡 fx.value 同一真源派生，
+//   不再在两处各写一遍 50；级数求和委托 pricing.geomSeriesSum（与其它仓库同口径）。
 export function faithVaultBonus() {
   const lv = (S.upgrades && S.upgrades.faith_vault) || 0;
-  let sum = 0;
-  for (let i = 1; i <= lv; i++) sum += 50 * Math.pow(1.15, i - 1); // 与其它仓库同口径（VAULT_CAP_GROWTH）
-  return sum;
+  return geomSeriesSum({ first: FP_BALANCE.capPerVaultLv, growth: FP_BALANCE.capVaultGrowth, n: lv });
 }
 export function faithCap() {
-  let cap = 100 + faithVaultBonus() + sealLevel() * 20;
+  let cap = FP_BALANCE.capBase + faithVaultBonus() + sealLevel() * FP_BALANCE.sealCapPerLv;
   const va = secretSanctumLv('void_altar');
   if (va > 0) cap *= (1 + 0.5 * va);
   return Math.round(cap);
+}
+// 当前产出下从空仓到满仓的秒数（面板用；圣所未建或已关闭时返回 Infinity）。
+// 与 FP_BALANCE.targetFillSec 对照，即可一眼看出「上限是不是 1 小时量级」。
+export function fpCapFillSec() {
+  const r = templeFaithPerSec();
+  return r > 0 ? faithCap() / r : Infinity;
 }
 // 虔诚全局加成（软上限：≤40% 线性，超出部分 50% 衰减；黑曜圣所抬高软上限 +10%/座）
 export function devotionMult() {
