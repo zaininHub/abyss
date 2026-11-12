@@ -409,7 +409,7 @@ test('E3 红包数值回归数据表单一真源', () => {
 test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(CHAPTERS.length, 51); // v3.12.9 并行审查内容扩充：46→51 章
   assert.equal(EVENTS.length, 82);    // v3.12.9：74→82 事件
-  assert.equal(BALANCE.researchUpgs.length, 68);
+  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
   assert.equal(BALANCE.miles.length, 16);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
   assert.equal(POLICY_GROUPS.length, 13);
@@ -418,7 +418,7 @@ test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   const grouped = RP_GROUPS.flatMap(g => g.ids).sort();
   assert.deepEqual(grouped, BALANCE.researchUpgs.map(u => u.id).sort(),
     'RP_GROUPS ↔ researchUpgs：新增研究项必须玩家可见可买');
-  assert.ok(SHOP_SRC.includes('rp_ep6') && SHOP_SRC.includes('rp_cosmos3'));
+  assert.ok(SHOP_SRC.includes('rp_entropy') && SHOP_SRC.includes('rp_cosmos2'));
 });
 
 test('E5 新增事件 / 章节 / 政策条件全部可执行且类型合法', () => {

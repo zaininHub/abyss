@@ -55,8 +55,8 @@ function compact(n) {
 
 console.log('[D] 内容完整性与卡面数值');
 
-test('D1 研究项 68 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
-  assert.equal(BALANCE.researchUpgs.length, 68);
+test('D1 研究项 21 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
+  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
   const grouped = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
   assert.equal(new Set(grouped).size, grouped.length, '分组内 id 不重复');

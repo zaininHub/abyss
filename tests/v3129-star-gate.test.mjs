@@ -43,17 +43,17 @@ test('② 宠物开了但没点深空探测 / 没有远征记录，星图仍不�
   });
 });
 
-test('③ 宠物 + RP + 深空探测 → 星图开放', () => {
-  withState({ ...merge(rp, pt), tech: { deep_space: 1 }, expeditionsDone: 0, expeditions: [] }, () => {
+test('③ 宠物 + RP + 深空探测 → 星图开放（第 3 章）', () => {
+  withState({ ...merge(rp, pt), tech: { deep_space: 1 }, expeditionsDone: 0, expeditions: [], chapter: '3' }, () => {
     assert.equal(starChartUnlocked(S), true);
   });
 });
 
-test('④ 宠物 + RP + 已有远征记录（完成数 / 在途队列）→ 星图开放', () => {
-  withState({ ...merge(rp, pt), tech: {}, expeditionsDone: 3, expeditions: [] }, () => {
+test('④ 宠物 + RP + 已有远征记录（完成数 / 在途队列）→ 星图开放（第 3 章）', () => {
+  withState({ ...merge(rp, pt), tech: {}, expeditionsDone: 3, expeditions: [], chapter: '3' }, () => {
     assert.equal(starChartUnlocked(S), true, '完成过远征的旧档应可进入');
   });
-  withState({ ...merge(rp, pt), tech: {}, expeditionsDone: 0, expeditions: [{ id: 'x' }] }, () => {
+  withState({ ...merge(rp, pt), tech: {}, expeditionsDone: 0, expeditions: [{ id: 'x' }], chapter: '3' }, () => {
     assert.equal(starChartUnlocked(S), true, '在途远征也应可进入');
   });
 });
@@ -68,22 +68,22 @@ test('⑤ PT 是本局制：转生后旧远征记录 + 跨转生标记不得提�
   });
 });
 
-test('⑥ 三种 PT 完成口径（仓库 / 宠物乐园 / 持有 PT）都能推进到星图', () => {
+test('⑥ 三种 PT 完成口径（仓库 / 宠物乐园 / 持有 PT）都能推进到星图（第 3 章）', () => {
   for (const patch of [
     { upgrades: { rp_vault: 1, pt_vault: 1 } },
     { upgrades: { rp_vault: 1, petland: 1 } },
     { upgrades: { rp_vault: 1 }, pt: 1 },
   ]) {
-    withState({ ...patch, tech: { deep_space: 1 }, expeditionsDone: 0, expeditions: [] }, () => {
+    withState({ ...patch, tech: { deep_space: 1 }, expeditionsDone: 0, expeditions: [], chapter: '3' }, () => {
       assert.equal(petsModuleUnlocked(S), true);
       assert.equal(starChartUnlocked(S), true);
     });
   }
 });
 
-test('⑦ 深空殖民 / 宇宙探索与星图 tab 同源，不能由自动化绕过', () => {
+test('⑦ 深空殖民 / 宇宙探索与星图 tab 同源，不能由自动化绕过（第 3 章）', () => {
   const full = { ...merge(rp, pt), tech: { deep_space: 1 }, expeditionsDone: 0,
-    expeditions: [], resDiscovered: { rp: true } };
+    expeditions: [], resDiscovered: { rp: true }, chapter: '3' };
   withState({ ...full, upgrades: { rp_vault: 1 } }, () => {
     assert.equal(starChartUnlocked(S), false);
     assert.equal(starColoniesUnlocked(), false, '宠物未开时深空殖民不可购');

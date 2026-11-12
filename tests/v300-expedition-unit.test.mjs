@@ -34,7 +34,7 @@ test('expedition.starColoniesUnlocked：宠物 + RP + deep_space 三级链', () 
   assert.equal(ex.starColoniesUnlocked(), false, '宠物未解锁时不可绕过星图 tab 购买殖民');
   setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1 } });
   assert.equal(ex.starColoniesUnlocked(), false, '缺 RP 锚点');
-  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1, rp_vault: 1 } });
+  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1, rp_vault: 1 }, chapter: '3' });
   assert.equal(ex.starColoniesUnlocked(), true);
 });
 

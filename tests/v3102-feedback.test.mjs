@@ -181,7 +181,7 @@ console.log('[C] FP 未解锁时 FP 研究项不出现、不可购买');
 
 test('C1 门控单一真源：映射表 / 谓词 / 三项 FP 研究全覆盖', () => {
   const fp = BALANCE.researchUpgs.filter(u => u.fx && u.fx.key === 'faith');
-  assert.deepEqual(fp.map(u => u.id).sort(), ['rp_disciple', 'rp_faith', 'rp_religion2']);
+  assert.deepEqual(fp.map(u => u.id).sort(), ['rp_faith']); // v3.12.11 反馈②：同质化 faith 堆叠已裁剪，仅留锚点 rp_faith
   assert.deepEqual(shop.RESEARCH_RES_ANCHORS, { faith: 'faith' });
   const locked = { upgrades: {}, faith: 0, religion: { unlocked: false } };
   assert.ok(fp.every(u => !shop.researchResourceUnlocked(u, locked)), '新档三项均不可显示');
@@ -216,13 +216,13 @@ test('C3 行为：研究面板渲染过滤隐藏项，FP 解锁当帧重建', ()
   shop.renderResearchUpgrades(c);
   const idsLocked = collectResearchIds(c);
   assert.ok(idsLocked.includes('rp_wage'), '同组非 FP 项仍渲染');
-  assert.ok(!idsLocked.some(id => ['rp_faith', 'rp_disciple', 'rp_religion2'].includes(id)),
+  assert.ok(!idsLocked.some(id => ['rp_faith'].includes(id)),
     'FP 未解锁不得出现 FP 研究项');
   S.religion = { unlocked: true };
   shop.renderResearchUpgrades(c);
   const idsOpen = collectResearchIds(c);
-  assert.ok(['rp_faith', 'rp_disciple', 'rp_religion2'].every(id => idsOpen.includes(id)),
-    '解锁后当帧重建并出现三项');
+  assert.ok(['rp_faith'].every(id => idsOpen.includes(id)),
+    '解锁后当帧重建并出现 FP 研究项');
 });
 
 test('C4 接线：渲染 / 购买 / 签名 / 分组标题四处消费同一谓词，顶栏 FP 同源', () => {

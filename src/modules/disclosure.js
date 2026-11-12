@@ -82,6 +82,9 @@ export function petsModuleUnlocked(S) {
 export function starChartUnlocked(S) {
   if (!petsModuleUnlocked(S)) return false;
   if (!anchorDone('rp', S)) return false;
+  // v3.12.11 反馈①：星图显式章节门控——第 3 章（且宠物已解锁）后才开放。
+  // 沿用真实口径：默认新档 chapter=1，推进到第 3 章才解禁，与玩家进度一致。
+  if ((parseInt((S && S.chapter), 10) || 0) < 3) return false;
   const exps = (S && S.expeditions) || [];
   return !!((S && S.tech && S.tech.deep_space)
     || (S && (S.expeditionsDone || 0) > 0) || exps.length > 0);

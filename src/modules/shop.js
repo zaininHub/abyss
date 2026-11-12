@@ -149,7 +149,7 @@ function vaultAnchorReady(u) {
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
   if (u.id === 'faith_vault') return religionUnlocked(); // v3.5.0 ②：宗教解锁后才需要 FP 上限
-  if (u.id === 'pt_vault') return parseInt(S.chapter, 10) >= 3 || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构），P2 章节（第 3 章）后才开放；旧档标记兼容
+  if (u.id === 'pt_vault') return parseInt(S.chapter, 10) >= 2 || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构）；v3.12.11 反馈①：提前到第 2 章开放（增加第 2 章 EP 消耗口）；旧档标记兼容
   return false;
 }
 // v3.0.7 反馈① / v3.0.8 修正：资源仓库要「EP 上限存得下全价」才摆出来——
@@ -177,7 +177,7 @@ function shopUnlocked(u) {
 function lockedHint(u) {
   if (u.id === 'rp_vault') return 'EP 溢出一次后开放';
   if (u.id === 'dm_vault') return '首辆载具后开放';
-  if (u.id === 'pt_vault') return '第 3 章后开放';
+  if (u.id === 'pt_vault') return '第 2 章后开放';
   if (u.id === 'faith_vault') return '信奉宗教后开放';
   return `累计 ${fmt(u.base * 0.3)} EP 解锁`;
 }
@@ -1640,15 +1640,15 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_relay', 'rp_ep2', 'rp_ep3', 'rp_thread2', 'rp_ep4', 'rp_thread3', 'rp_ep5', 'rp_thread4', 'rp_global2', 'rp_ep6', 'rp_thread5', 'rp_global3', 'rp_ep7', 'rp_thread6', 'rp_global4'], unlock: null },
-  // v3.12.0 反馈⑩：原「资源与消耗」组减耗/资源研究同质堆叠 19 项（6 个 wage、6 个 dm），
-  //   现把 4 个 wage + 2 个 dm 改造为「玩法扩展」研究（项目并行 / 班组 / 远征 / 集市 / 编排 / 政策），
-  //   研究点回归「先扩展玩法、再为扩展后的资源消耗配套增产/减耗」的定位；保留的 2 个减耗项大幅涨价。
-  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_disciple', 'rp_religion2', 'rp_policy', 'rp_project', 'rp_dm2', 'rp_crew', 'rp_dm3', 'rp_expedition', 'rp_policy3', 'rp_bazaar', 'rp_policy2', 'rp_storage2'], unlock: { prev: 'prod', need: 4 } },
-  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift', 'rp_void', 'rp_observe', 'rp_rift2', 'rp_delve2', 'rp_rift3', 'rp_rift4', 'rp_rift5', 'rp_delve3', 'rp_rift6', 'rp_delve4', 'rp_rift7'],                                        unlock: { prev: 'res', need: 4 } },
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
+  // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
+  //   prod = 开局显现的产出/全局/离线基础项；res = 玩法扩展与配套（资源/政策/项目/班组/远征/集市）；
+  //   abyss = 深渊终局两根核心轴；star = 星际与拟我（研究点已解锁 + 星图已开启 双门控）。
+  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar'], unlock: { prev: 'prod', need: 4 } },
+  { key: 'abyss', name: '深渊终局',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.0 反馈⑤：本组需要「研究点已解锁 + 星图已开启」双门控，过去只看前组累计 4 级，
   //   导致星图还没开，研究点里就冒出「星际与拟我」一整组。
-  { key: 'star',  name: '星际与拟我', anchor: 'rp', requireStar: true, ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_ai2', 'rp_ai3', 'rp_ai4', 'rp_ai5', 'rp_cosmos3', 'rp_sync', 'rp_ai6', 'rp_ai7', 'rp_cosmos4'],                                                    unlock: { prev: 'res', need: 4 } },
+  { key: 'star',  name: '星际与拟我', anchor: 'rp', requireStar: true, ids: ['rp_jump', 'rp_starres', 'rp_colony2', 'rp_cosmos2', 'rp_ai', 'rp_sync'],                unlock: { prev: 'res', need: 4 } },
 ];
 let rpFold = {}; // 类目折叠状态（会话级，不落盘）
 

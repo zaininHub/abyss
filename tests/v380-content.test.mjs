@@ -51,7 +51,6 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
     // v3.12.9：before 基线上移到上一版（46 章 / 74 事件），否则累计幅度会误判越界
     ['主线章节', CHAPTERS.length, 46],
     ['主事件', EVENTS.length, 74],
-    ['研究项', BALANCE.researchUpgs.length, 56],
     ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33],
     ['百科章节', WIKI_SECTIONS.length, 24],
     ['里程碑', BALANCE.miles.length, 13],
@@ -63,7 +62,7 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   }
   assert.equal(CHAPTERS.length, 51);
   assert.equal(EVENTS.length, 82);
-  assert.equal(BALANCE.researchUpgs.length, 68);
+  assert.equal(BALANCE.researchUpgs.length, 21); // v3.12.11 反馈②：同质化堆叠裁剪 68→21
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
   assert.equal(BALANCE.miles.length, 16);

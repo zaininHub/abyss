@@ -448,92 +448,37 @@ export const BALANCE = {
 
   // v2.8.4：研究点专属升级（RP 购买，研究点 tab 渲染；长线消耗 RP，克制——cap 8-10 + 成本指数涨）
   researchUpgs: [
-    { id: 'rp_entropy',     name: '熵减研究',   cap: 10, base: 50, growth: 1.6,  fx: { key: 'ep',   v: 0.05 }, desc: '基础 EP 产出 +5%/级' },
-    { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60, growth: 1.6,  fx: { key: 'thread', v: 0.05 }, desc: '线程产出 +5%/级' },
-    { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80, growth: 1.65, fx: { key: 'global', v: 0.04 }, desc: '全局产出 +4%/级' },
-    // v3.4.6 反馈②：深渊终局组整组大幅涨价（此前 100~640 RP 满级总投入仅 ≈1.6 万，远低于其永久乘区强度）
-    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650, growth: 1.8, fx: { key: 'delve', v: 0.10 }, desc: '深潜产出 +10%/级' },
-    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800, growth: 1.8, fx: { key: 'rift', v: 0.15 }, desc: '裂隙余烬 +15%/级' },
-    // v2.8.25 ②：研究点内容扩充（5→10 项）——消耗 RP、cap 5-10、成本指数涨；效果全接线
-    { id: 'rp_wage',        name: '薪酬协商',   cap: 4,  base: 600,  growth: 1.85, fx: { key: 'wage', v: -0.04 }, desc: '线程消耗 -4%/s' },
-    { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90, growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
-    { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100, growth: 1.65, fx: { key: 'dm', v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
-    { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200, growth: 1.8, fx: { key: 'faith', v: 0.10 }, desc: 'FP 产出 +10%/级' },
-    { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8, fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
-    // v3.4.2：研究点菜单扩充（10→20 项）——覆盖产出/消耗/资源/深渊/星空多轴，成本指数涨、cap 6~8
-    // v3.4.4 反馈③：本轮新增 10 项一律「基础价 ×4 + 增长指数 +0.10」——效果本就强于同轴老项（+6% vs +5% 等），
-    // 原价几乎与老项同档，等于用同样的 RP 买到更强的永久乘区；涨价后成为「后期才买得起的高阶研究」
-    { id: 'rp_quantum',  name: '量子推演',   cap: 8, base: 280, growth: 1.70, fx: { key: 'ep',      v: 0.06 }, desc: '基础 EP 产出 +6%/级' },
-    { id: 'rp_swarm',    name: '蜂群协议',   cap: 8, base: 320, growth: 1.70, fx: { key: 'thread',  v: 0.06 }, desc: '线程产出 +6%/级' },
-    { id: 'rp_harmony',  name: '万物调和',   cap: 8, base: 360, growth: 1.70, fx: { key: 'global',  v: 0.05 }, desc: '全局产出 +5%/级' },
-    { id: 'rp_frugal',   name: '精益管理',   cap: 4, base: 2400, growth: 1.90, fx: { key: 'wage',    v: -0.05 }, desc: '线程消耗 -5%/级' },
-    { id: 'rp_vault',    name: '量子仓储',   cap: 8, base: 2000, growth: 1.85, fx: { key: 'storage', v: 0.15 }, desc: 'EP 存储上限 +15%/级' }, // v3.4.6 反馈⑬：大幅涨价（380→2000）且存储额增多（10%→15%/级）
-    { id: 'rp_immerse',  name: '深渊沉浸',   cap: 8, base: 440, growth: 1.75, fx: { key: 'dm',      v: 0.10 }, desc: '载具 DM 采集 +10%/级' },
-    { id: 'rp_relay',    name: '信标中继',   cap: 6, base: 560, growth: 1.80, fx: { key: 'offline', v: 0.15 }, desc: '离线效率 +15%/级' },
-    { id: 'rp_void',     name: '虚空凝视',   cap: 6, base: 4000, growth: 1.90, fx: { key: 'rift',    v: 0.20 }, desc: '裂隙余烬 +20%/级' }, // v3.4.6 反馈②：深渊终局组大幅涨价
-    { id: 'rp_observe',  name: '深渊观测·改', cap: 8, base: 3200, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级' },
-    { id: 'rp_disciple', name: '信徒训导',   cap: 6, base: 880, growth: 1.90, fx: { key: 'faith',   v: 0.12 }, desc: 'FP 产出 +12%/级' },
-    // v3.6.0 研究点菜单再扩充（20→30 项）：覆盖星际/政策/AI/殖民/宇宙等长线轴；新键需在对应模块 researchMult 接线
-    { id: 'rp_jump',     name: '跃迁理论',   cap: 8, base: 600,  growth: 1.70, fx: { key: 'jump',    v: 0.06 }, desc: '星际跃迁效率 +6%/级' },
-    { id: 'rp_starres',  name: '星蕴提纯',   cap: 8, base: 700,  growth: 1.70, fx: { key: 'starres', v: 0.06 }, desc: '星际专属资源产出 +6%/级' },
-    { id: 'rp_policy',   name: '律令演绎',   cap: 8, base: 520,  growth: 1.70, fx: { key: 'policy',  v: 0.06 }, desc: '政策效果 +6%/级' },
-    { id: 'rp_religion2',name: '神性共振',   cap: 8, base: 1200, growth: 1.80, fx: { key: 'faith',   v: 0.10 }, desc: 'FP 产出 +10%/级（叠加信徒训导）' },
-    { id: 'rp_ai',      name: '拟我协议',   cap: 8, base: 900,  growth: 1.75, fx: { key: 'ai',      v: 0.08 }, desc: 'AI 助手效率 +8%/级' },
-    { id: 'rp_colony2', name: '星殖民拓',   cap: 8, base: 800,  growth: 1.75, fx: { key: 'colony',  v: 0.08 }, desc: '星殖民产出 +8%/级' },
-    { id: 'rp_cosmos2', name: '宇宙工程',   cap: 8, base: 1100, growth: 1.80, fx: { key: 'cosmos',  v: 0.08 }, desc: '宇宙工程星力 +8%/级' },
-    { id: 'rp_rift2',   name: '裂隙拓扑',   cap: 6, base: 5000, growth: 1.90, fx: { key: 'rift',    v: 0.18 }, desc: '裂隙余烬 +18%/级（叠加虚空凝视）' },
-    { id: 'rp_delve2',  name: '深潜超算',   cap: 8, base: 3600, growth: 1.90, fx: { key: 'delve',   v: 0.12 }, desc: '深潜产出 +12%/级（叠加深渊观测·改）' },
-    { id: 'rp_ep2',     name: '熵流增幅',   cap: 8, base: 400,  growth: 1.68, fx: { key: 'ep',      v: 0.08 }, desc: '基础 EP 产出 +8%/级（叠加量子推演）' },
-    // v3.7.0 研究项扩充（30→35，+17%）：一律复用已接线的 fx.key，沿用 v3.4.4「高阶 ×4 + growth +0.10」口径，
-    // 避免新增无人消费的效果键；五项按语义分入既有 4 组（RP_GROUPS 已同步）。
-    { id: 'rp_ep3',     name: '熵流超频',   cap: 8, base: 900,  growth: 1.72, fx: { key: 'ep',      v: 0.09 }, desc: '基础 EP 产出 +9%/级' },
-    { id: 'rp_thread2', name: '群体意识',   cap: 8, base: 980,  growth: 1.72, fx: { key: 'thread',  v: 0.07 }, desc: '线程产出 +7%/级' },
-    { id: 'rp_project',  name: '项目统筹',   cap: 3, base: 2400, growth: 1.85, fx: { key: 'project',    v: 1    }, desc: '可并行任务 +1/级' },
-    { id: 'rp_rift3',   name: '裂隙演算',   cap: 6, base: 6000, growth: 1.90, fx: { key: 'rift',    v: 0.10 }, desc: '裂隙余烬 +10%/级' },
-    { id: 'rp_ai2',     name: '拟我演化',   cap: 8, base: 1400, growth: 1.80, fx: { key: 'ai',      v: 0.06 }, desc: 'AI 助手效率 +6%/级' },
-    // v3.8.0 研究项扩充（35→40，+14.3%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
-    { id: 'rp_ep4',      name: '熵流终式',   cap: 8, base: 1800, growth: 1.78, fx: { key: 'ep',     v: 0.10 }, desc: '基础 EP 产出 +10%/级' },
-    { id: 'rp_thread3',  name: '群体共振',   cap: 8, base: 1900, growth: 1.78, fx: { key: 'thread', v: 0.08 }, desc: '线程产出 +8%/级' },
-    { id: 'rp_ai3',      name: '拟我终局',   cap: 8, base: 2200, growth: 1.82, fx: { key: 'ai',     v: 0.07 }, desc: 'AI 助手效率 +7%/级' },
-    { id: 'rp_rift4',    name: '裂隙终式',   cap: 6, base: 8000, growth: 1.92, fx: { key: 'rift',   v: 0.12 }, desc: '裂隙余烬 +12%/级' },
-    { id: 'rp_dm2',      name: '星尘终炼',   cap: 8, base: 1600, growth: 1.78, fx: { key: 'dm',     v: 0.12 }, desc: '载具 DM 采集 +12%/级' },
-    // v3.9.0 研究项扩充（40→46，+15%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
-    { id: 'rp_ep5',      name: '熵流守夜',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'ep',     v: 0.11 }, desc: '基础 EP 产出 +11%/级' },
-    { id: 'rp_thread4',  name: '群体值守',   cap: 8, base: 2700, growth: 1.80, fx: { key: 'thread', v: 0.09 }, desc: '线程产出 +9%/级' },
-    { id: 'rp_global2',  name: '全域编排',   cap: 8, base: 3000, growth: 1.82, fx: { key: 'global', v: 0.06 }, desc: '全局产出 +6%/级' },
-    { id: 'rp_crew',     name: '班组扩编',   cap: 8, base: 3200, growth: 1.88, fx: { key: 'crew',       v: 0.10 }, desc: '班组全局加成 +10%/级' },
-    { id: 'rp_ai4',      name: '拟我值守',   cap: 8, base: 2800, growth: 1.82, fx: { key: 'ai',     v: 0.09 }, desc: 'AI 助手效率 +9%/级' },
-    { id: 'rp_dm3',      name: '星尘夜采',   cap: 8, base: 2600, growth: 1.80, fx: { key: 'dm',     v: 0.13 }, desc: '载具 DM 采集 +13%/级' },
-    // v3.10.0 研究项扩充（46→55，+19.57%）：沿用「高阶 ×4 + growth +0.10」口径，全部复用已接线 fx.key
-    { id: 'rp_ep6',      name: '熵流共鸣',   cap: 8, base: 3400, growth: 1.84, fx: { key: 'ep',     v: 0.12 }, desc: '基础 EP 产出 +12%/级' },
-    { id: 'rp_thread5',  name: '群体合弦',   cap: 8, base: 3500, growth: 1.84, fx: { key: 'thread', v: 0.10 }, desc: '线程产出 +10%/级' },
-    { id: 'rp_global3',  name: '全域共鸣',   cap: 8, base: 3800, growth: 1.86, fx: { key: 'global', v: 0.07 }, desc: '全局产出 +7%/级' },
-    { id: 'rp_expedition',name:'远征后勤',   cap: 8, base: 4000, growth: 1.90, fx: { key: 'expedition', v: 0.12 }, desc: '远征收益 +12%/级' },
-    { id: 'rp_policy3',  name: '律令统筹',   cap: 8, base: 4200, growth: 1.90, fx: { key: 'policy',    v: 0.10 }, desc: '政策效果 +10%/级' },
-    { id: 'rp_rift5',    name: '裂隙共鸣',   cap: 6, base: 9800, growth: 1.94, fx: { key: 'rift',   v: 0.14 }, desc: '裂隙余烬 +14%/级' },
-    { id: 'rp_delve3',   name: '深潜回响',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'delve',  v: 0.14 }, desc: '深潜产出 +14%/级' },
-    { id: 'rp_ai5',      name: '拟我合弦',   cap: 8, base: 3600, growth: 1.86, fx: { key: 'ai',     v: 0.10 }, desc: 'AI 助手效率 +10%/级' },
-    { id: 'rp_cosmos3',  name: '星力共鸣',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'cosmos', v: 0.10 }, desc: '宇宙工程星力 +10%/级' },
-    // v3.10.5 ③：星图同调——星图远征（深空探测）开启后，购买此升级才启用 RP/PT 上限的 EP×比例「产出基座」联动；
-    // 未购时 RP/PT 上限只靠各自仓库线性增长，解决「早期 RP/PT 上限就随 EP 涨到千万级」的问题。
-    // fx.key='sync' 由 economy.syncUnlocked() 消费（researchMult('sync')>1 即已购），非死键。
-    { id: 'rp_sync',     name: '星图同调',   cap: 1, base: 2000, growth: 1.5, fx: { key: 'sync', v: 1 }, requiresTech: 'deep_space', desc: '启用 RP/PT 上限随 EP 上限联动（产出基座）' },
-    // v3.11.0 研究项扩充（56→68，+21.43%）：沿用「高阶 ×4 + growth +0.10」口径，
-    // fx.key 全部复用既有 researchMult 消费点（无死升级），且不使用需资源门控的 faith 键。
-    // 4 组各 3 项，RP_GROUPS 已同步（否则玩家看不到也买不到）。
-    { id: 'rp_ep7',      name: '熵流补货',   cap: 8, base: 4200, growth: 1.88, fx: { key: 'ep',     v: 0.13 }, desc: '基础 EP 产出 +13%/级' },
-    { id: 'rp_thread6',  name: '群体代班',   cap: 8, base: 4400, growth: 1.88, fx: { key: 'thread', v: 0.11 }, desc: '线程产出 +11%/级' },
-    { id: 'rp_global4',  name: '全域台账',   cap: 8, base: 4800, growth: 1.90, fx: { key: 'global', v: 0.08 }, desc: '全局产出 +8%/级' },
-    { id: 'rp_bazaar',   name: '集市协议',   cap: 8, base: 4800, growth: 1.92, fx: { key: 'bazaar',     v: 0.12 }, desc: '集市交易收益 +12%/级' },
-    { id: 'rp_policy2',  name: '政策推演',   cap: 8, base: 4600, growth: 1.92, fx: { key: 'policy',    v: 0.08 }, desc: '政策效果 +8%/级' },
-    { id: 'rp_storage2', name: '周转仓位',   cap: 8, base: 4100, growth: 1.88, fx: { key: 'storage', v: 0.10 }, desc: 'EP 存储上限 +10%/级' },
-    { id: 'rp_rift6',    name: '裂隙值守',   cap: 6, base: 11200, growth: 1.96, fx: { key: 'rift',  v: 0.15 }, desc: '裂隙余烬 +15%/级' },
-    { id: 'rp_delve4',   name: '深潜补货',   cap: 8, base: 6200, growth: 1.94, fx: { key: 'delve', v: 0.15 }, desc: '深潜产出 +15%/级' },
-    { id: 'rp_rift7',    name: '裂隙台账',   cap: 6, base: 11800, growth: 1.96, fx: { key: 'rift',  v: 0.16 }, desc: '裂隙余烬 +16%/级' },
-    { id: 'rp_ai6',      name: '拟我代班',   cap: 8, base: 4500, growth: 1.90, fx: { key: 'ai',     v: 0.11 }, desc: 'AI 助手效率 +11%/级（摊薄购买价 / 提升补给）' },
-    { id: 'rp_ai7',      name: '拟我补给',   cap: 8, base: 4700, growth: 1.90, fx: { key: 'ai',     v: 0.12 }, desc: 'AI 助手效率 +12%/级' },
-    { id: 'rp_cosmos4',  name: '星力代班',   cap: 8, base: 5200, growth: 1.92, fx: { key: 'cosmos', v: 0.11 }, desc: '宇宙工程星力 +11%/级' },
-    // v3.0.3：wish_well（许愿池）从研究升级移入通用设施 BALANCE.buildings——避免与设施 tab 重复
+    // v3.12.11 反馈②：同质化升级大削减（68→21）。旧版每根数值轴堆叠多个「同轴 +X%/级」编号项
+    // （rp_ep2~7 / rp_thread2~6 / rp_rift2~7 / rp_ai2~7 / rp_global2~4 / rp_dm2~3 /
+    // rp_delve2~4 / rp_cosmos2~4 / rp_policy2~3 / rp_storage2 等），玩家体验重复、同质。
+    // 设计回归「升级商店解锁基础玩法、研究点扩展功能」：每根数值轴只保留一个锚点升级，
+    // 其余效果键由对应玩法模块消费；删除项不留死键（researchMult 按 fx.key 动态消费）。
+    // 分组沿用既有 4 组（prod/res/abyss/star），RP_GROUPS 已同步。
+    // —— 产出强化（开局显现）——
+    { id: 'rp_entropy',     name: '熵减研究',   cap: 10, base: 50,  growth: 1.6,  fx: { key: 'ep',      v: 0.05 }, desc: '基础 EP 产出 +5%/级' },
+    { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60,  growth: 1.6,  fx: { key: 'thread',  v: 0.05 }, desc: '线程产出 +5%/级' },
+    { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80,  growth: 1.65, fx: { key: 'global',  v: 0.04 }, desc: '全局产出 +4%/级' },
+    { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8,  fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
+    // —— 玩法扩展与配套（累计 4 级后显现）——
+    { id: 'rp_wage',        name: '薪酬协商',   cap: 4,  base: 600,  growth: 1.85, fx: { key: 'wage',    v: -0.04 }, desc: '线程消耗 -4%/s' },
+    { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90,   growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
+    { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100,  growth: 1.65, fx: { key: 'dm',     v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
+    { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200,  growth: 1.8,  fx: { key: 'faith',   v: 0.10 }, desc: 'FP 产出 +10%/级' },
+    { id: 'rp_policy',      name: '律令演绎',   cap: 8,  base: 520,  growth: 1.70, fx: { key: 'policy',  v: 0.06 }, desc: '政策效果 +6%/级' },
+    { id: 'rp_project',     name: '项目统筹',   cap: 3,  base: 2400, growth: 1.85, fx: { key: 'project', v: 1    }, desc: '可并行任务 +1/级' },
+    { id: 'rp_crew',        name: '班组扩编',   cap: 8,  base: 3200, growth: 1.88, fx: { key: 'crew',    v: 0.10 }, desc: '班组全局加成 +10%/级' },
+    { id: 'rp_expedition',  name: '远征后勤',   cap: 8,  base: 4000, growth: 1.90, fx: { key: 'expedition', v: 0.12 }, desc: '远征收益 +12%/级' },
+    { id: 'rp_bazaar',      name: '集市协议',   cap: 8,  base: 4800, growth: 1.92, fx: { key: 'bazaar',  v: 0.12 }, desc: '集市交易收益 +12%/级' },
+    // —— 深渊终局（累计 4 级后显现）——
+    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650,  growth: 1.8,  fx: { key: 'delve',   v: 0.10 }, desc: '深潜产出 +10%/级' },
+    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800,  growth: 1.8,  fx: { key: 'rift',    v: 0.15 }, desc: '裂隙余烬 +15%/级' },
+    // —— 星际与拟我（研究点已解锁 + 星图已开启 双门控）——
+    { id: 'rp_jump',        name: '跃迁理论',   cap: 8,  base: 600,  growth: 1.70, fx: { key: 'jump',    v: 0.06 }, desc: '星际跃迁效率 +6%/级' },
+    { id: 'rp_starres',     name: '星蕴提纯',   cap: 8,  base: 700,  growth: 1.70, fx: { key: 'starres', v: 0.06 }, desc: '星际专属资源产出 +6%/级' },
+    { id: 'rp_colony2',     name: '星殖民拓',   cap: 8,  base: 800,  growth: 1.75, fx: { key: 'colony',  v: 0.08 }, desc: '星殖民产出 +8%/级' },
+    { id: 'rp_cosmos2',     name: '宇宙工程',   cap: 8,  base: 1100, growth: 1.80, fx: { key: 'cosmos',  v: 0.08 }, desc: '宇宙工程星力 +8%/级' },
+    { id: 'rp_ai',          name: '拟我协议',   cap: 8,  base: 900,  growth: 1.75, fx: { key: 'ai',      v: 0.08 }, desc: 'AI 助手效率 +8%/级' },
+    { id: 'rp_sync',        name: '星图同调',   cap: 1,  base: 2000, growth: 1.5,  fx: { key: 'sync', v: 1 }, requiresTech: 'deep_space', desc: '启用 RP/PT 上限随 EP 上限联动（产出基座）' },
   ],
   corruption: {
     accumulateRate: 0.1,       // 每秒按溢出比例累积

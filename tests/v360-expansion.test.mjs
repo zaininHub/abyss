@@ -17,11 +17,11 @@ const { tickAI } = await import('../src/modules/ai.js');
 const { RP_GROUPS } = await import('../src/modules/shop.js');
 
 // ===== T1 新研究项存在且键正确 =====
-test('v3.6.0 ① 新研究项（10 项）齐全且 fx.key 正确', () => {
+test('v3.6.0 ① 现存研究项齐全且 fx.key 正确', () => {
   const want = [
-    ['rp_jump', 'jump'], ['rp_starres', 'starres'], ['rp_policy', 'policy'],
-    ['rp_religion2', 'faith'], ['rp_ai', 'ai'], ['rp_colony2', 'colony'],
-    ['rp_cosmos2', 'cosmos'], ['rp_rift2', 'rift'], ['rp_delve2', 'delve'], ['rp_ep2', 'ep'],
+    ['rp_entropy', 'ep'], ['rp_matrix', 'thread'], ['rp_singularity', 'global'],
+    ['rp_delve', 'delve'], ['rp_rift', 'rift'], ['rp_storage', 'storage'],
+    ['rp_dm', 'dm'], ['rp_jump', 'jump'], ['rp_starres', 'starres'], ['rp_ai', 'ai'],
   ];
   for (const [id, key] of want) {
     const u = BALANCE.researchUpgs.find(x => x.id === id);
@@ -29,8 +29,8 @@ test('v3.6.0 ① 新研究项（10 项）齐全且 fx.key 正确', () => {
     assert.equal(u.fx.key, key, `${id} 的 fx.key 应为 ${key}`);
     assert.ok(u.cap >= 6 && u.cap <= 10, `${id} cap 在 6~10 区间`);
   }
-  // v3.7.0：研究项扩充到 35 项，改为下界断言，允许后续继续扩充
-  assert.ok(BALANCE.researchUpgs.length >= 30, `研究点至少 30 项，实际 ${BALANCE.researchUpgs.length}`);
+  // v3.12.11 反馈②：研究项裁剪到 21 项（每轴一个锚点），不再要求 >=30
+  assert.ok(BALANCE.researchUpgs.length >= 20, `研究点至少 20 项，实际 ${BALANCE.researchUpgs.length}`);
 });
 
 // ===== T1b 防回归：每个研究项都必须在面板分组中可见、可购买 =====
@@ -49,8 +49,8 @@ test('v3.6.0 ① 研究菜单 4 组 30 项，无遗漏/重复/幽灵 id', () => 
 test('v3.6.0 ② 新研究键经 researchMult 生效（lv8）', () => {
   const cases = [
     ['rp_jump', 'jump'], ['rp_starres', 'starres'], ['rp_policy', 'policy'],
-    ['rp_religion2', 'faith'], ['rp_ai', 'ai'], ['rp_colony2', 'colony'],
-    ['rp_cosmos2', 'cosmos'], ['rp_rift2', 'rift'], ['rp_delve2', 'delve'], ['rp_ep2', 'ep'],
+    ['rp_faith', 'faith'], ['rp_ai', 'ai'], ['rp_colony2', 'colony'],
+    ['rp_cosmos2', 'cosmos'], ['rp_rift', 'rift'], ['rp_delve', 'delve'], ['rp_entropy', 'ep'],
   ];
   for (const [id, key] of cases) {
     S.rpTheories = { [id]: 8 };

@@ -5,9 +5,10 @@
 //    顺带纠正「深井仓储」5e4 换 +80 万（0.06 EP/点，比存储节点便宜 48 倍）的异常单位价
 // ③ v3.4.2 新增的 10 项研究升级大幅涨价（base ×4、growth +0.10）——效果本就强于同轴老项
 import puppeteer from 'puppeteer-core';
+import { chromePath } from './_chrome.mjs';
 const { BALANCE } = await import('../src/data/balance.js');
 const { UPGRADES } = await import('../src/data/upgrades.js');
-const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
+const CHROME = chromePath(); // 跨平台 Chrome 路径（优先 CHROME_PATH，其次按平台探测）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
@@ -45,12 +46,12 @@ if (dbPt(1) > 1 && dbPt(20) < rbPt(20)) ok('② 深井仓储纠正异常单位�
 else bad('② 深井仓储单位价异常', `深井 L1 ${dbPt(1).toFixed(2)} / L20 ${dbPt(20).toFixed(1)}`);
 
 // ===== ③ 新增研究项涨价 =====
-const NEW = ['rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_frugal', 'rp_vault', 'rp_immerse', 'rp_relay', 'rp_void', 'rp_observe', 'rp_disciple'];
+const NEW = ['rp_delve', 'rp_rift', 'rp_jump', 'rp_starres', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_cosmos2'];
 const lowBase = NEW.filter(id => R(id).base < 280);
 const lowGrow = NEW.filter(id => R(id).growth < 1.70);
-if (lowBase.length === 0) ok('③ 新增 10 项研究首级价 ≥280 RP（原 70~220）', `量子推演 ${R('rp_quantum').base} / 信徒训导 ${R('rp_disciple').base} RP`);
+if (lowBase.length === 0) ok('③ 现存研究首级价 ≥280 RP（原 70~220）', `跃迁理论 ${R('rp_jump').base} / 宇宙工程 ${R('rp_cosmos2').base} RP`);
 else bad('③ 仍有首级价过低项', lowBase.map(id => `${id}:${R(id).base}`).join('，'));
-if (lowGrow.length === 0) ok('③ 新增 10 项研究增长指数 ≥1.70（原 1.60~1.80）', `量子推演 ×${R('rp_quantum').growth} / 信徒训导 ×${R('rp_disciple').growth}`);
+if (lowGrow.length === 0) ok('③ 现存研究增长指数 ≥1.70（原 1.60~1.80）', `跃迁理论 ×${R('rp_jump').growth} / 宇宙工程 ×${R('rp_cosmos2').growth}`);
 else bad('③ 仍有增长指数过低项', lowGrow.map(id => `${id}:${R(id).growth}`).join('，'));
 const totalNew = NEW.reduce((s, id) => { const u = R(id); let t = 0; for (let i = 0; i < u.cap; i++) t += u.base * Math.pow(u.growth, i); return s + t; }, 0);
 if (totalNew >= 3e5) ok('③ 新增 10 项满级总投入 ≥30 万 RP', `≈${Math.round(totalNew / 1000)}K RP`);
@@ -109,18 +110,18 @@ try {
     document.getElementById('btn-rp')?.click();
     await new Promise(r => setTimeout(r, 800));
     const card = (id) => document.querySelector(`[data-research="${id}"]`);
-    const cq = card('rp_quantum')?.querySelector('.cost')?.textContent || '';
+    const cq = card('rp_jump')?.querySelector('.cost')?.textContent || '';
     const ce = card('rp_entropy')?.querySelector('.cost')?.textContent || '';
-    card('rp_quantum')?.click();
+    card('rp_jump')?.click();
     await new Promise(r => setTimeout(r, 800));
-    const after = card('rp_quantum')?.querySelector('.cost')?.textContent || '';
-    return { cq, ce, after, lv: S.rpTheories?.rp_quantum || 0, rp: S.rp };
+    const after = card('rp_jump')?.querySelector('.cost')?.textContent || '';
+    return { cq, ce, after, lv: S.rpTheories?.rp_jump || 0, rp: S.rp };
   });
-  if (/280/.test(res.cq)) ok('③ 研究卡显示新价（量子推演 280 RP）', res.cq.trim());
-  else bad('③ 量子推演卡价', JSON.stringify(res.cq));
+  if (/600/.test(res.cq)) ok('③ 研究卡显示新价（跃迁理论 600 RP）', res.cq.trim());
+  else bad('③ 跃迁理论卡价', JSON.stringify(res.cq));
   if (/^50\s*RP/.test(res.ce.trim())) ok('③ 老项卡价不变（熵减研究 50 RP）', res.ce.trim());
   else bad('③ 熵减研究卡价', JSON.stringify(res.ce));
-  if (res.lv === 1 && /476/.test(res.after)) ok('③ 购入一级后次价 476 RP（×1.70 增长）', res.after.trim());
+  if (res.lv === 1 && /1020/.test(res.after)) ok('③ 购入一级后次价 1020 RP（×1.70 增长）', res.after.trim());
   else bad('③ 购买链路', `lv=${res.lv} cost=${JSON.stringify(res.after)}`);
 
   if (errs.length === 0) ok('无 JS 运行时报错');

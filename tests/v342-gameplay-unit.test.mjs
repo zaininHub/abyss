@@ -42,10 +42,10 @@ global.document = {
 global.requestAnimationFrame = (fn) => fn();
 
 // ============ ① 研究升级数据完整性 ============
-const NEW_RESEARCH = ['rp_quantum', 'rp_swarm', 'rp_harmony', 'rp_frugal', 'rp_vault',
-  'rp_immerse', 'rp_relay', 'rp_void', 'rp_observe', 'rp_disciple'];
+const NEW_RESEARCH = ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline', 'rp_wage',
+  'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_jump'];
 
-test('研究升级：10 个新增项齐备且 cap>0、fx.key 合法', () => {
+test('研究升级：10 个现存项齐备且 cap>0、fx.key 合法', () => {
   for (const id of NEW_RESEARCH) {
     const u = BALANCE.researchUpgs.find(x => x.id === id);
     assert.ok(u, `缺失研究升级 ${id}`);
@@ -78,29 +78,29 @@ test('研究升级：所有 fx.key 均被 researchMult 消费（无「死升级�
   }
 });
 
-test('研究升级：新增 rift/delve/faith 键定向正确', () => {
-  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_void').fx.key, 'rift');
-  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_observe').fx.key, 'delve');
-  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_disciple').fx.key, 'faith');
+test('研究升级：rift/delve/faith 键定向正确', () => {
+  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_rift').fx.key, 'rift');
+  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_delve').fx.key, 'delve');
+  assert.equal(BALANCE.researchUpgs.find(u => u.id === 'rp_faith').fx.key, 'faith');
 });
 
 // ============ ② researchMult 公式正确性 ============
-test('researchMult：faith 键（信徒训导）线性生效（此前为死升级，v3.4.2 接入 religions.js）', () => {
+test('researchMult：faith 键（圣颂研究）线性生效', () => {
   S.rpTheories = {};
   assert.equal(researchMult('faith'), 1, '未购应为 1');
-  S.rpTheories.rp_disciple = 1;
-  assert.ok(Math.abs(researchMult('faith') - 1.12) < 1e-9, 'Lv.1 应为 1.12');
-  S.rpTheories.rp_disciple = 5;
-  assert.ok(Math.abs(researchMult('faith') - (1 + 0.12 * 5)) < 1e-9, 'Lv.5 应为 1.6');
+  S.rpTheories.rp_faith = 1;
+  assert.ok(Math.abs(researchMult('faith') - 1.10) < 1e-9, 'Lv.1 应为 1.10');
+  S.rpTheories.rp_faith = 5;
+  assert.ok(Math.abs(researchMult('faith') - (1 + 0.10 * 5)) < 1e-9, 'Lv.5 应为 1.5');
 });
 
 test('researchMult：ep 线性 + global 复利', () => {
   S.rpTheories = {};
-  S.rpTheories.rp_quantum = 1; // v=0.06
-  assert.ok(Math.abs(researchMult('ep') - 1.06) < 1e-9);
+  S.rpTheories.rp_entropy = 1; // v=0.05
+  assert.ok(Math.abs(researchMult('ep') - 1.05) < 1e-9);
   S.rpTheories = {};
-  S.rpTheories.rp_harmony = 2; // v=0.05，global 复利
-  assert.ok(Math.abs(researchMult('global') - Math.pow(1.05, 2)) < 1e-9);
+  S.rpTheories.rp_singularity = 2; // v=0.04，global 复利
+  assert.ok(Math.abs(researchMult('global') - Math.pow(1.04, 2)) < 1e-9);
 });
 
 // ============ ③ 裂隙凝视深渊升级购买链路 ============

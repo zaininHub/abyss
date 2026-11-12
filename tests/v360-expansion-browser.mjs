@@ -26,7 +26,7 @@ const check = (cond, name, detail = '') => cond ? ok(name, detail) : bad(name, d
 // ===================== Node 侧：静态结构断言 =====================
 {
   const all = RP_GROUPS.flatMap(g => g.ids);
-  check(RP_GROUPS.length === 4 && all.length === 30, '① 研究菜单 4 组 30 项', `${RP_GROUPS.length} 组 / ${all.length} 项`);
+  check(RP_GROUPS.length === 4 && all.length === 21, '① 研究菜单 4 组 21 项', `${RP_GROUPS.length} 组 / ${all.length} 项`);
   check(BALANCE.researchUpgs.every(u => all.includes(u.id)), '① 全部研究项都挂在面板分组（可购）');
   check(RP_GROUPS.some(g => g.key === 'star'), '① 新增「星际与拟我」菜单组');
 

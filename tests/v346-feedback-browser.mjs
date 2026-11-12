@@ -13,6 +13,7 @@
 // ⑫  备用粮仓/存储节点曲线对调（粮仓先解锁）
 // ⑬  量子仓储大幅涨价且存储额增多
 import puppeteer from 'puppeteer-core';
+import { chromePath } from './_chrome.mjs';
 const { BALANCE } = await import('../src/data/balance.js');
 const { UPGRADES } = await import('../src/data/upgrades.js');
 const { OFF_UPGRADES } = await import('../src/data/offlineUpgrades.js');
@@ -24,7 +25,7 @@ const expeditionMod = await import('../src/modules/expedition.js');
 const cosmosMod = await import('../src/modules/cosmos.js');
 const petsMod = await import('../src/modules/pets.js');
 const threadBinding = await import('../src/modules/threadBinding.js');
-const CHROME = '/usr/local/bin/chromium'; // Linux CI 适配（本机用 Chrome 路径替换）
+const CHROME = chromePath(); // 跨平台 Chrome 路径（优先 CHROME_PATH，其次按平台探测）
 const URL = 'file://' + process.cwd() + '/dist/index.html';
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
@@ -47,26 +48,28 @@ else bad('① 裂隙卡拼接仍可能重复', '');
 
 // ===== ② 深渊终局组大幅涨价 =====
 const ABYSS = [
-  ['rp_delve', 650, 1.8], ['rp_rift', 800, 1.8], ['rp_void', 4000, 1.9], ['rp_observe', 3200, 1.9],
+  ['rp_delve', 650, 1.8], ['rp_rift', 800, 1.8],
 ];
 const wrongA = ABYSS.filter(([id, base, g]) => {
   const u = BALANCE.researchUpgs.find(x => x.id === id);
   return !u || u.base !== base || u.growth !== g;
 });
-if (wrongA.length === 0) ok('② 深渊终局组 4 项 base/growth 全量重标', `最低 ${ABYSS[0][1]} RP · 最高 ${ABYSS[2][1]} RP`);
+if (wrongA.length === 0) ok('② 深渊终局组 base/growth 全量重标', `最低 ${ABYSS[0][1]} RP · 最高 ${ABYSS[ABYSS.length - 1][1]} RP`);
 else bad('② 深渊终局数值不符', wrongA.map(([id]) => id).join('，'));
-const oldTotal = 100 * Math.pow(1.7, 8) + 120 * Math.pow(1.7, 8) + 640 * Math.pow(1.8, 6) + 520 * Math.pow(1.8, 8);
+// v3.12.11 反馈②：RP 同质化削减——深渊终局组从 4 项缩为 2 锚点（rp_delve/rp_rift），
+// 但二者保留 v3.4.6 高价定位。原「×5 vs 4 项旧口径」比较已随设计变更失效，
+// 改为校验「2 锚点满级总投入仍是大型 RP 消耗口（≥15 万）」。
 const newTotal = ABYSS.reduce((a, [id, base, g]) => {
   const u = BALANCE.researchUpgs.find(x => x.id === id);
   let t = 0; for (let i = 0; i < u.cap; i++) t += base * Math.pow(g, i); return a + t;
 }, 0);
-if (newTotal > oldTotal * 5) ok('② 满级总投入 ≥ 旧口径 ×5', `${Math.round(oldTotal)} → ${Math.round(newTotal)} RP（×${(newTotal / oldTotal).toFixed(1)}）`);
-else bad('② 涨幅不足', `${oldTotal} → ${newTotal}`);
+if (newTotal >= 150000) ok('② 深渊终局 2 锚点满级总投入仍为大型 RP 消耗口', `≈${Math.round(newTotal)} RP（保留 v3.4.6 高价定位）`);
+else bad('② 深渊终局消耗口过小', `≈${Math.round(newTotal)} RP`);
 
-// ===== ⑬ 量子仓储涨价 + 存储额增多 =====
-const qv = BALANCE.researchUpgs.find(x => x.id === 'rp_vault');
-if (qv && qv.base === 2000 && qv.growth === 1.85 && qv.fx.v === 0.15 && qv.desc.includes('15%')) ok('⑬ 量子仓储 380→2000、+10%→+15%/级', `${qv.desc}`);
-else bad('⑬ 量子仓储未重标', JSON.stringify(qv));
+// ===== ⑬ 存储协议（研究点锚点）存在且为 storage 轴唯一项 =====
+const qv = BALANCE.researchUpgs.find(x => x.id === 'rp_storage');
+if (qv && qv.base === 90 && qv.growth === 1.65 && qv.fx.v === 0.08 && qv.desc.includes('8%')) ok('⑬ 存储协议 = storage 轴锚点（EP 存储 +8%/级）', `${qv.desc}`);
+else bad('⑬ 存储协议锚点异常', JSON.stringify(qv));
 
 // ===== ⑫ 备用粮仓/存储节点曲线对调 =====
 const st = U('storage'), rb = U('reserve_bin');
