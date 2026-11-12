@@ -25,10 +25,16 @@ test('expedition.maxExpeditions：解锁 deep_space → 2 并发', () => {
   assert.equal(ex.maxExpeditions(), 2);
 });
 
-test('expedition.starColoniesUnlocked：与 deep_space 科技绑定', () => {
+// v3.12.9：深空殖民改成「宠物/PT → RP → 深空探测」三级链，与星图 tab 同源。
+//   旧断言只认 deep_space 科技，属设计变更，此处按新口径补双向矩阵。
+test('expedition.starColoniesUnlocked：宠物 + RP + deep_space 三级链', () => {
   setup({ tech: {} });
   assert.equal(ex.starColoniesUnlocked(), false);
   setup({ tech: { deep_space: true } });
+  assert.equal(ex.starColoniesUnlocked(), false, '宠物未解锁时不可绕过星图 tab 购买殖民');
+  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1 } });
+  assert.equal(ex.starColoniesUnlocked(), false, '缺 RP 锚点');
+  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1, rp_vault: 1 } });
   assert.equal(ex.starColoniesUnlocked(), true);
 });
 

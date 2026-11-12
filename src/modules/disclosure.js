@@ -69,6 +69,24 @@ export function petsModuleUnlocked(S) {
   return anchorDone('pt', S);
 }
 
+/**
+ * v3.12.9：星图（远征）解锁的唯一判定源 —— 必须排在「异兽 / 宠物」之后。
+ * 星图远征要消耗 PT，且「携带出战异兽每只 +10% CPS 与专属资源收益」；宠物没解锁时
+ * 这些产出与加成都没有落点，星图先开等于开一个残废模块。故把 PT 锚点设为硬前置。
+ *
+ * 其余条件沿用旧口径：RP 锚点 ∧（深空探测科技 / 已有远征记录）。
+ * 判定刻意全用本局即时字段（anchorDone / S.tech / S.expeditions*），不读 resDiscovered：
+ * PT / 宠物是本局制，转生后若尚未重购饵料仓库，旧远征记录也不该把星图提前放行。
+ * 不 import economy.hasTech，避免链层反向依赖经济模块（hasTech 等价于 !!S.tech[id]）。
+ */
+export function starChartUnlocked(S) {
+  if (!petsModuleUnlocked(S)) return false;
+  if (!anchorDone('rp', S)) return false;
+  const exps = (S && S.expeditions) || [];
+  return !!((S && S.tech && S.tech.deep_space)
+    || (S && (S.expeditionsDone || 0) > 0) || exps.length > 0);
+}
+
 // v2.5 ①：深渊裂隙触发门控——首次裂隙出现（S._riftSeen）后解锁探采平台与深渊商店；
 // v2.4 及以前旧档（S._v25Legacy，迁移时按 DM/RP 锚点进度自动打标）保持解锁不回退；
 // v2.5 起新档购入载具/灵感工坊不再解锁（解锁前提唯一 = 触发深渊裂隙）。

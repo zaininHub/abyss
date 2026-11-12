@@ -83,4 +83,14 @@ export const EVENTS = [
   {id:'handover',name:'交接班',desc:'随机升级 +1',minCps:1e5,type:'freelevel'},
   {id:'supply_echo',name:'补给回声',desc:'+48 RP',minCps:1e7,type:'rp',amount:48},
   {id:'night_dispatch',name:'夜班调度',desc:'立即获得 5400 秒产出',minCps:1e7,type:'ep',amount:5400,rare:true},
+  // v3.12.9 事件扩充（74→82，+10.81%）：复用既有 type，不引入 applyEvent 新分支；
+  // 数值全在主表天花板内（buff ≤20 / dur ≤3600 / ep ≤14400 / debuff 0.3~1）。
+  {id:'shift_ledger',name:'交班台账',desc:'立即获得 2700 秒产出',minCps:1e5,type:'ep',amount:2700},
+  {id:'quiet_handover',name:'静默交接',desc:'5 分钟产出 ×1.65',minCps:1e5,type:'buff',mult:1.65,dur:300},
+  {id:'ember_count',name:'余烬清点',desc:'+54 RP',minCps:1e7,type:'rp',amount:54},
+  {id:'idle_phase',name:'空相位',desc:'80 秒产出 ×0.64',minCps:1e6,type:'debuff',mult:0.64,dur:80},
+  {id:'ledger_seal',name:'台账封存',desc:'专注 +26',minCps:1e7,type:'focus',amount:26},
+  {id:'relay_echo',name:'中继回声',desc:'立即获得 4800 秒产出',minCps:1e7,type:'ep',amount:4800,rare:true},
+  {id:'duty_confirm',name:'值守确认',desc:'100 秒点击 ×9',minCps:1e5,type:'clickbuff',mult:9,dur:100},
+  {id:'night_ledger',name:'夜班台账',desc:'立即获得 6600 秒产出',minCps:1e7,type:'ep',amount:6600,rare:true},
 ];

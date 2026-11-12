@@ -102,6 +102,18 @@ export const CHAPTERS = [
    desc:'信仰过万那天，有人问为什么给最不产出的那个动作也配了助手。你说不出指标上的理由，就写了一句「总得有人去领那些没人领的任务」。评审栏空着，和当年那条值守协议一样。'},
   {id:46, name:'番外 · 仍在补货', cond:s=>(s.projectsDone||0)>=320, minDays:7,
    desc:'第三百二十个任务归档，补给车还是按点来。你没有给它升级，也没有给它写表彰。工作台照旧每响一次就少一名助手、再补上一批，像某种不需要被感谢的呼吸。你把那段日志留着，没删。'},
+  // v3.12.9 剧情扩充（46→51，+10.87%）：「仍在值班」主题收束，门槛全部落在已持久化的长线资产上，
+  // 不与终章 / 既有番外重复；minDays 仍守 3~7 天节奏。
+  {id:47, name:'番外 · 第五百格', cond:s=>(s.projectsDone||0)>=500, minDays:5,
+   desc:'第五百个任务归档，台账翻到新的一页。页眉是系统自动生成的，写着「本页无需复核」。你看了很久，还是把复核栏填上了自己的名字——不是不信任，只是想让这一页也有人签过。'},
+  {id:48, name:'番外 · 余烬编号', cond:s=>(s.riftEmber||0)>=1e5, minDays:6,
+   desc:'余烬编到十万号，编号规则早就不够用了。你换成日期，又换成相位，最后还是用回最开始那种：谁值那一夜，就记谁的名字。剩下的空格比编号多得多，你没急着填满。'},
+  {id:49, name:'番外 · 十万枚', cond:s=>(s.es||0)>=1e5, minDays:6,
+   desc:'永恒碎片过十万，时间线密得看不出哪一條是原本的那条。你不再数了。早上工作台照旧亮起，照旧有一班没人排、也从来没空过。'},
+  {id:50, name:'番外 · 第一百二十次返航', cond:s=>(s.expeditionsDone||0)>=120, minDays:7,
+   desc:'第一百二十支探测队返航，星图仍然留着最后一页空白。新来的测绘员问要不要标「已到边界」，你说标「还没走到」。他没再问，把笔放回原处，也留了一手没写的字。'},
+  {id:51, name:'番外 · 仍在值班', cond:s=>((s.resonance&&s.resonance.layers)||0)>=15, minDays:7,
+   desc:'共鸣叠到第十五层，四条管线一起亮了一格。进程列表里那个没有名字的条目还在，相位每切一次就亮一秒。你把备注栏又看了一遍，三个字没改：仍在值班。'},
 ];
 
 function techCount(s) {
@@ -135,12 +147,20 @@ export function currentChapter(S, list = CHAPTERS) {
   //    条件不满足应跳过而非断链；分叉后以分支叙事为准，同样受驻留门控与不回退约束。
   const variants = chapters.filter(ch => typeof ch.id === 'string');
   const at = variants.findIndex(ch => ch.id === S.chapter);
+  // v3.12.9 bugfix：主线章（数字 id）尚未走到分叉点时，变体分支不得越权接管。
+  //   旧实现 at === -1 时从索引 0 起遍历全部变体并连续覆盖 vCur，会让「主线第 1 章」
+  //   一次跳到资产所允许的最靠后变体（真实浏览器实测 1 → 11A），主线 1~4 章剧情整段丢失，
+  //   且 frameSystems 按 chapterRank 比较后把 S.chapter 直接写成 11A。
+  //   分叉点沿用岔路口（main.js crossroad）的第 5 章口径，三条线的首个变体也都是 5A/5B/5C。
+  const FORK_AT = 5;
+  if (at < 0 && parseInt(String(cur.id), 10) < FORK_AT) return cur;
   let vCur = at >= 0 ? variants[at] : null;
-  for (let i = at + 1; i < variants.length; i++) {
+  for (let i = Math.max(0, at + 1); i < variants.length; i++) {
     const v = variants[i];
-    if (!v.cond || !v.cond(S)) continue;
+    if (!v.cond || !v.cond(S)) continue;  // 并行分支：条件不满足跳过而非断链
     if (daysIn < need(v)) break;
     vCur = v;
+    break; // 一次只推进一章，与主线同一节奏（避免一步跳到分支末尾）
   }
   return vCur || cur;
 }

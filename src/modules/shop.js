@@ -10,7 +10,7 @@ import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleD
 import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
-import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
+import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v3.4.6 反馈⑤：卡面产出与 tick 同口径（绑定加成封顶 ×2）
@@ -1657,14 +1657,12 @@ function rpGroupLv(key) {
   if (!g) return 0;
   return g.ids.reduce((n, id) => n + ((S.rpTheories && S.rpTheories[id]) || 0), 0);
 }
-// v3.12.0 反馈⑤：星图已开启（深空探测 或 已有远征记录）——研究分组的玩法前置。
-function starChartUnlocked() {
-  return hasTech('deep_space') || (S.expeditionsDone || 0) > 0 || (S.expeditions || []).length > 0;
-}
+// v3.12.9：研究分组「星际与拟我」的玩法前置改读链层唯一判定源 starChartUnlocked(S)，
+//   与星图 tab / 顶栏同源（宠物未解锁时整组不出现，不再各抄一份条件）。
 function rpGroupShown(g) {
   // 资源锚点用 anchorDone（即时、本局制），不用含跨转生持久标记的 anchorShown，避免误放行。
   if (g.anchor && !anchorDone(g.anchor, S)) return false;
-  if (g.requireStar && !starChartUnlocked()) return false;
+  if (g.requireStar && !starChartUnlocked(S)) return false;
   if (!g.unlock) return true;
   return rpGroupLv(g.unlock.prev) >= g.unlock.need;
 }

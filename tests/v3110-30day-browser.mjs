@@ -555,6 +555,43 @@ async function uiCheck(page) {
         }
       })();
 
+      // v3.12.9：星图解锁排在宠物 / PT 之后。完整快照 + finally 恢复，双向验证
+      //   tab 锁定态、顶栏星图 CPS、程序化切换，三者都读 starChartUnlocked(S)。
+      const starGate = (() => {
+        const btn = document.getElementById('btn-expedition');
+        const st = document.getElementById('starcps-stat');
+        const saved = JSON.stringify(S);
+        const read = () => ({
+          gate: q.starChartUnlocked(S),
+          locked: !!btn && btn.dataset.locked === '1',
+          starCpsShown: st ? st.style.display !== 'none' : false,
+          paneOn: !!document.getElementById('tab-expedition')?.classList.contains('on'),
+        });
+        const render = () => { window.__gameDirty.top = true; window.__gameDirty.rp = true; q.sim.render(); };
+        try {
+          S.upgrades = { rp_vault: 1 };
+          S.tech = { deep_space: true };
+          S.pt = 0; S.expeditionsDone = 3; S.expeditions = []; S.starCps = 12;
+          render();
+          const before = read();
+          q.sim.switchTab('expedition'); render();
+          const beforePane = read().paneOn;
+          S.upgrades.pt_vault = 1;
+          render();
+          const after = read();
+          q.sim.switchTab('expedition'); render();
+          const afterPane = read().paneOn;
+          return { ok: true, before, beforePane, after, afterPane };
+        } catch (e) { return { ok: false, reason: String(e).slice(0, 120) }; }
+        finally {
+          const back = JSON.parse(saved);
+          for (const k of Object.keys(S)) delete S[k];
+          Object.assign(S, back);
+          q.sim.switchTab('shop');
+          render();
+        }
+      })();
+
       const rpTxt = document.getElementById('h-rp')?.textContent || '';
       const capOk = (S.rp || 0) <= q.rpCap() && !/NaN|undefined|Infinity/.test(rpTxt);
       const pendingDebuff = (S.projects || [])
@@ -562,7 +599,7 @@ async function uiCheck(page) {
       return { orderOk, firstTwo, restWarnOk, restTipOk, forced,
         fpIds, fpUnlocked, fpGateOk, fpDomCount, resGroupShown, fpForced,
         domCount: domIds.length, capOk, rpTxt,
-        pendingDebuff, runtimeKeys: q.RUN_RUNTIME_KEYS.length };
+        pendingDebuff, runtimeKeys: q.RUN_RUNTIME_KEYS.length, starGate };
     })();
 
     // v3.11.0：AI 面板 UI 准确性。夹具用完整快照 + finally 恢复，不污染推演终态。
@@ -1008,6 +1045,12 @@ try {
   if (fb.fpForced && fb.fpForced.ok) ok('受控夹具解锁分组后，FP 三项按资源锚点双向显隐',
     `自然态 ${fb.fpForced.natural.count}/${fb.fpForced.natural.expected} · 锚点开 ${fb.fpForced.on.count}/3 · 锚点关 ${fb.fpForced.off.count}/0`);
   else bad('FP 资源门控受控夹具失败', JSON.stringify(fb.fpForced));
+  const sg = fb.starGate || {};
+  if (sg.ok && !sg.before.gate && sg.before.locked && !sg.before.starCpsShown && !sg.beforePane
+      && sg.after.gate && !sg.after.locked && sg.after.starCpsShown && sg.afterPane)
+    ok('星图解锁排在宠物之后（tab 锁定态 / 顶栏 CPS / 程序化切换同源）',
+      'PT 未点亮 → ??? + 顶栏隐藏 + 切换被拦；PT 点亮 → 星图 + 顶栏亮出 + 可打开');
+  else bad('星图门控矩阵失败', JSON.stringify(sg));
   if (fb.capOk) ok('顶栏 RP 余额未超上限（重置钳制生效）', fb.rpTxt);
   else bad('RP 余额超过上限', fb.rpTxt);
   if (fb.pendingDebuff === 0) ok('任务面板不存在待领取的负面任务');

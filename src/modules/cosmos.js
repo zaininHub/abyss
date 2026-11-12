@@ -7,6 +7,7 @@ import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 
 import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult } from './economy.js';
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
+import { starChartUnlocked } from './disclosure.js'; // v3.12.9：宇宙探索与星图 tab 同源（宠物在前）
 
 // v3.4.6 反馈③：宇宙探索工程改消耗「星际燃料 CPS」（原巨量 EP）——CPS 由星图探索产出，
 // 呼应「CPS 用于升级星际探索的所有升级」。每项 baseCps 为 CPS 首价，growth 沿用；
@@ -30,7 +31,8 @@ export const COSMOS = {
 export const COSMOS_RES_LABEL = { pt: '🍪 PT', dm: '🌀 DM', faith: '🙏 FP', ember: '🕯️ 余烬', vs: '🌑 VS', rp: '🔬 RP' };
 
 export function cosmosUnlocked() {
-  return hasTech('deep_space') && !!(S.resDiscovered && S.resDiscovered.rp);
+  // v3.12.9：星图未开放（宠物/PT 未解锁）时，宇宙探索也不该由自动化绕过 tab 直接购买
+  return starChartUnlocked(S) && hasTech('deep_space') && !!(S.resDiscovered && S.resDiscovered.rp);
 }
 
 export function cosmosLv(id) {

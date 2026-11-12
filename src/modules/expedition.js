@@ -4,7 +4,8 @@ import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
-import { fmtLongDuration, fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
+import { fmtLongDuration, fmtMultDelta } from '../core/format.js';
+import { starChartUnlocked } from './disclosure.js'; // v3.12.9：深空殖民与星图 tab 同源（宠物在前） // v3.12.0 反馈⑮：倍率 → 带符号百分比
 export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改动
 
 // v3.6.0 方向⑤⑧：星际探索重构——
@@ -119,7 +120,7 @@ export function starColonyLevel() {
   // 殖民总级数 = 已建立殖民地数量（驱动探索收益加成与星际里程碑）
   return Object.values(S.colonies || {}).filter(Boolean).length;
 }
-export function starColoniesUnlocked() { return hasTech('deep_space'); }
+export function starColoniesUnlocked() { return starChartUnlocked(S) && hasTech('deep_space'); }
 export function colonyRpPerSec() {
   let rp = 0;
   for (const g of GALAXIES) if (isColonized(g.id)) rp += g.colonyRp * researchMult('colony'); // v3.6.0 方向⑤：rp_colony2（星殖民拓）提升殖民 RP 产出 +8%/级

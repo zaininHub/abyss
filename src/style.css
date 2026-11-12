@@ -1036,7 +1036,8 @@ body.paused .pet-grid .pet-card {
 .corruption-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;flex-wrap:wrap} /* v3.3.8 反馈③：移入左一窄列后允许换行（主动净化/紧急脱出并排不挤爆） */
 .corruption-label{color:var(--bad);font-weight:600;flex:0 0 auto}
 .corruption-num{color:var(--bad);font-weight:700;flex:1;text-align:right}
-.btn-mini{font-size:10px;padding:2px 6px;background:#6e768133;border:1px solid var(--border);color:var(--text-1);border-radius:3px;cursor:pointer;transition:all .15s}
+/* v3.12.9：原生按钮点击目标 ≥24×24（原 22px 高，实测全库 7 处 btn-mini 命中不足） */
+.btn-mini{font-size:10px;padding:2px 6px;min-height:24px;background:#6e768133;border:1px solid var(--border);color:var(--text-1);border-radius:3px;cursor:pointer;transition:all .15s}
 .btn-mini:hover{background:#6e768159;border-color:var(--accent)}
 .corruption-track{width:100%;height:6px;background:#0006;border-radius:3px;overflow:hidden;margin-bottom:3px}
 .corruption-fill{height:100%;background:linear-gradient(90deg,#d29922,#f85149);transition:width .4s;box-shadow:0 0 6px #f8514980}

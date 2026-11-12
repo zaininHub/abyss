@@ -29,7 +29,7 @@ import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnloc
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
-import { EXPAND_KEY, anchorShown, anchorDone, petsModuleUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
+import { EXPAND_KEY, anchorShown, anchorDone, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
@@ -548,8 +548,9 @@ function renderTop() {
   const hStarCps = document.getElementById('h-starcps');
   const starCpsStat = document.getElementById('starcps-stat');
   if (hStarCps && starCpsStat) {
-    const starOn = (S.starCps || 0) > 0 || !!S.fuelMode || (S.expeditionsDone || 0) > 0
-      || (S.expeditions || []).length > 0 || hasTech('deep_space');
+    // v3.12.9：星图未开放（宠物尚未解锁）时，顶栏也不亮出该模块的资源
+    const starOn = starChartUnlocked(S) && ((S.starCps || 0) > 0 || !!S.fuelMode
+      || (S.expeditionsDone || 0) > 0 || (S.expeditions || []).length > 0 || hasTech('deep_space'));
     starCpsStat.style.display = starOn ? '' : 'none';
     hStarCps.textContent = fmt(S.starCps || 0);
     hStarCps.style.color = S.fuelMode ? 'var(--good, #3fb950)' : '';
@@ -916,6 +917,8 @@ function policyTickRefresh() {
 function switchTab(id) {
   // v3.7.2 反馈①：程序化切换也走同一解锁判定源，防止绕过 nav 的 disabled 打开未解锁模块
   if (id === 'pets' && !petsModuleUnlocked(S)) { toast('🔒 异兽将在解锁 PT 后开放'); return; }
+  // v3.12.9：星图同样堵住程序化切换（QA / 自动化），与 nav 锁定态同源
+  if (id === 'expedition' && !starChartUnlocked(S)) return;
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('on'));
   document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('on'));
   const pane = document.getElementById('tab-' + id);
@@ -997,10 +1000,9 @@ function refreshTabVisibility() {
   // v3.12.0 反馈⑪：RP 改本局制后，tab 门控必须改用 anchorDone（不含跨转生持久标记），
   // 否则转生后 resDiscovered.rp 仍为 true 会误放行一个本局根本没解锁的研究点 tab。
   if (rpBtn) rpBtn.style.display = anchorDone('rp', S) ? '' : 'none';
-  // 星图：探索过或正在探索才显示（对齐原版 unlock 条件）——v3.3.3 反馈⑨：未解锁改「??？」锁定态
-  // v3.4.0 反馈⑤：科技树「深空探测」本身即解锁星图（深空殖民/第二路探索都在星图内），
-  // 此前只认 expeditionsDone/expeditions，玩家买完科技仍看到「???」，以为解锁没生效
-  setTabLocked(document.getElementById('btn-expedition'), !(anchorDone('rp', S) && (S.expeditionsDone > 0 || S.expeditions.length > 0 || hasTech('deep_space'))));
+  // 星图：v3.12.9 起唯一判定源 = starChartUnlocked(S)（宠物/PT 锚点 → RP 锚点 → 深空探测或远征记录）。
+  //   未解锁仍是「???」锁定态；不再在此处另抄一份条件，避免顶栏 / tab / 研究分组口径分叉。
+  setTabLocked(document.getElementById('btn-expedition'), !starChartUnlocked(S));
   // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才开放
   // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
   if (canUnlockReligion()) { S._religionHintSeen = true; }
@@ -2679,6 +2681,7 @@ if (typeof window !== 'undefined') {
     riftLevelOf, riftLevelTech, buyRiftLevelTech, // v3.6.4 ①：裂隙等级只认科技
     // v3.3.0 线程绑定系统 QA 钩子
     petsModuleUnlocked, // v3.7.2 ①：异兽模块与顶栏 PT 同口径的唯一解锁判定
+    starChartUnlocked, // v3.12.9：星图解锁唯一判定源（宠物在前）
     prestigePanelVisible, // v3.7.3 ⑤：晋升模块与 P3 阶段门控同源
     threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
       converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子

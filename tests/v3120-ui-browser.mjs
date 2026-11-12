@@ -188,8 +188,9 @@ try {
     const starShown = () => !!document.querySelector('#research-upgrade-list [data-rp-fold="star"]');
     let item5 = null, item13 = null;
 
-    // ⑤ 三态：无 RP 锚点 → 有锚点 + res 组前置但星图未开 → 三项前置齐备。
+    // ⑤ 四态（v3.12.9）：无 RP 锚点 → 有锚点但星图未开 → 有深空探测但宠物未解锁 → 四项前置齐备。
     // star 组自带 unlock: { prev:'res', need:4 }，夹具需先备齐该既有前置再单独考察星图维度。
+    // 星图 tab 已加「宠物/PT 锚点」硬前置，研究分组读同一谓词，故此处必须显式点亮 PT。
     const snap5 = JSON.stringify(S);
     try {
       const resIds = q.RP_GROUPS.find(g => g.key === 'res').ids.slice(0, 4);
@@ -200,8 +201,10 @@ try {
       S.upgrades = { rp_vault: 1 }; D.rp = true; q.sim.render();
       const anchorOnly = starShown();
       S.tech = { deep_space: true }; D.rp = true; q.sim.render();
+      const techOnly = starShown(); // 宠物未解锁：星图仍锁，研究组也不该出现
+      S.upgrades = { rp_vault: 1, pt_vault: 1 }; D.rp = true; q.sim.render();
       const both = starShown();
-      item5 = { off, anchorOnly, both, resLv: resIds.length };
+      item5 = { off, anchorOnly, techOnly, both, resLv: resIds.length };
     } finally { restore(snap5); }
 
     // ⑬ 未买断 → PP 开启卡；真实 DOM 点击 → 扣 PP、模块开启、卡消失、完整模块渲染
@@ -290,9 +293,9 @@ try {
 
   // ⑤ 星图 / 研究点双门控
   const m5 = M.item5;
-  if (m5 && !m5.off && !m5.anchorOnly && m5.both)
-    ok('⑤ 星际与拟我需 RP 锚点 + 星图前置双门控（res 组前置已备齐的三态矩阵）',
-      `无锚点 ${m5.off} / 锚点+res 但无星图 ${m5.anchorOnly} / 全开 ${m5.both}`);
+  if (m5 && !m5.off && !m5.anchorOnly && !m5.techOnly && m5.both)
+    ok('⑤ 星际与拟我需 RP + 宠物 + 星图三级门控（res 组前置已备齐的四态矩阵）',
+      `无锚点 ${m5.off} / 无星图 ${m5.anchorOnly} / 无宠物 ${m5.techOnly} / 全开 ${m5.both}`);
   else bad('⑤ 星图研究组门控异常', JSON.stringify(m5));
 
   // ⑬ 模块买断链路
