@@ -1,8 +1,9 @@
 // v3.4.2：凝视深渊彩蛋视觉层；v3.12.1 反馈② 重做为顶部「深渊之眼」HUD 徽记（挂 .sys-btns 行首）。
 // v4.0.1 反馈④：应反馈改回屏幕底部中央固定悬浮（fixed left:50% bottom:58px，置于底部触手条带之上），
-//   不再挤在系统按钮行首。下方 .sys-btns 历史说明保留备查。
+//   不再挤在系统按钮行首。v4.0.2 反馈①：再次改回与主线剧情同处一行（prepend 到 .sys-btns 行首），
+//   此前底部居中固定层在窄/中等屏压住了右栏内容（如「余烬井喷」行），故回退到剧情行内联。下方 .sys-btns 历史说明保留备查。
 // 旧版（v3.4.2）把眼睛固定在屏幕底部中央（bottom:0 / 56px），与 v3.12.0 新增的全宽底部触手条带
-// 完全重叠（实测 97×56 满重叠），故 v3.12.1 改为挂载 .sys-btns；v4.0.1 以更高 bottom 值（58px）重新居中并避开条带。
+// 完全重叠（实测 97×56 满重叠），故 v3.12.1 改为挂载 .sys-btns；v4.0.1 以更高 bottom 值（58px）重新居中并避开条带，v4.0.2 回退。
 // 视觉：胶囊仪器框 + 刻度/状态点 + 杏仁眼裂内发光竖瞳（扫视/眨眼/呼吸光晕）。
 // 交互：点击触发 .gazing 反馈并向 main 注册的回调（log/toast）汇报。
 // 动效只动 transform / opacity，prefers-reduced-motion 全量降级。
@@ -73,9 +74,9 @@ function buildOverlay() {
   wrap.setAttribute('aria-hidden', 'true');
   // v3.12.4 ④：尺寸移出内联样式——内联声明会压过下面的窄屏媒体查询（此前 ≤899px 的缩小规则形同虚设）。
   // v4.0.1 反馈④：改为屏幕底部中央固定悬浮（left:50% + translateX(-50%)），bottom:58px 落于底部触手条带（最高 56px）之上，避免重叠遮挡。
-  wrap.style.cssText = 'position:fixed;left:50%;bottom:58px;transform:translateX(-50%);' +
-    'pointer-events:auto;cursor:pointer;z-index:40;' +
-    'opacity:0;transition:opacity 1.8s ease-in;';
+  // v4.0.2 反馈①：改回与主线剧情同处一行——移除 fixed 底部居中定位，眼睛作为 .sys-btns 行内的行内元素自然排版。
+  //   （z-index 不再需要；尺寸由下方注入的 <style> #abyss-gaze-crack 控制，媒体查询照常生效）
+  wrap.style.cssText = 'pointer-events:auto;cursor:pointer;opacity:0;transition:opacity 1.8s ease-in;';
   wrap.innerHTML = buildEyeSvg();
   // 点击交互：点一下「凝视深渊」——视觉反馈（.gazing）+ 回调汇报（log/toast）。
   // 纯 Node 桩未实现 addEventListener，做能力检测后回退（与 querySelector 守卫一致）。
@@ -139,9 +140,11 @@ export function showAbyssGaze() {
   let el = document.getElementById('abyss-gaze-crack');
   if (!el) {
     el = buildOverlay();
-    // v4.0.1 反馈④：固定挂到 body（屏幕底部中央），离开 .sys-btns 行首。
-    // 轻量 DOM 桩（纯 Node 单测）无 body，做能力检测后跳过，避免抛错。
-    if (document.body && typeof document.body.appendChild === 'function') document.body.appendChild(el);
+    // v4.0.2 反馈①：回到主线剧情行——prepend 到 .sys-btns 行首，与 #chapter-bar 剧情条同处一行（不再 fixed 底部居中）。
+    // 轻量 DOM 桩（纯 Node 单测）无 .sys-btns / body，做能力检测后跳过，避免抛错。
+    const host = (typeof document.querySelector === 'function') ? document.querySelector('.sys-btns') : null;
+    if (host && typeof host.prepend === 'function') host.prepend(el);
+    else if (document.body && typeof document.body.appendChild === 'function') document.body.appendChild(el);
   }
   el.style.display = '';
   requestAnimationFrame(() => { el.style.opacity = '1'; }); // 下一帧淡入（首购/重载均生效）

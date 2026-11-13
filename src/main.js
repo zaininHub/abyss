@@ -1912,6 +1912,40 @@ function bindEvents() {
     });
   }
 
+  // v4.0.2 反馈②：系统日志面板高度可拖拽调整（持久化到 localStorage）
+  const bindLogResize = () => {
+    const panel = document.getElementById('log-panel');
+    const handle = document.getElementById('log-resize');
+    if (!panel || !handle) return;
+    const KEY = 'abyss_log_h';
+    const clamp = (h) => Math.max(96, Math.min(window.innerHeight * 0.8, h));
+    const saved = (() => { try { return Number(localStorage.getItem(KEY)); } catch { return NaN; } })();
+    panel.style.height = (Number.isFinite(saved) ? clamp(saved) : 240) + 'px';
+    let dragging = false;
+    const onMove = (e) => {
+      if (!dragging) return;
+      const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+      const rect = panel.getBoundingClientRect();
+      panel.style.height = clamp(rect.bottom - y + handle.offsetHeight) + 'px';
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.body.style.userSelect = '';
+      try { localStorage.setItem(KEY, Math.round(panel.getBoundingClientRect().height)); } catch { /* ignore */ }
+    };
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      document.body.style.userSelect = 'none';
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  };
+  bindLogResize();
+
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）
 
   // v2.7.0：深渊遗物购买（事件委托）

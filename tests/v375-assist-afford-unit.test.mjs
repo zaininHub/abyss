@@ -113,7 +113,7 @@ test('⑤ 300ms 快刷原地维护按钮：不足→充足，sig 去重不重复
 test('⑥ 接线：EP 购买按钮已删除，预留线并入助手行，扩编走研究点 rp_ai_unit', () => {
   // v3.12.12 反馈⑧：购买按钮从 UI 删除——助手扩编唯一玩家入口是研究点「助手扩编协议」
   assert.ok(!/data-assist-buy data-afford-sig/.test(AI), 'EP 购买按钮应已从助手行移除');
-  assert.ok(/data-ai-reserve="\$\{r\}"/.test(AI), '预留线按钮应并入助手行（与助手数量同处一行）');
+  assert.ok(/data-ai-reserve-sel/.test(AI), '预留线下拉框应并入助手行（与助手数量同处一行）');
   // v3.12.13 ⑤：常驻「研究点扩编」提示已从助手行移除，扩编入口说明收敛到悬浮框 data-tip（含「助手扩编协议」）
   assert.ok(!/ai-assist-hint/.test(AI), '常驻「研究点扩编」提示已从助手行移除');
   assert.ok(/助手扩编协议/.test(AI), '悬浮框 data-tip 应携带助手获取说明（研究点「助手扩编协议」）');
@@ -126,6 +126,6 @@ test('⑥ 接线：EP 购买按钮已删除，预留线并入助手行，扩编�
   assert.ok(SHOP.includes('dirty.ai = true'), '授予助手后应置 dirty.ai 即时刷新 AI 面板');
   // buyAssistant 保留为 30 天推演/QA 自动化入口（不再有 UI 按钮）
   assert.ok(/export function buyAssistant\(\)/.test(AI), 'buyAssistant 保留为推演自动化入口');
-  // CSS：预留线并入标题行后命中目标仍 >=24x24
-  assert.match(CSS, /\.ai-reserve-btn \{[^}]*min-height: 24/);
+  // CSS：预留线下拉框并入标题行后命中目标仍 >=24x24
+  assert.match(CSS, /\.ai-reserve-select \{[^}]*min-height: 24/);
 });

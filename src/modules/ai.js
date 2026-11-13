@@ -476,11 +476,11 @@ export function refreshAssistantAffordability() {
   // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），落进面板标题 <h3>。
   // v3.12.13 ⑤：移除常驻「研究点扩编」提示，扩编入口说明收敛到悬浮框 data-tip（见 ledgerTip）。
   const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
-  // v4.0.1 反馈①：预留线独立成行（data-ai-reserve-line，位于标题行下方），不再挤在标题行内。
+  // v4.0.2 反馈⑤：预留线并入标题行 h3 内（与助手数量同处一行），百分比改为 <select> 下拉框。
   const ai = S.ai;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
-    `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
-  const reserveHtml = `<span class="ai-reserve-label">预留线 EP 上限</span><span class="ai-reserve-opts">${reserveOpts}</span>`;
+    `<option value="${r}" ${ai.reserve === r ? 'selected' : ''}>${Math.round(r * 100)}%</option>`).join('');
+  const reserveHtml = `<span class="ai-reserve-label">预留线 EP 上限</span><select class="ai-reserve-select" data-ai-reserve-sel>${reserveOpts}</select>`;
   return { headHtml: head, reserveHtml, stallHtml: unstaffedHtml };
 }
 
@@ -559,16 +559,16 @@ export function renderAiPanel(container) {
     ? container.parentElement : document.getElementById('ai-card');
   const slot = card && card.querySelector('[data-ai-assist-slot]');
   if (slot) slot.innerHTML = section.headHtml;
-  // v4.0.1 反馈①：预留线独立成行（标题行下方），与助手数同行解耦，避免按钮被挤出面板。
-  const rline = card && card.querySelector('[data-ai-reserve-line]');
-  if (rline) rline.innerHTML = section.reserveHtml;
+  // v4.0.2 反馈⑤：预留线下拉框注入标题行 h3 内的 [data-ai-reserve-slot]（与助手数量同处一行）。
+  const rslot = card && card.querySelector('[data-ai-reserve-slot]');
+  if (rslot) rslot.innerHTML = section.reserveHtml;
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
     <div class="ai-action-grid">${basicHtml}</div>
     ${advancedHtml}
     ${section.stallHtml}`;
 
-  // 点击委托挂在 #ai-card 上（助手行含预留线按钮，在标题行 slot 内，不在 #ai-panel 内，否则收不到事件）
+  // 点击委托挂在 #ai-card 上（助手行 + 标题行预留线下拉框都在 #ai-card 内，不在 #ai-panel 内，否则收不到事件）
   const delegateHost = card || container;
   if (!delegateHost.dataset.v13Delegated) {
     delegateHost.dataset.v13Delegated = '1';
@@ -593,11 +593,9 @@ export function renderAiPanel(container) {
         renderAiPanel(container);
         return;
       }
-      const rEl = e.target.closest('[data-ai-reserve]');
-      if (rEl) {
-        S.ai.reserve = Number(rEl.dataset.aiReserve);
-        save(S);
-        renderAiPanel(container);
+      // v4.0.2 反馈⑤：预留线改为 <select>，点击委托不再处理按钮；选中变化走下面的 change 监听
+      const selEl = e.target.closest('[data-ai-reserve-sel]');
+      if (selEl) { // 点击下拉框本身不立即改值，等 change 事件
         return;
       }
       // v3.12.7 ⑩：面板上的「一键全关」按钮已移除（占编 − 到 0 就是关闭）。
@@ -629,6 +627,15 @@ export function renderAiPanel(container) {
         buyAssistant();
         renderAiPanel(container);
         return;
+      }
+    });
+    // v4.0.2 反馈⑤：预留线下拉框选中变化 → 写回 S.ai.reserve（select 触发 change，而非 click）
+    delegateHost.addEventListener('change', (e) => {
+      const sel = e.target.closest('[data-ai-reserve-sel]');
+      if (sel) {
+        S.ai.reserve = Number(sel.value);
+        save(S);
+        renderAiPanel(container);
       }
     });
   }

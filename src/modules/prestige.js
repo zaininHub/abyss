@@ -42,7 +42,7 @@ export function doPrestige(talentId) {
   // v3.12.0 反馈⑫：晋升推动故事线——驻留计时回拨，让「条件已满足」的下一章立即推进，
   // 但章节条件仍由 chapters.js 逐章判定，不会无条件跳章。
   S.chapterEnteredAt = Date.now() - 3 * 86400000;
-  crewPush('晋升转生：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水
+  crewPush('晋升：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水 // v4.0.2 反馈④：晋升转生→晋升
   // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
   let startEp = 0;
   if (talentId === 'rich') startEp = 500;
@@ -83,7 +83,7 @@ export function renderPrestige(container) {
   // 不再整面板 innerHTML 重建（原每 2s 重建使按钮在慢速点击窗口被替换 → click 丢失）
   if (!container._prgBuilt) {
     container._prgBuilt = true;
-    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升转生</b>结算职级（第一层循环）→ 本局晋升 ≥1 且累计 EP ≥10 亿后可<b style="color:var(--purple)">轮回</b>（第二层循环），结算深渊回响（全局 +5%/点，跨轮回保留）。</div>
+    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升</b>结算职级（第一层循环）→ 本局晋升 ≥1 且累计 EP ≥10 亿后可<b style="color:var(--purple)">轮回</b>（第二层循环），结算深渊回响（全局 +5%/点，跨轮回保留）。</div>
       <div class="off-stat"><span>本局累计</span><b id="prg-run">0</b></div>
       <div class="off-stat"><span>晋升需求</span><b id="prg-need">0</b></div>
       <div class="off-stat"><span>可获得职级点</span><b id="prg-gain">0/1 PP</b></div>
@@ -91,7 +91,7 @@ export function renderPrestige(container) {
       <div class="off-stat"><span>可获得 ES</span><b id="prg-esg">0/1</b></div>
       <div class="prestige-bar" id="prg-bar"><div id="prg-bar-fill" style="width:0%"></div></div>
       <div class="prestige-status no" id="prg-status">未达标</div>
-      <button class="btn prestige-btn no" id="prestige-btn" title="">晋升转生</button>
+      <button class="btn prestige-btn no" id="prestige-btn" title="">晋升</button>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3)" id="prg-note"></div>
       <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display"></div>`;
   }
@@ -117,14 +117,14 @@ export function renderPrestige(container) {
   const bar = container.querySelector('#prg-bar-fill');
   if (bar) bar.style.width = pct + '%';
   const st = container.querySelector('#prg-status');
-  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = abyssLock ? '深渊吞噬：已被深渊锁定——转生不可脱离，直面命运抉择' : (ready ? '已达标：可晋升转生' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`); }
+  if (st) { st.className = 'prestige-status ' + (ready ? 'ok' : 'no'); st.textContent = abyssLock ? '深渊吞噬：已被深渊锁定——转生不可脱离，直面命运抉择' : (ready ? '已达标：可晋升' : `未达标：还差 ${fmt(lack)} EP（${pct.toFixed(0)}%）`); }
   const btn = container.querySelector('#prestige-btn');
   if (btn) {
     btn.className = 'btn prestige-btn' + (ready ? '' : ' no');
-    btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '转生：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
+    btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '晋升：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `转生将获得 ${reward}；职级点 / ES / 成就 / 宗教 / 深潜 / 回响 / 永恒保留，AI 助手 / 升级 / 科技 / 研究点 / RP / 裂隙余烬归零。` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
+  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `清空所有资源，下局开局获得 ${reward}` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
   const td = container.querySelector('#talent-display');
   if (td) {
     // v3.12.3 反馈⑩：本局天赋同时展示名称与效果（原只有名字，玩家看不到自己这一局拿到了什么）

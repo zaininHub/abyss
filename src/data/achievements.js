@@ -21,7 +21,7 @@ export const ACHIEVEMENTS = [
   { id: 'thread3',   name: '三人成众', icon: '🧵', desc: '同时拥有 3 条产出线程', test: (s, ctx) => (s.cultists || []).length >= 3 },
   { id: 'thread10',  name: '军团',     icon: '🧵', desc: '拥有 10 条产出线程', test: (s, ctx) => (s.cultists || []).length >= 10 },
   { id: 'thread50',  name: '文明',     icon: '🧵', desc: '拥有 50 条产出线程', test: (s, ctx) => (s.cultists || []).length >= 50 },
-  { id: 'pre1',      name: '初次超脱', icon: '⬆️', desc: '完成首次晋升转生', test: (s, ctx) => s.prestige >= 1 },
+  { id: 'pre1',      name: '初次超脱', icon: '⬆️', desc: '完成首次晋升', test: (s, ctx) => s.prestige >= 1 },
   { id: 'pre5',      name: '五度超脱', icon: '⬆️', desc: '完成 5 次晋升', test: (s, ctx) => s.prestige >= 5 },
   { id: 'pre50',     name: '五十度轮回', icon: '⬆️', desc: '完成 50 次晋升', test: (s, ctx) => s.prestige >= 50 },
   { id: 'pre150',    name: '百五十度', icon: '⬆️', desc: '完成 150 次晋升', test: (s, ctx) => s.prestige >= 150 },

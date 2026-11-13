@@ -33,10 +33,9 @@ rec('V1 鱼缸 1/2/3 级显 1/2/3 条（隐藏臂不占位，可见臂自动居�
   && css.includes('.tentacle-deco.tentacle-2 .td-arm.tentacle-b')
   && css.includes('.tentacle-deco.tentacle-3 .td-arm.tentacle-c')
   && css.includes('justify-content: center'), '');
-rec('V1 条带压到 32px、凝视底部居中固定（v4.0.1：脱离 .sys-btns）、装饰不阻挡页面',
+rec('V1 条带压到 32px、凝视回到剧情行（prepend .sys-btns，不再 fixed）、装饰不阻挡页面',
   css.includes('--bottom-deco-h: 32px') && css.includes('pointer-events: none')
-  && gaze.includes('position:fixed;left:50%') && gaze.includes('bottom:58px') && gaze.includes('translateX(-50%)')
-  && gaze.includes('document.body.appendChild')
+  && gaze.includes('.sys-btns') && gaze.includes('prepend') && !gaze.includes('position:fixed;left:50%')
   && html.includes('tentacle-tap-zone'), '');
 rec('V1 触手点击热区铺满底部条带',
   css.includes('.tentacle-tap-zone {') && /\.tentacle-tap-zone \{[^}]*width: 100%/.test(css), '');

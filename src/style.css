@@ -146,7 +146,7 @@ body {
   /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口
      v3.4.0 反馈①：最左列再放宽（0.58→0.70fr，下限 240→280px）——裂隙/任务文案不再频繁换行
      v3.4.1 反馈①：右侧让出 132px 浮动栏后重新配权（最左列 0.70→0.74fr），1920 宽下仍保持 ≈300px */
-  grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.02fr) minmax(0, 1.94fr) minmax(280px, 0.80fr);
+  grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr);
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
@@ -170,7 +170,7 @@ body {
    现在日志弹性伸缩（96~240）、故事线正文固定占位、岔路口封顶 180 内部滚动、
    晋升自然高度收尾；短窗口再收一档，整列因此放得下，晋升下边框与左列齐平。
    仍是放不下时（超短视口）由整列滚动兜底，内容不会被裁掉。 */
-.side-col > .log-panel { flex: 1 1 auto; min-height: 96px; max-height: 240px; display: flex; flex-direction: column; }
+.side-col > .log-panel { flex: 0 0 auto; min-height: 96px; display: flex; flex-direction: column; } /* v4.0.2 反馈②：高度由 inline style 控制（bindLogResize 拖拽），故 flex-grow:0 让拖拽高度生效 */
 .side-col > .log-panel .log-content { flex: 1 1 auto; height: auto; min-height: 0; }
 .side-col > #tab-storyline > #crossroad-list { max-height: clamp(112px, 15vh, 190px); overflow-y: auto; }
 .side-col > #tab-prestige { flex: 1 0 auto; margin-top: auto; }
@@ -531,10 +531,10 @@ body {
 .ai-card > h3 .ai-title { white-space: nowrap; flex: 0 0 auto; }
 .ai-assist-slot { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
 .ai-assist-slot:empty { display: none; }
-/* v4.0.1 反馈①：预留线独立成行（标题行下方），允许换行，保证 10%/30%/50% 按钮始终可点选 */
-.ai-reserve-line { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; font-size: 10px; color: var(--text-3); flex-wrap: wrap; }
+/* v4.0.2 反馈⑤：预留线下拉框并入标题行 h3 内（与助手数量同处一行），百分比改为 <select> */
+.ai-reserve-inline { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 10px; color: var(--text-3); white-space: nowrap; }
 .ai-reserve-label { white-space: nowrap; }
-.ai-reserve-opts { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.ai-reserve-select { font-size: 11px; min-height: 24px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-2, #1a1030); color: var(--text-1, #e8e0f5); }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
 .ai-assistant-head b { font-size: 13px; }
 .ai-assist-sep { color: var(--text-3); margin: 0 1px; }
@@ -868,14 +868,21 @@ body {
 }
 
 /* ========== 日志 ========== */
-.log-panel { max-height: 240px; }
+/* v4.0.2 反馈②：面板高度可拖拽调整（main.js bindLogResize 设置 inline height，故此处不再固定 max-height） */
+.log-panel { display: flex; flex-direction: column; }
 
 .log-content {
-  height: 200px; /* v3.10.4 ②：固定高度（替代 max-height），日志界面大小恒定，内容滚动 */
+  flex: 1 1 auto;
+  min-height: 60px;
+  height: auto;
   overflow-y: auto;
   font-size: 11.5px;
   line-height: 1.6;
 }
+
+/* v4.0.2 反馈②：日志高度拖拽手柄 */
+.log-resize { flex: 0 0 auto; height: 7px; margin-top: 4px; border-radius: 4px; background: var(--border); opacity: .45; cursor: ns-resize; transition: opacity .15s; }
+.log-resize:hover, .log-resize:active { opacity: 1; }
 
 .log-content .t {
   color: var(--text-3);
@@ -1111,7 +1118,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.02fr) minmax(0, 1.94fr) minmax(280px, 0.80fr); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
+    grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;

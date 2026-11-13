@@ -1,10 +1,10 @@
 // v4.0.1 四项反馈 UI 专项浏览器验收（真实 DOM / computed style / 几何 / 浮层命中）
 //
 // 覆盖：
-//   ① AI 助手面板头部不再挤在一行——标题单行，「预留线 EP 上限」独立成行，10%/30%/50% 按钮始终可点选；
+//   ① AI 助手面板头部：标题单行，「预留线 EP 上限」下拉框并入标题行 h3（与助手数量同处一行），10%/30%/50% 三档；
 //   ② 深渊扩展研究卡 desc 去掉「每层」字样（rp_delve / rp_rift）；
 //   ③ 班组档案卡每页 6 条（PAGE_SIZE = 6）；
-//   ④ 深渊凝视改回屏幕底部中央固定悬浮（脱离 .sys-btns），自动转化从首列面板移为「⚡ 转化」悬浮按钮（皮肤左侧），悬停展开快捷开关。
+//   ④ 深渊凝视回到主线剧情行（prepend .sys-btns，不再固定底部居中），自动转化从首列面板移为「⚡ 转化」悬浮按钮（皮肤左侧），悬停展开快捷开关。
 //
 // 用法：node tests/v401-ui-feedback-browser.mjs   （Chrome 路径走 tests/_chrome.mjs 单源）
 import puppeteer from 'puppeteer-core';
@@ -75,7 +75,7 @@ try {
   });
   await sleep(350);
 
-  // ---------- ① AI 头部：标题单行 + 预留线独立成行 + 按钮可点选 ----------
+  // ---------- ① AI 头部：标题单行 + 预留线下拉框并入标题行 + 三档 ----------
   const ai = await page.evaluate(() => {
     const q = window.__qa;
     const card = document.getElementById('ai-card');
@@ -83,32 +83,31 @@ try {
     let titleLines = 0;
     if (title) { const r = document.createRange(); r.selectNodeContents(title); titleLines = r.getClientRects().length; }
     const titleCs = title ? getComputedStyle(title) : null;
-    // 预留线：必须是 #ai-card 的直接子元素（标题行 h3 之外），而非 h3 内
-    const inH3 = !!(card && card.querySelector('.ai-card > h3 [data-ai-reserve-line]'));
-    const line = card && card.querySelector('.ai-card > [data-ai-reserve-line]');
-    const btns = line ? [...line.querySelectorAll('.ai-reserve-btn')] : [];
-    const btnBoxes = btns.map(b => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top), left: Math.round(r.left) }; });
-    const label = line ? line.querySelector('.ai-reserve-label') : null;
+    // 预留线下拉框：必须是 #ai-card h3 内的 [data-ai-reserve-slot]（与标题同处一行）
+    const inH3 = !!(card && card.querySelector('.ai-card > h3 [data-ai-reserve-slot]'));
+    const slot = card && card.querySelector('.ai-card > h3 [data-ai-reserve-slot]');
+    const sel = slot ? slot.querySelector('.ai-reserve-select') : null;
+    const opts = sel ? [...sel.querySelectorAll('option')].map(o => o.textContent.trim()) : [];
+    const label = slot ? slot.querySelector('.ai-reserve-label') : null;
     return {
       cardVisible: card ? card.style.display !== 'none' : false,
       titleText: title ? title.textContent.trim() : '',
       titleLines, titleNowrap: titleCs ? titleCs.whiteSpace : '',
-      inH3, lineExists: !!line, labelText: label ? label.textContent.trim() : '',
-      btnCount: btns.length,
-      clickable: btnBoxes.length > 0 && btnBoxes.every(b => b.w >= 24 && b.h >= 24 && b.top >= 0 && b.top <= innerHeight && b.left >= 0 && b.left <= innerWidth),
-      labelInLine: !!(line && line.contains(label)),
+      inH3, slotExists: !!slot,
+      labelText: label ? label.textContent.trim() : '',
+      selExists: !!sel, opts,
     };
   });
   results.ai = ai;
   if (ai.cardVisible && ai.titleLines === 1 && ai.titleNowrap === 'nowrap' && ai.titleText.includes('AI 助手'))
     ok('① 「🤖 AI 助手」标题单行不换行', `${ai.titleText} / ${ai.titleLines} 行`);
   else bad('① AI 标题仍换行或不可见', JSON.stringify(ai));
-  if (!ai.inH3 && ai.lineExists && ai.labelText.includes('预留线 EP 上限') && ai.labelInLine)
-    ok('① 「预留线 EP 上限」独立成行（位于标题行下方，不在 h3 内）', `inH3=${ai.inH3}`);
-  else bad('① 预留线未独立成行', JSON.stringify(ai));
-  if (ai.btnCount === 3 && ai.clickable)
-    ok('① 预留线 3 档按钮（10%/30%/50%）可见且点击目标 ≥24×24', `${ai.btnCount} 档 / 可点选 ${ai.clickable}`);
-  else bad('① 预留线按钮缺失或不可点选', JSON.stringify(ai));
+  if (ai.inH3 && ai.slotExists && ai.labelText.includes('预留线 EP 上限'))
+    ok('① 「预留线 EP 上限」下拉框并入标题行 h3（与助手数量同处一行）', `inH3=${ai.inH3}`);
+  else bad('① 预留线未并入标题行', JSON.stringify(ai));
+  if (ai.selExists && ai.opts.length === 3 && ai.opts.every(t => /%$/.test(t)))
+    ok('① 预留线下拉框含 3 档（10%/30%/50%）', ai.opts.join(' '));
+  else bad('① 预留线下拉框档位缺失', JSON.stringify(ai));
 
   // ---------- ② 深渊扩展研究 desc 去「每层」 ----------
   const desc = await page.evaluate(() => {
@@ -139,27 +138,28 @@ try {
     ok('③ 分页器显示「第 1 / 2 页」（8 名 ÷ 6 = 2 页）', crew.pagerText);
   else bad('③ 分页器页数不符', JSON.stringify(crew));
 
-  // ---------- ④ 深渊凝视底部居中 + 自动转化悬浮按钮 ----------
+  // ---------- ④ 深渊凝视回到剧情行 + 自动转化悬浮按钮 ----------
   const gaze = await page.evaluate(() => {
     const el = document.getElementById('abyss-gaze-crack');
     if (!el) return { exists: false };
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
+    const sysBtns = el.closest && el.closest('.sys-btns');
+    const chapterRow = el.closest && el.closest('.chapter-row');
+    const bar = document.getElementById('chapter-bar');
+    const barRect = bar ? bar.getBoundingClientRect() : null;
+    // 与剧情条同处一行：sys-btns 行内，且垂直中心与 #chapter-bar 重叠
+    const sameRow = !!(sysBtns && barRect && Math.abs((r.top + r.height / 2) - (barRect.top + barRect.height / 2)) <= 8);
     return {
       exists: true, position: cs.position,
-      parentIsBody: el.parentElement === document.body,
-      inSysBtns: !!(el.closest && el.closest('.sys-btns')),
-      centerX: Math.round(r.left + r.width / 2), viewportCenterX: Math.round(innerWidth / 2),
-      bottomGap: Math.round(innerHeight - r.bottom), width: Math.round(r.width), height: Math.round(r.height),
+      inSysBtns: !!sysBtns, inChapterRow: !!chapterRow, sameRow,
+      width: Math.round(r.width), height: Math.round(r.height),
     };
   });
   results.gaze = gaze;
-  if (gaze.exists && gaze.position === 'fixed' && gaze.parentIsBody && !gaze.inSysBtns)
-    ok('④ 深渊凝视固定到 body（脱离 .sys-btns 行）', `position=${gaze.position}`);
-  else bad('④ 凝视未固定到 body / 仍在 .sys-btns', JSON.stringify(gaze));
-  if (gaze.exists && Math.abs(gaze.centerX - gaze.viewportCenterX) <= 6 && gaze.bottomGap >= 40 && gaze.bottomGap <= 90)
-    ok('④ 深渊凝视屏幕底部中央（水平居中 + 落于触手条带之上）', `centerX=${gaze.centerX}/${gaze.viewportCenterX} · 距底 ${gaze.bottomGap}px`);
-  else bad('④ 凝视未居中或重叠触手条带', JSON.stringify(gaze));
+  if (gaze.exists && gaze.position !== 'fixed' && gaze.inSysBtns && gaze.inChapterRow && gaze.sameRow)
+    ok('④ 深渊凝视回到剧情行（prepend .sys-btns，与剧情条同处一行，不再 fixed 底部）', `position=${gaze.position} · sameRow=${gaze.sameRow}`);
+  else bad('④ 凝视未回到剧情行 / 仍 fixed', JSON.stringify(gaze));
 
   const fab = await page.evaluate(() => {
     const q = document.getElementById('qs-fab');

@@ -150,8 +150,8 @@ test('C4 底部装饰 / 页面宽度（v3.12.0 ⑭ + v3.12.1 ②③ 随设计更
   const gaze = src('src/modules/abyssGaze.js');
   assert.ok(css.includes('--bottom-deco-h: 32px'), 'v3.12.10 ②：底部条带压缩到 32px');
   assert.ok(css.includes('.tentacle-deco {') && css.includes('pointer-events: none'), '触手不阻挡');
-  // v4.0.1 反馈④：凝视改回屏幕底部中央固定悬浮（脱离 .sys-btns 行首），bottom:58px 落于触手条带之上
-  assert.ok(gaze.includes('position:fixed;left:50%') && gaze.includes('bottom:58px') && gaze.includes('translateX(-50%)'), '凝视底部居中固定、离开系统按钮行');
+  // v4.0.2 反馈①：凝视回到主线剧情行（prepend .sys-btns），不再 fixed 底部居中
+  assert.ok(gaze.includes('.sys-btns') && gaze.includes('prepend') && !gaze.includes('position:fixed;left:50%'), '凝视回到剧情行（prepend .sys-btns，不再 fixed）');
   assert.ok((html.match(/viewBox="0 0 140 32"/g) || []).length === 3, '三条独立、不横向拉伸的触手 SVG');
   assert.ok(html.includes('tentacle-tap-zone'), '点击彩蛋迁移到不遮挡的专用热区');
   // v3.12.1 ③：许愿池改可收起/可拖动浮窗，右侧 112px 留白全部回收

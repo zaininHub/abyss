@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>深渊效能工作台 v4.0.1</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-CR4ka4kL.js"></script>
-  <link rel="stylesheet" href="./assets/index-ARp4IrIf.css">
+  <script defer src="./assets/index-CkqgOC6P.js"></script>
+  <link rel="stylesheet" href="./assets/index-BlAp6dig.css">
 </head>
 <body>
 <div id="app">
@@ -161,9 +161,7 @@
         <div id="ep-cap-hint" class="ep-cap-hint" style="display:none"></div>
         <!-- v1.3 A：AI 助手面板（研究「AI 管理核心」后显示） -->
         <div id="ai-card" class="panel ai-card" style="display:none">
-          <h3><span class="ai-title">🤖 AI 助手</span><span class="ai-assist-slot" data-ai-assist-slot></span></h3>
-          <!-- v4.0.1 反馈①：预留线独立成行，避免与标题挤在一行把百分比按钮挤出面板不可点选 -->
-          <div class="ai-reserve-line" data-ai-reserve-line></div>
+          <h3><span class="ai-title">🤖 AI 助手</span><span class="ai-assist-slot" data-ai-assist-slot></span><span class="ai-reserve-inline" data-ai-reserve-slot></span></h3>
           <div id="ai-panel"></div>
         </div>
         <!-- v2.0 矩阵腐化进度条 -->
@@ -284,9 +282,10 @@
     <!-- 右列（v3.2.1 反馈④第三栏；v3.3.3 反馈②成就移至第一列）：日志 / 故事线 / 晋升（常驻可见） -->
     <div class="side-col">
       <!-- 日志 -->
-      <div class="panel log-panel">
+      <div class="panel log-panel" id="log-panel">
         <h3>系统日志</h3>
         <div id="log-content" class="log-content"></div>
+        <div id="log-resize" class="log-resize" title="拖拽调整日志高度" aria-hidden="true"></div>
       </div>
 
       <!-- 故事线（原 tab-storyline，常驻右列；id 保留兼容 switchTab/测试）；v3.2.4 反馈①：点击标题收起/展开 -->
