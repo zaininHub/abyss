@@ -1678,7 +1678,7 @@ export function buyResearchUpgrade(id) {
   return { ok: true };
 }
 // v2.8.28：研究升级分类 + 分批次解锁（参考科技树/升级商店的类目分区与渐进揭示）
-// 批次：产出强化（开局显现）→ 玩法扩展与配套（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（并列，累计 4 级）
+// 批次：产出强化（开局显现）→ 深渊协议（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（并列，累计 4 级）
 export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部有归属分组」
   // v3.0.3：许愿池 wish_well 已从研究升级移入通用设施（BALANCE.buildings）——不再在研究点 tab 渲染
   // v3.4.2：研究菜单扩充——各批次新增条目（ep/thread/global/offline 等）并入对应轴
@@ -1686,11 +1686,11 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix'], unlock: null }, // v3.12.13 反馈①：奇点推演/离线协议移出至「玩法扩展与配套」，本组精简为开局两项（解锁链仍靠 2 项 cap 达标）
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix'], unlock: null }, // v3.12.13 反馈①：奇点推演/离线协议移出至「深渊协议」，本组精简为开局两项（解锁链仍靠 2 项 cap 达标）
   // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
-  //   prod = 开局显现的产出/全局/离线基础项；res = 玩法扩展与配套（资源/政策/项目/班组/远征/集市）；
+  //   prod = 开局显现的产出/全局/离线基础项；res = 深渊协议（资源/政策/项目/班组/远征/集市）；
   //   abyss = 深渊终局两根核心轴；ai = AI 助手（效率 + 扩编）；star = 星际（研究点已解锁 + 星图已开启 双门控）。
-  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）
+  { key: 'res',   name: '深渊协议', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）
   { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），
   // 「自动能力」与「购买」同处一个研究点类目，解锁仍留在升级商店科技树。

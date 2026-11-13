@@ -37,7 +37,7 @@ import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons
 import { renderTech, refreshTechState, renderEternal, buyTech } from './modules/tech.js';
 import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
-import { renderCrewPanel, crewPush, crewShown } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
+import { renderCrewPanel, crewPush, crewShown, crewStateMeta } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
 import { tickVehicleCollect, setVehicleLogFn } from './modules/vehicles.js'; // v1.3 D
 import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHireFlag, autoBuildUnlocked, allResDiscovered, autoBuildActivateCost, refreshAssistantAffordability,
   assistantCount, assistantCost, assistantBuyState, buyAssistant, setAiSwitch, allOffActions,
@@ -136,21 +136,16 @@ function renderOrchestrationPanel() {
   // v3.12.13 反馈 #164：潮汐排班与四种排版类型同排；开关仅用选中高亮表达；潮汐预案改为悬停浮层。
   html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized });
 
-  // v3.10.0「相位共鸣」：标题与说明分行，避免窄卡内提示被挤成孤字换行；
-  // 按钮点击目标 28×28 且带 aria-label / aria-pressed（可访问性），焦点态只用既有强调色。
+  // v4.0.0 反馈④：相位共鸣与效能编排同级——去掉说明文案与「共鸣：开/关」文字，
+  //   一个纯开关样式按钮 + 四种焦点按钮同排一行；倍率读数与层数保留（读侧契约）。
   if (res.unlocked) {
-    html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
-      <div style="font-size:11.5px;color:var(--text-2);margin-bottom:7px">相位共鸣 · ${res.layers}/${res.maxLayers} 层</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
-        <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" style="min-height:28px;min-width:28px">共鸣：${res.enabled ? '开' : '关'}</button>
-        <span style="font-size:10.5px;color:var(--text-3)">焦点每层 +1.5%，其余各 -0.2%</span>
-      </div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap">
-        ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${f.icon}</button>`).join('')}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-top:6px">
-        ${res.rows.map(r => `<div>${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
-      </div>
+    html += `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
+      <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">◉</button>
+      ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${f.icon}</button>`).join('')}
+      <span style="font-size:10.5px;color:var(--text-3);margin-left:2px;white-space:nowrap">相位共鸣 · ${res.layers}/${res.maxLayers} 层</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
+      ${res.rows.map(r => `<div>${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
     </div>`;
   }
 
@@ -163,11 +158,52 @@ function renderOrchestrationPanel() {
   }
   html += `</div>`;
   el.innerHTML = html;
+  placeTideSchedPop(); // v4.0.0 ⑤：fixed 浮层按触发按钮视口坐标重定位
+}
+
+/**
+ * v4.0.0 反馈⑤：潮汐预案浮层改 position:fixed 后，需按「潮汐排班」按钮的
+ * 视口坐标写入 left/top，并在视口边界内翻转（下方放不下就翻到上方）。
+ * 显隐仍由 .tide-sched-wrap:hover / :focus-within 的注入 CSS 控制，DOM 结构不变。
+ */
+function placeTideSchedPop() {
+  if (typeof document === 'undefined') return;
+  const wrap = document.querySelector('.tide-sched-wrap');
+  const pop = wrap && wrap.querySelector('.tide-sched-pop');
+  const btn = wrap && wrap.querySelector('[data-orch-auto]');
+  if (!pop || !btn) return;
+  // 浮层默认 display:none，先临时显示测量真实尺寸（不改变显隐契约）
+  const prevDisplay = pop.style.display;
+  const prevVisibility = pop.style.visibility;
+  pop.style.visibility = 'hidden';
+  pop.style.display = 'block';
+  const w = pop.offsetWidth || 240;
+  const h = pop.offsetHeight || 200;
+  pop.style.display = prevDisplay;
+  pop.style.visibility = prevVisibility;
+  const r = btn.getBoundingClientRect();
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const left = Math.max(8, Math.min(r.left, vw - w - 8));
+  // 0 间隙：浮层是 wrap 的 DOM 后代，鼠标从按钮移入浮层时 :hover 不会中途丢失
+  const below = r.bottom;
+  const top = (below + h <= vh - 8) ? below : Math.max(8, r.top - h);
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(top)}px`;
 }
 
 function bindOrchestrationPanel() {
   const el = document.getElementById('orchestration-panel');
   if (!el) return;
+  // v4.0.0 ⑤：hover 进入 / 窗口尺寸变化 / 任一层滚动时重定位 fixed 浮层。
+  el.addEventListener('mouseover', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.tide-sched-wrap')) placeTideSchedPop();
+  });
+  el.addEventListener('focusin', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.tide-sched-wrap')) placeTideSchedPop();
+  });
+  window.addEventListener('resize', placeTideSchedPop);
+  window.addEventListener('scroll', placeTideSchedPop, true);
   el.addEventListener('click', (e) => {
     const btn = e.target && e.target.closest ? e.target.closest('button') : null;
     if (!btn) return;
@@ -767,7 +803,9 @@ function renderHero() {
     hireBtn.disabled = S.ep < staffCost();
     hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
   }
-  if (focusLv) { const nxt = Math.round(focusPerLevel(S.focusLevel + 1) * 100); focusLv.textContent = `专注等级：Lv.${S.focusLevel} · 下一级 +${nxt}%`; focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)'; focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal'; } // v2.8.30：等级旁显示下一级加成（加成从少到多，达上限后固定）
+  // v4.0.0 反馈⑥：静态标签「专注等级:」已在 index.html 的 #focus-bar 里，此处只写值，
+  //   不再重复前缀（旧写法会渲染成「专注等级: 专注等级：Lv.32 …」）。
+  if (focusLv) { const nxt = Math.round(focusPerLevel(S.focusLevel + 1) * 100); focusLv.textContent = `Lv.${S.focusLevel} · 下一级 +${nxt}%`; focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)'; focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal'; } // v2.8.30：等级旁显示下一级加成（加成从少到多，达上限后固定）
   if (focusCostEl) focusCostEl.textContent = fmt(focusCost());
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
   const focusBarEl = document.getElementById('focus-bar');
@@ -1793,7 +1831,9 @@ function bindEvents() {
   // v3.12.13 ⑦：皮肤改由「永恒矩阵」购买——默认仅 abyss 拥有，light/ember 需 S.eternal[skin_*] > 0。
   const skinMenuEl = document.getElementById('skin-menu');
   if (skinMenuEl) {
-    const SKINS = ['abyss', 'light', 'ember'];
+    // v4.0.0 反馈②：新增薄荷绿潮 / 秋日鎏金两款（均为浅色系，与 light 一起挂 .light 供凝视检测）。
+    const SKINS = ['abyss', 'light', 'ember', 'mint', 'autumn'];
+    const LIGHT_SKINS = ['light', 'mint', 'autumn'];
     const SKIN_KEY = 'abyss_skin';
     // 拥有判定：abyss 默认拥有；其余皮肤由永恒矩阵一次性解锁（S.eternal[skin_<name>] > 0）
     const skinOwned = (name) => name === 'abyss' || ((S.eternal && S.eternal['skin_' + name]) || 0) > 0;
@@ -1810,7 +1850,7 @@ function bindEvents() {
       if (!SKINS.includes(name) || !skinOwned(name)) name = 'abyss';
       const root = document.documentElement;
       SKINS.forEach(s => root.classList.toggle(`theme-${s}`, s === name));
-      root.classList.toggle('light', name === 'light');
+      root.classList.toggle('light', LIGHT_SKINS.includes(name));
       try { localStorage.setItem(SKIN_KEY, name); } catch (e) { /* 隐私模式等忽略 */ }
       refreshSkinOptions(name);
     };
@@ -2703,6 +2743,7 @@ if (typeof window !== 'undefined') {
   window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
     faithCap, // v3.5.0 ②：FP 上限（已从圣所搬到誓约圣龛）测试钩子
+    crewStateMeta, // v4.0.0 ④：全局薪资状态真源转为只读 QA 钩子（面板不再展示状态行，但机制仍可查询）
     rpEffScale, // v3.3.3 反馈③：RP 效率递增系数（测试钩子）
     riftEtaSec, riftNextSec, // v3.3.5 反馈③：裂隙倒计时/下次间隔（测试钩子）
     vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, vehicleDmPerMin, // v3.3.6：探采汇率/乘区/结算口径（测试钩子）

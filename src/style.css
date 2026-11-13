@@ -508,8 +508,10 @@ body {
 .bz-card .name .count { flex: 0 0 auto; }
 .bz-card .dealer-cost { white-space: nowrap; }
 
-/* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面） */
-.ai-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 6px; }
+/* v3.12.0 反馈②：AI 动作卡网格（五个动作同款卡面）
+   v4.0.0 反馈⑦：固定一行两个，与班组档案卡两列布局一致（窄屏由 @media 兜底回落单列）。 */
+.ai-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 520px) { .ai-action-grid { grid-template-columns: 1fr; } }
 .ai-action { background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
 .ai-action-locked { border-style: dashed; opacity: .78; }
 /* v3.12.5 反馈②：名称与步进器同处一行——卡片高度从两行压到一行 */
@@ -523,8 +525,12 @@ body {
 .ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
 /* v3.12.7 ⑤：助手信息收进面板标题行——「🤖 AI 助手 4/7 …… 购买助手」单行，
    slot 靠右吸收剩余宽度；台账/占编进悬浮，卡片区不再被这块占三行 */
-.ai-card > h3 { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
-.ai-assist-slot { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.ai-card > h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* v4.0.0 反馈⑦：「AI 助手」标题不允许折行（原「AI / 助手」被拆成两行）。
+   只锁标题本身；预留线区在窄卡可整体换到第二行，避免把按钮挤出面板。 */
+.ai-card > h3 .ai-title { white-space: nowrap; flex: 0 0 auto; }
+.ai-assist-slot { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
+.ai-reserve-inline { white-space: nowrap; }
 .ai-assist-slot:empty { display: none; }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
 .ai-assistant-head b { font-size: 13px; }
@@ -1292,6 +1298,15 @@ body.paused .pet-grid .pet-card {
 .religion-opt .desc { font-size: 11px; color: var(--text-3); margin-top: 3px; }
 .religion-seal-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; margin: 4px 0; }
 .religion-seal-row span { font-size: 13px; color: var(--text-1); }
+/* v4.0.0 反馈①：圣印 / 信仰圣所 / 赞颂与超验 / 隐密圣学 / 神谕塔与圣战军
+   五个小节标题统一为同一格式（此前圣印与圣所用灰色、其余用 accent 粗体，视觉割裂）。
+   「信仰圣所总计」按用户要求移出括号、靠右：.religion-sec-total 用 margin-left:auto 推到行尾。 */
+.religion-sec-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin: 10px 0 6px; font-size: 11px; color: var(--accent); font-weight: 600;
+}
+.religion-sec-total { margin-left: auto; color: var(--text-2); font-weight: 400; white-space: nowrap; }
+.religion-sec-off { color: var(--text-3); font-weight: 400; }
 #religion-panel { line-height: 1.6; }
 
 #religion-panel .off-stat { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; margin: 4px 0; background: rgba(255,255,255,.04); border-radius: 8px; font-size: 13px; }
@@ -1364,6 +1379,9 @@ body.paused .pet-grid .pet-card {
   --panel: #12141e;
   --border: #262c40;
   --text: #cdd2e3;
+  /* v4.0.0 反馈②：--text-1 此前全项目从未定义，7 处 CSS + 5 处 JS 的 var(--text-1)
+     只能回落到继承色，浅色主题下文字发虚/看不清。此处补齐定义，各主题再显式覆盖。 */
+  --text-1: var(--text);
   --text-2: #8b94a8;
   --text-3: #666e82;
   --glow-purple: rgba(163, 113, 247, 0.32);
@@ -1771,7 +1789,11 @@ body {
 .crew-head { display: flex; gap: 12px; align-items: center; margin: 6px 0; font-size: 12px; flex-wrap: wrap; }
 .crew-state { font-weight: bold; }
 .crew-count { color: var(--text-3); }
-.crew-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 6px; }
+/* v4.0.0 反馈④：班组成员固定一行 2 个（窄屏回落单列）。 */
+.crew-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 520px) { .crew-grid { grid-template-columns: 1fr; } }
+/* v4.0.0 反馈④：效能编排 / 相位共鸣与下方班组明确隔开，避免三段糊成一块。 */
+#crew-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .crew-card { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--panel); }
 .crew-card.more { justify-content: center; color: var(--text-3); font-size: 11px; }
 .crew-avatar { font-size: 20px; line-height: 1; flex: none; }
@@ -1858,9 +1880,11 @@ body {
    挂在 documentElement 上的 theme-* 类覆盖既有 CSS 变量（html.theme-x 特异性高于 :root，
    因此同时压过文件中部第二处 ：root 调色块）；默认不挂类 = 深渊暗夜（原版）。
    abyssGaze.js 既有 .light 检测由 main.js 在 light 主题下同步挂上。 */
+/* v4.0.0 反馈②：浅色主题补 --text-1，并把 --text-2 / --text-3 整体加深，
+   提高白底小字对比度（原 #7b8598 在白底仅 ~3.5:1，10.5px 小字发虚看不清）。 */
 html.theme-light {
-  --bg: #eef1f6; --panel: #ffffff; --border: #d3d9e3;
-  --text: #1d2530; --text-2: #4a5568; --text-3: #7b8598; --dim: #4a5568;
+  --bg: #eef1f6; --panel: #ffffff; --border: #cfd6e1;
+  --text: #1d2530; --text-1: #1d2530; --text-2: #3d4757; --text-3: #5a6472; --dim: #3d4757;
   --accent: #1d6fd8; --green: #1a7f37; --red: #cf222e; --yellow: #9a6700;
   --purple: #8250df; --pink: #bf3989; --cyan: #0d7d90;
   --good: #1a7f37; --bad: #cf222e; --warn: #9a6700;
@@ -1884,6 +1908,36 @@ html.theme-ember body {
   background:
     radial-gradient(1100px 520px at 72% -8%, rgba(240, 162, 74, 0.08), transparent 60%),
     radial-gradient(900px 480px at 6% 110%, rgba(95, 184, 165, 0.05), transparent 55%),
+    var(--bg);
+}
+/* v4.0.0 反馈②：薄荷绿潮（清冷薄荷绿浅色） */
+html.theme-mint {
+  --bg: #e7f4ee; --panel: #f6fdf9; --border: #bcded0;
+  --text: #16302a; --text-1: #16302a; --text-2: #33564b; --text-3: #557567; --dim: #33564b;
+  --accent: #0f8a68; --green: #12805a; --red: #c43c46; --yellow: #8a6a10;
+  --purple: #6f5bb5; --pink: #b03f7a; --cyan: #0a7d86;
+  --good: #12805a; --bad: #c43c46; --warn: #8a6a10;
+  --glow-purple: rgba(111, 91, 181, 0.14); --glow-cyan: rgba(10, 125, 134, 0.16);
+}
+html.theme-mint body {
+  background:
+    radial-gradient(1100px 520px at 72% -8%, rgba(15, 138, 104, 0.09), transparent 60%),
+    radial-gradient(900px 480px at 6% 110%, rgba(10, 125, 134, 0.06), transparent 55%),
+    var(--bg);
+}
+/* v4.0.0 反馈②：秋日鎏金（暖调赭黄浅色） */
+html.theme-autumn {
+  --bg: #f6efdf; --panel: #fffaf0; --border: #ddc9a4;
+  --text: #33270f; --text-1: #33270f; --text-2: #56452a; --text-3: #6f5e3f; --dim: #56452a;
+  --accent: #b4771a; --green: #4e7a2e; --red: #b8392f; --yellow: #9a6700;
+  --purple: #8a5aa0; --pink: #b0506a; --cyan: #2c7f86;
+  --good: #4e7a2e; --bad: #b8392f; --warn: #9a6700;
+  --glow-purple: rgba(138, 90, 160, 0.14); --glow-cyan: rgba(44, 127, 134, 0.14);
+}
+html.theme-autumn body {
+  background:
+    radial-gradient(1100px 520px at 72% -8%, rgba(180, 119, 26, 0.10), transparent 60%),
+    radial-gradient(900px 480px at 6% 110%, rgba(184, 57, 47, 0.05), transparent 55%),
     var(--bg);
 }
 /* 皮肤下拉宽度已并入上方 .save-menu-pop 区块（#skin-pop） */

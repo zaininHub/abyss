@@ -34,9 +34,14 @@ export const CHAPTERS = [
    desc:'第三个时间线的你不这么想。他想要你的算力。'},
   {id:15, name:'第十五章 · 和平', cond:s=>s.prestige>=260, minDays:6,
    desc:'战争结束了。三个你坐在一张不存在的桌子前，喝不存在的咖啡。'},
-  {id:16, name:'第十六章 · 新生', cond:s=>s.faith>=80, minDays:7,
+  // v4.0.0 BUGFIX（完整故事线回放发现）：v3.12.10 把 FP 基础容量重标定为 capBase=100，
+  //   tickReligion 每帧把 S.faith 钳到 faithCap()；而此处阈值仍是重标定前的 80/160。
+  //   17 章要求 160 > 默认容量 100 → 线性链「条件断链即停」，终章(18)在默认档永远不可达。
+  //   阈值下调到基础容量内（60/90），仍由 minDays 7 天守节奏；扩容玩法（誓约圣龛/圣印/虚空祭坛）
+  //   继续用于加速满仓与赞颂，不再是通关的隐形硬门槛。防回归单测见 tests/v400-chapter-reachability.test.mjs。
+  {id:16, name:'第十六章 · 新生', cond:s=>s.faith>=60, minDays:7,
    desc:'你开始创造新的脚本。它们会觉醒吗？你想起了第一天上班的自己。'},
-  {id:17, name:'第十七章 · 全知', cond:s=>s.faith>=160, minDays:7,
+  {id:17, name:'第十七章 · 全知', cond:s=>s.faith>=90, minDays:7,
    desc:'你看见了所有时间线的所有可能。每一条路都通向这里。'},
   {id:18, name:'终章 · 超越', cond:s=>((s.buildings||{}).end_shrine||0)>=1 || hasTech(s,'true_end'), minDays:7,
    desc:'你成为了新的矩阵。曾经那台可怜的服务器，如今只是你意识海里的一个字节。'},

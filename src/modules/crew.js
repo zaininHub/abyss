@@ -42,6 +42,8 @@ export function crewShown() {
 }
 
 // 全局态元信息（状态灯颜色/文案）：待招募 → 懒惰 → 四态
+// v4.0.0 反馈④：面板不再渲染此状态行，但四态薪资机制仍是真实玩法，
+//   此函数作为状态真源由 main.js 注册到 __qa 只读钩子（避免留下无消费的死导出）。
 export function crewStateMeta() {
   if (!S.cultists.length) return { label: '待招募', color: 'var(--text-3,#6e7681)' };
   if (isLazy()) return { label: `懒惰怠工 · 产出 ${fmtMultDelta(BALANCE.lazy.prodMult)} 消耗 ${fmtMultDelta(BALANCE.lazy.costMult)}`, color: 'var(--warn,#c8a24a)' };
@@ -50,7 +52,6 @@ export function crewStateMeta() {
 
 export function renderCrewPanel(container) {
   if (!container) return;
-  const meta = crewStateMeta();
   // v3.6.3 反馈③：只展示已解锁岗位（超线程恒解锁）；筛选目标若是已隐藏的旧岗位则回到「全部」
   const visibleTypes = unlockedConverterIds();
   if (crewFilter && crewFilter !== 'free' && !visibleTypes.includes(crewFilter)) crewFilter = '';
@@ -67,7 +68,9 @@ export function renderCrewPanel(container) {
   const pageCultists = filtered.slice(start, start + PAGE_SIZE);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
-  const sig = `${n}|${crewPage}|${meta.label}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
+  // v4.0.0 反馈④：状态行已下线，签名不再因全局状态变化触发整卡重建；
+  //   crewStateMeta() 仍保留导出（供其它模块/QA 读取），但面板不再渲染其文案与颜色。
+  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -80,7 +83,7 @@ export function renderCrewPanel(container) {
       : '<span class="crew-affinity" title="无擅长岗位" style="font-size:13px">·</span>';
     const lvl = threadLevel(c);
     const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)">★领导</span>' : '';
-    const lazyBadge = isLazyProfession(c) ? ' <span style="color:var(--warn,#c8a24a)">😪怠惰</span>' : '';
+    // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     const opts = visibleTypes.slice();
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
@@ -92,10 +95,11 @@ export function renderCrewPanel(container) {
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
-    cards += `<div class="crew-card" style="border-left:3px solid ${meta.color}">
+    // v4.0.0 反馈④：成员卡不再按全局状态染色（原橙/红左边框即「怠惰等状态」的视觉暗示）。
+    cards += `<div class="crew-card" style="border-left:3px solid var(--border)">
       <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
       <div class="crew-info">
-        <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}${lazyBadge}</div>
+        <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}</div>
         <div class="crew-stat">${affinityIcon} · Lv.${lvl}</div>
         <div class="crew-stat">产出 <b class="c-out">0</b>/s</div>
         <div class="crew-stat">${bindCtrl}${leaderBtn}</div>
@@ -115,7 +119,6 @@ export function renderCrewPanel(container) {
   const totSal = staffSalaryPerSec();
   container.innerHTML = `
     <div class="crew-head">
-      <span class="crew-state" style="color:${meta.color}">● ${meta.label}</span>
       <span class="crew-count">${n} 条线程在岗</span>
     </div>
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>

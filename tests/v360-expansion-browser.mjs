@@ -123,8 +123,8 @@ check(panelBuy.found && panelBuy.after.lv === panelBuy.before.lv + 1 && panelBuy
 await page.evaluate(() => document.getElementById('btn-rp')?.click());
 await sleep(400);
 const rpUi = await page.evaluate(() => document.getElementById('research-upgrade-list')?.innerText || '');
-// v3.12.12 ⑧：分组名改为「玩法扩展与配套 / 深渊扩展」，并新增「AI 助手」独立组
-check(/产出强化/.test(rpUi) && /玩法扩展与配套/.test(rpUi) && /深渊扩展/.test(rpUi) && /AI 助手/.test(rpUi) && /星际/.test(rpUi),
+// v3.12.12 ⑧：分组名改为「深渊协议 / 深渊扩展」，并新增「AI 助手」独立组
+check(/产出强化/.test(rpUi) && /深渊协议/.test(rpUi) && /深渊扩展/.test(rpUi) && /AI 助手/.test(rpUi) && /星际/.test(rpUi),
   '① 研究点面板渲染 5 个分组菜单');
 const newResearch = ['跃迁理论', '星蕴提纯', '律令演绎', '拟我协议', '熵减研究', '助手扩编协议'];
 const missingRp = newResearch.filter(t => !rpUi.includes(t));

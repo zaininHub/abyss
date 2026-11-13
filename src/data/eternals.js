@@ -1,4 +1,5 @@
-// 永恒矩阵 18 个（含 2 项皮肤解锁：v3.12.13 ⑦ 皮肤改由永恒矩阵购买，默认仅 abyss 拥有）
+// 永恒矩阵 20 个（含 4 项皮肤解锁：v3.12.13 ⑦ 皮肤改由永恒矩阵购买，默认仅 abyss 拥有；
+//   v4.0.0 ② 增补薄荷绿潮 / 秋日鎏金）
 export const ETERNALS = [
   {id:'eff',name:'永恒效能',desc:'每级全局 +5%',base:1,growth:1.6},
   {id:'cost',name:'永恒节俭',desc:'每级成本 -2%',base:1,growth:1.6},
@@ -19,8 +20,11 @@ export const ETERNALS = [
   {id:'lucky',name:'永恒幸运',desc:'每级事件奖励 +5%',base:2,growth:1.7},
   // v3.12.13 ⑦：皮肤解锁——一次性购买（cap:1），alwaysShow 保证在矩阵内始终可见可购；
   //   拥有后 S.eternal[id] > 0，皮肤菜单据此判定可切换。
+  // v4.0.0 反馈②：新增薄荷绿 / 秋日黄两款；买满后由 tech.js 收进「已拥有」折叠区。
   {id:'skin_light',name:'晨光白昼皮肤',desc:'解锁浅色主题「晨光白昼」',base:3,growth:1,cap:1,alwaysShow:true},
   {id:'skin_ember',name:'余烬琥珀皮肤',desc:'解锁暖色暗色主题「余烬琥珀」',base:5,growth:1,cap:1,alwaysShow:true},
+  {id:'skin_mint',name:'薄荷绿潮皮肤',desc:'解锁清冷浅色主题「薄荷绿潮」',base:4,growth:1,cap:1,alwaysShow:true},
+  {id:'skin_autumn',name:'秋日鎏金皮肤',desc:'解锁暖调浅色主题「秋日鎏金」',base:6,growth:1,cap:1,alwaysShow:true},
 ];
 
 export function esCost(e, eternalLevels) {

@@ -460,7 +460,7 @@ export const BALANCE = {
     { id: 'rp_matrix',      name: '矩阵意识',   cap: 10, base: 60,  growth: 1.6,  fx: { key: 'thread',  v: 0.05 }, desc: '线程产出 +5%/级' },
     { id: 'rp_singularity', name: '奇点推演',   cap: 10, base: 80,  growth: 1.65, fx: { key: 'global',  v: 0.04 }, desc: '全局产出 +4%/级' },
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8,  fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
-    // —— 玩法扩展与配套（累计 4 级后显现）——
+    // —— 深渊协议（累计 4 级后显现）——
     { id: 'rp_wage',        name: '薪酬协商',   cap: 4,  base: 600,  growth: 1.85, fx: { key: 'wage',    v: -0.04 }, desc: '线程消耗 -4%/s' },
     { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90,   growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100,  growth: 1.65, fx: { key: 'dm',     v: 0.08 }, desc: '载具 DM 采集 +8%/级' },

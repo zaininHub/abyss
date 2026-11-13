@@ -107,7 +107,9 @@ try {
     window.__prodCands = q ? q.UPGRADES.filter(u => u.cps > 0 && /^基础产出\+/.test(u.desc || '')) : [];
     window.__chapterLog = [];
     window.__lastCh = String(window.S.chapter || '1');
-    window.__stats = { clicks: 0, buys: 0, claims: 0, buyFails: 0, errors: [], maxEpRatio: 0, minCps: Infinity, maxCps: 0 };
+    // v4.0.0：逐日数值样本，供「产出曲线合理性」验收（用户本轮重点）。
+    window.__stats = { clicks: 0, buys: 0, claims: 0, buyFails: 0, errors: [], maxEpRatio: 0, minCps: Infinity, maxCps: 0,
+      daily: [] };
     // 逐帧批跑：虚拟墙钟与 tick 同步推进 10s，绝不一次性跳天（否则离线结算会失真）
     window.__runBatch = (ticks) => {
       const S = window.S, q = window.__qa, st = window.__stats;
@@ -170,6 +172,15 @@ try {
   const started = Date.now();
   for (let day = 1; day <= DAYS; day++) {
     const n = await page.evaluate((t) => window.__runBatch(t), TICKS_PER_DAY);
+    // v4.0.0：逐日采样真实产出/消耗/余额，用于检验长线数值曲线不爆炸、不塌陷。
+    await page.evaluate((d) => {
+      const S = window.S, q = window.__qa;
+      window.__stats.daily.push({
+        day: d, chapter: String(S.chapter || '1'),
+        cps: q.computeCps(), drain: q.totalDrainPerSec ? q.totalDrainPerSec() : 0,
+        ep: S.ep, cap: q.epStorageCap(), rp: S.rp || 0, es: S.es || 0,
+      });
+    }, day);
     if (day % 10 === 0 || day === 1) {
       const st = await page.evaluate(() => ({ ch: String(window.S.chapter), day: window.__vt / 86400000,
         ep: window.S.ep, cps: window.__qa.computeCps(), log: window.__chapterLog.length }));
@@ -184,7 +195,7 @@ try {
   report.telemetry.elapsedSec = elapsedSec;
   report.telemetry.virtualDays = await page.evaluate(() => window.__vt / 86400000);
 
-  if (reached) ok(`到达终章（第 ${STOP_AT} 章）`, `虚拟第 ${reached.day} 天 / 实跑 ${elapsedSec}s / 推进 ${chapterLog.length} 次`);
+  if (reached) ok(`章节链越过终章（目标第 ${STOP_AT} 章）`, `虚拟第 ${reached.day} 天 / 实跑 ${elapsedSec}s / 推进 ${chapterLog.length} 次 / 终点第 ${reached.chapter} 章`);
   else bad('未到达终章', `最终章节 ${await page.evaluate(() => String(window.S.chapter))}，日志 ${JSON.stringify(chapterLog.slice(-6))}`);
 
   // 章节序列必须严格 +1、不回退、不跳章
@@ -215,11 +226,20 @@ try {
     const bar = document.getElementById('chapter-bar');
     return { name: el ? el.textContent : '', bar: bar ? bar.textContent.slice(0, 120) : '' };
   });
-  // 灰度（STOP_AT<18）时只要求剧情栏按当前章节渲染；全量到终章才要求「终章」文案。
-  const showEnd = await page.evaluate(() => parseInt(String(window.S.chapter || '1'), 10)) >= 18;
-  if (endUi.name.trim().length > 0 && (!showEnd || /终章/.test(endUi.name + endUi.bar)))
-    ok(showEnd ? '终章文案在剧情栏真实渲染' : '剧情栏按当前章节真实渲染（灰度）', endUi.name.trim());
-  else bad(showEnd ? '终章文案未渲染' : '剧情栏未渲染章节名', JSON.stringify(endUi));
+  // v4.0.0 口径修正：currentChapter 允许一次连跳多个 minDays 已满足的章节（v360 断言锁死的
+  //   既有设计），修复 17 章断链后长线种子档会一路连跳到 19/20 番外，终点未必恰好停在 18。
+  //   因此全量验收看两件事：① 章节链确实越过了终章(≥18)；② 剧情栏按 S.chapter 读侧同源渲染
+  //   （名称与 CHAPTERS 表对应，且不含非法数值），而不是硬要求栏里出现「终章」二字。
+  const endState = await page.evaluate(() => ({ ch: parseInt(String(window.S.chapter || '1'), 10) }));
+  const showEnd = endState.ch >= 18;
+  const expected = CHAPTERS.find(c => c.id === endState.ch);
+  const label = expected ? expected.name.split(' · ').pop() : '';
+  const synced = !!label && endUi.name.includes(label) && !/undefined|NaN|Infinity/.test(endUi.name + endUi.bar);
+  if (showEnd && synced)
+    ok('章节链越过终章且剧情栏按 S.chapter 读侧同源渲染', `终点第 ${endState.ch} 章 / ${endUi.name.trim()}`);
+  else if (!showEnd && endUi.name.trim().length > 0)
+    ok('剧情栏按当前章节真实渲染（灰度）', endUi.name.trim());
+  else bad(showEnd ? '终章段渲染与读侧不同源' : '剧情栏未渲染章节名', JSON.stringify({ ...endUi, endState, expected: expected?.name }));
 
   // ---------- C. 数值准确性 ----------
   console.log('\n[C] 数值准确性');
@@ -248,6 +268,44 @@ try {
   else bad('运行时错误队列非空', JSON.stringify({ flow: num.flowErrors, panel: num.panelErrors, system: num.systemErrors }));
   if (!stats.errors.length) ok('自动玩家动作零异常', `点击 ${stats.clicks} / 购买 ${stats.buys} / 领任务 ${stats.claims}`);
   else bad('自动玩家动作抛异常', stats.errors.join(' | '));
+
+  // ---------- C2. v4.0.0 长线数值产出曲线合理性（用户本轮重点） ----------
+  console.log('\n[C2] 数值产出曲线合理性');
+  const daily = stats.daily || [];
+  report.telemetry.daily = daily;
+  const finiteOk = daily.length > 0 && daily.every(d =>
+    [d.cps, d.drain, d.ep, d.cap].every(Number.isFinite) && d.cps >= 0 && d.ep >= 0 && d.cap > 0);
+  if (finiteOk) ok('逐日 CPS / 消耗 / EP / 上限全程有限且非负', `${daily.length} 天样本`);
+  else bad('产出曲线出现 NaN / Infinity / 负值', JSON.stringify(daily.filter(d =>
+    ![d.cps, d.drain, d.ep, d.cap].every(Number.isFinite) || d.cps < 0 || d.ep < 0 || d.cap <= 0).slice(0, 3)));
+
+  // 长线产出不应塌陷：末段 CPS 不能低于峰值的 1%（转生前的自然波动远小于此）。
+  const peak = Math.max(1, ...daily.map(d => d.cps));
+  const tailCps = daily.length ? daily[daily.length - 1].cps : 0;
+  const firstCps = daily.length ? daily[0].cps : 0;
+  if (tailCps >= peak * 0.01)
+    ok('末段产出未塌陷（≥ 峰值 1%）', `首日 ${fx(firstCps)} → 峰值 ${fx(peak)} → 末日 ${fx(tailCps)}`);
+  else bad('产出曲线尾段塌陷', JSON.stringify({ firstCps, peak, tailCps }));
+
+  // 净流为负（消耗 > 产出）不能长期持续，否则经济必然死锁。
+  const negDays = daily.filter(d => d.drain > d.cps * 1.001).length;
+  if (negDays <= Math.max(3, Math.ceil(daily.length * 0.1)))
+    ok('净流为负的天数在可控范围（无长期经济死锁）', `${negDays}/${daily.length} 天`);
+  else bad('长期消耗大于产出，存在死锁风险', `${negDays}/${daily.length} 天`);
+
+  // 单日 CPS 异常跳变（>100 倍）视为数值爆炸；允许章节奖励带来的合理跳升。
+  const spikes = [];
+  for (let i = 1; i < daily.length; i++) {
+    const a = daily[i - 1].cps, b = daily[i].cps;
+    if (a > 1 && b > a * 100) spikes.push(`D${daily[i].day}: ${fx(a)}→${fx(b)}`);
+  }
+  if (!spikes.length) ok('无单日 100 倍以上的产出爆炸', `最大 ${fx(peak)} CPS`);
+  else bad('产出曲线存在异常爆炸', spikes.slice(0, 5).join(' / '));
+
+  // EP 余额始终在存储上限内（采样口径，与逐 tick 的 maxEpRatio 双保险）。
+  const capBreaches = daily.filter(d => d.ep > d.cap * 1.001);
+  if (!capBreaches.length) ok('逐日 EP 余额均未越上限', `峰值 ${fx(Math.max(0, ...daily.map(d => d.ep)))}`);
+  else bad('逐日采样发现 EP 越上限', JSON.stringify(capBreaches.slice(0, 3)));
 
   // ---------- D. UI 准确性 ----------
   console.log('\n[D] 各功能 UI 准确性');

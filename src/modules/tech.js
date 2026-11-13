@@ -160,13 +160,28 @@ export function renderEternal(container) {
   // v2.3 渐进披露链：链序固定为定义序——若沿用 v1.3 的当前级成本升序，
   // 已购项价格上浮后会漂移到队尾，已购前缀 p 恒为 0，链窗口语义整体失效
   const split = chainSplit('eternal', [...ETERNALS], e => (S.eternal[e.id] || 0) > 0, S);
-  split.visible.forEach((e, i) => {
-    const owned = (S.eternal[e.id] || 0) > 0;
+  // v4.0.0 反馈②「学习完一样要收起」：仿科技树「已研究」折叠区。
+  //   只把「已学完」的一次性项（有 cap 且满级，如皮肤解锁）收进「已拥有」区；
+  //   可叠加升级项没有「学完」这一天，必须永留可购区，否则玩家无法继续升级（listkit 既有规范）。
+  const learned = split.visible.filter(e => e.cap && (S.eternal[e.id] || 0) >= e.cap);
+  const buyable = split.visible.filter(e => !(e.cap && (S.eternal[e.id] || 0) >= e.cap));
+  for (const e of buyable) {
     // v3.0.3 第二批⑧：链窗口内未购项显示真卡（可购/ES 不足灰显），不再 ??? 占位
     const el = makeEternalItem(e);
-    if (owned) eternalEls.set(e.id, el);
+    eternalEls.set(e.id, el); // 可叠加项购后需原地更新，全部登记
     container.appendChild(el);
-  });
+  }
+  if (learned.length) {
+    const section = buildOwnedSection('eternal', container, '拥有');
+    for (const e of learned) {
+      const el = makeEternalItem(e);
+      delete el.dataset.eternal; // 已学完不再响应购买（与科技树 owned 项同款）
+      el.style.cursor = 'default';
+      el.classList.add('owned-item');
+      section.box.appendChild(el);
+    }
+    section.updateCount(learned.length);
+  }
   // v2.3.1 ⑤（rev18 9.3）：窗口 K = p + 1，「展开更多 ▾」按钮整节移除
   bindEternalDelegate(container);
   return totalLv;

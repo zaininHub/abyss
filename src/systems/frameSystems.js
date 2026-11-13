@@ -553,7 +553,9 @@ export function buildTideSchedulingHtml(ctx) {
   // 潮汐预案：仅悬停/聚焦「潮汐排班」时显示的浮层，默认隐藏。
   if (auto && schedOK) {
     const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
-    html += `<div class="tide-sched-pop" role="tooltip" style="position:absolute;left:0;top:calc(100% + 4px);z-index:50;background:var(--bg-2,#1a1d24);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:240px;box-shadow:0 6px 18px rgba(0,0,0,.35)">
+    // v4.0.0 反馈⑤：浮层改 position:fixed，彻底脱离 .first-col(overflow-y:auto) 的裁剪与祖先层叠上下文；
+    //   left/top 由 main.js 的 placeTideSchedPop 按触发按钮视口坐标写入（此处仅占位）。
+    html += `<div class="tide-sched-pop" role="tooltip" style="position:fixed;left:0;top:0;z-index:9999;background:var(--bg-2,#1a1d24);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:240px;max-height:min(60vh,420px);overflow-y:auto;box-shadow:0 6px 18px rgba(0,0,0,.45)">
       <div style="font-size:11.5px;color:var(--text-2);margin-bottom:6px">潮汐预案 · 四相位排班表</div>`;
     for (let i = 0; i < 4; i++) {
       const nowOn = curPhase === i;
