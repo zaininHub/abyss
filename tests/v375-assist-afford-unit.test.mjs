@@ -114,7 +114,9 @@ test('⑥ 接线：EP 购买按钮已删除，预留线并入助手行，扩编�
   // v3.12.12 反馈⑧：购买按钮从 UI 删除——助手扩编唯一玩家入口是研究点「助手扩编协议」
   assert.ok(!/data-assist-buy data-afford-sig/.test(AI), 'EP 购买按钮应已从助手行移除');
   assert.ok(/data-ai-reserve="\$\{r\}"/.test(AI), '预留线按钮应并入助手行（与助手数量同处一行）');
-  assert.ok(/ai-assist-hint/.test(AI), '助手行应提示「研究点扩编」入口');
+  // v3.12.13 ⑤：常驻「研究点扩编」提示已从助手行移除，扩编入口说明收敛到悬浮框 data-tip（含「助手扩编协议」）
+  assert.ok(!/ai-assist-hint/.test(AI), '常驻「研究点扩编」提示已从助手行移除');
+  assert.ok(/助手扩编协议/.test(AI), '悬浮框 data-tip 应携带助手获取说明（研究点「助手扩编协议」）');
   // 扩编协议：研究点购买 → 每级 +1 助手，需 ai_core 解锁（解锁仍在升级商店科技树）
   const SHOP = read('src/modules/shop.js');
   const BAL = read('src/data/balance.js');

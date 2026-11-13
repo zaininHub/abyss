@@ -103,7 +103,7 @@ export const UPGRADES = [
     id: p.id, name: p.name, base: p.base, cps: 0, cat: 'purifier', maxLevel: 3, dmCost: p.dmCost || false, desc: p.desc, // v2.8.21 ⑥：净化节点限购 3 级、DM 消耗（不耗 EP）
   })),
   // v3.12.3 反馈②：集市「回响刷新」按钮的解锁件——一次性 EP 购买，只在集市开张后出现在升级商店
-  { id: 'bazaar_echo', name: '回响账簿', base: 60000000.0, growth: 1.0, cps: 0, cat: 'bazaar', maxLevel: 1,
+  { id: 'bazaar_echo', name: '回响账簿', base: 1200000000.0, growth: 1.0, cps: 0, cat: 'bazaar', maxLevel: 1,
     desc: '解锁深渊集市的「回响刷新」（消耗 1 点深渊回响重掷摊位与汇率，不消耗 EP）' },
 ];
 

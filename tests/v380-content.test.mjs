@@ -212,8 +212,8 @@ test('G3 编排卡已接入面板注册表 / 帧系统快刷 / 事件委托 / QA
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.ok(html.includes('id="orchestration-card"') && html.includes('id="orchestration-panel"'));
   assert.ok(MAIN_SRC.includes('el._orchSig === sig'), '面板必须有结构签名去重，防 2s 兜底吞点击');
-  assert.ok(MAIN_SRC.includes('data-orch-slot-mode') && MAIN_SRC.includes('data-orch-schedule-reset'),
-    '潮汐预案排班表应有逐相位改写与恢复默认入口');
+  assert.ok(SYS_SRC.includes('data-orch-slot-mode') && SYS_SRC.includes('data-orch-schedule-reset'),
+    '潮汐预案排班表应有逐相位改写与恢复默认入口（构建已迁移至帧系统）');
 });
 
 test('G4 currentChapter 新章节不回退，旧档 chapter 仍为权威下限', () => {

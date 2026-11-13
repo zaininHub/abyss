@@ -89,7 +89,7 @@ const aiUi = await page.evaluate(() => ({
 }));
 check(aiUi.visible && aiUi.actionCards.length >= 3, '⑨ AI 面板渲染自动化动作卡', `${aiUi.actionCards.length} 张`);
 check(!aiUi.hasBuyBtn, '⑧ EP 购买助手按钮已删除（扩编走研究点）');
-check(/研究点扩编/.test(aiUi.headText), '⑧ 助手行提示「研究点扩编」入口', aiUi.headText.slice(0, 40));
+check(!/研究点扩编/.test(aiUi.headText), '⑧ 常驻「研究点扩编」提示已从助手行移除（信息移入悬浮框）');
 check(aiUi.reserveInHead, '⑧ 预留线并入助手行（与助手数量同处一行）');
 
 // ---- ⑨ 占编 + / − 交互（v3.11 常驻班组模型） ----

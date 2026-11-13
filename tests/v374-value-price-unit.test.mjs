@@ -127,6 +127,8 @@ test('⑧ 实际显示/实扣价（含 costMult）同样保持比例', () => {
 test('⑨ 全组 Lv.0 单价（每 +1%）单调不降，后期逐档抬高抑制速通', () => {
   const unit = A.map(b => b.base / pctOf(b));
   for (let i = 1; i < unit.length; i++) {
+    // v3.12.13 反馈⑩：量子叠加器整体 ×1000（2e6→2e9）成为组A 溢价 outlier，跳过与其相邻的单调性比较
+    if (A[i - 1].id === 'quantum_stacker') continue;
     assert.ok(unit[i] >= unit[i - 1] - 1e-9, `第 ${i} 座 ${A[i].id} 单价 ${unit[i]} 低于前一座 ${A[i - 1].id} ${unit[i - 1]}`);
   }
   assert.ok(unit[3] > unit[0] * 1.9, '中期档应显著高于入门档');

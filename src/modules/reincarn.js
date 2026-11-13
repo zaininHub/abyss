@@ -139,7 +139,6 @@ export function renderReincarn(container) {
     container._echoBuilt = true;
     container.innerHTML = `<div id="echo-block" style="margin-top:16px;border-top:1px dashed var(--border);padding-top:10px">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <b style="color:var(--accent);font-size:12px">轮回 · 第二层循环（晋升之上）</b>
         <span style="font-size:11px;color:var(--text-2)" id="echo-stat">深渊回响 <b style="color:var(--accent)">0</b> · 已轮回 0 次</span>
       </div>
       <div style="font-size:11px;color:var(--text-2);margin:6px 0;line-height:1.6" id="echo-desc">

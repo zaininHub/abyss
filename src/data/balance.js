@@ -105,7 +105,7 @@ export const BALANCE = {
     // v3.4.0 反馈④：DM 产出再降（27 辆 ≈ 15 DM/s → ≈1 DM/s），单位 DM 的 EP 成本 ×5（汇率随辆数递增照旧）
     epPerDm: 15000,                     // v3.4.0：3000→15000（DM 稀缺化后单 DM 该更贵；27 辆 ≈ ×4.8 → 约 72K EP/DM）
     epPerDmGrowth: 1.06,                // v3.3.8：1.15→1.06（逐辆递增保留，但不再呈指数爆炸；27 辆 ≈ ×4.8）
-    dmRates: [0.2, 0.4, 1, 2],          // v3.4.0：每辆 DM/min（6/12/30/60 → ÷15；27 辆实测约 1 DM/s）
+    dmRates: [0.05, 0.1, 0.25, 0.5],    // v3.12.13 反馈⑨：载具 DM 产出整体 ÷4（27 辆实测约 0.25 DM/s，DM 进一步稀缺化）
     collectInterval: 60,                     // 采集 roll 周期（秒）
     tierDmBonus: [0, 0, 1, 1, 2],           // 封印裂隙 DM 加成（按最高档 0~4）
     embraceBonusSec: 5,                     // 拥抱裂隙爆发时长加成（秒 × 档位）
@@ -136,7 +136,7 @@ export const BALANCE = {
     { id: 'eff_tower',      name: '效能尖塔',   cat: 'A', cap: 9, base: aBase('globalAdd', 0.10), growth: A_GROWTH, unlockTech: 'eff2',      ...aGain('globalAdd', 0.10) },
     { id: 'double_workshop',name: '双倍工坊',   cat: 'A', cap: 9, base: aBase('globalMul', 1.12), growth: A_GROWTH, unlockTech: 'speed2',    ...aGain('globalMul', 1.12) },
     { id: 'dispatch_hub',   name: '调度中枢',   cat: 'A', cap: 9, base: 1.2e6, growth: 1.40, unlockTech: 'auto2',     ...aGain('globalAdd', 0.20) },
-    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e6,   growth: 1.45, unlockTech: 'quantum2',  ...aGain('globalMul', 1.20) },
+    { id: 'quantum_stacker',name: '量子叠加器', cat: 'A', cap: 3, base: 2e9,   growth: 1.45, unlockTech: 'quantum2', minMile: 6,  ...aGain('globalMul', 1.20) },
     { id: 'singularity_core',name: '奇点反应堆',cat: 'A', cap: 3, base: 2.6e6, growth: 1.48, unlockTech: 'singular',  ...aGain('globalMul', 1.25) },
     { id: 'transcend_temple',name: '超越圣殿', cat: 'A', cap: 3, base: 3.2e6, growth: 1.48, unlockTech: 'transcend', ...aGain('globalMul', 1.20) },
     { id: 'ascend_spire',   name: '飞升尖塔',   cat: 'A', cap: 3, base: 3.8e6, growth: 1.50, unlockTech: 'ascend',    ...aGain('globalMul', 1.20) },
@@ -150,7 +150,7 @@ export const BALANCE = {
     //   旧口径满档累计 ×0.511（全部成本几乎对半砍）而总投入不到 5,000 万，明显过强。
     //   新口径：单价 ×5~12、每级折价幅度收窄一档 → 满档累计 ×0.742（约 26% 折扣），总投入 ≈6.3 亿 EP。
     //   minMile：按原档位显式锁定，避免涨价后一律被 unlockMilestoneV21 顶到 m7。
-    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e6, growth: 1.45, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.99 },  minMile: 5, desc: '每级所有成本 -1%' },
+    { id: 'bargain_shop',   name: '议价坊',     cat: 'C', cap: 5, base: 2.5e9, growth: 1.45, unlockTech: 'cheap_start',fx: { key: 'costMul', value: 0.99 },  minMile: 5, desc: '每级所有成本 -1%' },
     { id: 'negotiate_seat', name: '谈判席',     cat: 'C', cap: 3, base: 1.2e7, growth: 1.48, unlockTech: 'cost_opt',   fx: { key: 'costMul', value: 0.98 },  minMile: 6, desc: '每级所有成本 -2%' },
     { id: 'purchase_office',name: '采购总署',   cat: 'C', cap: 3, base: 5e7,   growth: 1.50, unlockTech: 'cheap2',     fx: { key: 'costMul', value: 0.975 }, minMile: 7, desc: '每级所有成本 -2.5%' },
     { id: 'purchase_office_2',name: '采购总署·聚',cat:'C',cap: 2, base: 8e7,   growth: 1.50, unlockTech: 'cost3',      fx: { key: 'costMul', value: 0.97 },  minMile: 7, desc: '每级所有成本 -3%' },
@@ -170,7 +170,7 @@ export const BALANCE = {
     { id: 'eco_battery_2',  name: '节能电池·II',cat: 'E', cap: 3, base: 1.1e6, growth: 1.40, unlockTech: 'fuel2',      fx: { key: 'fuelMul', value: 0.85 },   desc: '每级线程薪资 -15%' },
     // ---- 组 F · RP 加成（5 座）----
     { id: 'exp_bench',      name: '初探实验台', cat: 'F', cap: 3, base: 6.6e5, rpCost: 300, growth: 1.45, unlockTech: 'rp_first',  fx: { key: 'rpAdd', value: 0.30 },     desc: '每级晋升 RP +30%' },
-    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.75e6,rpCost: 600, growth: 1.45, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
+    { id: 'rp_distiller',   name: 'RP 蒸馏塔', cat: 'F', cap: 3, base: 1.75e9,rpCost: 600, growth: 1.45, unlockTech: 'rp_boost',   fx: { key: 'rpAdd', value: 0.50 },     desc: '每级晋升 RP 获取效率 +50%' },
     { id: 'deep_lab',       name: '深度实验室', cat: 'F', cap: 2, base: 5.6e6, rpCost: 1000, growth: 1.50, unlockTech: 'rp2',        fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP +100%' },
     { id: 'theory_desk',    name: '理论突破台', cat: 'F', cap: 2, base: 8e6,   rpCost: 1800, growth: 1.50, unlockTech: 'rp3',        fx: { key: 'rpAdd', value: 1.50 },     desc: '每级晋升 RP +150%' },
     { id: 'legend_institute',name: '传奇研究所',cat: 'F', cap: 2, base: 1.02e7, rpCost: 3000, growth: 1.50, unlockTech: 'grand_rp',   fx: { key: 'rpMul', value: 2 },        desc: '每级晋升 RP +100%' },
@@ -273,7 +273,7 @@ export const BALANCE = {
     defaultReserve: 0.3,
     // v2.5.5：AI 自动购建（全部资源点解锁后可激活）
     aiAutoBuild: {
-      activateCost: 2e6,            // 激活消耗（大量 EP，一次性）
+      activateCost: 1000,           // 激活消耗（研究点 RP，一次性；v3.12.13 ⑥ 自动购建能力迁研究点，由 EP 改为 RP）
       rateOptions: [5, 10, 30, 60], // 购买间隔档位（秒）
       defaultRate: 10,              // 默认间隔
       minRate: 5,                   // 硬下限：即使改存档也不低于 5s（严格限速）
@@ -417,10 +417,11 @@ export const BALANCE = {
   // 全局乘数软上限（v2.0 §1.3：m > 5000 → 5000 + sqrt(m-5000)*70）
   softCapThreshold: 5e3,
   softCapFactor: 70,
-  // 项目奖励（v3.12.0 反馈⑧：原 10 分钟满额产出、且可一次灌满整仓 → 奖励过高）
-  projRpMin: 3, projRpMax: 8,
-  projEpRatio: 0.35,      // 任务 EP 奖励 = 10 分钟基线产出 ×0.35
-  projEpCapRatio: 0.25,   // 且不超过当前 EP 上限 ×25%（不再一次灌满整仓）
+  // 项目奖励（v3.12.0 反馈⑧：原 10 分钟满额产出、且可一次灌满整仓 → 奖励过高；
+  //   v3.12.13 反馈②：整体再下调——EP 比例 0.35→0.18、上限占比 0.25→0.12、RP 3~8→1~3）
+  projRpMin: 2, projRpMax: 5,
+  projEpRatio: 0.18,      // 任务 EP 奖励 = 10 分钟基线产出 ×0.18
+  projEpCapRatio: 0.12,   // 且不超过当前 EP 上限 ×12%（不再一次灌满整仓）
   // 事件奖励
   brainstormRp: 35, epiphanyRp: 80,
   // 线程补贴科技

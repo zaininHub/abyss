@@ -764,9 +764,31 @@ export function ptCap() { return capParts(1000, 200, 0.18, 'pt_vault').total; }
 export function rpCapParts() { return capParts(2500, 400, 0.25, 'rp_vault'); }
 export function ptCapParts() { return capParts(1000, 200, 0.18, 'pt_vault'); }
 export function dmCapParts() { return capParts(1000, 100, 0, 'dm_vault'); }
-export function addRp(n) { const c = rpCap(); S.rp = Math.max(0, Math.min(c, (S.rp || 0) + (n || 0))); return S.rp; }
-export function addDm(n) { const c = dmCap(); S.dm = Math.max(0, Math.min(c, (S.dm || 0) + (n || 0))); return S.dm; }
-export function addPt(n) { const c = ptCap(); S.pt = Math.max(0, Math.min(c, (S.pt || 0) + (n || 0))); return S.pt; }
+// v3.12.13：资源增减全局统计（任务进度口径：累计获得 / 累计花费）。
+// 任务系统据此为「已解锁资源」生成 获取 / 消耗 / 相关升级 三类任务，未解锁资源绝不刷出。
+// 两个映射挂在 S._gainRes / S._spentRes，缺省惰性初始化，跨局由 stateSchema 兜底。
+export function gainRes(key, amount) {
+  if (!(amount > 0)) return;
+  if (!S._gainRes) S._gainRes = {};
+  S._gainRes[key] = (S._gainRes[key] || 0) + amount;
+}
+export function spendRes(key, amount) {
+  if (!(amount > 0)) return;
+  if (!S._spentRes) S._spentRes = {};
+  S._spentRes[key] = (S._spentRes[key] || 0) + amount;
+}
+// 各类资源「相关升级」购买计数（任务进度口径，与 spend 区分：买升级是离散次数）
+export function buyRes(key) {
+  if (!S._buyRes) S._buyRes = {};
+  S._buyRes[key] = (S._buyRes[key] || 0) + 1;
+}
+function bumpGain(key, before, after) {
+  const g = after - before;
+  if (g > 0) gainRes(key, g);
+}
+export function addRp(n) { const c = rpCap(); const b = S.rp || 0; S.rp = Math.max(0, Math.min(c, b + (n || 0))); bumpGain('rp', b, S.rp); return S.rp; }
+export function addDm(n) { const c = dmCap(); const b = S.dm || 0; S.dm = Math.max(0, Math.min(c, b + (n || 0))); bumpGain('dm', b, S.dm); return S.dm; }
+export function addPt(n) { const c = ptCap(); const b = S.pt || 0; S.pt = Math.max(0, Math.min(c, b + (n || 0))); bumpGain('pt', b, S.pt); return S.pt; }
 
 // v3.10.2 ④：上限回落后的余额钳制。rp / pt / dm 的余额是「隐式保留」（既不在跨局保留清单，
 //   也不在本局重置清单），而它们的上限随本局 upgrades 变化。转生 / 轮回后上限回到新档值，
@@ -944,7 +966,8 @@ export function atriumDrainPerSec() {
   if (n < 1) return 0;
   if (!converterEnabled('atrium')) return 0; // 工坊关闭：不蒸馏不消耗（与 tick 同口径）
   if ((S.ep || 0) <= 0) return 0; // EP 已空：扣费被钳到 0
-  return (BALANCE.atrium.epRate || 150) * n;
+  // v3.12.13 反馈⑫：EP 消耗改随等级平方增长（×n²），快于 RP 产出（×n 线性）——消耗增长明显快于产出
+  return (BALANCE.atrium.epRate || 150) * n * n;
 }
 export function totalDrainPerSec() {
   return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
@@ -952,7 +975,8 @@ export function totalDrainPerSec() {
 // v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 main.js tick 同口径：5000×级数 EP/s，解锁自动孵化且开关开启时生效）
 export function ptHatchEpPerSec() {
   if (S.ptAutoHatch !== true || S.ptDistillOn !== true) return 0;
-  return 5000 * (S.ptHatchLv || 1);
+  // v3.12.13 反馈⑫：EP 消耗随等级平方增长（×lv²），快于 PT 产出（×lv 线性）——消耗增长明显快于产出
+  return 5000 * (S.ptHatchLv || 1) * (S.ptHatchLv || 1);
 }
 
 // ========== EP 存储上限 ==========
@@ -1106,6 +1130,7 @@ export function addEp(amount) {
   if (gained > 0) {
     S.runEarned += gained;
     S.allTimeEp += gained;
+    gainRes('ep', gained); // v3.12.13：EP 累计获得（任务进度口径）
   }
   // v2.8.13：任务进度（earnedFull）仅统计挂机产出（main.js tick），一次性入账（点击/任务奖励/事件/远征/离线）不计入任务 EP 要求
   // v2.1 溢出池承接 + v2.2 缺陷B修复：上限打满后被丢弃的 EP 经公共函数记账（与 tickCorruption 同口径）

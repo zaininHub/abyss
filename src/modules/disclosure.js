@@ -109,7 +109,7 @@ export function chainSplit(mod, items, purchasedOf, S) {
   let p = 0;
   while (p < items.length && flags[p]) p++; // 已购前缀
   const K = conf.extraK ? conf.extraK(items, flags, p, S) : Math.min(items.length, p + 1); // rev18 9.3：K = p + 1（eternal 按 ES 扩展）
-  const visible = items.filter((it, i) => i < K || flags[i]); // 前 K 项 ∪ 全部已购项
+  const visible = items.filter((it, i) => it.alwaysShow || i < K || flags[i]); // 前 K 项 ∪ 全部已购项 ∪ alwaysShow 项
   const hiddenCount = items.length - visible.length;
   return { visible, hiddenCount, chainNextIdx: p, K };
 }

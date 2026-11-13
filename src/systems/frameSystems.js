@@ -506,8 +506,9 @@ export function registerFrameSystems(deps = {}) {
       const abNow = aiNow && (autoBuildUnlocked() || allResDiscovered(S));
       if (abNow !== ctx.lastAbVisible) { ctx.lastAbVisible = abNow; d.ai = true; }
       else if (abNow && !autoBuildUnlocked()) {
-        const epOkNow = (S.ep || 0) >= autoBuildActivateCost();
-        if (epOkNow !== ctx.lastAbEpOk) { ctx.lastAbEpOk = epOkNow; d.ai = true; }
+        // v3.12.13 ⑥：自动购建激活消耗由 EP 改为研究点 RP
+        const rpOkNow = (S.rp || 0) >= autoBuildActivateCost();
+        if (rpOkNow !== ctx.lastAbRpOk) { ctx.lastAbRpOk = rpOkNow; d.ai = true; }
       }
     },
   });
@@ -530,6 +531,55 @@ export const FRAME_DEPS_KEYS = Object.freeze([
 ]);
 
 /** 供单测 / QA 校验「声明 → 消费」接线完整的系统 id 清单 */
+/**
+ * v3.12.13 反馈 #164：潮汐排班 UI 构建（纯字符串，由 main.js 的 renderOrchestrationPanel 拼入面板）。
+ * 设计要点：
+ *  - 「潮汐排班」与四种排版类型（ORCHESTRATION_MODES）处于同一行，均为切换按钮。
+ *  - 「潮汐排班」仅用选中高亮（accent 边框）表达开/关，不显示「开启/关闭」字样。
+ *  - 「潮汐预案」改为悬停浮层（role=tooltip），默认隐藏，仅悬停/聚焦「潮汐排班」时显示。
+ * 浮层显隐的 CSS 规则（.tide-sched-pop 默认 display:none，hover/focus-within 时 display:block）
+ * 在首渲时注入一次 <style id="tide-sched-style">，不改动 style.css。
+ */
+export function buildTideSchedulingHtml(ctx) {
+  const { S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized } = ctx;
+  let html = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">`;
+  for (const m of ORCHESTRATION_MODES) {
+    const on = !auto && m.id === st.mode;
+    html += `<button class="btn-mini" data-orch-mode="${m.id}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}${auto ? ' disabled title="随潮汐排班开启时由相位决定"' : ''}>${m.icon} ${m.short}</button>`;
+  }
+  // 潮汐排班：选中高亮即表示开启；无独立「开启/关闭」文字。
+  html += `<div class="tide-sched-wrap" style="position:relative;display:inline-block">
+    <button class="btn-mini" data-orch-auto="1" aria-pressed="${auto}"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>潮汐排班</button>`;
+  // 潮汐预案：仅悬停/聚焦「潮汐排班」时显示的浮层，默认隐藏。
+  if (auto && schedOK) {
+    const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
+    html += `<div class="tide-sched-pop" role="tooltip" style="position:absolute;left:0;top:calc(100% + 4px);z-index:50;background:var(--bg-2,#1a1d24);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:240px;box-shadow:0 6px 18px rgba(0,0,0,.35)">
+      <div style="font-size:11.5px;color:var(--text-2);margin-bottom:6px">潮汐预案 · 四相位排班表</div>`;
+    for (let i = 0; i < 4; i++) {
+      const nowOn = curPhase === i;
+      html += `<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin:4px 0">
+        <span style="min-width:44px;font-size:11px;color:${nowOn ? 'var(--accent)' : 'var(--text-3)'}">${nowOn ? '▶ ' : ''}${TIDE_PHASE_NAMES[i]}</span>`;
+      for (const m of ORCHESTRATION_MODES) {
+        const on = sched[i] === m.id;
+        html += `<button class="btn-mini" data-orch-slot="${i}" data-orch-slot-mode="${m.id}" title="${TIDE_PHASE_NAMES[i]}改用${m.name}" aria-label="${TIDE_PHASE_NAMES[i]}改用${m.name}" style="min-width:24px;min-height:24px;display:inline-flex;align-items:center;justify-content:center;${on ? 'border-color:var(--accent);color:var(--accent);' : ''}">${m.icon}</button>`;
+      }
+      html += `<span style="font-size:10.5px;color:var(--text-3)">${(ORCHESTRATION_MODES.find(m => m.id === sched[i]) || {}).name || ''}</span></div>`;
+    }
+    if (scheduleCustomized(S)) html += `<button class="btn-mini" data-orch-schedule-reset="1">恢复默认排班</button>`;
+    html += `</div>`;
+  }
+  html += `</div></div>`;
+
+  // 注入浮层显隐规则（默认隐藏，悬停/聚焦显示），不改动 style.css。
+  if (typeof document !== 'undefined' && !document.getElementById('tide-sched-style')) {
+    const s = document.createElement('style');
+    s.id = 'tide-sched-style';
+    s.textContent = `.tide-sched-pop{display:none}.tide-sched-wrap:hover .tide-sched-pop,.tide-sched-wrap:focus-within .tide-sched-pop{display:block}`;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  return html;
+}
+
 export const FRAME_SYSTEM_IDS = Object.freeze([
   'wages', 'threads', 'crew-earned',
   'religion', 'policy-refresh', 'delve', 'bazaar',
@@ -540,3 +590,4 @@ export const FRAME_SYSTEM_IDS = Object.freeze([
   'discover', 'ai', 'dirty-tide', 'dirty-corruption', 'dirty-wage', 'collapse-ui',
   'dirty-basics', 'dirty-periodic', 'relic-sig', 'affordability', 'shop-unlock', 'render',
 ]);
+

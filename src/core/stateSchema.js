@@ -41,6 +41,8 @@ export const COMPAT_KEYS = Object.freeze([
   // v3.10.2 ④：本局运行时快照旧档缺省补齐（见 RUN_RUNTIME_KEYS）
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
   '_purifierSeen',
+  // v3.12.13：资源增减 / 升级购买统计（与 RUN_RUNTIME_KEYS 同源，旧档兜底补齐）
+  '_gainRes', '_spentRes', '_buyRes',
   'galaxyDone', // v3.12.7 ⑦：按星系的探索回数（与 colonies 同寿命，跨本局保留）
 ]);
 
@@ -78,6 +80,8 @@ export const RUN_RESET_KEYS = Object.freeze([
 export const RUN_RUNTIME_KEYS = Object.freeze([
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
   '_purifierSeen',
+  // v3.12.13：资源增减 / 升级购买统计（任务进度口径）；晋升 / 轮回清零，避免跨局累计偏差
+  '_gainRes', '_spentRes', '_buyRes',
 ]);
 
 // ⑥ 资源发现：顶栏统计条 id ↔ 锚点 key ↔ toast 文案，三处此前各自手写一份。

@@ -3,7 +3,7 @@ import { resetRunState } from '../core/stateSchema.js';
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
 import { crossRunUpgradeSubset } from '../data/upgrades.js'; // v3.12.3 反馈⑤：DM 计价升级跨转生保留
-import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp, clampRunResourceBalances } from './economy.js';
+import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp, clampRunResourceBalances, gainRes } from './economy.js';
 import { spawnProject } from './projects.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水
@@ -21,7 +21,7 @@ export function doPrestige(talentId) {
   const esg = esGain();
   S.prestigePoints += gain;
   S.prestige++;
-  if (esg > 0) { S.es += esg; discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
+  if (esg > 0) { S.es += esg; gainRes('es', esg); discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
   // v2.9.0：湮灭残片改由「同归于尽」抉择结算发放（main.js），晋升不再发放/清除吞噬状态
   S.runTalent = talentId;
   // v3.10.0：本局重置字段清单与重置动作收敛到 core/stateSchema.js（晋升 / 轮回共用一条路径）。
@@ -63,6 +63,7 @@ export function doPrestige(talentId) {
   // 晋升 10% 概率获得信仰
   if (Math.random() < 0.10) {
     S.faith = (S.faith || 0) + 1;
+    gainRes('fp', 1);
   }
   return { gain, rpg, esg };
 }

@@ -1,7 +1,7 @@
 // v2.0 特殊任务系统 + 彩蛋系统
 // 设计文档 §6 特殊任务 + §7 彩蛋
 import { S, save } from '../state.js';
-import { addRp, addDm, addPt } from './economy.js'; // v2.8.27 ②：资源上限
+import { addRp, addDm, addPt, gainRes } from './economy.js'; // v2.8.27 ②：资源上限
 
 // ========== 特殊任务定义（6个：3通用 + 3线专属） ==========
 export const SPECIAL_TASKS = [
@@ -156,7 +156,7 @@ export function checkSpecialTasks(S, log, toast) {
         if (task.reward.rp) addRp(task.reward.rp);
         if (task.reward.ep) S.ep = Math.min(S.ep + task.reward.ep, 1e15);
         if (task.reward.dm) addDm(task.reward.dm);
-        if (task.reward.fa) S.faith = (S.faith || 0) + task.reward.fa;
+        if (task.reward.fa) { S.faith = (S.faith || 0) + task.reward.fa; gainRes('fp', task.reward.fa); }
         if (log) log(`特殊任务：${task.name} - ${task.desc}`, 'good');
         if (toast) toast(`✓ ${task.name}`);
       }

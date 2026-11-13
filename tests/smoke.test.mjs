@@ -187,7 +187,7 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
     const p = S.projects[S.projects.length - 1];
     if (p.reward.kind === 'rp') {
       rpSeen++;
-      assert.ok(p.reward.amount >= 3 && p.reward.amount <= 8, `RP=${p.reward.amount}`);
+      assert.ok(p.reward.amount >= 2 && p.reward.amount <= 5, `RP=${p.reward.amount}`);
     } else if (p.reward.kind === 'ep') {
       assert.ok(p.reward.amount > 0);
     }

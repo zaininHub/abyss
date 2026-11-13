@@ -1888,3 +1888,5 @@ html.theme-ember body {
 }
 /* 皮肤下拉宽度已并入上方 .save-menu-pop 区块（#skin-pop） */
 .skin-opt.on { border-color: var(--cyan); color: var(--cyan); }
+/* v3.12.13 ⑦：未解锁皮肤（需在永恒矩阵购买）置灰，但保留点击以提示解锁途径 */
+.skin-opt.locked { opacity: .45; cursor: not-allowed; }

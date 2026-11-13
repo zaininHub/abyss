@@ -65,8 +65,8 @@ try {
     else bad('① 购买按钮仍存在');
     if (s.reserveInHead && s.reserveBtns.length >= 3) ok('② 预留线并入助手行（与助手数量同处一行）', s.reserveBtns.join('/'));
     else bad('② 预留线不在助手标题行内', JSON.stringify(s.reserveBtns));
-    if (/研究点扩编/.test(s.head)) ok('③ 助手行提示「研究点扩编」入口', s.head.slice(0, 40));
-    else bad('③ 缺少扩编入口提示', s.head.slice(0, 60));
+    if (!/研究点扩编/.test(s.head)) ok('③ 常驻「研究点扩编」提示已移除（信息移入悬浮框）');
+    else bad('③ 仍残留常驻扩编提示', s.head.slice(0, 60));
     if (s.assistants === 4) ok('④ 存档助手数量正确渲染', `assistants=${s.assistants}`);
     else bad('④ 助手数量异常', String(s.assistants));
   }

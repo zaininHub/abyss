@@ -45,7 +45,7 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 131, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen');
+  assert.equal(keys.length, 134, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 资源统计三键');
   assert.deepEqual(d.moduleUnlocks, { reincarn: false, bazaar: false }, '新档两个大模块均未开启');
 });
 
@@ -471,7 +471,10 @@ test('F3 Wiki 不再把编排倍率写成「每条管线的总倍率」', () => 
 });
 
 test('F4 方案 A 边界：数值入口与交互绑定保持原样', () => {
-  assert.ok(MAIN.includes('data-res-toggle="1"') && MAIN.includes('data-orch-mode='));
+  // v3.12.13 反馈 #164：潮汐排班 UI 构建迁移到帧系统（buildTideSchedulingHtml），
+  // 编排模式按钮入口 data-orch-mode= 随之落到 frameSystems.js；资源切换入口 data-res-toggle 仍在主入口。
+  assert.ok(MAIN.includes('data-res-toggle="1"') && SYS_SRC.includes('data-orch-mode='),
+    '资源切换入口在 main.js，编排模式按钮入口已迁移至帧系统构建');
   assert.match(read('core/orchestration.js'), /return base \* resonanceMult\(key, S\)/,
     '编排乘区仍与共鸣合并，口径澄清不得改数值');
 });

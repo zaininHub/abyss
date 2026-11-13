@@ -22,7 +22,7 @@ const STATE_META = {
   dormant: { label: '强制休眠', color: '#ff9800' },
   losing:  { label: '流失预警', color: 'var(--bad,#f85149)' },
 };
-const PAGE_SIZE = 10; // v3.2.3 反馈①：班组档案卡一页 10 条，分页浏览（原 24 条上限折叠，改分页后全量可达）
+const PAGE_SIZE = 5; // v3.2.3 反馈①：班组档案卡分页浏览；v3.12.13 反馈#172：一页 5 条，便于浏览
 let crewPage = 0; // 会话级页码（不落盘）
 let crewFilter = ''; // v3.4.6 反馈⑥：岗位筛选（'' = 全部；'free' = 空闲；其余 = converter id）——会话级，不落盘
 
@@ -122,11 +122,11 @@ export function renderCrewPanel(container) {
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位">智能分配</button>
       <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）">一键收回</button>
-      <span style="display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px" data-crew-filter>
-        <button class="btn" data-crew-filter-btn="" style="font-size:11px;padding:2px 8px${crewFilter === '' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">全部</button>
-        <button class="btn" data-crew-filter-btn="free" style="font-size:11px;padding:2px 8px${crewFilter === 'free' ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">空闲</button>
-        ${visibleTypes.map(t => `<button class="btn" data-crew-filter-btn="${t}" style="font-size:11px;padding:2px 8px${crewFilter === t ? ';color:var(--good,#3fb950);border-color:var(--good,#3fb950)' : ''}">${CONVERTERS[t].name}</button>`).join('')}
-      </span>
+      <select data-crew-filter-select title="按线程类型（在岗岗位）筛选" style="font-size:12px;padding:3px 8px;margin-left:4px;max-width:180px">
+        <option value="" ${crewFilter === '' ? 'selected' : ''}>全部</option>
+        <option value="free" ${crewFilter === 'free' ? 'selected' : ''}>空闲</option>
+        ${visibleTypes.map(t => `<option value="${t}" ${crewFilter === t ? 'selected' : ''}>${CONVERTERS[t].name}</option>`).join('')}
+      </select>
     </div>
     <div class="crew-grid">${cards}</div>
     ${pager}`;
@@ -172,16 +172,16 @@ export function renderCrewPanel(container) {
         renderCrewPanel(container);
         return;
       }
-      // v3.4.6 反馈⑥：岗位筛选按钮
-      const fb = ev.target.closest ? ev.target.closest('[data-crew-filter-btn]') : null;
-      if (fb) {
-        crewFilter = fb.dataset.crewFilterBtn || '';
+    });
+    container.addEventListener('change', (ev) => {
+      // v3.12.13 反馈#172：线程类型筛选下拉框
+      const fsel = ev.target.closest ? ev.target.closest('[data-crew-filter-select]') : null;
+      if (fsel) {
+        crewFilter = fsel.value || '';
         crewPage = 0;
         renderCrewPanel(container);
         return;
       }
-    });
-    container.addEventListener('change', (ev) => {
       const sel = ev.target.closest ? ev.target.closest('[data-bind]') : null;
       if (!sel) return;
       const c = S.cultists.find(x => String(x.id) === String(sel.dataset.bind));

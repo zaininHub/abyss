@@ -12,7 +12,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
-  corruptionCap, researchMult, clampRunResourceBalances } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径
+  corruptionCap, researchMult, clampRunResourceBalances, spendRes } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径）
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs, checkSpecialTasks } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -21,7 +21,7 @@ import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot,
 let importMode = 'current';
 // v2.0：故事线管理器
 import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePackage } from './core/storylineManager.js';
-import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn } from './modules/projects.js';
+import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn, rewardText } from './modules/projects.js';
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn, refreshReligionAffordability } from './modules/religions.js'; // v2.8.26 ④
 import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
 import { policyOpenGroups, policyMult, POLICY_GROUPS } from './data/policies.js';
@@ -73,7 +73,7 @@ import { runFlows, flowStats, flowLedger, flowErrors, FLOW_PHASES } from './core
 import './systems/resourceFlows.js'; // 副作用：注册全部资源流（必须在 tick 之前完成）
 // v3.9.0 核心玩法抽象（控制流层）：帧系统调度 + 声明式面板分发
 import { runSystems, systemStats, systemErrors, FRAME_PHASES } from './core/systemScheduler.js';
-import { registerFrameSystems } from './systems/frameSystems.js';
+import { registerFrameSystems, buildTideSchedulingHtml } from './systems/frameSystems.js';
 import { registerPanel, renderPanels, panelErrors, allPanels } from './core/panelRegistry.js';
 import { ORCHESTRATION_MODES, TIDE_ORCHESTRATION, TIDE_PHASE_NAMES, SCHEDULE_UNLOCK,
   orchestrationUnlocked, orchestrationState, scheduleUnlocked, orchestrationSchedule,
@@ -133,42 +133,8 @@ function renderOrchestrationPanel() {
   let html = `<div style="color:var(--text-2);font-size:11.5px;line-height:1.6;margin-bottom:8px">
     当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}</div>`;
 
-  html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">`;
-  for (const m of ORCHESTRATION_MODES) {
-    const on = !auto && m.id === st.mode;
-    html += `<button class="btn-mini" data-orch-mode="${m.id}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}${auto ? ' disabled title="随潮汐排班开启时由相位决定"' : ''}>${m.icon} ${m.short}</button>`;
-  }
-  html += `</div>`;
-
-  const schedLine = TIDE_PHASE_NAMES
-    .map((n, i) => `${n}→${(ORCHESTRATION_MODES.find(m => m.id === sched[i]) || {}).short || '均衡'}`)
-    .join(' · ');
-  html += `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-    <button class="btn-mini" data-orch-auto="1"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>随潮汐排班：${auto ? '开' : '关'}</button>
-    <span style="color:var(--text-3);font-size:10.5px">${auto ? schedLine : '手动选定一条编排'}</span>
-  </div>`;
-
-  // v3.9.0「潮汐预案」：解锁后，随潮汐排班开启时逐相位改写策略。
-  // 面板只陈述自身数据（四相位当前排班），不写获取入口、不暴露实现术语。
-  if (auto && schedOK) {
-    const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
-    // 标题与操作提示分行：窄卡内同行会把提示挤成「孤字」换行（实测末字单独占一行）
-    html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin:2px 0 8px">
-      <div style="font-size:11.5px;color:var(--text-2);margin-bottom:7px">潮汐预案 · 四相位排班表</div>`;
-    for (let i = 0; i < 4; i++) {
-      const nowOn = curPhase === i;
-      // 槽位按钮放大到 24×24（可访问性点击目标下限），相位标签/间距相应收窄，保持单行不换行
-      html += `<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;margin:4px 0">
-        <span style="min-width:44px;font-size:11px;color:${nowOn ? 'var(--accent)' : 'var(--text-3)'}">${nowOn ? '▶ ' : ''}${TIDE_PHASE_NAMES[i]}</span>`;
-      for (const m of ORCHESTRATION_MODES) {
-        const on = sched[i] === m.id;
-        html += `<button class="btn-mini" data-orch-slot="${i}" data-orch-slot-mode="${m.id}" title="${TIDE_PHASE_NAMES[i]}改用${m.name}" aria-label="${TIDE_PHASE_NAMES[i]}改用${m.name}" style="min-width:24px;min-height:24px;display:inline-flex;align-items:center;justify-content:center;${on ? 'border-color:var(--accent);color:var(--accent);' : ''}">${m.icon}</button>`;
-      }
-      html += `<span style="font-size:10.5px;color:var(--text-3)">${(ORCHESTRATION_MODES.find(m => m.id === sched[i]) || {}).name || ''}</span></div>`;
-    }
-    if (scheduleCustomized(S)) html += `<button class="btn-mini" data-orch-schedule-reset="1">恢复默认排班</button>`;
-    html += `</div>`;
-  }
+  // v3.12.13 反馈 #164：潮汐排班与四种排版类型同排；开关仅用选中高亮表达；潮汐预案改为悬停浮层。
+  html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized });
 
   // v3.10.0「相位共鸣」：标题与说明分行，避免窄卡内提示被挤成孤字换行；
   // 按钮点击目标 28×28 且带 aria-label / aria-pressed（可访问性），焦点态只用既有强调色。
@@ -856,10 +822,10 @@ function renderProjects() {
     const div = document.createElement('div');
     div.className = 'proj';
     div.dataset.pidx = i; // v2.1 R2：供原地进度更新定位
+    const r = p.reward;
+    const rw = rewardText(r);
+    const rwColor = r.kind === 'debuff' ? 'var(--bad)' : 'var(--good)';
     if (p.status === 'pending') {
-      const r = p.reward;
-      const rw = r.kind === 'ep' ? `+${fmt(r.amount)} EP` : r.kind === 'rp' ? `+${r.amount} RP` : r.kind === 'buff' ? `${r.dur / 60}分钟全局+${Math.round((r.buffMult - 1) * 100)}%` : `任务期间产出-${Math.round((1 - r.buffMult) * 100)}%`;
-      const rwColor = r.kind === 'debuff' ? 'var(--bad)' : 'var(--good)';
       const left = Math.max(0, Math.ceil((3600000 - (now - p.pendingAt)) / 1000));
       // v2.1 R2：领取按钮不再逐节点挂监听，统一由容器级事件委托处理
       div.innerHTML = `<div class="pn"><span style="color:var(--good)">✓ ${p.name}</span><span class="mono" style="color:${rwColor}">${rw}</span></div>
@@ -868,11 +834,10 @@ function renderProjects() {
     } else {
       const left = Math.max(0, Math.ceil((p.deadline - now) / 1000));
       const pct = p.goal > 0 ? Math.min(100, p.progress / p.goal * 100) : 0;
-      const r = p.reward;
-      const rw = r.kind === 'ep' ? `+${fmt(r.amount)} EP` : r.kind === 'rp' ? `+${r.amount} RP` : r.kind === 'buff' ? `${r.dur / 60}分钟全局+${Math.round((r.buffMult - 1) * 100)}%` : `任务期间产出-${Math.round((1 - r.buffMult) * 100)}%`;
-      const rwColor = r.kind === 'debuff' ? 'var(--bad)' : 'var(--good)';
+      // v3.12.13：进度文案用紧凑格式化（如 12.4M / 84.9B），不裸露超长原始数字、也不只写百分比
+      const progTxt = `${p.desc}：${fmt(p.progress)} / ${fmt(p.goal)}（${pct.toFixed(0)}%）`;
       div.innerHTML = `<div class="pn"><span>${p.name}</span><span class="mono" style="color:${rwColor}">${rw}</span></div>
-        <div class="prog-txt" style="font-size:11px;color:var(--text-2)">${p.desc}（${pct.toFixed(0)}%）</div>
+        <div class="prog-txt" style="font-size:11px;color:var(--text-2)">${progTxt}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
           <div class="pt" style="flex:1"><div style="width:${pct}%"></div></div>
           <div class="pr mono deadline-left" style="font-size:11px;min-width:60px;text-align:right">${fmtTime(left)}</div>
@@ -898,7 +863,7 @@ function updateProjectProgress() {
       const bar = div.querySelector('.pt > div');
       if (bar) bar.style.width = pct + '%';
       const txt = div.querySelector('.prog-txt');
-      if (txt) txt.textContent = `${p.desc}（${pct.toFixed(0)}%）`;
+      if (txt) txt.textContent = `${p.desc}：${fmt(p.progress)} / ${fmt(p.goal)}（${pct.toFixed(0)}%）`;
       const leftEl = div.querySelector('.deadline-left');
       if (leftEl) leftEl.textContent = fmtTime(Math.max(0, Math.ceil((p.deadline - now) / 1000)));
     }
@@ -1342,7 +1307,7 @@ function onWishToss() {
   const now = Date.now();
   if (now < wishCoolUntil) { toast('投币动画进行中，稍等片刻…'); return; }
   if ((S.ep || 0) < WISH_COST) { toast(`EP 不足（需 ${WISH_COST} EP）`); return; }
-  S.ep -= WISH_COST;
+  S.ep -= WISH_COST; spendRes('ep', WISH_COST);
   S.wishCoins = (S.wishCoins || 0) + 1; // v3.0.3 第二批①：许愿池投币计数（成就）
   wishCoolUntil = now + 3000;
   w.disabled = true;
@@ -1400,7 +1365,7 @@ function onFarewellBuy() {
   const b = document.getElementById('farewell-gift');
   if (!b || b.disabled) return;
   if ((S.ep || 0) < FAREWELL_COST) { toast(`EP 不足（需 ${FAREWELL_COST} EP）`); return; }
-  S.ep -= FAREWELL_COST;
+  S.ep -= FAREWELL_COST; spendRes('ep', FAREWELL_COST);
   S._farewellBought = true;
   b.disabled = true;
   b.classList.add('giving');
@@ -1511,7 +1476,7 @@ function bindEvents() {
     const spend = Math.max(Math.floor((S.ep || 0) * 0.25), rate); // v2.8.30：25% 不足 1 RP 时按最低 1 RP 额蒸馏（ep ≥ 蒸馏率即可点）
     if (spend < rate || (S.ep || 0) < spend) { if (toast) toast('EP 不足：需至少蒸馏出 1 RP'); return; }
     const rp = Math.floor(spend / rate);
-    S.ep -= spend;
+    S.ep -= spend; spendRes('ep', spend);
     addRp(rp); // v3.0.8：走统一入口，受 RP 上限约束
     S.epDistilledTotal = (S.epDistilledTotal || 0) + spend;
     save(S); dirty.top = true; dirty.rp = true;
@@ -1825,25 +1790,43 @@ function bindEvents() {
   // v3.12.12 反馈⑥：皮肤菜单（暂停左侧）——悬停展开（CSS :hover）+ 键盘 .kbd-open，
   //   点击切换 documentElement 主题类并持久化 localStorage（独立键，不入存档模式结构）。
   //   light 主题同步挂 .light 类，让 abyssGaze.js 既有的浅色检测真正生效。
+  // v3.12.13 ⑦：皮肤改由「永恒矩阵」购买——默认仅 abyss 拥有，light/ember 需 S.eternal[skin_*] > 0。
   const skinMenuEl = document.getElementById('skin-menu');
   if (skinMenuEl) {
     const SKINS = ['abyss', 'light', 'ember'];
     const SKIN_KEY = 'abyss_skin';
+    // 拥有判定：abyss 默认拥有；其余皮肤由永恒矩阵一次性解锁（S.eternal[skin_<name>] > 0）
+    const skinOwned = (name) => name === 'abyss' || ((S.eternal && S.eternal['skin_' + name]) || 0) > 0;
+    const refreshSkinOptions = (selected) => {
+      document.querySelectorAll('#skin-pop .skin-opt').forEach(b => {
+        const owned = skinOwned(b.dataset.skin);
+        if (b.dataset.origTitle === undefined) b.dataset.origTitle = b.getAttribute('title') || '';
+        b.classList.toggle('on', b.dataset.skin === selected);
+        b.classList.toggle('locked', !owned);
+        b.title = owned ? (b.dataset.origTitle || '') : '需在「永恒矩阵」用研究点（ES）购买后解锁';
+      });
+    };
     const applySkin = (name) => {
-      if (!SKINS.includes(name)) name = 'abyss';
+      if (!SKINS.includes(name) || !skinOwned(name)) name = 'abyss';
       const root = document.documentElement;
       SKINS.forEach(s => root.classList.toggle(`theme-${s}`, s === name));
       root.classList.toggle('light', name === 'light');
       try { localStorage.setItem(SKIN_KEY, name); } catch (e) { /* 隐私模式等忽略 */ }
-      document.querySelectorAll('#skin-pop .skin-opt').forEach(b => b.classList.toggle('on', b.dataset.skin === name));
+      refreshSkinOptions(name);
     };
     const skinBtn = document.getElementById('skin-menu-btn');
     const setSkinOpen = (open) => skinBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
-    skinMenuEl.addEventListener('mouseenter', () => setSkinOpen(true));
+    // 打开时刷新（购买皮肤后 S.eternal 已变化，需重算锁定态）
+    const refreshOnOpen = () => {
+      const cur = (() => { try { return localStorage.getItem(SKIN_KEY) || 'abyss'; } catch { return 'abyss'; } })();
+      refreshSkinOptions(skinOwned(cur) ? cur : 'abyss');
+    };
+    skinMenuEl.addEventListener('mouseenter', () => { setSkinOpen(true); refreshOnOpen(); });
     skinMenuEl.addEventListener('mouseleave', () => { if (!skinMenuEl.classList.contains('kbd-open')) setSkinOpen(false); });
     skinMenuEl.addEventListener('focusin', (e) => {
       setSkinOpen(true);
       if (e.target.matches(':focus-visible')) skinMenuEl.classList.add('kbd-open');
+      refreshOnOpen();
     });
     skinMenuEl.addEventListener('focusout', () => {
       requestAnimationFrame(() => {
@@ -1855,10 +1838,14 @@ function bindEvents() {
     });
     document.getElementById('skin-pop')?.addEventListener('click', (e) => {
       const opt = e.target.closest('[data-skin]');
-      if (opt) applySkin(opt.dataset.skin);
+      if (opt) {
+        if (!skinOwned(opt.dataset.skin)) { if (typeof toast === 'function') toast('该皮肤需在「永恒矩阵」购买后解锁'); return; }
+        applySkin(opt.dataset.skin);
+      }
     });
     let savedSkin = 'abyss';
     try { savedSkin = localStorage.getItem(SKIN_KEY) || 'abyss'; } catch (e) { /* 忽略 */ }
+    if (!skinOwned(savedSkin)) savedSkin = 'abyss'; // 旧档/越权：未拥有回落默认
     applySkin(savedSkin); // 启动即恢复上次选择的主题
   }
 
@@ -1925,7 +1912,7 @@ function bindEvents() {
     const cut = Math.min(cur, BALANCE.corruption.purge?.maxCut || 50);
     const cost = Math.ceil(purgeCostFor(cut) * riftPurgeCostMult()); // v3.4.9 反馈④：净化 EP 成本随裂隙等级 ×(1+0.30/级)
     if ((S.ep || 0) < cost) { toast(`EP 不足：净化 ${cut.toFixed(1)}% 腐化需 ${fmt(cost)} EP`); return; }
-    S.ep -= cost;
+    S.ep -= cost; spendRes('ep', cost);
     S.corruption = Math.max(0, cur - cut);
     const dmGain = purgeDmFor(cut);
     if (dmGain > 0) { addDm(dmGain); discoverDm(); }
@@ -2265,7 +2252,7 @@ function doClick() {
 function hireCultist() {
   const cost = staffCost();
   if (S.ep < cost) return;
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.lazySince = null; // v2.7.1：招募操作解除线程懒惰
   S._lastActionAt = Date.now();
   const names = ['外勤干员 A','斥候','深潜者','观测员','渗透单元','信使','无面者','印斯茅斯节点','沙丘行者','门之侍者'];
@@ -2298,7 +2285,7 @@ function hireCultist() {
 function buyFocus() {
   const c = focusCost();
   if (S.ep < c) return;
-  S.ep -= c; S.focusLevel++;
+  S.ep -= c; spendRes('ep', c); S.focusLevel++;
   S._lastActionAt = Date.now();
   dirty.hero = true; dirty.top = true;
 }

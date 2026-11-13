@@ -17,7 +17,7 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   hasTech, computeCps, globalMult, epStorageCap, staffCost, staffNetPerSec,
-  fmt, unitCost, costMult, addEp, techCostOf, researchMult, elv, // v2.8.22 ②：自动研究按多资源成本购买；v3.10.5：「拟我协议」rp_ai 提升助手性价比（摊薄购买价）；v3.12.12 ⑥：永恒拟我缩短决策间隔
+  fmt, unitCost, costMult, addEp, techCostOf, researchMult, elv, spendRes, // v2.8.22 ②：自动研究按多资源成本购买；v3.10.5：「拟我协议」rp_ai 提升助手性价比（摊薄购买价）；v3.12.12 ⑥：永恒拟我缩短决策间隔
 } from './economy.js';
 import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
@@ -111,23 +111,14 @@ export function actionCounts() {
 export { totalActionCount, maxCycleCrewDemand, AI_CREW_REQUIRED_IDS, crewSizeOf, crewMaxOf, groupRankOf };
 
 // 已开启但未绑定助手的动作（占编 0 = 未生效，等待绑定 / 购买补员）。
-// 告警按 60s 真实时间节流，避免刷屏。
-const STALL_WARN_MS = 60 * 1000;
+// v3.12.13 ⑥：移除「⚠ 已开启但未绑定助手」日志告警——未绑定态由面板 stall 盒（data-ai-stall）直接呈现，
+//   不再向 [AI] 日志刷屏告警。
 export function stalledActions() {
   if (!aiUnlocked()) return [];
   // v3.12.3 反馈⑦：0 助手 = 全关（不再有「已开启但没绑定」的中间态可提示）
   if (assistantCount() <= 0) return [];
   if (!isAnyActionEnabled(S.ai)) return [];
   return enabledActions(S.ai).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
-}
-function warnIfStalled(stalled) {
-  if (!stalled.length) return;
-  // v3.12.3 反馈⑦：0 助手 = 全关（旧档可能残留开关为 true，但没有任何东西需要「补员提示」）
-  if (assistantCount() <= 0) return;
-  const now = Date.now();
-  if (S.ai._stallWarnAt && now - S.ai._stallWarnAt < STALL_WARN_MS) return;
-  S.ai._stallWarnAt = now;
-  ailog(`已开启但未绑定助手：${stalled.map(a => a.name).join('、')} 暂不执行——点击 + 绑定或购买助手后自动补员`, 'warn');
 }
 
 // v2.5.5：全部资源点解锁判定（resDiscovered 十个锚点全 true）
@@ -138,20 +129,22 @@ export function allResDiscovered(S) {
 }
 export function autoBuildUnlocked() { return !!(S.ai && S.ai.autoBuildUnlocked); }
 export function autoBuildActivateCost() { return BALANCE.ai.aiAutoBuild.activateCost; }
+// v3.12.13 ⑥：激活消耗的资源——自动购建能力迁研究点，由 EP 改为 RP
+export function autoBuildActivateRes() { return 'rp'; }
 export function autoBuildRate() {
   const r = (S.ai && S.ai.autoBuildRate) || BALANCE.ai.aiAutoBuild.defaultRate;
   return Math.max(BALANCE.ai.aiAutoBuild.minRate, Math.min(3600, r)); // 硬下限 5s：改档/改存档均不生效
 }
 export function autoBuildActivable() {
-  return aiUnlocked() && !autoBuildUnlocked() && allResDiscovered(S) && S.ep >= autoBuildActivateCost();
+  return aiUnlocked() && !autoBuildUnlocked() && allResDiscovered(S) && (S.rp || 0) >= autoBuildActivateCost();
 }
-// 激活：校验 + 一次性扣除大量 EP
+// 激活：校验 + 一次性扣除研究点 RP
 export function activateAutoBuild() {
   if (autoBuildUnlocked()) return { ok: false, reason: '已激活' };
   if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };
   const cost = autoBuildActivateCost();
-  if (S.ep < cost) return { ok: false, reason: `EP 不足（需 ${fmt(cost)}）` };
-  S.ep -= cost;
+  if ((S.rp || 0) < cost) return { ok: false, reason: `研究点不足（需 ${fmt(cost)}）` };
+  S.rp -= cost;
   S.ai.autoBuildUnlocked = true;
   S.ai.autoBuild = true;
   save(S);
@@ -304,6 +297,7 @@ const EXECUTORS = {
       if (bought >= workers) break;
       if ((S.rp || 0) < cost.rp || (S.ep || 0) < (cost.ep || 0)) break;
       S.rp -= cost.rp;
+      spendRes('rp', cost.rp);
       S.ep -= cost.ep || 0;
       S.tech[t.id] = true;
       pushBoughtOrder(S, t.id);
@@ -342,21 +336,19 @@ export function tickAI(dt) {
 
   let acted = false;
   const ctx = { dt, line: reserveLine() };
-  const stalled = [];
 
   // v3.11.3：每个动作的执行次数 = 其绑定的助手数（手动占编，常驻不消耗）。
-  // 绑定为 0 的已开启动作（待绑定 / 待补员）进入 stalled，不执行。
+  // 绑定为 0 的已开启动作不执行（待绑定 / 待补员）；未绑定态由面板 stall 盒呈现，不再日志告警。
   for (const a of AI_ACTIONS) {
     if (!ai[a.switchKey] || !actionAvailable(a.id)) continue;
     const workers = crewOf(a.id);
-    if (workers <= 0) { stalled.push(a); continue; }
+    if (workers <= 0) continue;
     const result = EXECUTORS[a.id](ctx, workers);
     if (!result || result.count <= 0) continue;
     recordAction(a.id, result.count);
     for (const m of result.messages) ailog(m.text, m.cls);
     acted = true;
   }
-  warnIfStalled(stalled);
   return acted;
 }
 
@@ -474,14 +466,16 @@ function renderAssistantSection() {
   const bound = crewBoundTotal();
   const counts = actionCounts();
   const unstaffed = (assistantCount() > 0 ? enabledActions(S.ai) : []).filter(a => actionAvailable(a.id) && crewOf(a.id) <= 0);
+  // v3.12.13 ⑥：移除「⚠ 已开启但未绑定助手…研究点扩编后自动补员」告警文案；保留 data-ai-stall 盒作为
+  //   未绑定态的中性提示（与 stalledActions() 读侧同源，供 30 天推演一致性校验）。
   const unstaffedHtml = unstaffed.length
-    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">⚠ 已开启但未绑定助手：${unstaffed.map(a => a.name).join('、')} 暂不执行——点击 ＋ 绑定或研究点扩编后自动补员。</div>`
+    ? `<div class="ai-stall" data-ai-stall style="margin-top:4px;padding:5px 8px;border:1px solid var(--warn,#c8a24a);border-radius:6px;font-size:12px;line-height:1.7;color:var(--warn,#c8a24a)">${unstaffed.map(a => a.name).join('、')} 已开启但未绑定助手，点击 ＋ 绑定后才会执行</div>`
     : '';
   // v3.12.5 反馈④：台账数值改为悬浮在助手行上，需要时才看，不占版面。
-  const ledgerTip = `空闲 ${idle} · 占编 ${bound} · 共 ${n} 名｜本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}`;
+  const ledgerTip = `空闲 ${idle} · 占编 ${bound} · 共 ${n} 名｜本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}｜助手来自研究点「助手扩编协议」（每级 +1 名）`;
   // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），落进面板标题 <h3>。
-  // v3.12.12 ⑧：追加「研究点扩编」提示（玩家获取助手的唯一入口已移至研究点）。
-  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span><span class="ai-assist-hint" style="font-size:10px;color:var(--text-3);margin-left:6px">研究点扩编</span></span>`;
+  // v3.12.13 ⑤：移除常驻「研究点扩编」提示，扩编入口说明收敛到悬浮框 data-tip（见 ledgerTip）。
+  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
   // 预留线：并入助手行（反馈⑧）——EP 上限预留比例；按钮点击仍由 #ai-card 委托处理。
   const ai = S.ai;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
@@ -550,11 +544,11 @@ export function renderAiPanel(container) {
       `<div class="ai-reserve-row" style="margin-top:6px">${rateBtns}</div>
        <div style="font-size:11px;color:var(--text-3);margin-top:4px">下次购建 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>`);
   } else if (allResDiscovered(S)) {
-    // 资源点已齐：只剩一次性 EP 激活（激活后自动解锁并出现上面的常规卡）
-    const epOk = S.ep >= autoBuildActivateCost();
-    buildHtml = `<div class="ai-build-box ${epOk ? '' : 'ai-build-locked'}">
+    // 资源点已齐：只剩一次性激活（消耗研究点 RP；激活后自动解锁并出现上面的常规卡）
+    const rpOk = (S.rp || 0) >= autoBuildActivateCost();
+    buildHtml = `<div class="ai-build-box ${rpOk ? '' : 'ai-build-locked'}">
       <div class="ai-build-title">${buildAction.name}</div>
-      <button class="btn ${epOk ? '' : 'disabled'}" data-ai-build-activate="1" ${epOk ? '' : 'disabled'} title="消耗 ${fmt(autoBuildActivateCost())} EP 激活自动购建">激活（${fmt(autoBuildActivateCost())} EP）</button>
+      <button class="btn ${rpOk ? '' : 'disabled'}" data-ai-build-activate="1" ${rpOk ? '' : 'disabled'} title="消耗 ${fmt(autoBuildActivateCost())} 研究点 激活自动购建">激活（${fmt(autoBuildActivateCost())} 研究点）</button>
     </div>`;
   }
   const basicHtml = actionsByGroup('basic').map(a => actionCard(a)).join('');
@@ -608,15 +602,15 @@ export function renderAiPanel(container) {
       // v2.5.5：激活自动购建——二次确认（首次点击变确认态，再点执行）
       const actEl = e.target.closest('[data-ai-build-activate]');
       if (actEl) {
-        if (!autoBuildActivable()) { ailog('激活条件未满足：需全部资源点解锁且 EP 充足', 'bad'); return; }
+        if (!autoBuildActivable()) { ailog('激活条件未满足：需全部资源点解锁且研究点充足', 'bad'); return; }
         if (actEl.dataset.confirm === '1') {
           const r = activateAutoBuild();
-          if (r.ok) { ailog(`自动购建已激活（-${fmt(r.cost)} EP）；设置购买间隔与开关即可开始`, 'good'); }
+          if (r.ok) { ailog(`自动购建已激活（-${fmt(r.cost)} 研究点）；设置购买间隔与开关即可开始`, 'good'); }
           else ailog(`激活失败：${r.reason}`, 'bad');
           renderAiPanel(container);
         } else {
           actEl.dataset.confirm = '1';
-          actEl.textContent = `再次点击确认（消耗 ${fmt(autoBuildActivateCost())} EP）`;
+          actEl.textContent = `再次点击确认（消耗 ${fmt(autoBuildActivateCost())} 研究点）`;
           setTimeout(() => { if (actEl.isConnected && actEl.dataset.confirm === '1') { actEl.dataset.confirm = ''; actEl.textContent = '激活自动购建'; } }, 4000);
         }
         return;

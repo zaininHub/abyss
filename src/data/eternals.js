@@ -1,4 +1,4 @@
-// 永恒矩阵 14 个
+// 永恒矩阵 18 个（含 2 项皮肤解锁：v3.12.13 ⑦ 皮肤改由永恒矩阵购买，默认仅 abyss 拥有）
 export const ETERNALS = [
   {id:'eff',name:'永恒效能',desc:'每级全局 +5%',base:1,growth:1.6},
   {id:'cost',name:'永恒节俭',desc:'每级成本 -2%',base:1,growth:1.6},
@@ -17,6 +17,10 @@ export const ETERNALS = [
   {id:'pet',name:'永恒宠物',desc:'每级宠物效果 +8%',base:2,growth:1.7},
   {id:'fuse',name:'永恒融合',desc:'每级融合世代加成 +10%',base:5,growth:2},
   {id:'lucky',name:'永恒幸运',desc:'每级事件奖励 +5%',base:2,growth:1.7},
+  // v3.12.13 ⑦：皮肤解锁——一次性购买（cap:1），alwaysShow 保证在矩阵内始终可见可购；
+  //   拥有后 S.eternal[id] > 0，皮肤菜单据此判定可切换。
+  {id:'skin_light',name:'晨光白昼皮肤',desc:'解锁浅色主题「晨光白昼」',base:3,growth:1,cap:1,alwaysShow:true},
+  {id:'skin_ember',name:'余烬琥珀皮肤',desc:'解锁暖色暗色主题「余烬琥珀」',base:5,growth:1,cap:1,alwaysShow:true},
 ];
 
 export function esCost(e, eternalLevels) {

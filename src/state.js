@@ -43,6 +43,8 @@ export function defaultState() {
     gotOffline: false, lastOfflineSec: 0, lastOfflineGain: 0,
     // 任务版
     projects: [], projectsDone: 0,
+    // v3.12.13：资源增减 / 升级购买全局统计（任务进度口径，按资源键聚合；跨局由 stateSchema 兜底）
+    _gainRes: {}, _spentRes: {}, _buyRes: {},
     // 探索/宗教
     expeditions: [], expeditionsDone: 0, galaxyDone: {}, // v3.12.7 ⑦：按星系的探索回数（深空殖民入口门槛；星际里程碑已并入成就）
     cosmos: { lv: {} }, // v3.0.3 后续反馈④：宇宙探索工程等级（本局制，晋升/轮回重置）

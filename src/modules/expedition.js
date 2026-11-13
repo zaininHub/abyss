@@ -1,6 +1,6 @@
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost, researchMult } from './economy.js';
+import { computeCps, fmt, fmtTime, hasTech, addEp, addRp, addDm, addPt, unitCost, researchMult, spendRes, gainRes } from './economy.js';
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
@@ -311,7 +311,7 @@ export function renderExpeditions(container) {
       if ((S.ep || 0) < c.ep) { toast(`EP 不足（需 ${fmt(c.ep)}）`); return; }
       if ((S.rp || 0) < c.rp) { toast(`RP 不足（需 ${fmt(c.rp)}）`); return; }
       if ((S.pt || 0) < c.pt) { toast(`PT 不足（需 ${fmt(c.pt)}）`); return; }
-      S.ep -= c.ep; S.rp -= c.rp; S.pt -= c.pt;
+      S.ep -= c.ep; spendRes('ep', c.ep); S.rp -= c.rp; spendRes('rp', c.rp); S.pt -= c.pt; spendRes('pt', c.pt);
       const pets = Math.min(3, (S.activePets || []).filter(id => S.pets && S.pets[id]).length);
       S.expeditions.push({ galaxyId: g.id, startsAt: Date.now(), duration: galaxyDur(g) * 1000, pets });
       log(`探索出发：${g.name}${pets > 0 ? `（携带 ${pets} 只出战异兽）` : ''}（-${fmt(c.ep)} EP${c.rp ? ` / -${fmt(c.rp)} RP` : ''}${c.pt ? ` / -${fmt(c.pt)} PT` : ''}）`, 'good');
@@ -355,6 +355,7 @@ export function tickExpeditions() {
     let msg = `探索返回：${g.name}，+${fmt(gain)} 星际燃料 CPS`;
     if (g.es) {
       S.es += g.es;
+      gainRes('es', g.es);
       msg += `、+${g.es} ES`;
     }
     // v3.6.0 方向⑧：按星系群返回专属星际资源
@@ -369,6 +370,7 @@ export function tickExpeditions() {
     // 深空探索有概率获得信仰
     if ((ex.galaxyId === 'edge' || ex.galaxyId === 'andromeda') && Math.random() < 0.15) {
       S.faith = (S.faith || 0) + 1;
+      gainRes('fp', 1);
       log('探索中感受到神意：+1 FP', 'good');
     }
     toast(`探索完成：${g.name}（+${fmt(gain)} CPS）`);

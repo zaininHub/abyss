@@ -4,7 +4,7 @@
 // 克制：每项等级上限 4~5、成本 ×1.7~1.9/级陡峭增长、转化率劣于最优通道（集市/深潜）但不占库存不占队列。
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult, gainRes } from './economy.js';
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
 import { starChartUnlocked } from './disclosure.js'; // v3.12.9：宇宙探索与星图 tab 同源（宠物在前）
@@ -62,7 +62,7 @@ function grantRes(key, n) {
     case 'rp': addRp(n); break;
     case 'dm': addDm(n); break;
     case 'pt': addPt(n); break;
-    case 'faith': S.faith = Math.min(faithCap(), (S.faith || 0) + n); break;
+    case 'faith': S.faith = Math.min(faithCap(), (S.faith || 0) + n); gainRes('fp', n); break;
     case 'ember': S.riftEmber = (S.riftEmber || 0) + n; break;
     case 'vs': S.vs = (S.vs || 0) + n; break;
     default: break;

@@ -1,7 +1,7 @@
 import { S, save } from '../state.js';
 import { petBaseMult, petLevelMilestoneMult, petsStarving as _petsStarving } from '../data/pets.js';
 import { getStorylinePets } from '../core/storylineContent.js'; // v3.7.0：异兽表按当前故事线动态合并
-import { elv, fmt, ptCap } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
+import { elv, fmt, ptCap, spendRes, buyRes } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
 import { BALANCE } from '../data/balance.js'; // v3.4.0 反馈③：孵化汇率与 tick 同源
 import { converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径）
 import { checkEasterEggs } from './progression.js';
@@ -92,9 +92,23 @@ export function petStarving() {
   return _petsStarving(S.pt, activePetIds().length); // v3.7.0：与 economy.js 真实乘数共用同一判定
 }
 
+// v3.12.13 反馈#168：异兽链式解锁——深渊龙需前置全部购买，深潜者需深渊龙已购。
+// 未解锁的异兽在商店显示为「???」占位，且不可购买（仅影响可见性，不动购买/升级逻辑）。
+export function petPrereqs(id) {
+  const def = petTable().find(x => x.id === id);
+  return (def && def.req) ? def.req : [];
+}
+export function isUnlocked(petDef) {
+  if (!petDef) return true;
+  for (const r of (petDef.req || [])) if (!S.pets[r]) return false;
+  return true;
+}
+
 export function buyPet(petDef) {
+  if (!isUnlocked(petDef)) return false; // 未解锁不可购买
   if ((S.pt || 0) < petDef.price) return false;
   S.pt -= petDef.price;
+  spendRes('pt', petDef.price); buyRes('pt');
   S.pets[petDef.id] = { icon: petDef.icon, name: petDef.name, level: 1, exp: 0, gen: 1, tier: petDef.tier || 1 };
   if (S.activePets.length < 3) S.activePets.push(petDef.id);
   return true;
@@ -260,6 +274,7 @@ export function renderPetGrid(container) {
       return `${id}:${p.level}:${p.gen}:${actives.includes(id) ? 1 : 0}:${xpReady ? 1 : 0}`;
     }),
     `b:${buyable.map(p => p.id).join(',')}`,
+    `u:${buyable.map(p => isUnlocked(p) ? 1 : 0).join(',')}`, // v3.12.13 #168：解锁态变化需重建
     `h:${autoHatch ? 1 : 0}${ptOn ? 1 : 0}${hatchLv}${ptFull ? 'f' : ''}`,
   ].join('|');
   if (sig === _gridSig && container.childElementCount > 0) {
@@ -288,6 +303,14 @@ export function renderPetGrid(container) {
   if (buyable.length > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin:8px 0 2px">异兽商店（PT：${Math.floor(S.pt || 0)} / ${fmt(ptCap())}）</div>`;
     for (const p of buyable) {
+      if (!isUnlocked(p)) {
+        // v3.12.13 #168：未解锁——名称与图标均显示为「???」，不可购买
+        html += `<div class="pet-card cant" data-pet-locked="${p.id}">
+          <div class="icon">???</div><div class="n">???</div>
+          <div class="lv" style="color:var(--text-3)">未解锁</div>
+          <div class="pet-fx">前置异兽集齐后解锁</div></div>`;
+        continue;
+      }
       const afford = (S.pt || 0) >= p.price;
       html += `<div class="pet-card${!afford ? ' cant' : ''}" data-pet-buy="${p.id}">
         <div class="icon">${p.icon}</div><div class="n">${p.name}</div>

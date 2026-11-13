@@ -22,8 +22,8 @@ export const PETS = [
   {id:'cat',icon:'🐈',name:'影猫',price:50,tier:1,desc:'点击 +20%',anim:'b',spark:'✦'},
   {id:'robot',icon:'🦾',name:'机巧兵',price:400,tier:2,desc:'全局 +10%',anim:'c',spark:'⚙'},
   {id:'ghost',icon:'👁',name:'窥视者',price:2500,tier:3,desc:'离线 +10%',anim:'d',spark:'✦'},
-  {id:'dragon',icon:'🐲',name:'深渊龙',price:12000,tier:4,desc:'全局 +25%',anim:'b',spark:'❖'},
-  {id:'pixel',icon:'🦑',name:'深潜者',price:36000,tier:5,desc:'事件 +20%',anim:'a',spark:'❋'},
+  {id:'dragon',icon:'🐲',name:'深渊龙',price:12000,tier:4,desc:'全局 +25%',anim:'b',spark:'❖',req:['hamster','cat','robot','ghost']},
+  {id:'pixel',icon:'🦑',name:'深潜者',price:36000,tier:5,desc:'事件 +20%',anim:'a',spark:'❋',req:['dragon']},
 ];
 
 export function petBaseMult(petId, key) {

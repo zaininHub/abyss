@@ -44,7 +44,7 @@ rec('V1 点击动画一次性轻抬 + 冷光转青（不再有常驻 glow）',
   && css.includes('.tentacle-deco.tap .td-rim') && !css.includes('tentacleGlow'), '');
 
 // ===== ② AI 激活按钮 =====
-rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${epOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.2.4 反馈④：未全解锁整块不展示，按钮仅在展示态判 EP
+rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${rpOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.12.13 ⑥：激活消耗由 EP 改为研究点 RP（epOk→rpOk）
 rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };"), 'activateAutoBuild');
 
 // ===== ③ 宗教 =====

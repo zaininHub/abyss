@@ -12,7 +12,7 @@ function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('embe
 import { BALANCE } from '../data/balance.js';
 import { policyMult } from '../data/policies.js';
 import { progressBar } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条）
-import { researchMult, addDm, addRp } from './economy.js'; // v3.0.8：RP 上限统一入口
+import { researchMult, addDm, addRp, spendRes, gainRes } from './economy.js'; // v3.0.8：RP 上限统一入口
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { showAbyssGaze } from './abyssGaze.js'; // v3.4.2：凝视深渊彩蛋视觉层（独立模块，避免环形引用）
 
@@ -62,6 +62,7 @@ export function buyRiftLevelTech() {
   if ((S.dm || 0) < cost.dm) return { ok: false, reason: `DM 不足（需 ${fmt(cost.dm)}）` };
   S.ep -= cost.ep;
   S.dm -= cost.dm;
+  spendRes('dm', cost.dm);
   S.riftLevelTech = riftLevelTech() + 1;
   // 已存在的裂隙不追加强度（下一次裂隙按新等级生成）
   save(S);
@@ -267,6 +268,7 @@ export function delveRift() {
   const epCost = Math.ceil(r.sealCost * 0.5); // v2.8.30 ⑤：深入只消耗 EP（去 DM 门槛）
   if (S.ep < epCost) return { ok: false, reason: `EP 不足（需 ${fmt(epCost)}）` };
   S.ep -= epCost;
+  spendRes('ep', epCost);
   S.riftExpedition = {
     until: Date.now() + BALANCE.rift.delveDurSec * 1000,
     level: r.level,
@@ -300,6 +302,7 @@ function settleRiftExpedition(dt) {
   const epUse = riftDelveEpPerSec(lv) * dt;
   const actualEp = Math.min(S.ep, epUse);
   S.ep -= actualEp;
+  spendRes('ep', actualEp);
   if (actualEp < epUse - 1e-9) {
     log(`[裂隙] 深入失败：EP 耗尽（探索中止，无奖励）`, 'bad');
     if (toast) toast('⚠️ EP 耗尽：深入探索失败，无奖励');
@@ -427,6 +430,7 @@ function grantRiftRewards(r, emberGain, embrace) {
   // 信仰：宗教解锁后概率
   if (S.religion && S.religion.unlocked && Math.random() < BALANCE.rift.faithChance) {
     S.faith = (S.faith || 0) + 1;
+    gainRes('fp', 1);
     log(`裂隙神谕：+1 FP`, 'good');
   }
   S.riftEmber = Math.round((S.riftEmber || 0) + emberGain * emberMul()); // v3.3.8 反馈②：余烬整数化（浮点四舍五入显示与判定不一致）
@@ -438,6 +442,7 @@ export function sealRift() {
   const r = S.activeRift;
   if (S.ep < r.sealCost) { toast('EP 不足'); return; }
   S.ep -= r.sealCost;
+  spendRes('ep', r.sealCost);
   const dmGain = grantRiftRewards(r, BALANCE.rift.emberSeal, false);
   S.riftsSealed++;
   log(`裂隙封印成功（${riftLevelName(r.level)}）：+${dmGain.toFixed(1)} DM（深渊物质）`, 'good');

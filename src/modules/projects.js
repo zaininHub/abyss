@@ -1,9 +1,26 @@
 import { S, save } from '../state.js';
-import { PROJECT_TYPES, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
-import { computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost, researchMult } from './economy.js';
-import { anchorShown } from './disclosure.js'; // v2.5 ③：未解锁资源不出对应奖励任务
+import { RES_PROJECTS, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
+import {
+  computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost,
+  researchMult, rpProdPerSec, totalDrainPerSec, vehicleDmPerMin,
+} from './economy.js';
+import { templeFaithPerSec } from '../data/religions.js'; // 信仰圣所 FP/s（data 层定义）
+import { anchorDone } from './disclosure.js'; // v3.12.13：资源未解锁不刷出对应任务（与顶栏同口径）
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
+
+// v3.12.13：资源驱动任务系统。
+// 任务只针对「已解锁资源」生成（spawnProject 按 RES_PROJECTS + anchorDone 门控），
+// 每个资源可衍生 获取 / 消耗 / 相关升级 三类（见 data/projects.js）。
+// 进度统一走 economy 的 _gainRes / _spentRes / _buyRes 累加器，真实反映玩家在窗口内的增减。
+//
+// 进度展示约定（用户诉求）：不允许超长原始数字（如 12355333/84899337000），也不只写百分比，
+// 统一用紧凑格式化 `${fmt(progress)} / ${fmt(goal)}（${pct}%）`（如 12.4M / 84.9B）。
+
+// 各资源「保底目标」——当该资源无稳定连续速率（rate≈0）时回落到的小目标，保证任务可达。
+const MIN_GOAL = { ep: 100, rp: 3, pt: 3, dm: 1, es: 1, fp: 1 };
+// 目标 = 速率 × 窗口秒 × 系数（系数 <1，保证窗口内可达）。
+const GOAL_FACTOR = 0.4;
 
 // v2.5.6 review：任务过期日志（main.js setProjectLogFn 注入）
 let logFn = null;
@@ -20,76 +37,120 @@ export function maxProjects() {
 // v2.0：记录上次生成时间，配合 PROJECT_SPAWN_COOLDOWN 防止秒刷
 let lastSpawnAt = 0;
 
+// 资源连续速率估计（每秒）：用于推算 gain / spend 类任务目标。
+// 无稳定速率的资源（pt/es 等）返回 0 → 目标回落 MIN_GOAL，仍保证可达。
+function resRatePerSec(key, metric) {
+  if (metric === 'buy') return null;
+  if (key === 'ep') return metric === 'gain' ? computeCps() : totalDrainPerSec();
+  if (key === 'rp') return rpProdPerSec();              // 获取/消耗共用（消耗以产出为近似代理）
+  if (key === 'dm') return vehicleDmPerMin() / 60;        // 探采 DM/s
+  if (key === 'fp') return templeFaithPerSec();           // 信仰圣所 FP/s
+  return 0; // pt / es：无稳定连续速率
+}
+
+// 枚举当前已解锁资源可衍生的所有（资源, 类型）组合
+function availableResKinds() {
+  const out = [];
+  for (const [key, def] of Object.entries(RES_PROJECTS)) {
+    if (def.anchor && !anchorDone(def.anchor, S)) continue; // 资源未解锁 → 不刷该类任务
+    for (const kind of Object.values(def.kinds)) {
+      out.push({ key, metric: kind.metric, name: kind.name, desc: kind.desc, resLabel: def.label });
+    }
+  }
+  return out;
+}
+
+// v2.0：tickProjects 返回本帧是否有状态变化（changed），
+// 由 main.js 主循环消费：changed === true 时置 dirty.projects 触发任务面板重绘。
+function rollReward(now) {
+  const cps = computeCps();
+  const hasBuff = now < S.buffUntil && S.buffMult >= 1;
+  const hasDebuff = now < S.buffUntil && S.buffMult < 1;
+  // v3.12.13：奖励整体下调（balance.js 已调小 projEpRatio / projEpCapRatio / projRpMin/Max）
+  const roll = Math.random();
+  let reward;
+  if (roll < 0.55) {
+    // 奖励量级 = 窗口基线产出 × 比例；不再一次灌满整仓
+    let amt = cps * 600 * (BALANCE.projEpRatio || 0.18);
+    if (!isFinite(amt) || amt < 50) amt = 50;
+    amt *= projRewardMult();
+    amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.12));
+    reward = { kind: 'ep', amount: amt };
+  } else if (roll < 0.8) {
+    // RP 奖励（已解锁才给；未解锁资源不可能出现 RP 任务，这里仅作双保险回退 EP）
+    if (anchorDone('rp', S)) {
+      reward = { kind: 'rp', amount: Math.ceil((BALANCE.projRpMin + Math.floor(Math.random() * (BALANCE.projRpMax - BALANCE.projRpMin + 1))) * projRewardMult()) };
+    } else {
+      let amt = cps * 600 * (BALANCE.projEpRatio || 0.18);
+      if (!isFinite(amt) || amt < 50) amt = 50;
+      amt *= projRewardMult();
+      amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.12));
+      reward = { kind: 'ep', amount: amt };
+    }
+  } else if (roll < 0.9 && !hasBuff) reward = { kind: 'buff', buffMult: 2, dur: 300 };
+  else if (!hasDebuff) reward = { kind: 'debuff', buffMult: 0.8, dur: 0 };
+  else reward = { kind: 'ep', amount: 100 };
+  return reward;
+}
+
 export function spawnProject() {
   lastSpawnAt = Date.now();
   const now = Date.now();
   // v2.7.4 ⑤：手动激活=新手任务——游戏刚开始（首次生成）必出一次，此后不再出现
   // （替代 v2.5 ② 的 80/20 随机加权；click 任务仅保留新手引导价值）
-  const t = !S._clickTutorialDone
-    ? PROJECT_TYPES.find(x => x.id === 'click')
-    : PROJECT_TYPES.find(x => x.id === 'earn_ep');
-  if (t.id === 'click') S._clickTutorialDone = true;
-  const duration = (1 + Math.random() * 7) * 3600000; // 1-8小时
-  const cps = computeCps();
-  // v2.4.1：任务目标/奖励基准时长钳制到 ≤10 分钟（原按全时长 1-8h 计算，前期也会出现百万级目标、
-  // 且 goal 带长小数；钳制后前期目标合理、短窗可完成，goal 取整展示）。reward:goal 维持 1.5:0.5 = 3:1。
-  const windowSec = Math.min(duration / 1000, 600);
-  let goal;
-  if (t.id === 'earn_ep') goal = Math.max(100, Math.round(cps * windowSec * 0.5));
-  else if (t.id === 'click') goal = 20; // v3.0.4 反馈①：新手任务固定 20 次点击（原 20~49 随机，配合下方奖励精确对齐线程 1 价格）
-  else if (t.id === 'buy_up') goal = 1 + Math.floor(Math.random() * 2);
-  else goal = 1;
-
-  // 奖励
-  const hasBuff = now < S.buffUntil && S.buffMult >= 1;
-  const hasDebuff = now < S.buffUntil && S.buffMult < 1;
-  // v2.5 ③：资源未解锁不出现相关奖励任务——RP 未解锁（EP 未首次溢出）时 RP 奖励档回退 EP 档
-  const rpUnlocked = anchorShown('rp', S);
-  const roll = Math.random();
-  let reward;
-  if (roll < 0.55) {
-    // v2.4.2：奖励量级再降——10 分钟产出（goal 的 2 倍；原 15 分钟产出，反馈「奖励值过大」）
-    let amt = cps * windowSec * (BALANCE.projEpRatio || 0.35);
-    if (!isFinite(amt) || amt < 50) amt = 50;
-    amt *= projRewardMult(); // v2.1 建筑驱动：项目督导室 +50%/级（生成时计入，奖励展示与实际一致）
-    amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.25)); // v3.12.0 反馈⑧：不再一次灌满整仓
-    reward = { kind: 'ep', amount: amt };
-  } else if (roll < 0.8 && rpUnlocked) {
-    // v2.0：项目 RP 奖励 3-8（balance.js 配置）
-    reward = { kind: 'rp', amount: Math.ceil((BALANCE.projRpMin + Math.floor(Math.random() * (BALANCE.projRpMax - BALANCE.projRpMin + 1))) * projRewardMult()) };
-  } else if (roll < 0.8) {
-    // v2.5 ③：RP 未解锁 → 回退 EP 档（等同基础档）
-    let amt = cps * windowSec * (BALANCE.projEpRatio || 0.35);
-    if (!isFinite(amt) || amt < 50) amt = 50;
-    amt *= projRewardMult();
-    amt = Math.min(amt, epStorageCap() * (BALANCE.projEpCapRatio || 0.25)); // v3.12.0 反馈⑧：不再一次灌满整仓
-    reward = { kind: 'ep', amount: amt };
-  } else if (roll < 0.9 && !hasBuff) reward = { kind: 'buff', buffMult: 2, dur: 300 };
-  else if (!hasDebuff) reward = { kind: 'debuff', buffMult: 0.8, dur: 0 };
-  else reward = { kind: 'ep', amount: 100 };
-
-  // v3.0.4 反馈①：新手任务总收益精确对齐线程 1 价格——点击收益(goal×clickMult) + 任务奖励 = 首线程价格
-  // 新档 clickMult=1、staffCost=180 → 20 次点击得 20 EP + 奖励 160 EP = 180 EP，恰好买得起第一个线程
-  if (t.id === 'click') {
-    reward = { kind: 'ep', amount: Math.max(50, Math.round(staffCost() - goal * clickMult())) };
+  if (!S._clickTutorialDone) {
+    S._clickTutorialDone = true;
+    const duration = (1 + Math.random() * 7) * 3600000; // 1-8小时
+    // v3.0.4 反馈①：新手任务固定 20 次点击（原 20~49 随机，配合下方奖励精确对齐线程 1 价格）
+    const goal = 20;
+    const reward = { kind: 'ep', amount: Math.max(50, Math.round(staffCost() - goal * clickMult())) };
+    S.projects.push({
+      type: 'click', name: '深渊初探', desc: '点击深渊之心 20 次',
+      goal, progress: 0,
+      startsAt: now, deadline: now + duration,
+      reward, status: 'active', pendingAt: 0,
+      clicksAt: S.totalClicks,
+    });
+    return;
   }
 
+  // v3.12.13：资源驱动任务——只在已解锁资源里随机挑一个（资源, 类型）组合
+  const avail = availableResKinds();
+  // ep 恒解锁，avail 至少含 ep 的三种类型，不会为空；兜底仍处理
+  const pick = avail.length
+    ? avail[Math.floor(Math.random() * avail.length)]
+    : { key: 'ep', metric: 'gain', name: RES_PROJECTS.ep.kinds.gain.name, desc: RES_PROJECTS.ep.kinds.gain.desc, resLabel: 'EP' };
+
+  const durationMs = (2 + Math.random() * 28) * 60000; // v3.12.13：限时 2-30 分钟（短窗更易在单局内完成，展示也紧凑）
+  const windowSec = Math.min(durationMs / 1000, 600);
+
+  const rate = resRatePerSec(pick.key, pick.metric);
+  let goal;
+  if (pick.metric === 'buy') {
+    goal = 1 + Math.floor(Math.random() * 2); // 相关升级：1-2 次购买
+  } else {
+    const est = (rate || 0) * windowSec * GOAL_FACTOR;
+    goal = Math.max(MIN_GOAL[pick.key] || 10, Math.round(est));
+  }
+
+  // 记录进度基准快照：窗口内「增量」= 当前累加器 − 基准
+  const acc = pick.metric === 'gain' ? S._gainRes : pick.metric === 'spend' ? S._spentRes : S._buyRes;
+  const base = (acc && acc[pick.key]) || 0;
+
+  const reward = rollReward(now);
   S.projects.push({
-    type: t.id, name: t.name, desc: t.desc,
+    type: 'res', resKey: pick.key, metric: pick.metric,
+    name: pick.name, desc: pick.desc,
     goal, progress: 0,
-    startsAt: now, deadline: now + duration,
+    startsAt: now, deadline: now + durationMs,
     reward, status: 'active', pendingAt: 0,
-    runEarnedAt: S.runEarned,
-    earnedFullAt: S.earnedFull || 0, // v2.5.1：全量产出起点（含被上限钳制部分）
-    buysAt: S.totalBuys || 0,
-    threadsAt: S.cultists.length,
-    clicksAt: S.totalClicks,
+    base,
   });
 
   // debuff 任务立即生效
   if (reward.kind === 'debuff') {
     S.buffMult = reward.buffMult;
-    S.buffUntil = now + duration;
+    S.buffUntil = now + durationMs;
   }
 }
 
@@ -101,8 +162,8 @@ function finishProject(p) {
   S.projectsDone = (S.projectsDone || 0) + 1;
 }
 
-// v2.0 P1 修复：tickProjects 返回本帧是否有状态变化（changed），
-// 由 main.js 主循环消费：changed === true 时置 dirty.projects 触发任务面板重绘。
+// v2.0 P1 修复：tickProjects 返回本帧是否有状态变化（changed），由 main.js 主循环消费：
+// changed === true 时置 dirty.projects 触发任务面板重绘。
 export function tickProjects() {
   const now = Date.now();
   let changed = false;
@@ -110,21 +171,23 @@ export function tickProjects() {
   const before = S.projects.length;
   for (const p of S.projects) {
     if (p.status !== 'active') continue;
-    // v2.8.10：earn_ep 任务进度改钳后口径（earnedFull 随真实可得 EP 累计）——达存储上限后任务进度冻结，符合「达上限后任务 EP 不增长」；
-    // v2.5.1 之前创建的存量任务（无 earnedFullAt）回退 runEarned 口径，不清零不误判
-    if (p.type === 'earn_ep') {
+    if (p.type === 'click') {
+      p.progress = S.totalClicks - (p.clicksAt || 0);
+    } else if (p.type === 'res') {
+      // v3.12.13：进度 = 窗口内累加器增量（获取/消耗/购买）
+      const acc = p.metric === 'gain' ? S._gainRes : p.metric === 'spend' ? S._spentRes : S._buyRes;
+      const cur = (acc && acc[p.resKey]) || 0;
+      p.progress = Math.max(0, cur - (p.base || 0));
+    } else if (p.type === 'earn_ep') {
+      // v3.12.13：旧档/测试兼容——earn_ep 进度按 earnedFull 口径（达上限后冻结）
       p.progress = p.earnedFullAt !== undefined
         ? (S.earnedFull || 0) - p.earnedFullAt
         : S.runEarned - (p.runEarnedAt || S.runEarned);
     }
-    else if (p.type === 'click') p.progress = S.totalClicks - (p.clicksAt || 0);
-    else if (p.type === 'buy_up') p.progress = (S.totalBuys || 0) - (p.buysAt || 0);
-    else if (p.type === 'buy_thread') p.progress = S.cultists.length - (p.threadsAt || 0);
 
     if (p.progress >= p.goal) {
       if (p.reward.kind === 'debuff') {
         // v3.10.2 ①：负面任务没有任何奖励可领，达成目标即自动结束并解除 DEBUFF。
-        // 旧行为会停在 pending 等玩家点「领取奖励」，玩家却只能领到一个「-20% 已结束」的空按钮。
         S.buffMult = 1; S.buffUntil = 0;
         finishProject(p);
         autoDone = true;
@@ -157,7 +220,6 @@ export function tickProjects() {
   if (S.projects.length !== before) changed = true;
   // v2.8.28：任务版无论任务状态如何（active 进行中 / pending 完成未领取）都占位——
   // 完成多个任务但未领取奖励时不再发放新任务，领取（claimed）或过期（expired）后才腾出位置。
-  // 上限保持 maxProjects()（默认 3 条，项目平行台升级可提高并行数）。
   const occupiedCount = S.projects.length;
   // v2.4.2：任务发放减速——冷却 10 分钟 + 1% 概率（原 120s + 2%，反馈「任务发放速率减缓」）
   if (occupiedCount < maxProjects() && now - lastSpawnAt > PROJECT_SPAWN_COOLDOWN && Math.random() < 0.01) {
@@ -174,8 +236,8 @@ export function claimProject(p) {
   // v2.1 D1：EP 奖励走统一入口 addEp（受存储上限约束 + 统一记账）
   if (r.kind === 'ep') epGained = addEp(r.amount);
   else if (r.kind === 'rp') {
-    // v2.8.7：防御——RP 未解锁（理论上生成已门控）时回退 EP 等值奖励
-    if (anchorShown('rp', S)) addRp(r.amount); // v2.8.27 ②：RP 上限；v2.8.28 修复：统一用 anchorShown 口径（resDiscovered.rp 无写入点曾导致 RP 奖励永远走回退）
+    // v2.8.27 ②：RP 上限；v2.8.28 修复：统一用 anchorDone 口径（resDiscovered.rp 无写入点曾导致 RP 奖励永远走回退）
+    if (anchorDone('rp', S)) addRp(r.amount);
     else epGained = addEp(Math.min(r.amount * 100, epStorageCap()));
   }
   else if (r.kind === 'buff') { S.buffMult = r.buffMult; S.buffUntil = Date.now() + r.dur * 1000; }
@@ -189,6 +251,7 @@ export function claimProject(p) {
 
 // v2.4.1：任务目标规范化——启动时对存量 earn_ep 任务重算（旧档/旧公式产生的
 // 百万级目标与长小数按新基准 ≤10 分钟半程产出收敛；进度保持，不越界不误判）。
+// v3.12.13：res / click 任务自带合理目标，仅旧 earn_ep 遗留任务需要规范化。
 export function normalizeProjectGoals() {
   const cps = computeCps();
   const capGoal = Math.max(100, Math.round(cps * 600 * 0.5));

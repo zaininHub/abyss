@@ -17,7 +17,7 @@ import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   computeCps, epStorageCap, addEp, addRp, addPt, clickMult, isLazy,
-  hasTech, rpCap, rpEffScale, ptCap, researchMult,
+  hasTech, rpCap, rpEffScale, ptCap, researchMult, gainRes, spendRes,
 } from '../modules/economy.js';
 import { converterEnabled, converterThreadBoost } from '../modules/threadBinding.js';
 import { petUpkeepTotalPerSec, petStarving } from '../modules/pets.js';
@@ -110,6 +110,7 @@ registerFlow({
       S._atriumTrickle = 0;
       if ((S.ep || 0) >= 50000) {
         S.ep -= 50000;
+        spendRes('ep', 50000);
         const before = S.rp || 0;
         addRp(0.01 * mult); // v3.10.2 ④：满仓涓流改走统一入口，不再直写 S.rp 越过 rpCap
         bookFlow('ep', 'out', 50000);
@@ -142,6 +143,7 @@ registerFlow({
       } else if (p.type === 'fa_chance') {
         if (Math.random() < p.rate * n * dt) {
           S.faith = (S.faith || 0) + 1;
+          gainRes('fp', 1);
           faithIn += 1;
           if (log) log('神龛显灵：+1 FP', 'good');
         }
@@ -182,6 +184,7 @@ registerFlow({
       S._ptTrickle = 0;
       if ((S.ep || 0) >= 50000) {
         S.ep -= 50000;
+        spendRes('ep', 50000);
         const before = S.pt || 0;
         addPt(0.01 * ptMult); // v3.10.2 ④：满仓涓流改走统一入口，不再直写 S.pt 越过 ptCap
         bookFlow('ep', 'out', 50000);

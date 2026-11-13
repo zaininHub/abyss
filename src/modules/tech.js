@@ -2,7 +2,7 @@
 import { S, save } from '../state.js'; // v2.8.16：科技购买即持久化
 import { getTechs } from '../core/provider.js';
 import { ETERNALS } from '../data/eternals.js';
-import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford } from './economy.js';
+import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford, spendRes, gainRes } from './economy.js';
 import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned, boughtOrderIndex } from './listkit.js';
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
@@ -104,9 +104,10 @@ export function buyTech(t, el) {
   const cost = techCostOf(t);
   if (!techAfford(t)) return;
   S.rp -= cost.rp || 0;
-  S.ep -= cost.ep || 0;
-  S.dm = (S.dm || 0) - (cost.dm || 0);
-  S.es = (S.es || 0) - (cost.es || 0);
+  spendRes('rp', cost.rp || 0);
+  S.ep -= cost.ep || 0; spendRes('ep', cost.ep || 0);
+  S.dm = (S.dm || 0) - (cost.dm || 0); spendRes('dm', cost.dm || 0);
+  S.es = (S.es || 0) - (cost.es || 0); spendRes('es', cost.es || 0);
   S.tech[t.id] = true;
   pushBoughtOrder(S, t.id);
   save(S); // v2.8.16：科技购买即持久化（此前仅靠 5s 自动存档兜底——购买后立即刷新会丢科技，「AI 管理核心」等一次性科技购买后丢失）
@@ -186,13 +187,14 @@ function makeEternalItem(e) {
   const lv = S.eternal[e.id] || 0;
   const cost = esCost(e);
   const afford = S.es >= cost;
+  const maxed = e.cap && lv >= e.cap; // v3.12.13 ⑦：一次性解锁项（如皮肤）满级后显示「已拥有」
   const div = document.createElement('div');
   div.dataset.eternal = e.id;
-  div.className = 'tech' + (!afford ? ' locked' : '');
-  div.style.cursor = afford ? 'pointer' : 'not-allowed';
+  div.className = 'tech' + (!afford && !maxed ? ' locked' : '');
+  div.style.cursor = maxed ? 'default' : (afford ? 'pointer' : 'not-allowed');
   div.innerHTML = `<div class="n">${e.name} <span style="color:var(--warn)">Lv.${lv}</span></div>
     <div class="d">${e.desc}</div>
-    <div class="c" style="color:var(--warn)">${afford ? cost + ' ES' : '还差 ' + fmt(cost - S.es) + ' ES'}</div>`;
+    <div class="c" style="color:var(--warn)">${maxed ? '已拥有' : (afford ? cost + ' ES' : '还差 ' + fmt(cost - S.es) + ' ES')}</div>`;
   return div;
 }
 
@@ -202,12 +204,13 @@ function updateEternalItem(e) {
   const lv = S.eternal[e.id] || 0;
   const cost = esCost(e);
   const afford = S.es >= cost;
-  el.style.cursor = afford ? 'pointer' : 'not-allowed';
+  const maxed = e.cap && lv >= e.cap;
+  el.style.cursor = maxed ? 'default' : (afford ? 'pointer' : 'not-allowed');
   const n = el.querySelector('.n');
   if (n) n.innerHTML = `${e.name} <span style="color:var(--warn)">Lv.${lv}</span>`;
   const c = el.querySelector('.c');
-  if (c) c.innerHTML = afford ? `${cost} ES` : `还差 ${fmt(cost - S.es)} ES`;
-  el.classList.toggle('locked', !afford);
+  if (c) c.innerHTML = maxed ? '已拥有' : (afford ? `${cost} ES` : `还差 ${fmt(cost - S.es)} ES`);
+  el.classList.toggle('locked', !afford && !maxed);
 }
 
 function bindEternalDelegate(container) {
@@ -224,8 +227,11 @@ function bindEternalDelegate(container) {
 export function buyEternal(e) {
   const cost = esCost(e);
   if (S.es < cost) return;
+  // v3.12.13 ⑦：一次性解锁项（如皮肤）满级后不可重复购买
+  if (e.cap && (S.eternal[e.id] || 0) >= e.cap) return;
   const wasOwned = (S.eternal[e.id] || 0) > 0; // v2.3：首次购入推进已购前缀 → 链窗口刷新
   S.es -= cost;
+  spendRes('es', cost);
   S.eternal[e.id] = (S.eternal[e.id] || 0) + 1;
   updateEternalItem(e); // v1.3 E：购后原地更新，不再整列表重建
   if (!wasOwned) dirty.tech = true; // v2.3：p 推进 → 下个 tick（≤100ms）整面板重入刷新链窗口

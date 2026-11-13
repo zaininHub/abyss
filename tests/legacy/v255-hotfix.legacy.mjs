@@ -51,15 +51,15 @@ function mkState(extra = {}) {
   S.ai.autoBuildRate = 120;
   rec('V1 高间隔正常接受（120s）', autoBuildRate() === 120, `rate=${autoBuildRate()}`);
 
-  // 激活条件与扣费
-  Object.assign(S, mkState({ ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, autoBuild: false, autoBuildUnlocked: false, autoBuildRate: 10, autoBuildTimer: 0 } }));
-  rec('V1 激活条件：资源全解锁 + EP 充足 → 可激活', autoBuildActivable() === true, `ep=${S.ep}`);
+  // 激活条件与扣费（v3.12.13 ⑥：激活消耗由 EP 改为研究点 RP）
+  Object.assign(S, mkState({ rp: 5000, ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, autoBuild: false, autoBuildUnlocked: false, autoBuildRate: 10, autoBuildTimer: 0 } }));
+  rec('V1 激活条件：资源全解锁 + 研究点充足 → 可激活', autoBuildActivable() === true, `rp=${S.rp}`);
   const r1 = activateAutoBuild();
-  rec('V1 激活成功：一次性扣除 2e6 EP + 置 unlocked', r1.ok && r1.cost === 2e6 && S.ai.autoBuildUnlocked === true && S.ai.autoBuild === true, `cost=${r1.cost},ep=${S.ep}`);
+  rec('V1 激活成功：一次性扣除 1000 研究点 + 置 unlocked', r1.ok && r1.cost === 1000 && S.ai.autoBuildUnlocked === true && S.ai.autoBuild === true && S.rp === 4000, `cost=${r1.cost},rp=${S.rp}`);
   rec('V1 激活后不可重复激活', activateAutoBuild().ok === false, 'already');
-  // EP 不足不可激活
-  Object.assign(S, mkState({ ep: 100, ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, autoBuild: false, autoBuildUnlocked: false, autoBuildRate: 10, autoBuildTimer: 0 } }));
-  rec('V1 EP 不足 → 不可激活', autoBuildActivable() === false && activateAutoBuild().ok === false, 'ep poor');
+  // 研究点不足不可激活
+  Object.assign(S, mkState({ rp: 100, ai: { autoUpgrade: false, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, autoBuild: false, autoBuildUnlocked: false, autoBuildRate: 10, autoBuildTimer: 0 } }));
+  rec('V1 研究点不足 → 不可激活', autoBuildActivable() === false && activateAutoBuild().ok === false, 'rp poor');
   // 资源未全解锁不可激活
   Object.assign(S, mkState({ resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: false, faith: false, pt: false, dm: false } }));
   rec('V1 资源未全解锁 → 不可激活', autoBuildActivable() === false, 'res partial');
@@ -178,7 +178,7 @@ function mkState(extra = {}) {
   const balSrc = readFileSync('src/data/balance.js', 'utf-8');
   rec('V4 硬限速落点：minRate 5s clamp 在公共函数 autoBuildRate()', aiSrc.includes('Math.max(BALANCE.ai.aiAutoBuild.minRate') && balSrc.includes('minRate: 5'), 'clamp');
   rec('V4 每周期至多 1 栋（break）', aiSrc.includes('break; // 每周期至多 1 栋'), 'perTick break');
-  rec('V4 激活费配置 2e6 与速率档', balSrc.includes('activateCost: 2e6') && balSrc.includes('rateOptions: [5, 10, 30, 60]'), 'config');
+  rec('V4 激活费配置 1000 研究点 与速率档', balSrc.includes('activateCost: 1000') && balSrc.includes('rateOptions: [5, 10, 30, 60]'), 'config');
 }
 
 const failed = results.filter(r => !r.ok);

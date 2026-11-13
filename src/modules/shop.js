@@ -6,7 +6,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale, spendRes, buyRes } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解 // v3.12.13：资源增减/升级统计（任务进度口径）
 import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
@@ -62,10 +62,10 @@ export function buyUpgrade(u) {
   // v2.8.21 ⑥：净化节点等 DM 消耗升级（不耗 EP）
   if (u.dmCost) {
     if ((S.dm || 0) < cost) return false;
-    S.dm -= cost;
+    S.dm -= cost; spendRes('dm', cost); buyRes('dm');
   } else {
     if (S.ep < cost) return false;
-    S.ep -= cost;
+    S.ep -= cost; spendRes('ep', cost); buyRes('ep');
   }
   S.upgrades[u.id] = owned + n;
   S.totalBuys += n;
@@ -90,7 +90,7 @@ export function buyThreadUpgrade(u) {
   if (owned >= maxLv) return false; // v2.0.2 maxLevel：cache 20 级封顶，满级不可购
   const cost = threadCost(u);
   if (S.ep < cost) return false;
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.upgrades[u.id] = owned + 1;
   S.totalBuys++;
   S.lazySince = null; // v2.7.1：线程购买解除懒惰
@@ -101,7 +101,7 @@ export function buyVehicle(u) {
   const owned = S.upgrades[u.id] || 0;
   const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：单一售价真源
   if (S.ep < cost) return false;
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.upgrades[u.id] = owned + 1;
   S.totalBuys++;
   return true;
@@ -109,7 +109,7 @@ export function buyVehicle(u) {
 
 export function buyDmUpgrade(u) {
   if ((S.dm || 0) < u.dmCost) return false;
-  S.dm -= u.dmCost;
+  S.dm -= u.dmCost; spendRes('dm', u.dmCost); buyRes('dm');
   S.upgrades[u.id] = 1;
   dirty.shop = true; // v2.0 修复：购买后重渲染商店
   return true;
@@ -121,8 +121,8 @@ export function buyOfflineUpgrade(o) {
   if (S.ep < epCost) return false;
   if (S.rp < o.cost) return false;
   if (o.req && !S.offUpgrades[o.req]) return false;
-  S.ep -= epCost;
-  S.rp -= o.cost;
+  S.ep -= epCost; spendRes('ep', epCost);
+  S.rp -= o.cost; spendRes('rp', o.cost); buyRes('rp');
   S.offUpgrades[o.id] = true;
   save(S); // v2.7.5 ⑥：购买即落盘（与主商店 v2.7.1 同口径，消除 5s 节流保存窗口）
   return true;
@@ -366,12 +366,12 @@ export function renderAtriumDistill(container) {
           const c0 = Math.ceil(BALANCE.atrium.base || 5e4);
           if ((S.ep || 0) < c0) return;
           if (drainBlocked({ id: 'atrium' })) { shopToast('产出不足：总消耗 ≥ 产出，暂不可购买「EP 换资源」类升级'); return; }
-          S.ep -= c0;
+          S.ep -= c0; spendRes('ep', c0);
           S.upgrades.atrium = 1;
         } else {
           const cost = atriumUpgCost(lvl);
           if (!Number.isFinite(cost) || (S.ep || 0) < cost) return;
-          S.ep -= cost;
+          S.ep -= cost; spendRes('ep', cost);
           S.upgrades.atrium = lvl + 1;
         }
         S.totalBuys = (S.totalBuys || 0) + 1;
@@ -445,13 +445,13 @@ export function renderHatchUpgrade(container) {
         const lvl = S.ptHatchLv || 1;
         const c = ptHatchUpgCost(lvl);
         if ((S.ep || 0) < c) return;
-        S.ep -= c;
+        S.ep -= c; spendRes('ep', c);
         S.ptHatchLv = lvl + 1;
         if (S.ptAutoHatch !== true) S.ptAutoHatch = true; // 首次购买即解锁自动孵化
         S.totalBuys = (S.totalBuys || 0) + 1;
         S.lazySince = null;
         save(S);
-        log(`异兽孵化工坊 ×${S.ptHatchLv}：-${fmt(5000 * S.ptHatchLv)} EP/s → +${fmt(0.15 * S.ptHatchLv)} PT/s`, 'good');
+        log(`异兽孵化工坊 ×${S.ptHatchLv}：-${fmt(5000 * S.ptHatchLv * S.ptHatchLv)} EP/s → +${fmt(0.15 * S.ptHatchLv)} PT/s`, 'good');
         dirty.pets = true;
         renderHatchUpgrade(container);
       });
@@ -1016,7 +1016,7 @@ export function buyBuilding(b) {
   if (lv >= b.levels) return false;
   const cost = buildingCost(b, S, costMult());
   if (S.ep < cost) return false;
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.buildings[b.id] = lv + 1;
   return true;
 }
@@ -1248,7 +1248,7 @@ export function buyUnlockV21(b) {
   }
   const cost = v21BuildingCost(b); // v2.8.8：纯 EP 购买（解锁+首级），去除 RP 解锁+EP 升级混合支付
   if (S.ep < cost) { shopToast(`EP 不足：${b.name} 需要 ${fmt(cost)} EP`); return false; }
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.unlockedBuildings[b.id] = true;
   S.buildings[b.id] = 1;
   return true;
@@ -1259,7 +1259,7 @@ export function buyV21Building(b) {
   if (lv >= capOf(b, S)) return false; // v2.2：动态上限（族升级扩展）
   const cost = v21BuildingCost(b);
   if (S.ep < cost) return false;
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.buildings[b.id] = lv + 1;
   return true;
 }
@@ -1335,12 +1335,51 @@ function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); 
 // v3.4.2 反馈②「分类太细没必要」：原 A/C/D/E/F/G/H/I 八组（链序窗口内常出现一组一卡的碎标题）
 // 合并为三大组 + 命运誓言 + 兜底「其他」；组序 = 大组声明序。
 const V21_GROUPS = [
-  { title: '产出与效率', cats: ['A', 'C', 'E', 'I'] }, // 全局乘数 / 成本折扣 / 线程与薪资 / 职级强化
+  // v3.12.13 反馈①：原「产出与效率」含 A/C/E/I 四轴共 23 项，严重臃肿。拆分为更聚焦的小组：
+  { title: '产出与效率', cats: ['A'] },            // 全局乘数（原 A 轴）
+  { title: '成本折扣',   cats: ['C'] },            // v3.12.13 反馈①：从「产出与效率」移出（成本优化轴）
+  { title: '线程与职级', cats: ['E', 'I'] },       // v3.12.13 反馈①：从「产出与效率」移出（线程与薪资 + 职级强化）
   // v3.4.5 反馈③：删除「存储与续航」组（原 D 上限扩容 + G 离线续航）——
   // EP 上限走升级商店（存储节点/备用粮仓/深井仓储）+ 三仓库，离线续航走离线升级（off_eff1~3 / off_cap1~2）。
   { title: '研究与事件', cats: ['F', 'H'] },           // RP 加成 / 事件与项目
   { title: '命运誓言', cats: ['X'] },
 ];
+
+// v3.12.13 反馈②：效能建筑分组收起/展开——复刻研究点 rp-group-title 的交互与定位
+// （箭头居标题左侧、整行可点、会话级折叠态），与「设施」分区折叠一致的观感。
+// 仅改分组显示，不触碰底层建筑数据或购买公式。
+let v21Fold = {}; // 分组折叠态（会话级，不落盘），key = 组标题
+function applyV21GroupFold(container) {
+  if (!container) return;
+  const titles = Array.from(container.querySelectorAll('.group-title'));
+  for (const t of titles) {
+    if (t.dataset.v21FoldBound) continue; // 整面板重建后元素为新建，不会带此标记
+    t.dataset.v21FoldBound = '1';
+    const key = t.textContent.trim();
+    t.classList.add('rp-group-title'); // 复用研究点分组折叠样式（箭头居左 + 整行可点）
+    t.dataset.rpFold = key;
+    const arrow = document.createElement('span');
+    arrow.className = 'rp-fold-arrow';
+    arrow.textContent = v21Fold[key] ? '▶' : '▼';
+    t.prepend(arrow);
+    t.addEventListener('click', () => {
+      v21Fold[key] = !v21Fold[key];
+      arrow.textContent = v21Fold[key] ? '▶' : '▼';
+      let sib = t.nextElementSibling;
+      while (sib && !sib.classList.contains('group-title')) {
+        sib.style.display = v21Fold[key] ? 'none' : '';
+        sib = sib.nextElementSibling;
+      }
+    });
+    if (v21Fold[key]) {
+      let sib = t.nextElementSibling;
+      while (sib && !sib.classList.contains('group-title')) {
+        sib.style.display = 'none';
+        sib = sib.nextElementSibling;
+      }
+    }
+  }
+}
 
 export function renderV21Buildings(container) {
   if (!container) return;
@@ -1381,6 +1420,7 @@ export function renderV21Buildings(container) {
   ];
   renderChainedGroups(container, split, groups, makeV21Item, (b, el) => v21ItemEls.set(b.id, el));
   bindV21Delegate(container);
+  applyV21GroupFold(container); // v3.12.13 反馈②：分组收起/展开（对齐研究点 rp-group-title）
 }
 
 function bindV21Delegate(container) {
@@ -1430,7 +1470,7 @@ export function buyCrossroadBuilding(id) {
   if (crossroadOwned(id, S)) return false;        // 1 级封顶
   const cost = 3e5;                                // 固定价（PM §2.2：不乘 costMult、不受 30% 钳制）
   if (S.ep < cost) return false; // v2.8.2 反馈⑪：EP 不足不弹框
-  S.ep -= cost;
+  S.ep -= cost; spendRes('ep', cost);
   S.buildings[id] = 1;
   const line = BALANCE.crossroadToLine[id];
   if (loadStoryline(line)) {
@@ -1625,7 +1665,7 @@ export function buyResearchUpgrade(id) {
   if (lv >= u.cap) return { ok: false, reason: '已达上限' };
   const cost = researchUpgCost(id);
   if ((S.rp || 0) < cost) return { ok: false, reason: `RP 不足（需 ${fmt(cost)}）` };
-  S.rp -= cost;
+  S.rp -= cost; spendRes('rp', cost); buyRes('rp');
   S.rpTheories = S.rpTheories || {};
   S.rpTheories[id] = lv + 1;
   // v3.12.12 反馈⑧：研究点「助手扩编协议」每购买一级即授予 1 名 AI 助手（与旧 EP 购买同一落点 S.ai.assistants）
@@ -1646,11 +1686,11 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix', 'rp_singularity', 'rp_offline'], unlock: null },
+  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix'], unlock: null }, // v3.12.13 反馈①：奇点推演/离线协议移出至「玩法扩展与配套」，本组精简为开局两项（解锁链仍靠 2 项 cap 达标）
   // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
   //   prod = 开局显现的产出/全局/离线基础项；res = 玩法扩展与配套（资源/政策/项目/班组/远征/集市）；
   //   abyss = 深渊终局两根核心轴；ai = AI 助手（效率 + 扩编）；star = 星际（研究点已解锁 + 星图已开启 双门控）。
-  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar'], unlock: { prev: 'prod', need: 4 } },
+  { key: 'res',   name: '玩法扩展与配套', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）
   { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），
   // 「自动能力」与「购买」同处一个研究点类目，解锁仍留在升级商店科技树。

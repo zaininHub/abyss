@@ -1,7 +1,7 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { epStorageCap, fmt, echoLv, faithTechMult, researchMult } from './economy.js';
+import { epStorageCap, fmt, echoLv, faithTechMult, researchMult, spendRes, gainRes, buyRes } from './economy.js';
 import { converterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径）
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
@@ -76,6 +76,7 @@ export function upgradeSeal() {
   const cost = sealUpgradeCost(lv);
   if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${fmt(S.faith || 0)}）` };
   S.faith -= cost;
+  spendRes('fp', cost); buyRes('fp');
   S.religion.seal = lv + 1;
   save(S);
   rlog(`圣印升至 Lv.${lv + 1}（-${fmt(cost)} FP）——全局产出 +${8 * (lv + 1)}%`, 'good');
@@ -137,6 +138,7 @@ export function buyOracle() {
   const cost = oracleCost();
   if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
   S.faith -= cost;
+  spendRes('fp', cost); buyRes('fp');
   S.religion.oracle = lv + 1;
   save(S);
   rlog(`神谕塔升至 Lv.${lv + 1}（-${cost} FP）：FP 产出 ×${(1 + ORACLE.effect * (lv + 1)).toFixed(2)}`, 'good');
@@ -152,6 +154,7 @@ export function buyCrusade() {
   const cost = crusadeCost();
   if ((S.faith || 0) < cost) return { ok: false, reason: `FP 不足（需 ${fmt(cost)}，当前 ${(S.faith || 0).toFixed(2)}）` };
   S.faith -= cost;
+  spendRes('fp', cost); buyRes('fp');
   S.religion.crusade = lv + 1;
   save(S);
   rlog(`圣战军升至 Lv.${lv + 1}（-${cost} FP）：全局产出 ×${(1 + CRUSADE.effect * (lv + 1)).toFixed(2)}`, 'good');
@@ -253,7 +256,9 @@ export function tickReligion(dt) {
     //   导致「看起来永远卡在同一个数」。上限已改为顶栏「当前 / 上限」展示，上限扩容入口是升级商店「誓约圣龛」（首级 +180 FP 上限）。
     if ((S.ep || 0) >= epUse) {
       S.ep -= epUse;
+      const _bf = S.faith || 0;
       S.faith = Math.min(faithCap(), (S.faith || 0) + r * dt * mult * boost);
+      gainRes('fp', Math.max(0, S.faith - _bf));
       S._templeEpShortSec = 0; // v3.0.2：EP 充足，重置缓冲计时器
       if (S.religion._templeEpNotice) S.religion._templeEpNotice = false; // v3.3.9：恢复后可再次提示
     } else {
@@ -423,8 +428,7 @@ export function renderReligionPanel(container) {
     }).join('')}
     ` : ''}
     ${sealLevel() >= 3 || ((S.religion && S.religion.temple) || 0) >= 5 ? `
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">神谕塔与圣战军</div>
-    <div style="font-size:11px;color:var(--text-3);margin:-4px 0 6px">建造神学相关的建筑，提升 FP 上限或获取速度，消耗大量 FP 建造</div>
+    <div style="margin:10px 0 6px;font-size:11px;color:var(--accent);font-weight:600">神谕塔与圣战军</div>
     ${sealLevel() >= 3 ? `
     <div class="religion-seal-row">
       <span>神谕塔 Lv.${oracleLevel()}/${ORACLE.cap}（FP 产出 ${fmtMultDelta(1 + ORACLE.effect * oracleLevel())}）</span>

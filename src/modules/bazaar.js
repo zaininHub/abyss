@@ -10,7 +10,7 @@
 //   · 二次确认改为独立拨动开关；
 //   · 交付的资源未解锁时该摊位灰显并标「未解锁」，不可购买。
 import { S, save } from '../state.js';
-import { fmt, epStorageCap, addRp, addDm, addPt, researchMult } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, researchMult, spendRes as trackSpendRes, gainRes as trackGainRes } from './economy.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：汇率倍率 → 带符号百分比
 import { policyMult } from '../data/policies.js';
 import { faithCap } from '../data/religions.js';
@@ -180,7 +180,7 @@ function spendRes(key, n) {
     case 'ep': S.ep = Math.max(0, (S.ep || 0) - n); break;
     case 'rp': S.rp = Math.max(0, (S.rp || 0) - n); break;
     case 'dm': S.dm = Math.max(0, (S.dm || 0) - n); break;
-    case 'faith': S.faith = Math.max(0, (S.faith || 0) - n); break;
+    case 'faith': S.faith = Math.max(0, (S.faith || 0) - n); trackSpendRes('fp', n); break;
     case 'ember': S.riftEmber = Math.max(0, (S.riftEmber || 0) - n); break;
     case 'pt': S.pt = Math.max(0, (S.pt || 0) - n); break;
     default: break;
@@ -192,7 +192,7 @@ function gainRes(key, n) {
     case 'rp': addRp(n); break;
     case 'dm': addDm(n); break;
     case 'pt': addPt(n); break;
-    case 'faith': S.faith = Math.min(faithCap(), (S.faith || 0) + n); break;
+    case 'faith': S.faith = Math.min(faithCap(), (S.faith || 0) + n); trackGainRes('fp', n); break;
     case 'ember': S.riftEmber = (S.riftEmber || 0) + n; break;
     case 'vs': S.vs = (S.vs || 0) + n; break;
     default: break;

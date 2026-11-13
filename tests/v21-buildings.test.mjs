@@ -90,17 +90,24 @@ t('组A 锚链 6 栋：基价 2e6~5.5e6、growth ×1.45~1.50、3 级封顶（v3.
   const anchor = ['quantum_stacker', 'singularity_core', 'transcend_temple', 'ascend_spire', 'eternity_hall', 'end_shrine'];
   for (const id of anchor) {
     const b = V21_BUILDINGS.find(x => x.id === id);
-    assert.ok(b.base >= 2e6 && b.base <= 5.5e6, `${id} 基价 ${b.base} 越界`);
+    // v3.12.13 反馈⑩：量子叠加器按反馈整体 ×1000（2e6→2e9），其余五座维持原阶梯
+    if (id === 'quantum_stacker') {
+      assert.ok(b.base >= 1.5e9 && b.base <= 3e9, `${id} 基价 ${b.base} 越界（v3.12.13 溢价档）`);
+    } else {
+      assert.ok(b.base >= 2e6 && b.base <= 5.5e6, `${id} 基价 ${b.base} 越界`);
+    }
     assert.ok(b.growth >= 1.45 && b.growth <= 1.50, `${id} growth 越界`);
     assert.equal(b.cap, 3);
   }
 });
-t('锚链末级价 ≤ 1.5e7（≤ 终局档上限量级，v3.4.2 反馈① 后重标）', () => {
+t('锚链末级价 ≤ 1.5e7（≤ 终局档上限量级，v3.4.2 反馈① 后重标；量子叠加器溢价档放宽）', () => {
   const anchor = ['quantum_stacker', 'singularity_core', 'transcend_temple', 'ascend_spire', 'eternity_hall', 'end_shrine'];
   for (const id of anchor) {
     const b = V21_BUILDINGS.find(x => x.id === id);
     const last = b.base * Math.pow(b.growth, b.cap - 1);
-    assert.ok(last <= 1.5e7, `${id} 末级价 ${last} > 1.5e7`);
+    // v3.12.13 反馈⑩：量子叠加器溢价后末级约 6e9，单独放宽上限
+    const cap = id === 'quantum_stacker' ? 1e10 : 1.5e7;
+    assert.ok(last <= cap, `${id} 末级价 ${last} > ${cap}`);
   }
 });
 t('调度中枢：1.2e6 × 1.40、9 级封顶、末级 ≈ 1.77e7（v3.4.2 反馈① 重标）', () => {
@@ -131,11 +138,13 @@ t('各组高端楼（C/E/F/H）基价 ≤3e8、growth ×1.28~1.50、末级 ≤3.
     assert.ok(last <= 3.6e8, `${id} 末级价 ${last} > 3.6e8`);
   }
 });
-t('非钳制建筑全量：任一级价格 ≤ 4e8（终局档 base 2e8 允许；v3.4.5 采购总署·极）', () => {
+t('非钳制建筑全量：任一级价格 ≤ 4e8（终局档 base 2e8 允许；v3.4.5 采购总署·极；量子叠加器/议价坊/RP蒸馏塔溢价档放宽）', () => {
+  const PREMIUM = new Set(['quantum_stacker', 'bargain_shop', 'rp_distiller']); // v3.12.13 反馈⑩：三建筑整体 ×1000
   for (const b of V21_BUILDINGS) {
     for (let n = 0; n < b.cap; n++) {
       const price = b.base * Math.pow(b.growth, n);
-      assert.ok(price <= 4e8, `${b.id} 第 ${n + 1} 级价 ${price} > 4e8（终局档 base 2e8 允许）`);
+      const cap = PREMIUM.has(b.id) ? 2e10 : 4e8;
+      assert.ok(price <= cap, `${b.id} 第 ${n + 1} 级价 ${price} > ${cap}`);
     }
   }
 });
