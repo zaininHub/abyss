@@ -458,9 +458,9 @@ export function refreshAssistantAffordability() {
   btn.title = st.title;
 }
 
-// v3.12.12 反馈⑧：删除 EP 购买按钮（「购买助手」改走研究点「助手扩编协议」rp_ai_unit）；
-// 预留线从面板独立区块移入助手行，与助手数量同处一行。
-function renderAssistantSection() {
+  // v3.12.12 反馈⑧：删除 EP 购买按钮（「购买助手」改走研究点「助手扩编协议」rp_ai_unit）；
+  // v4.0.1 反馈①：预留线从标题行移出，独立成行（data-ai-reserve-line），避免与标题挤在一行把按钮挤出面板。
+  function renderAssistantSection() {
   const n = assistantCount();
   const idle = crewIdle();
   const bound = crewBoundTotal();
@@ -476,12 +476,12 @@ function renderAssistantSection() {
   // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），落进面板标题 <h3>。
   // v3.12.13 ⑤：移除常驻「研究点扩编」提示，扩编入口说明收敛到悬浮框 data-tip（见 ledgerTip）。
   const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
-  // 预留线：并入助手行（反馈⑧）——EP 上限预留比例；按钮点击仍由 #ai-card 委托处理。
+  // v4.0.1 反馈①：预留线独立成行（data-ai-reserve-line，位于标题行下方），不再挤在标题行内。
   const ai = S.ai;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<button class="btn ai-reserve-btn ${ai.reserve === r ? 'on' : ''}" data-ai-reserve="${r}">${Math.round(r * 100)}%</button>`).join('');
-  const reserveHtml = `<span class="ai-reserve-inline" style="margin-left:8px;font-size:10px;color:var(--text-3)">预留线 EP 上限 <span class="ai-reserve-opts">${reserveOpts}</span></span>`;
-  return { rowHtml: head + reserveHtml, stallHtml: unstaffedHtml };
+  const reserveHtml = `<span class="ai-reserve-label">预留线 EP 上限</span><span class="ai-reserve-opts">${reserveOpts}</span>`;
+  return { headHtml: head, reserveHtml, stallHtml: unstaffedHtml };
 }
 
 // ========== 面板 ==========
@@ -558,7 +558,10 @@ export function renderAiPanel(container) {
   const card = container.parentElement && container.parentElement.classList.contains('ai-card')
     ? container.parentElement : document.getElementById('ai-card');
   const slot = card && card.querySelector('[data-ai-assist-slot]');
-  if (slot) slot.innerHTML = section.rowHtml;
+  if (slot) slot.innerHTML = section.headHtml;
+  // v4.0.1 反馈①：预留线独立成行（标题行下方），与助手数同行解耦，避免按钮被挤出面板。
+  const rline = card && card.querySelector('[data-ai-reserve-line]');
+  if (rline) rline.innerHTML = section.reserveHtml;
   container.innerHTML = `
     ${(S.tech && S.tech.prophecy && S.prophecyNext) ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid var(--purple,#9c27b0);border-radius:6px;background:rgba(156,39,176,.12);font-size:12px;line-height:1.6">🔮 <b>神谕广播</b>：下一个事件将是「${S.prophecyNext.name}」<span style="color:var(--text-2)">——${S.prophecyNext.desc || '效果未知'}</span></div>` : ''}
     <div class="ai-action-grid">${basicHtml}</div>

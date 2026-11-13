@@ -22,7 +22,7 @@ const STATE_META = {
   dormant: { label: '强制休眠', color: '#ff9800' },
   losing:  { label: '流失预警', color: 'var(--bad,#f85149)' },
 };
-const PAGE_SIZE = 5; // v3.2.3 反馈①：班组档案卡分页浏览；v3.12.13 反馈#172：一页 5 条，便于浏览
+const PAGE_SIZE = 6; // v3.2.3 反馈①：班组档案卡分页浏览；v3.12.13 反馈#172：一页 5 条；v4.0.1 反馈③：一页 6 条
 let crewPage = 0; // 会话级页码（不落盘）
 let crewFilter = ''; // v3.4.6 反馈⑥：岗位筛选（'' = 全部；'free' = 空闲；其余 = converter id）——会话级，不落盘
 

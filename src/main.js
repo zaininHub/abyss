@@ -1038,9 +1038,9 @@ const QS_STYLE_OFF = 'padding:4px 14px;font-size:11.5px;background:var(--red,#f8
 // v3.7.3 反馈②：未解锁的自动转化不再灰显占位——解锁后才出现（与 Wiki「各系统解锁后出现」一致）。
 // 六枚开关各自用唯一解锁判定源（四枚转化器 + 两枚裂隙科技）；全部未解锁时整块面板隐藏，不留空壳。
 function renderQuickSwitches() {
-  const panel = document.getElementById('quick-switches-panel');
   const host = document.getElementById('quick-switches');
-  if (!panel || !host) return;
+  const fab = document.getElementById('qs-fab');
+  if (!host) return;
   const items = [];
   if (converterUnlocked('atrium')) {
     const on = converterEnabled('atrium');
@@ -1068,7 +1068,8 @@ function renderQuickSwitches() {
     const on = !!S.autoPurify;
     items.push(`<button data-qs="purify" title="自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">净化 ${on ? '开' : '关'}</button>`);
   }
-  panel.style.display = items.length ? '' : 'none';
+  // v4.0.1 反馈④：整块收入「⚡ 转化」悬浮按钮（#qs-fab）；无任何转化器解锁时隐藏该按钮（含其弹层）。
+  if (fab) fab.style.display = items.length ? '' : 'none';
   const sig = items.join('|');
   if (host._qsSig === sig) return;
   host._qsSig = sig;
@@ -1887,6 +1888,28 @@ function bindEvents() {
     try { savedSkin = localStorage.getItem(SKIN_KEY) || 'abyss'; } catch (e) { /* 忽略 */ }
     if (!skinOwned(savedSkin)) savedSkin = 'abyss'; // 旧档/越权：未拥有回落默认
     applySkin(savedSkin); // 启动即恢复上次选择的主题
+  }
+
+  // v4.0.1 反馈④：自动转化「⚡ 转化」悬浮按钮（皮肤左侧）——复用存档/皮肤菜单的悬停 + 键盘 .kbd-open 展开范式，
+  //   避免 hover 断档、保证键盘可达。点击开关在 #quick-switches 上委托（bindQuickSwitches），此处只管弹层显隐。
+  const qsFabEl = document.getElementById('qs-fab');
+  if (qsFabEl) {
+    const qsBtn = document.getElementById('qs-fab-btn');
+    const setQsOpen = (open) => qsBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    qsFabEl.addEventListener('mouseenter', () => setQsOpen(true));
+    qsFabEl.addEventListener('mouseleave', () => { if (!qsFabEl.classList.contains('kbd-open')) setQsOpen(false); });
+    qsFabEl.addEventListener('focusin', (e) => {
+      setQsOpen(true);
+      if (e.target.matches(':focus-visible')) qsFabEl.classList.add('kbd-open');
+    });
+    qsFabEl.addEventListener('focusout', () => {
+      requestAnimationFrame(() => {
+        if (!qsFabEl.contains(document.activeElement)) {
+          qsFabEl.classList.remove('kbd-open');
+          setQsOpen(false);
+        }
+      });
+    });
   }
 
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）

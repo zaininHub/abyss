@@ -472,8 +472,8 @@ export const BALANCE = {
     { id: 'rp_bazaar',      name: '集市协议',   cap: 8,  base: 4800, growth: 1.92, fx: { key: 'bazaar',  v: 0.12 }, desc: '集市交易收益 +12%/级' },
     // —— 深渊扩展（累计 4 级后显现）——反馈⑤：深渊研究定位为「扩展玩法」而非单纯 +X%/级，
     //   desc 改写为解锁/推进深渊玩法机制，但仍保留 delve/rift 乘区供既有消费点读取（不破 v342/v360 断言）。
-    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650,  growth: 1.8,  fx: { key: 'delve',   v: 0.10 }, desc: '深潜观测协议：每层 +10% 深潜产出，并拓展一层可观测深潜区' },
-    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800,  growth: 1.8,  fx: { key: 'rift',    v: 0.15 }, desc: '裂隙数学：每层 +15% 余烬析出，并稳定一层裂隙相位' },
+    { id: 'rp_delve',       name: '深渊观测',   cap: 8,  base: 650,  growth: 1.8,  fx: { key: 'delve',   v: 0.10 }, desc: '深潜观测协议：+10% 深潜产出，并拓展一层可观测深潜区' },
+    { id: 'rp_rift',        name: '裂隙数学',   cap: 8,  base: 800,  growth: 1.8,  fx: { key: 'rift',    v: 0.15 }, desc: '裂隙数学：+15% 余烬析出，并稳定一层裂隙相位' },
     // —— 星际（研究点已解锁 + 星图已开启 双门控；拟我已移入独立 AI 助手组）——
     { id: 'rp_jump',        name: '跃迁理论',   cap: 8,  base: 600,  growth: 1.70, fx: { key: 'jump',    v: 0.06 }, desc: '星际跃迁效率 +6%/级' },
     { id: 'rp_starres',     name: '星蕴提纯',   cap: 8,  base: 700,  growth: 1.70, fx: { key: 'starres', v: 0.06 }, desc: '星际专属资源产出 +6%/级' },

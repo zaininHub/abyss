@@ -76,7 +76,7 @@ test('B1 灰显占位按钮与锁定样式已移除', () => {
 });
 
 test('B2 六枚开关各自按解锁判定 push，全未解锁时整块面板隐藏', () => {
-  assert.match(MAIN, /panel\.style\.display = items\.length \? '' : 'none'/, '空列表隐藏整块面板');
+  assert.match(MAIN, /fab\.style\.display = items\.length \? '' : 'none'/, '空列表隐藏「⚡ 转化」悬浮按钮（含其弹层）');
   const pushCount = (MAIN.match(/items\.push\(/g) || []).length;
   assert.equal(pushCount, 6, '蒸馏/探采/孵化/圣所/深入/净化共 6 枚');
   assert.match(MAIN, /if \(converterUnlocked\('vehicles'\)\)/, '探采按唯一解锁源判定');

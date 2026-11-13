@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.0</title>
+<title>深渊效能工作台 v4.0.1</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-Dy4wCkDf.js"></script>
-  <link rel="stylesheet" href="./assets/index-C4H0bTTl.css">
+  <script defer src="./assets/index-CR4ka4kL.js"></script>
+  <link rel="stylesheet" href="./assets/index-ARp4IrIf.css">
 </head>
 <body>
 <div id="app">
@@ -40,6 +40,14 @@
   <div class="chapter-row">
     <div id="chapter-bar" class="ch-bar"></div>
     <div class="sys-btns">
+      <!-- v4.0.1 反馈④：自动转化从首列面板移为「⚡ 转化」悬浮按钮（皮肤左侧），悬停/聚焦展开快捷开关 -->
+      <div class="qs-fab" id="qs-fab">
+        <button class="btn" id="qs-fab-btn" aria-label="自动转化快捷开关" aria-haspopup="true" aria-expanded="false">⚡ 转化</button>
+        <div class="save-menu-pop qs-fab-pop" id="qs-fab-pop">
+          <div class="save-list-label">⚡ 自动转化</div>
+          <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+        </div>
+      </div>
       <!-- v3.12.12 反馈⑥：皮肤菜单（暂停左侧）——切换界面色彩/风格主题，悬停展开（复用存档菜单交互范式）。
            独立 .skin-menu 类：不占用 .save-menu 首位匹配（存档菜单测试按 .save-menu 查询） -->
       <div class="skin-menu" id="skin-menu">
@@ -103,12 +111,6 @@
         <div id="projects"></div>
       </div>
 
-      <!-- v3.2.2 反馈①：自动转化快捷开关（RP 蒸馏 / DM 探采 / PT 孵化 / FP 圣所）——v3.7.3 反馈②：各系统解锁后才出现，全未解锁时整块隐藏 -->
-      <div class="panel" id="quick-switches-panel">
-        <h3>⚡ 自动转化</h3>
-        <div id="quick-switches" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
-      </div>
-
       <!-- 深渊裂隙（v3.3.8 反馈③：深入裂隙状态 + 矩阵腐化条自 hero 移入此处） -->
       <div class="panel" id="rift-card" style="display:none">
         <h3 style="color:var(--purple)">深渊裂隙</h3>
@@ -160,6 +162,8 @@
         <!-- v1.3 A：AI 助手面板（研究「AI 管理核心」后显示） -->
         <div id="ai-card" class="panel ai-card" style="display:none">
           <h3><span class="ai-title">🤖 AI 助手</span><span class="ai-assist-slot" data-ai-assist-slot></span></h3>
+          <!-- v4.0.1 反馈①：预留线独立成行，避免与标题挤在一行把百分比按钮挤出面板不可点选 -->
+          <div class="ai-reserve-line" data-ai-reserve-line></div>
           <div id="ai-panel"></div>
         </div>
         <!-- v2.0 矩阵腐化进度条 -->

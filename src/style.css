@@ -530,8 +530,11 @@ body {
    只锁标题本身；预留线区在窄卡可整体换到第二行，避免把按钮挤出面板。 */
 .ai-card > h3 .ai-title { white-space: nowrap; flex: 0 0 auto; }
 .ai-assist-slot { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
-.ai-reserve-inline { white-space: nowrap; }
 .ai-assist-slot:empty { display: none; }
+/* v4.0.1 反馈①：预留线独立成行（标题行下方），允许换行，保证 10%/30%/50% 按钮始终可点选 */
+.ai-reserve-line { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; font-size: 10px; color: var(--text-3); flex-wrap: wrap; }
+.ai-reserve-label { white-space: nowrap; }
+.ai-reserve-opts { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
 .ai-assistant-head b { font-size: 13px; }
 .ai-assist-sep { color: var(--text-3); margin: 0 1px; }
@@ -1862,6 +1865,18 @@ body {
 .save-menu-pop { min-width: 280px; max-height: 72vh; overflow-y: auto; }
 /* v3.12.12 ⑥：皮肤下拉收窄到内容宽度 */
 #skin-pop { min-width: 160px; max-height: none; }
+/* v4.0.1 反馈④：自动转化「⚡ 转化」悬浮按钮（皮肤左侧）——复用 .save-menu/.skin-menu 的悬停 + 键盘展开范式。
+   弹层用基类 .save-menu-pop 定位（position:absolute; right:0; top:calc(100%+6px)），仅收窄到内容宽度。 */
+.qs-fab { position: relative; display: inline-block; }
+.qs-fab-pop { min-width: 200px; max-height: none; }
+/* 透明桥接伪元素：盖住「按钮 → 下拉」6px 断档，鼠标下移平滑进入弹层（与 .save-menu::after 同款思路） */
+.qs-fab::after {
+  content: ''; position: absolute; right: 0; top: 100%;
+  width: 280px; max-width: calc(100vw - 16px); height: 8px; pointer-events: none;
+}
+.qs-fab:hover::after { pointer-events: auto; }
+.qs-fab:hover .qs-fab-pop,
+.qs-fab.kbd-open .qs-fab-pop { display: flex; }
 .save-actions { display: flex; gap: 4px; }
 .save-actions .btn { width: auto; flex: 1; padding: 4px 6px; font-size: 11px; }
 .save-list-label { font-size: 11px; color: var(--text-3); margin: 6px 0 4px; }
