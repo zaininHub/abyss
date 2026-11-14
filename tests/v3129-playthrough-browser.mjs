@@ -367,8 +367,9 @@ try {
   if (preAfter.prestige === preBefore.prestige + 1 && preAfter.pp > preBefore.pp)
     ok('职级 +1 且职级点增加', `${preBefore.prestige}→${preAfter.prestige} / PP ${preBefore.pp}→${preAfter.pp}`);
   else bad('晋升计数或职级点异常', JSON.stringify({ before: preBefore, after: preAfter }));
-  // ES 在晋升时会按本局累计发放（esGain），因此只要求「不减少」；其余跨局资产要求完全不变。
-  if (preAfter.es >= preBefore.es && preAfter.faith === preBefore.faith && preAfter.chapter === preBefore.chapter
+  // ES 在晋升时会按本局累计发放（esGain），因此只要求「不减少」；faith 有 10% 晋升奖励（只增不减），
+  // 故跨局资产断言用 >= 而非 ===，避免该随机奖励触发时误报（flaky）。
+  if (preAfter.es >= preBefore.es && preAfter.faith >= preBefore.faith && preAfter.chapter === preBefore.chapter
       && preAfter.ach === preBefore.ach)
     ok('跨局资产（ES / 信仰 / 章节 / 成就）完整保留', `ES ${fx(preBefore.es)} → ${fx(preAfter.es)}（含本局发放）`);
   else bad('跨局资产在晋升后丢失', JSON.stringify({ before: preBefore, after: preAfter }));
