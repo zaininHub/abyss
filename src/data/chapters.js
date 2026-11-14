@@ -49,7 +49,7 @@ export const CHAPTERS = [
    desc:'你封印了 8 道裂隙。深渊开始记住你的名字。它不是友好的那种。'},
   {id:20, name:'番外 · 低语', cond:s=>(s.dm||0)>=100, minDays:5,
    desc:'DM 在你的意识里沉淀成一种语言。你开始读懂深渊代码——那不是代码，是梦。'},
-  {id:21, name:'番外 · 回响', cond:s=>(s.upgrades||{}).dmmind, minDays:5,
+  {id:21, name:'番外 · 回响', cond:s=>!!((s.upgrades||{}).dmmind), minDays:5,
    desc:'你给自己装上了深渊心智。线程不再只是工人，它们是你的神经。'},
   // v3.7.0 剧情扩充：三段终局番外，条件落在已积累的长线资产上，不与终章门槛重复
   {id:22, name:'番外 · 归档', cond:s=>(s.es||0)>=300 && (s.riftsSealed||0)>=5, minDays:5,
