@@ -44,15 +44,25 @@ test('v2.9.2 ② sp3_farewell 文案保留"购买离职礼盒（1 EP）"承诺',
   assert.ok(t.desc.includes('1 EP'), 'desc 含"1 EP"成本');
 });
 
-test('v2.9.2 ② 购买入口实现：main.js 含 ensureFarewellGift + onFarewellBuy + 1 EP 成本', () => {
+test('v2.9.2 ② 购买入口实现：wishDock 模块导出 + 主入口接线 + 1 EP 成本', async () => {
+  // 组件已抽到 src/modules/wishDock.js：断言「模块真实导出 + main.js 接线 + 实现细节」，
+  // 不再锁死函数必须定义在 main.js（源码位置重构不应误报）。
   const mainSrc = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.ok(mainSrc.includes('function ensureFarewellGift'), 'main.js 含 ensureFarewellGift 函数');
-  assert.ok(mainSrc.includes('function onFarewellBuy'), 'main.js 含 onFarewellBuy 点击处理');
-  assert.ok(mainSrc.includes('FAREWELL_COST = 1'), '成本常量 FAREWELL_COST = 1');
-  assert.ok(mainSrc.includes('S._farewellBought = true'), '购买后设 _farewellBought=true');
-  assert.ok(mainSrc.includes('checkSpecialTasks(S, log, toast)'), '购买后立即结算 checkSpecialTasks');
+  const dockSrc = readFileSync(new URL('../src/modules/wishDock.js', import.meta.url), 'utf8');
+  assert.ok(mainSrc.includes("from './modules/wishDock.js'"), 'main.js 接入 wishDock 模块');
+  assert.ok(mainSrc.includes('ensureFarewellGift()') && mainSrc.includes('initFarewellGift()'), '主入口调用初始化/刷新');
+
+  const mod = await import('../src/modules/wishDock.js');
+  for (const fn of ['ensureWishWell', 'initWishWell', 'ensureFarewellGift', 'initFarewellGift']) {
+    assert.equal(typeof mod[fn], 'function', `wishDock 应导出 ${fn}`);
+  }
+
+  assert.ok(dockSrc.includes('function onFarewellBuy'), '含 onFarewellBuy 点击处理');
+  assert.ok(dockSrc.includes('FAREWELL_COST = 1'), '成本常量 FAREWELL_COST = 1');
+  assert.ok(dockSrc.includes('S._farewellBought = true'), '购买后设 _farewellBought=true');
+  assert.ok(dockSrc.includes('checkSpecialTasks(S, log, toast)'), '购买后立即结算 checkSpecialTasks');
   // 仅 dormant/losing/staffUnhappy≥3 时显示（避免新手误触）
-  assert.ok(mainSrc.includes("w.state === 'dormant'") && mainSrc.includes("w.state === 'losing'"), '条件守卫：dormant/losing');
+  assert.ok(dockSrc.includes("w.state === 'dormant'") && dockSrc.includes("w.state === 'losing'"), '条件守卫：dormant/losing');
 });
 
 test('v2.9.2 ② 转生重置 _farewellBought（每局可再次触发）', async () => {

@@ -43,3 +43,19 @@ CHROME_PATH="C:/Program Files/Google/Chrome/Application/chrome.exe" node tests/l
 
 > 注：设计已变更的封板断言（探采自动暂停、分支数量、研究/政策数量等）**按预期仍会失败**，
 > 它们记录的是当时版本的验收口径，不要据此判断当前版本有缺陷。当前口径请看顶层现代单测。
+
+---
+
+## 第二轮归档（v4.0.2 代码质量整理）
+
+- `tests/` 根目录的 65 个一次性脚本与历史报告迁入本目录，统一 `*.legacy.mjs` / `*.legacy.json`；
+  相对导入按目录加深一层修正（`../src/` → `../../src/`、`../dist/` → `../../dist/`、
+  `./_chrome.mjs` → `../_chrome.mjs`）；以 `process.cwd()` 派生路径的脚本不受影响。
+- 归档对象：`v23-diag-*` 诊断脚本、历代 `v3xx-feedback-browser`、旧版 `v3xx-30day-browser`、
+  `v300-*` 验收脚本，以及对应的 `*-report.json` / `*-result.json` 产物。
+- 顶层 `tests/` 现在只保留：51 个 `*.test.mjs` 现代单测、`_chrome.mjs`、`runtime-verify.mjs`，
+  以及 4 个仍承担回归的浏览器脚本：`v3110-30day-browser`、`v3129-playthrough-browser`、
+  `v400-ui-feedback-browser`、`v401-ui-feedback-browser`。
+- 归档文件**未删除**，仍可按需运行（`CHROME_PATH=... node tests/legacy/xxx.legacy.mjs`）。
+  `npm test` 与 `npm run lint` 均不覆盖本目录：前者避免陈旧断言噪声，后者避免
+  浏览器脚本在 `page.evaluate` 中引用页面注入的全局 `S` 导致 `no-undef` 误报。

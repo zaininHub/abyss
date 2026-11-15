@@ -94,7 +94,7 @@ test('A3 ALL_OFF_SWITCH_KEYS 覆盖全部开关（含 autoTech，修 v3.10.5 漏
 });
 
 test('A4 双向审计：注册表 id ↔ ai.js EXECUTORS 执行器一一对应', () => {
-  const execKeys = [...AI_SRC.matchAll(/^  (\w+)\(ctx, workers\) \{/gm)].map(m => m[1]);
+  const execKeys = [...AI_SRC.matchAll(/^ {2}(\w+)\(ctx, workers\) \{/gm)].map(m => m[1]);
   assert.deepEqual(execKeys.sort(), [...REG.AI_ACTION_IDS].sort(),
     '每个声明动作都要有执行器，且不得有孤儿执行器');
   // tickAI 必须遍历注册表，而不是手写 5 个 if 分支

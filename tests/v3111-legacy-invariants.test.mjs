@@ -79,10 +79,12 @@ const legacyFiles = readdirSync(LEGACY).filter((f) => f !== 'README.md');
 const topTests = readdirSync(__dirname)
   .filter((f) => f.endsWith('.test.mjs') && f !== SELF);
 
-test('A1 归档目录内全部脚本统一为 *.legacy.mjs，不再被常规单测通配命中', () => {
+test('A1 归档目录内全部文件统一加 .legacy 后缀，不再被常规单测通配命中', () => {
   assert.ok(legacyFiles.length >= 60, `归档数量异常：${legacyFiles.length}`);
-  const bad = legacyFiles.filter((f) => !f.endsWith('.legacy.mjs'));
-  assert.deepEqual(bad, [], '归档目录内不得残留 *.test.mjs');
+  // 验收脚本为 *.legacy.mjs；历史报告 / 结果为 *.legacy.json。
+  // 两者都不能是 *.test.mjs 或任何未加后缀的文件。
+  const bad = legacyFiles.filter((f) => !/\.legacy\.(mjs|json)$/.test(f));
+  assert.deepEqual(bad, [], '归档目录内不得残留未加 .legacy 后缀的文件（尤其 *.test.mjs）');
 });
 
 test('A2 顶层常规单测不再出现 .legacy.mjs，也不启动浏览器', () => {

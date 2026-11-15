@@ -27,7 +27,9 @@ const { CHAPTERS } = await import('../src/data/chapters.js');
 const { POLICY_GROUPS } = await import('../src/data/policies.js');
 const MAIN_SRC = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const PROJECTS_SRC = readFileSync(new URL('../src/modules/projects.js', import.meta.url), 'utf8');
-const DAY30_SRC = readFileSync(new URL('./v380-30day-browser.mjs', import.meta.url), 'utf8');
+// 守当前「活跃」的 30 天推演脚本（v380 版已归入 tests/legacy/ 不再承担回归）；
+// 三条守卫分别确保：自动玩家走真实领取入口、不伪造累计完成数、逐日快照记录累计完成数。
+const DAY30_SRC = readFileSync(new URL('./v3110-30day-browser.mjs', import.meta.url), 'utf8');
 
 const pending = (id) => ({ id, name: '测试任务', type: 'earn_ep', status: 'pending',
   reward: { kind: 'ep', amount: 100 }, progress: 1, goal: 1 });

@@ -55,10 +55,8 @@ function mkState(extra = {}) {
   // dormantSec < 30（快速恢复）→ 不触发补偿（正常转机门控）
   Object.assign(S, mkState({ ep: 1e9, wageState: { state: 'losing', debtSec: 0, dormantSec: 10, bufferSec: 0, loseTimer: 0 } }));
   S.restBonusMult = undefined;
-  tickWakes: {
-    tickWages(0.5);
-    rec('V2 流失预警快速恢复（<30s）不触发补偿（门控正确）', S.restBonusMult === undefined, `mult=${S.restBonusMult}`);
-  }
+  tickWages(0.5);
+  rec('V2 流失预警快速恢复（<30s）不触发补偿（门控正确）', S.restBonusMult === undefined, `mult=${S.restBonusMult}`);
   // dormant 恢复原有行为保持（v2.5.3 既有）
   Object.assign(S, mkState({ ep: 1e9, wageState: { state: 'dormant', debtSec: 0, dormantSec: 300, bufferSec: 0, loseTimer: 0 } }));
   S.restBonusMult = undefined;

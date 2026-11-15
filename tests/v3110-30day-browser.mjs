@@ -30,16 +30,17 @@
 //   UI 侧另有真实 DOM 点击，不直接写 S 伪造进度。
 //
 // 用法：
-//   CHROME_PATH="C:/Program Files/Google/Chrome/Application/chrome.exe" node tests/v3110-30day-browser.mjs
+//   node tests/v3110-30day-browser.mjs   （Chrome 路径走 tests/_chrome.mjs 单源；可用 CHROME_PATH 覆盖）
 //   DAYS=1 REPORT=/tmp/gray.json node tests/v3110-30day-browser.mjs        # 灰度
 //   LINE=line_faith DAYS=3 REPORT=/tmp/faith.json node ...
 import puppeteer from 'puppeteer-core';
 import { writeFileSync, readFileSync } from 'node:fs';
+import { chromePath } from './_chrome.mjs'; // Chrome 路径单一真源（跨平台 + CHROME_PATH 显式覆盖）
 
 // v3.10.1：报告版本直接取 package.json，不再随版本 bump 手改硬编码。
 // 注意：本脚本后面有 `const URL = 'file://...'`，会遮蔽全局 URL 构造器（TDZ），此处只能用 cwd 相对路径。
 const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version;
-const CHROME = process.env.CHROME_PATH || '/usr/local/bin/chromium';
+const CHROME = chromePath(); // 不再硬编码 Linux CI 路径，Windows / macOS 自动探测
 const DAYS = Number(process.env.DAYS || 30);
 const LINE = process.env.LINE || 'line_order';
 const REPORT = process.env.REPORT || 'tests/v3110-30day-report.json';

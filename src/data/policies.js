@@ -170,20 +170,9 @@ export function policyMult(key) {
 
 export function groupHasChoice(groupId) { return !!groupPolicyId(groupId); }
 
-// v3.6.0 方向⑨：AI 助手自动采纳每组最优政策（仅当该组尚未选择时）
-export function autoAdoptBestPolicy() {
-  let acted = false;
-  for (const g of policyOpenGroups()) {
-    if (groupPolicyId(g.id)) continue;
-    let best = null, bestSum = -Infinity;
-    for (const p of g.policies) {
-      const sum = Object.values(p.effect || {}).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
-      if (sum > bestSum) { bestSum = sum; best = p; }
-    }
-    if (best && selectPolicy(g.id, best.id).ok) acted = true;
-  }
-  return acted;
-}
+// 「AI 自动采纳每组最优政策」入口此前定义在此处，但全库无调用点，且内部调用了只存在于
+// modules/policies.js 的 selectPolicy —— data 层反向依赖 modules 层，一旦触发即抛 ReferenceError。
+// 该功能从未生效，故移除；如需启用，应在 modules/policies.js 内实现并显式接线，避免破坏分层。
 export function policyOpenGroups() {
   return POLICY_GROUPS.filter(g => { try { return !!g.unlock(S); } catch { return false; } });
 }

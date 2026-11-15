@@ -18,6 +18,8 @@
   --warn: #d29922;
   /* v3.12.10 ②：底部装饰条 56px → 32px —— 压缩触手高度，把 24px 还给主面板 */
   --bottom-deco-h: 32px;
+  /* 四列主网格唯一真源：.grid 基础规则与宽屏媒体查询共用，避免改列宽时手动同步两处 */
+  --grid-cols-4: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -146,7 +148,7 @@ body {
   /* v3.3.9 反馈①：四列继续加宽（取消 1200px 上限后按屏宽分配），高度撑满剩余视口
      v3.4.0 反馈①：最左列再放宽（0.58→0.70fr，下限 240→280px）——裂隙/任务文案不再频繁换行
      v3.4.1 反馈①：右侧让出 132px 浮动栏后重新配权（最左列 0.70→0.74fr），1920 宽下仍保持 ≈300px */
-  grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr);
+  grid-template-columns: var(--grid-cols-4);
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
@@ -1118,7 +1120,7 @@ body.paused .pet-grid .pet-card {
   .grid {
     flex: 1 1 auto;
     min-height: 0;
-    grid-template-columns: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
+    grid-template-columns: var(--grid-cols-4); /* v3.3.9 反馈①：四列同步加宽 // v3.4.1 ①：让出右侧浮动栏后重新配权 */
   }
   .first-col, .left-col, .side-col {
     overflow-y: auto;
