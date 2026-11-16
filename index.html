@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.7</title>
+<title>深渊效能工作台 v4.0.8</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -143,8 +143,10 @@
           <div class="big" id="big-ep">0</div>
           <div style="text-align:center;color:var(--dim);font-size:11px">点击产出 <span id="click-power">1</span></div>
         </div>
-        <!-- v3.12.0 反馈⑯：薪资四态说明由窄 span 扩成「整块」触发——悬浮整行显气泡、点击整行弹完整说明 -->
-        <div class="hero-row wage-help-zone" id="wage-help-zone" data-tip="线程薪资四态 · 点击整块查看完整规则">
+        <!-- v3.12.0 反馈⑯：薪资四态说明由窄 span 扩成「整块」触发——悬浮整行显气泡、点击整行弹完整规则
+             v4.0.8 反馈②：气泡改彩色 DOM（#wage-tip-pop，四态行按语义色着色）——
+             attr(data-tip) 只能纯文本，故整行 data-tip 与 ::after 样式一并退役。 -->
+        <div class="hero-row wage-help-zone" id="wage-help-zone">
           <span class="staff-label">线程: <b id="staff-count">0</b></span>
           <span class="wage-help"><span id="staff-status" class="wage-badge" role="status" aria-label="满薪"></span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
           <!-- v4.0.4 反馈②：NEXT（下一线程 产出/消耗）挪到招募按钮左侧，价签只出现在按钮内，不再重复 -->
@@ -156,15 +158,16 @@
             <span class="recruit-cost mono" id="hire-cost">0</span>
           </button>
         </div>
-        <!-- v4.0.4 反馈②：专注条不再在行内显示「下一级价格」——价格进悬浮说明，行内只留等级与下一级加成 -->
-        <!-- v4.0.6 反馈②：专注的购买/升级方式与线程对齐——行内只留「等级 + NEXT 下一级加成」，
-             价格收进「强化 / 价格」两行按钮；整条不再可点（购入口径与招募一致，避免误触）。 -->
-        <div id="focus-bar" class="hero-row focus-bar" data-tip="专注等级：点击强化，提升点击产出">
+        <!-- v4.0.4 反馈②：专注条不再在行内显示「下一级价格」——价格收进「强化 / 价格」两行按钮 -->
+        <!-- v4.0.6 反馈②：专注的购买/升级方式与线程对齐——行内只留「等级 + NEXT」，
+             价格收进「强化 / 价格」两行按钮；整条不再可点（购入口径与招募一致，避免误触）。
+             v4.0.8 反馈③：悬浮说明（data-tip）删除——NEXT 直接写「线程产出+N%」就地自明。 -->
+        <div id="focus-bar" class="hero-row focus-bar">
           <span class="staff-label">专注等级: <b id="focus-lv">Lv.0</b></span>
           <span class="next-recruit">
             <span id="focus-preview" class="nr-body" style="font-size:10.5px;color:var(--text-2)"></span>
           </span>
-          <button class="btn recruit-btn" id="focus-buy" title="强化专注：提升点击产出（价格随等级递增，单级加成递减）">
+          <button class="btn recruit-btn" id="focus-buy" title="强化专注：提升线程产出（价格随等级递增，单级加成递减）">
             <span class="recruit-label">强化</span>
             <span class="recruit-cost mono" id="focus-cost">50</span>
           </button>

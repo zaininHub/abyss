@@ -127,22 +127,37 @@ try {
     ? ok('NEXT 位于招募按钮左侧同一行', `prev.right=${Math.round(hero.prev.right)} ≤ btn.x=${Math.round(hero.btn.x)}`)
     : bad('NEXT 与按钮位置不对', JSON.stringify({ prev: hero.prev, btn: hero.btn }));
   // v4.0.6 反馈②：专注价签从「只进悬浮说明」改为「只进强化按钮」，行内不再散落价格
+  // v4.0.8 反馈③：专注悬浮说明删除——NEXT 就地写「线程产出+N%」
   hero.hasFocusCost && hero.costInBtn
     ? ok('专注价格只在「强化」按钮内', hero.focusText)
     : bad('专注价格位置不符', JSON.stringify({ t: hero.focusText, has: hero.hasFocusCost, inBtn: hero.costInBtn }));
-  /需 \d|需 [\d.]+/.test(hero.focusTip) ? ok('专注价格进悬浮说明', hero.focusTip.split('\n').pop()) : bad('悬浮说明缺价格', hero.focusTip);
+  !hero.focusTip ? ok('v4.0.8：专注悬浮说明已删除', hero.focusText) : bad('专注 data-tip 残留', hero.focusTip);
   results.hero = hero;
 
-  // 悬浮确认（真实鼠标）：气泡出现且含价格
-  await page.hover('#focus-bar');
+  // v4.0.8 反馈③：专注气泡删除——改为断言「无 ::after 残留」+ 薪资彩色气泡真实显隐
+  await page.hover('#wage-help-zone');
   await sleep(300);
-  const focusTip = await page.evaluate(() => {
-    const cs = getComputedStyle(document.getElementById('focus-bar'), '::after');
-    return { content: cs.content, position: cs.position, z: cs.zIndex };
+  const wageTipShown = await page.evaluate(() => {
+    const pop = document.getElementById('wage-tip-pop');
+    if (!pop) return { exists: false };
+    const cs = getComputedStyle(pop);
+    const r = pop.getBoundingClientRect();
+    return { exists: true, shown: cs.display !== 'none', z: cs.zIndex, pos: cs.position, top: Math.round(r.top) };
   });
-  /需/.test(focusTip.content) ? ok('专注悬浮气泡真实出现', focusTip.content.slice(0, 60)) : bad('专注气泡未出现', JSON.stringify(focusTip));
+  wageTipShown.exists && wageTipShown.shown && wageTipShown.z === '1200'
+    ? ok('薪资彩色气泡悬浮真实出现', `z=${wageTipShown.z} top=${wageTipShown.top}`)
+    : bad('薪资彩色气泡未出现', JSON.stringify(wageTipShown));
+  await page.mouse.move(4, 4);
+  await sleep(250);
+  const focusTipGone = await page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById('focus-bar'), '::after');
+    return { content: cs.content, popHidden: getComputedStyle(document.getElementById('wage-tip-pop')).display === 'none' };
+  });
+  focusTipGone.content === 'none' && focusTipGone.popHidden
+    ? ok('专注无 ::after 残留且气泡可消失', '')
+    : bad('气泡清理不彻底', JSON.stringify(focusTipGone));
 
-  // 新气泡沿用主题变量：三套浅色皮肤不得出现「深字压深底」
+  // 彩色气泡沿用主题变量：三套浅色皮肤不得出现「深字压深底」（四语义色逐一对底色）
   const focusContrast = await page.evaluate(() => {
     const parse = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
     const lum = rgb => {
@@ -154,15 +169,20 @@ try {
     for (const theme of ['abyss', 'light', 'mint', 'autumn']) {
       document.documentElement.classList.remove('theme-light', 'theme-mint', 'theme-autumn');
       if (theme !== 'abyss') document.documentElement.classList.add('theme-' + theme);
-      const cs = getComputedStyle(document.getElementById('focus-bar'), '::after');
-      out[theme] = Math.round(ratio(parse(cs.color), parse(cs.backgroundColor)) * 10) / 10;
+      const pop = document.getElementById('wage-tip-pop');
+      const bg = parse(getComputedStyle(pop).backgroundColor);
+      const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
+        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+      }
+      out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }
     document.documentElement.classList.remove('theme-light', 'theme-mint', 'theme-autumn');
     return out;
   });
   Object.values(focusContrast).every(v => v >= 4.5)
-    ? ok('专注气泡四套皮肤对比度达标', Object.entries(focusContrast).map(([k, v]) => `${k} ${v}:1`).join(' · '))
-    : bad('专注气泡对比度不足', JSON.stringify(focusContrast));
+    ? ok('薪资彩色气泡四套皮肤对比度达标（最差色行）', Object.entries(focusContrast).map(([k, v]) => `${k} ${v}:1`).join(' · '))
+    : bad('薪资彩色气泡对比度不足', JSON.stringify(focusContrast));
 
   // 异常态对照：懒惰仍有文字角标
   const lazy = await page.evaluate(() => {

@@ -18,8 +18,10 @@
   --warn: #d29922;
   /* v3.12.10 ②：底部装饰条 56px → 32px —— 压缩触手高度，把 24px 还给主面板 */
   --bottom-deco-h: 32px;
-  /* 四列主网格唯一真源：.grid 基础规则与宽屏媒体查询共用，避免改列宽时手动同步两处 */
-  --grid-cols-4: minmax(300px, 0.76fr) minmax(350px, 1.30fr) minmax(0, 1.55fr) minmax(280px, 0.80fr);
+  /* 四列主网格唯一真源：.grid 基础规则与宽屏媒体查询共用，避免改列宽时手动同步两处。
+     v4.0.8 反馈①：第二列 1.30fr → 0.90fr（班组卡 2 列自然宽 201px，≥430px 即不换行），
+     让出宽度给右侧编排/班组列——班组一行放满、右两列模块一行收齐。 */
+  --grid-cols-4: minmax(300px, 0.76fr) minmax(300px, 0.90fr) minmax(0, 1.55fr) minmax(280px, 0.80fr);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -83,19 +85,36 @@ body {
 /* v3.12.0 反馈⑯：线程薪资说明整块触发。整行都是命中区（.hero-row 本身即块），
    悬浮显示含换行的四态说明，点击任意空白处也会弹完整说明；刻意不用原生 title 免双弹窗。
    v4.0.3 反馈③：气泡改 position:fixed，坐标由 main.js 按本行 rect 实时写入
-   （absolute 会被祖先 overflow 裁剪，顶部行的首行说明整段丢失）；上方空间不足时自动翻到下方。 */
+   （absolute 会被祖先 overflow 裁剪，顶部行的首行说明整段丢失）；上方空间不足时自动翻到下方。
+   v4.0.8 反馈②：说明从 attr(data-tip) 纯文本改为真实 DOM（#wage-tip-pop）——
+   四态行要按状态着色（满薪绿/欠薪黄/休眠橙/流失红），::after 拼不出彩色文本。 */
 .wage-help-zone { position: relative; cursor: help; }
-.wage-help-zone[data-tip]:hover::after {
-  content: attr(data-tip);
+.wage-tip-pop {
   position: fixed; left: var(--tip-x, 12px); top: var(--tip-y, 12px);
   transform: translateY(-100%);
   z-index: 1200;
   background: var(--tip-bg); border: 1px solid var(--border); border-radius: 5px;
   padding: 8px 10px; font-size: 11px; color: var(--tip-fg);
-  white-space: pre-line; width: max-content; max-width: min(360px, 88vw); line-height: 1.7;
+  width: max-content; max-width: min(360px, 88vw); line-height: 1.7;
   pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+  display: none;
 }
-.wage-help-zone.tip-below[data-tip]:hover::after { transform: translateY(0); }
+.wage-tip-pop.show { display: block; }
+.wage-help-zone.tip-below ~ .wage-tip-pop,
+.wage-tip-pop.tip-below { transform: translateY(0); }
+/* 四态语义色（浅色主题经 --tip-* 变量与下方逐态覆盖保持可读） */
+.wage-tip-pop .w-good { color: var(--good, #3fb950); }
+.wage-tip-pop .w-warn { color: var(--warn, #d29922); }
+.wage-tip-pop .w-orange { color: #ff9800; }
+.wage-tip-pop .w-bad { color: var(--bad, #f85149); }
+.wage-tip-pop .w-dim { color: var(--text-3, #8b949e); }
+.wage-tip-pop b { font-weight: 600; }
+/* v4.0.8：浅色主题下语义色必须换深色变体——默认亮色系（#3fb950/#d29922/#ff9800/#f85149）
+   压白底只有 2.1~2.5:1，浅字压白底不可读（v404/v406 专项以 ≥4.5:1 锁死）。 */
+html.theme-light .wage-tip-pop .w-good, html.theme-mint .wage-tip-pop .w-good, html.theme-autumn .wage-tip-pop .w-good { color: #0f6b2d; }
+html.theme-light .wage-tip-pop .w-warn, html.theme-mint .wage-tip-pop .w-warn, html.theme-autumn .wage-tip-pop .w-warn { color: #7a5200; }
+html.theme-light .wage-tip-pop .w-orange, html.theme-mint .wage-tip-pop .w-orange, html.theme-autumn .wage-tip-pop .w-orange { color: #8a4b00; }
+html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, html.theme-autumn .wage-tip-pop .w-bad { color: #b3161d; }
 /* v4.0.3 反馈③：四态文案收成小角标（只留状态名）——原先把整句惩罚说明塞在行内，
    把右侧 NEXT 预览挤到省略号；细则与倒计时统一进上面的悬浮说明。 */
 .wage-help {
@@ -215,11 +234,17 @@ body {
 }
 
 @media (max-width: 1280px) {
-  /* 窄屏回退：允许整页滚动（列不再挤成一团） */
-  #app { height: auto; overflow: visible; }
+  /* 窄屏回退：允许整页滚动（列不再挤成一团）
+     v4.0.8 反馈⑤：本块的 #app/body 覆盖必须赢过下方 @media(min-width:900) 的
+     #app{overflow:hidden}——1280×720 等窄视口两个查询同时命中，源顺序上
+     min-width:900 在后，overflow:hidden 胜出 → .side-col 只分到 185px 高、
+     日志手柄（top≈712）被裁在 #app 裁剪框外，elementsFromPoint 永远命中触手热区，
+     「日志拖不动」。提高覆盖特异性恢复整页滚动后，手柄 z-index:3 > 触手层 2，
+     命中恢复正常（v408 专项锁定）。 */
+  #app { height: auto; overflow: visible !important; }
   body { overflow: auto; }
   .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
-  .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; overflow: visible; }
+  .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; overflow: visible !important; }
 }
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }
@@ -337,19 +362,10 @@ body {
   font-size: 12px;
   border-radius: 4px;
   transition: background .15s;
-  position: relative; /* v4.0.4：价签移出可见行，改由悬浮说明承载 */
 }
 
-/* v4.0.4 反馈②：行内不再显示「下一级价格」，价格与加成一起进悬浮气泡
-   （与 .stat / .item 同一套 [data-tip] 外观，避免又造一套弹窗）。 */
-.focus-bar[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1200;
-  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 5px;
-  padding: 6px 9px; font-size: 11px; color: var(--tip-fg);
-  white-space: pre-line; width: max-content; max-width: min(300px, 86vw); line-height: 1.6;
-  pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.45);
-}
+/* v4.0.8 反馈③：专注悬浮气泡删除——NEXT 直接写「线程产出+N%」，说明就地自明；
+   attr(data-tip) 的 ::after 气泡样式随之移除（原 .focus-bar[data-tip]:hover::after）。 */
 
 /* v4.0.7：淡底只做 hover 提示，用 inset 负值外扩，不占布局（不改变文字与按钮的对齐基线） */
 .focus-bar:hover { background: rgba(163,113,247,.07); box-shadow: 0 0 0 4px rgba(163,113,247,.07); }
@@ -939,6 +955,11 @@ body {
    热区加高到 12px（视觉仍是 3px 细条），hover/聚焦时才变宽变 accent。 */
 .log-resize {
   flex: 0 0 auto; height: 12px; margin-top: 2px;
+  /* v4.0.8 反馈⑤：窄视口（如 1280×720）下日志手柄贴近视口底部，会被
+     .tentacle-tap-zone（position:fixed bottom:0 高 32px z-index:2 的触手彩蛋热区）盖住，
+     pointerdown 永远落不到手柄 → 「拖不动」。手柄所在 .log-panel 无层叠上下文，
+     提升手柄 z-index 至 3 即可重新命中（触手层其余区域不受影响）。 */
+  position: relative; z-index: 3;
   display: flex; align-items: center; justify-content: center;
   background: transparent; cursor: ns-resize; touch-action: none;
 }
@@ -1870,10 +1891,9 @@ body {
   .wiki-nav-btn { flex: 0 0 auto; }
 }
 
-/* v3.1.0 反馈③：班组面板（线程拟人化个人档案 + 事件流水） */
-.crew-head { display: flex; gap: 12px; align-items: center; margin: 6px 0; font-size: 12px; flex-wrap: wrap; }
-.crew-state { font-weight: bold; }
-.crew-count { color: var(--text-3); }
+/* v3.1.0 反馈③：班组面板（线程拟人化个人档案 + 事件流水）
+   v4.0.8 反馈④：crew-head 整行删除（「N 条线程在岗」口径与分页条重复）——
+   .crew-head/.crew-state/.crew-count 样式随之清退。 */
 /* v4.0.0 反馈④：班组成员固定一行 2 个（窄屏回落单列）。 */
 .crew-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 @media (max-width: 520px) { .crew-grid { grid-template-columns: 1fr; } }

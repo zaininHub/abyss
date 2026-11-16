@@ -96,6 +96,10 @@ import { RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
   resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
   setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus } from './core/resonance.js';
 
+// v4.0.8 反馈①：共鸣焦点图标改三角形族（与编排策略的方块/菱形族区分）——
+// 四条管线四种不同的三角形：实心上 ▲ / 空心 △ / 实心下 ▼ / 空心下 ▽。
+const RES_FOCUS_ICONS = { ep: '▲', rp: '△', pt: '▼', dm: '▽' };
+
 const app = document.getElementById('app');
 
 // ========== 日志系统 / toast / 脏检查渲染 ==========
@@ -133,31 +137,37 @@ function renderOrchestrationPanel() {
   el._orchSig = sig;
 
   // v3.12.8 ④：策略描述按需渲染——「均衡编排」无增益无代价，不再补一句说明文字。
-  let html = `<div style="color:var(--text-2);font-size:11.5px;line-height:1.6;margin-bottom:8px">
-    当前编排：<b style="color:var(--accent)">${active.icon} ${active.name}</b>${auto ? ' · 随潮汐排班' : ''}</div>`;
+  // v4.0.8 反馈①：删除「当前编排」行——按钮的 aria-pressed 高亮已表达当前策略，
+  //   单独一行文字与相位共鸣的焦点按钮并存时反生歧义（用户反馈「容易引起误解」）。
+  let html = '';
 
   // v3.12.13 反馈 #164：潮汐排班与四种排版类型同排；开关仅用选中高亮表达；潮汐预案改为悬停浮层。
   html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized });
 
   // v4.0.0 反馈④：相位共鸣与效能编排同级——去掉说明文案与「共鸣：开/关」文字，
   //   一个纯开关样式按钮 + 四种焦点按钮同排一行；倍率读数与层数保留（读侧契约）。
+  // v4.0.8 反馈①：共鸣图标整族改为三角形（开=实心 ▲ / 焦点四种不同三角形），
+  //   与编排策略的方块/菱形族区分——「相位共鸣加成通过不同的三角形表示」。
   if (res.unlocked) {
     html += `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
-      <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">◉</button>
-      ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${f.icon}</button>`).join('')}
+      <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">${res.enabled ? '▲' : '△'}</button>
+      ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${RES_FOCUS_ICONS[f.id] || f.icon}</button>`).join('')}
       <span style="font-size:10.5px;color:var(--text-3);margin-left:2px;white-space:nowrap">相位共鸣 · ${res.layers}/${res.maxLayers} 层</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
-      ${res.rows.map(r => `<div>${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
+      ${res.rows.map(r => `<div style="white-space:nowrap">${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
     </div>`;
   }
 
   // v3.10.1：明确标注这四行是编排层倍率（策略 + 相位共鸣合并），不是全部加成的总和。
-  html += `<div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px">编排倍率 · 策略与相位共鸣合并</div>`;
+  // v4.0.8 反馈①：编排倍率标改圆形族（●增益 ◐小幅 ○持平/减益），
+  //   与共鸣的三角形族成对区分——「编配倍率为不同的圆」；行内 nowrap 修不正常换行。
+  html += `<div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px;white-space:nowrap">编排倍率 · 策略与相位共鸣合并</div>`;
   html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
     const color = x.mult > 1.0001 ? 'var(--good,#3fb950)' : x.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)';
-    html += `<div>${x.label} <b class="mono" style="color:${color}">×${x.mult.toFixed(2)}</b></div>`;
+    const mark = x.mult > 1.05 ? '●' : x.mult > 1.0001 || (x.mult < 0.9999 && x.mult >= 0.95) ? '◐' : '○';
+    html += `<div style="white-space:nowrap"><span aria-hidden="true">${mark}</span> ${x.label} <b class="mono" style="color:${color}">×${x.mult.toFixed(2)}</b></div>`;
   }
   html += `</div>`;
   el.innerHTML = html;
@@ -725,6 +735,67 @@ function renderCorruption() {
   // v2.8.3：深渊吞噬横幅（v3.4.9 ⑨：刷新逻辑已抽到 renderAbyssCollapseBanner，函数开头统一调用）
 }
 
+/**
+ * v4.0.8 反馈②：线程薪资四态说明气泡——真实 DOM 版（彩色文本）。
+ * 结构签名去重：同内容不重写 DOM（每帧渲染不抖动）；显隐由 mouseenter/mouseleave 控制。
+ * 四态行语义色：满薪 var(--good) / 欠薪+懒惰 var(--warn) / 休眠 #ff9800 / 流失 var(--bad)，
+ * 与行内角标四态色一一对应（renderHero 的 txt/color 分支同源）。
+ */
+function renderWageTipPop({ txt, detail, W, salary }) {
+  if (typeof document === 'undefined') return;
+  let pop = document.getElementById('wage-tip-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'wage-tip-pop';
+    pop.className = 'wage-tip-pop';
+    pop.setAttribute('role', 'tooltip');
+    pop.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(pop);
+  }
+  const html = `<b>线程薪资状态（当前：<span class="${WAGE_TIP_CLS[txt] || 'w-dim'}">${txt}</span>${detail ? ' · ' + detail : ''}）</b>\n`
+    + `<span class="w-good">· 满薪：EP ≥ ${W.warnSec}s 薪资，无惩罚</span>\n`
+    + `<span class="w-warn">· 欠薪降效：EP &lt; ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠</span>\n`
+    + `<span class="w-orange">· 强制休眠：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警</span>\n`
+    + `<span class="w-bad">· 流失预警：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程（维修坞 → 0，免疫）</span>\n`
+    + `<span class="w-warn">· 懒惰：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}（消耗 &gt; 产出）；EP 跌到 0 或任意升级/线程购买解除</span>\n`
+    + `<span class="w-dim">恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）</span>`;
+  if (pop._tipSig !== html) {
+    pop._tipSig = html;
+    pop.innerHTML = html;
+  }
+}
+
+// 四态名 → 气泡内「当前状态」文字的语义色类（与 renderHero 四态色同源）
+const WAGE_TIP_CLS = { '满薪': 'w-good', '欠薪': 'w-warn', '休眠': 'w-orange', '流失预警': 'w-bad', '懒惰': 'w-warn', '待招募': 'w-dim' };
+
+/** v4.0.8 反馈②：气泡显隐 + 按 wage-help-zone rect 定位（fixed + 上下翻转 + 左右钳制，与旧 ::after 同规则）。 */
+function bindWageTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('wage-help-zone');
+  if (!zone || zone._wageTipBound) return;
+  zone._wageTipBound = true;
+  const pop = () => document.getElementById('wage-tip-pop');
+  const place = () => {
+    const p = pop();
+    if (!p) return;
+    const r = zone.getBoundingClientRect();
+    const tipW = Math.min(360, window.innerWidth * 0.88);
+    const below = r.top < 260; // 上方容纳不下 7 行说明 → 翻到行下方
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const show = () => { place(); const p = pop(); if (p) { p.classList.add('show'); p.setAttribute('aria-hidden', 'false'); } };
+  const hide = () => { const p = pop(); if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); } };
+  zone.addEventListener('mouseenter', show);
+  zone.addEventListener('focusin', show);
+  zone.addEventListener('mouseleave', hide);
+  zone.addEventListener('focusout', hide);
+  // 滚动/改尺寸时气泡跟着挪（旧 ::after 随 hover 天然跟随，DOM 版需手动）
+  window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) place(); }, true);
+  window.addEventListener('resize', () => { if (pop() && pop().classList.contains('show')) place(); });
+}
+
 function renderHero() {
   const bigEp = document.getElementById('big-ep');
   const clickPower = document.getElementById('click-power');
@@ -788,21 +859,15 @@ function renderHero() {
     //   文字保留在 DOM 里但 CSS 清零字号（无障碍读 aria-label，视觉只剩色点）。
     staffStatus.classList.toggle('is-dot', txt === '满薪');
     staffStatus.setAttribute('aria-label', detail ? `${txt}（${detail}）` : txt);
-    // 刻意不写原生 title：整行已有 [data-tip] 自定义气泡，双弹窗是本项目明确避开的坑；
+    // 刻意不写原生 title：整行已有自定义气泡，双弹窗是本项目明确避开的坑；
     //   细则还可在触屏上通过「点击整块 → 线程状态说明」弹窗查看。
     // v3.12.3 反馈③：问号说明框只在「满薪」状态显示（其余四态由整块悬浮说明承载）
     const wageMark = document.getElementById('wage-help-mark');
     if (wageMark) wageMark.style.display = (txt === '满薪') ? '' : 'none';
-    // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块 [data-tip]，整行悬浮 / 点击均可触发。
-    const wageZone = document.getElementById('wage-help-zone');
-    const wageTip = `线程薪资四态（当前：${txt}${detail ? ' · ' + detail : ''}）\n` +
-      `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
-      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
-      `· 强制休眠（橙）：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
-      `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程（维修坞 → 0，免疫）\n` +
-      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}（消耗 > 产出）；EP 跌到 0 或任意升级/线程购买解除\n` +
-      `恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）`;
-    if (wageZone) wageZone.dataset.tip = wageTip;
+    // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块，整行悬浮 / 点击均可触发。
+    // v4.0.8 反馈②：四态说明改彩色 DOM（#wage-tip-pop）——四态行按语义色着色
+    //   （满薪绿/欠薪黄/休眠橙/流失红/懒惰黄），attr(data-tip) 只能纯文本做不到。
+    renderWageTipPop({ txt, detail, W, salary });
   }
   // v2.8.10：招募行只展示「下一线程」增量（总产出/消耗移出 hero——顶栏已有，避免重复显示）
   // v4.0.4 反馈②：NEXT 只留产出/消耗（价签移到招募按钮第二行，同一数字不再出现两次）
@@ -843,8 +908,10 @@ function renderHero() {
   const focusPrice = focusCost();
   const focusNxtPct = Math.round(focusPerLevel(S.focusLevel + 1) * 100);
   if (focusPrevEl) {
-    // 与线程 NEXT 同款：拆 nowrap 小块，窄列只在块之间换行；同值不重写 DOM。
-    const nextHtml = `<b class="nri">NEXT</b><span class="nri">下一级 +${focusNxtPct}%</span>`;
+    // v4.0.8 反馈③：NEXT 直接写「线程产出+N%」——专注加成实际作用于线程产出
+    //   （economy.staffOutputParts 的 outMult），旧文案「下一级 +N%」不指明对象；
+    //   与线程 NEXT 同款 nowrap 小块，同值不重写 DOM。悬浮说明已按反馈删除。
+    const nextHtml = `<b class="nri">NEXT</b><span class="nri">线程产出 +${focusNxtPct}%</span>`;
     if (focusPrevEl.dataset.sig !== nextHtml) { focusPrevEl.innerHTML = nextHtml; focusPrevEl.dataset.sig = nextHtml; }
     focusPrevEl.style.color = 'var(--text-2)';
   }
@@ -857,10 +924,11 @@ function renderHero() {
     focusBtn.setAttribute('aria-label', `强化专注至 Lv.${S.focusLevel + 1}，需要 ${fmt(focusPrice)} EP`);
   }
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
+  // v4.0.8 反馈③：悬浮说明（data-tip）整条删除——NEXT 已写明「线程产出+N%」就地自明，
+  //   原气泡的「强化后：+N% · 需 X EP」与按钮第二行价格重复。
   const focusBarEl = document.getElementById('focus-bar');
   if (focusBarEl) {
-    focusBarEl.dataset.tip = `专注等级 Lv.${S.focusLevel}（当前加成 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%）\n`
-      + `强化后：+${focusNxtPct}% 点击产出 · 需 ${fmt(focusPrice)} EP`;
+    delete focusBarEl.dataset.tip; // v4.0.8：清掉 index.html 静态 data-tip，防止残留旧气泡
     focusBarEl.classList.toggle('cant', !canFocus);
   }
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
@@ -1314,19 +1382,8 @@ function bindEvents() {
   });
   // v4.0.3 反馈③：悬浮说明按本行 rect 实时定位（position:fixed + 上下自动翻转 + 左右钳制）。
   //   原先 absolute 定位在祖先 overflow 容器里会被裁剪，首屏这一行的说明首段整段看不见。
-  const wageTipZone = document.getElementById('wage-help-zone');
-  if (wageTipZone) {
-    const placeWageTip = () => {
-      const r = wageTipZone.getBoundingClientRect();
-      const tipW = Math.min(360, window.innerWidth * 0.88);
-      const below = r.top < 260; // 上方容纳不下 7 行说明 → 翻到行下方
-      wageTipZone.classList.toggle('tip-below', below);
-      wageTipZone.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
-      wageTipZone.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
-    };
-    wageTipZone.addEventListener('mouseenter', placeWageTip);
-    wageTipZone.addEventListener('focusin', placeWageTip);
-  }
+  // v4.0.8 反馈②：定位与显隐整体移交 bindWageTipPop（彩色 DOM 气泡），旧 ::after 定位绑定删除。
+  bindWageTipPop();
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
   document.getElementById('focus-buy')?.addEventListener('click', buyFocus);

@@ -241,34 +241,38 @@ try {
   /px$/.test(badge.radius) && parseFloat(badge.radius) >= 8 ? ok('角标为胶囊圆角', badge.radius) : bad('角标圆角异常', badge.radius);
   !badge.prevTruncated ? ok('NEXT 行未被截断', badge.prevText) : bad('NEXT 行仍被省略', badge.prevText);
 
-  // 悬浮说明：fixed 定位 + 落在视口内 + 首行内容完整
+  // 悬浮说明：v4.0.8 反馈② 改彩色 DOM 气泡（#wage-tip-pop）——
+  // fixed 定位 / rect 写坐标 / 首行内容 / 显隐四断言全部迁移到新 DOM 上
   await page.hover('#wage-help-zone');
   await sleep(350);
   const tip = await page.evaluate(() => {
     const zone = document.getElementById('wage-help-zone');
-    const cs = getComputedStyle(zone, '::after');
-    const r = zone.getBoundingClientRect();
+    const pop = document.getElementById('wage-tip-pop');
+    if (!pop) return { missing: true };
+    const cs = getComputedStyle(pop);
     return {
       position: cs.position,
       zIndex: cs.zIndex,
       left: parseFloat(cs.left),
       top: parseFloat(cs.top),
       transform: cs.transform,
-      content: cs.content,
-      tipX: zone.style.getPropertyValue('--tip-x'),
-      tipY: zone.style.getPropertyValue('--tip-y'),
-      below: zone.classList.contains('tip-below'),
-      zoneTop: Math.round(r.top),
+      content: pop.textContent || '',
+      tipX: pop.style.getPropertyValue('--tip-x'),
+      tipY: pop.style.getPropertyValue('--tip-y'),
+      shown: cs.display !== 'none',
+      below: pop.classList.contains('tip-below'),
       vw: window.innerWidth, vh: window.innerHeight,
     };
   });
-  tip.position === 'fixed' ? ok('悬浮说明改 position:fixed', `z-index=${tip.zIndex}`) : bad('仍是会被裁剪的定位方式', tip.position);
-  tip.tipX && tip.tipY ? ok('按本行 rect 实时写入坐标', `x=${tip.tipX} y=${tip.tipY}${tip.below ? ' · 已翻到下方' : ' · 在行上方'}`) : bad('未写入定位变量', JSON.stringify(tip));
-  (tip.left >= 0 && tip.left <= tip.vw - 40) ? ok('气泡水平位置在视口内', `left=${tip.left}`) : bad('气泡水平溢出视口', `left=${tip.left}`);
-  (tip.top >= 0 && tip.top <= tip.vh) ? ok('气泡锚点垂直在视口内', `top=${tip.top} / vh=${tip.vh}`) : bad('气泡垂直溢出视口', `top=${tip.top}`);
-  /线程薪资四态/.test(tip.content) ? ok('气泡首行内容存在（未被裁掉）') : bad('气泡内容缺失', tip.content.slice(0, 60));
+  tip.missing ? bad('彩色气泡 DOM 缺失', 'wage-tip-pop') : (() => {
+    tip.position === 'fixed' ? ok('悬浮说明 position:fixed（DOM 气泡）', `z-index=${tip.zIndex}`) : bad('仍是会被裁剪的定位方式', tip.position);
+    tip.tipX && tip.tipY ? ok('按本行 rect 实时写入坐标', `x=${tip.tipX} y=${tip.tipY}${tip.below ? ' · 已翻到下方' : ' · 在行上方'}`) : bad('未写入定位变量', JSON.stringify({ x: tip.tipX, y: tip.tipY }));
+    (tip.left >= 0 && tip.left <= tip.vw - 40) ? ok('气泡水平位置在视口内', `left=${tip.left}`) : bad('气泡水平溢出视口', `left=${tip.left}`);
+    (tip.top >= 0 && tip.top <= tip.vh) ? ok('气泡锚点垂直在视口内', `top=${tip.top} / vh=${tip.vh}`) : bad('气泡垂直溢出视口', `top=${tip.top}`);
+    /线程薪资状态/.test(tip.content) ? ok('气泡首行内容存在（未被裁掉）') : bad('气泡内容缺失', tip.content.slice(0, 60));
+  })();
 
-  // 气泡配色随主题（浅色主题此前是「深字压深底」）
+  // 气泡配色随主题（浅色主题此前是「深字压深底」）——四语义色逐一对底色，取最差
   const contrast = await page.evaluate(() => {
     const parse = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
     const lum = rgb => {
@@ -280,14 +284,19 @@ try {
     for (const theme of ['abyss', 'light']) {
       document.documentElement.classList.remove('theme-light', 'theme-mint', 'theme-autumn');
       if (theme === 'light') document.documentElement.classList.add('theme-light');
-      const cs = getComputedStyle(document.getElementById('wage-help-zone'), '::after');
-      out[theme] = Math.round(ratio(parse(cs.color), parse(cs.backgroundColor)) * 10) / 10;
+      const pop = document.getElementById('wage-tip-pop');
+      const bg = parse(getComputedStyle(pop).backgroundColor);
+      const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
+        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+      }
+      out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }
     document.documentElement.classList.remove('theme-light');
     return out;
   });
   contrast.abyss >= 4.5 && contrast.light >= 4.5
-    ? ok('气泡文字对比度达标（暗夜 / 浅色）', `暗夜 ${contrast.abyss}:1 · 浅色 ${contrast.light}:1`)
+    ? ok('气泡文字对比度达标（暗夜 / 浅色，最差色行）', `暗夜 ${contrast.abyss}:1 · 浅色 ${contrast.light}:1`)
     : bad('气泡文字对比度不足', JSON.stringify(contrast));
   results.contrast = contrast;
   results.badge = badge; results.tip = tip;

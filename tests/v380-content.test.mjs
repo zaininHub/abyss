@@ -228,7 +228,11 @@ test('G5 面板文案不写跨面板指引、不暴露实现术语', () => {
   const i = MAIN_SRC.indexOf('function renderOrchestrationPanel()');
   const body = MAIN_SRC.slice(i, MAIN_SRC.indexOf('function bindOrchestrationPanel()', i));
   assert.ok(!/由升级商店|上限 N|修饰器|flowEngine|resourceFlows/.test(body), '编排卡暴露了实现术语或跨面板指引');
-  assert.ok(body.includes('当前编排') && body.includes('随潮汐排班'), '编排卡应陈述自身数据');
+  // v4.0.8 反馈①：「当前编排」行删除（按钮高亮已表达当前策略）；「随潮汐排班」提示移入潮汐排班按钮 title。
+  //   断言剥掉行注释，只看真实产出的字符串字面量。
+  const code = body.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+  assert.ok(!code.includes('当前编排'), 'v4.0.8：不再单独渲染「当前编排」行（易与相位共鸣混淆）');
+  assert.ok(code.includes('编排倍率'), '编排卡仍陈述自身数据（编排倍率四行）');
 });
 
 test('G6 数值读侧未解锁时不影响任何既有乘区', () => {

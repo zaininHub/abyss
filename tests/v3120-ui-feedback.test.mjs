@@ -164,8 +164,10 @@ test('C5 反馈⑯：薪资四态说明整块触发', () => {
   const main = src('src/main.js');
   assert.ok(html.includes('id="wage-help-zone"') && html.includes('class="hero-row wage-help-zone"'), '整块触发区');
   assert.ok(html.includes('wage-help-mark'), '保留问号徽章');
-  assert.ok(css.includes('.wage-help-zone[data-tip]:hover::after') && css.includes('white-space: pre-line'), '整块悬浮气泡可多行');
-  assert.ok(main.includes('wageZone.dataset.tip'), '动态说明写入整块 data-tip（不再用窄 span 的原生 title）');
+  // v4.0.8 反馈②：说明气泡改彩色 DOM（#wage-tip-pop）——attr(data-tip) 拼不出四态分色文本
+  assert.ok(css.includes('.wage-tip-pop') && css.includes('display: none') && css.includes('.wage-tip-pop.show'), '彩色气泡用真实 DOM 承载（默认隐藏、.show 显示）');
+  assert.ok(css.includes('.wage-tip-pop .w-good') && css.includes('.wage-tip-pop .w-warn') && css.includes('.wage-tip-pop .w-orange') && css.includes('.wage-tip-pop .w-bad'), '四态语义色类齐备');
+  assert.ok(main.includes('renderWageTipPop') && main.includes('bindWageTipPop'), '气泡内容渲染与显隐绑定入口齐备');
   assert.ok(main.includes("getElementById('wage-help-zone')?.addEventListener('click'"), '点击整块触发');
   assert.ok(main.includes("e.target.closest('#hire-btn')"), '招募按钮不误触说明');
 });

@@ -214,8 +214,9 @@ try {
   if (orch.btnCount === 5 && orch.sameRow && orch.ariaOk)
     ok('④ 相位共鸣：1 纯开关 + 4 焦点同排（aria 契约保留）', `${orch.btnCount} 按钮 / 同一行 ${orch.sameRow}`);
   else bad('④ 共鸣按钮排布异常', JSON.stringify(orch));
-  if (!orch.hasExplain && orch.toggleText === '◉' && orch.hasLayers && orch.hasMult)
-    ok('④ 共鸣说明文案与「共鸣：开/关」文字已去除，层数/倍率读数保留', `toggle="${orch.toggleText}"`);
+  // v4.0.8 反馈①：共鸣开关图标从 ◉ 改为三角系（开▲ / 关△）——只锁「不再是 ◉」+ 三角族
+  if (!orch.hasExplain && /^[▲△]/.test(orch.toggleText) && orch.hasLayers && orch.hasMult)
+    ok('④ 共鸣说明文案与「共鸣：开/关」文字已去除，层数/倍率读数保留（v4.0.8 起开关为三角）', `toggle="${orch.toggleText}"`);
   else bad('④ 共鸣文案清理不完整', JSON.stringify({ e: orch.hasExplain, t: orch.toggleText, l: orch.hasLayers, m: orch.hasMult }));
   if (orch.crewStateNodes === 0 && !orch.crewStateText && !orch.lazyBadge)
     ok('④ 班组详情不再展示怠惰等状态', '状态行 / 状态文案 / 😪标记 均为 0');

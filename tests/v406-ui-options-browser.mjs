@@ -156,8 +156,8 @@ try {
     ? ok('专注按钮为「强化 / 价格」两行', focus0.btnLines.join(' | '))
     : bad('专注按钮结构不符', JSON.stringify(focus0.btnLines));
   focus0.costInsideBtn ? ok('价格只出现在按钮内', focus0.costText) : bad('价格不在按钮内', String(focus0.costInsideBtn));
-  /NEXT/.test(focus0.prevText) && /下一级 \+\d+%/.test(focus0.prevText)
-    ? ok('NEXT 显示「下一级 +N%」', focus0.prevText)
+  /NEXT/.test(focus0.prevText) && /线程产出 \+\d+%/.test(focus0.prevText)
+    ? ok('NEXT 显示「线程产出 +N%」', focus0.prevText)
     : bad('NEXT 文案缺失', focus0.prevText);
   !/EP/.test(focus0.prevText) && !/\d+(\.\d+)?K/.test(focus0.prevText)
     ? ok('NEXT 行不重复价签', focus0.prevText)
@@ -167,7 +167,8 @@ try {
     ? ok('NEXT 位于按钮左侧同一行', `prev.right=${focus0.prev.right} ≤ btn.x=${focus0.btn.x}`)
     : bad('NEXT 与按钮位置不对', JSON.stringify({ prev: focus0.prev, btn: focus0.btn }));
   focus0.btn.w >= 24 && focus0.btn.h >= 24 ? ok('按钮点击目标足够大', `${focus0.btn.w}×${focus0.btn.h}`) : bad('按钮过小', JSON.stringify(focus0.btn));
-  /强化后/.test(focus0.tip) && /需 [\d.]+/.test(focus0.tip) ? ok('悬浮说明含下一级加成与价格', focus0.tip.replace(/\n/g, ' / ')) : bad('悬浮说明不完整', focus0.tip);
+  // v4.0.8 反馈③：专注悬浮说明删除——NEXT 就地写明「线程产出+N%」，价格在按钮内，不再有 data-tip
+  !focus0.tip ? ok('v4.0.8：专注悬浮说明已删除（NEXT 就地自明）', '') : bad('专注 data-tip 残留', focus0.tip);
 
   // 真实点击「强化」→ 等级 +1、EP 按旧价扣减
   const payBefore = await page.evaluate(() => ({ ep: window.S.ep, lv: window.S.focusLevel, price: Number(document.getElementById('focus-cost').textContent.replace(/[^\d.]/g, '')) }));
@@ -220,7 +221,7 @@ try {
     ? ok('窄列下 NEXT 与按钮仍同行且不出界', `btn.right=${narrow.btn.right} ≤ bar.right=${narrow.bar.right}`)
     : bad('窄列排版异常', JSON.stringify(narrow));
 
-  // 四套皮肤下专注气泡对比度
+  // v4.0.8 反馈③：专注气泡删除——改为断言「薪资彩色气泡（同一处 CSS 体系）」四皮肤对比度
   await page.setViewport({ width: 1600, height: 1000 });
   await sleep(300);
   const contrast = await page.evaluate(() => {
@@ -234,15 +235,21 @@ try {
     for (const theme of ['abyss', 'light', 'mint', 'autumn']) {
       document.documentElement.classList.remove('theme-light', 'theme-mint', 'theme-autumn');
       if (theme !== 'abyss') document.documentElement.classList.add('theme-' + theme);
-      const cs = getComputedStyle(document.getElementById('focus-bar'), '::after');
-      out[theme] = Math.round(ratio(parse(cs.color), parse(cs.backgroundColor)) * 10) / 10;
+      const pop = document.getElementById('wage-tip-pop');
+      // 气泡本体：底色 vs 默认字色；四个语义色行逐一对底色断言
+      const bg = parse(getComputedStyle(pop).backgroundColor);
+      const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
+        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+      }
+      out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }
     document.documentElement.classList.remove('theme-light', 'theme-mint', 'theme-autumn');
     return out;
   });
   Object.values(contrast).every(v => v >= 4.5)
-    ? ok('专注气泡四套皮肤对比度达标', Object.entries(contrast).map(([k, v]) => `${k} ${v}:1`).join(' · '))
-    : bad('专注气泡对比度不足', JSON.stringify(contrast));
+    ? ok('薪资彩色气泡四套皮肤对比度达标（最差色行）', Object.entries(contrast).map(([k, v]) => `${k} ${v}:1`).join(' · '))
+    : bad('薪资气泡对比度不足', JSON.stringify(contrast));
   results.contrast = contrast;
 
   await page.mouse.move(4, 4);

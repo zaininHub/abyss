@@ -118,9 +118,7 @@ export function renderCrewPanel(container) {
   const totOut = staffOutputPerSec();
   const totSal = staffSalaryPerSec();
   container.innerHTML = `
-    <div class="crew-head">
-      <span class="crew-count">${n} 条线程在岗</span>
-    </div>
+    <!-- v4.0.8 反馈④：删除「N 条线程在岗」（crew-head 整行）——线程数在分页条/顶栏已有同口径展示，此处纯重复 -->
     <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位">智能分配</button>
