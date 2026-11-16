@@ -305,33 +305,36 @@ body {
    v4.0.4 反馈②：价签移进招募按钮，NEXT 只剩「产出 / 消耗」→ 回到按钮左侧同行；
    宽度不足时 NEXT 内部换行（不截断、不推走按钮），按钮自身永不收缩。 */
 .next-recruit { display: inline-flex; align-items: center; flex: 1 1 0; order: 2; min-width: 0; }
-/* v4.0.4：NEXT 由三个 nowrap 小块组成，换行只发生在块与块之间（窄列也不会把「· 消耗」切半句） */
-.next-recruit #staff-preview { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 0 5px; line-height: 1.45; }
-.next-recruit #staff-preview .nri { white-space: nowrap; }
-.next-recruit #staff-preview b.nri { font-weight: 600; color: var(--text-3); }
-/* v4.0.4 反馈②：招募按钮改为「招募 / 价格」两行——价签只出现在这里，NEXT 行不再重复「需 N EP」 */
-#hire-btn {
+/* v4.0.4：NEXT 由三个 nowrap 小块组成，换行只发生在块与块之间（窄列也不会把「· 消耗」切半句）
+   v4.0.6：结构类名从 #staff-preview 提到 .nr-body，线程 NEXT 与专注 NEXT 共用同一套排版 */
+.next-recruit .nr-body { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 0 5px; line-height: 1.45; }
+.next-recruit .nr-body .nri { white-space: nowrap; }
+.next-recruit .nr-body b.nri { font-weight: 600; color: var(--text-3); }
+/* v4.0.4 反馈②：招募按钮改为「招募 / 价格」两行——价签只出现在这里，NEXT 行不再重复「需 N EP」
+   v4.0.6 反馈②：专注「强化 / 价格」按钮复用同一套结构（.recruit-btn） */
+.recruit-btn {
   order: 3; margin-left: 0; flex: 0 0 auto; min-width: 64px;
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px; padding: 3px 10px; line-height: 1.3;
 }
-#hire-btn .recruit-label { font-size: 12px; font-weight: 600; }
-#hire-btn .recruit-cost { font-size: 10px; color: var(--text-2); }
-#hire-btn.poor .recruit-cost { color: var(--warn, #c8a24a); }
+.recruit-btn .recruit-label { font-size: 12px; font-weight: 600; }
+.recruit-btn .recruit-cost { font-size: 10px; color: var(--text-2); }
+.recruit-btn.poor .recruit-cost { color: var(--warn, #c8a24a); }
 
 .hero-cost { margin-left: auto; }
 
 /* ========== 专注条 ========== */
+/* v4.0.6 反馈②：与线程行同构——等级 + NEXT +「强化 / 价格」按钮；整条不再可点（cursor/点击都收进按钮） */
 .focus-bar {
   margin-top: 8px;
-  padding: 8px 12px;
+  padding: 5px 10px;
   background: rgba(163,113,247,.08);
   border: 1px solid var(--border);
   border-radius: 4px;
-  cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
   font-size: 12px;
   transition: background .15s;
   position: relative; /* v4.0.4：价签移出可见行，改由悬浮说明承载 */
@@ -350,7 +353,7 @@ body {
 
 .focus-bar:hover { background: rgba(163,113,247,.15); }
 
-.focus-bar .cost { color: var(--purple); }
+/* v4.0.6：专注价格改在按钮内（.recruit-cost），旧的整条 .cost 样式已无消费点，删除 */
 
 /* ========== 剧情栏 ========== */
 .ch-bar {

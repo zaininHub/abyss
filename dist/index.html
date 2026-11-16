@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.5</title>
+<title>深渊效能工作台 v4.0.6</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-9IGDxtSa.js"></script>
-  <link rel="stylesheet" href="./assets/index-BikEpnWo.css">
+  <script defer src="./assets/index-DtXJnZn5.js"></script>
+  <link rel="stylesheet" href="./assets/index-Biy-2BER.css">
 </head>
 <body>
 <div id="app">
@@ -150,7 +150,7 @@
           <span class="wage-help"><span id="staff-status" class="wage-badge" role="status" aria-label="满薪"></span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
           <!-- v4.0.4 反馈②：NEXT（下一线程 产出/消耗）挪到招募按钮左侧，价签只出现在按钮内，不再重复 -->
           <span class="next-recruit">
-            <span id="staff-preview" style="font-size:10.5px;color:var(--text-2)"></span>
+            <span id="staff-preview" class="nr-body" style="font-size:10.5px;color:var(--text-2)"></span>
           </span>
           <button class="btn recruit-btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">
             <span class="recruit-label">招募</span>
@@ -158,8 +158,17 @@
           </button>
         </div>
         <!-- v4.0.4 反馈②：专注条不再在行内显示「下一级价格」——价格进悬浮说明，行内只留等级与下一级加成 -->
-        <div id="focus-bar" class="focus-bar" data-tip="专注等级：点击强化，提升点击产出">
-          <span>专注等级: <b id="focus-lv">0</b></span>
+        <!-- v4.0.6 反馈②：专注的购买/升级方式与线程对齐——行内只留「等级 + NEXT 下一级加成」，
+             价格收进「强化 / 价格」两行按钮；整条不再可点（购入口径与招募一致，避免误触）。 -->
+        <div id="focus-bar" class="hero-row focus-bar" data-tip="专注等级：点击强化，提升点击产出">
+          <span class="staff-label">专注等级: <b id="focus-lv">Lv.0</b></span>
+          <span class="next-recruit">
+            <span id="focus-preview" class="nr-body" style="font-size:10.5px;color:var(--text-2)"></span>
+          </span>
+          <button class="btn recruit-btn" id="focus-buy" title="强化专注：提升点击产出（价格随等级递增，单级加成递减）">
+            <span class="recruit-label">强化</span>
+            <span class="recruit-cost mono" id="focus-cost">50</span>
+          </button>
         </div>
         <!-- v2.0 EP 容量提示 -->
         <div id="ep-cap-hint" class="ep-cap-hint" style="display:none"></div>

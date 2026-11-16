@@ -533,10 +533,13 @@ export const FRAME_DEPS_KEYS = Object.freeze([
 /** 供单测 / QA 校验「声明 → 消费」接线完整的系统 id 清单 */
 /**
  * v3.12.13 反馈 #164：潮汐排班 UI 构建（纯字符串，由 main.js 的 renderOrchestrationPanel 拼入面板）。
+ * v4.0.6 反馈①：从「四策略 + 一个开关」改为「五个互斥选项」——潮汐排班也是一个选项，
+ *   选中它即随相位轮转；点任一具体策略即退出轮转并固定该策略。不再有「再点一次关闭」的隐性动作
+ *   （旧开关态既能开也能关，玩家点第二次时无法预判是开还是关）。
  * 设计要点：
- *  - 「潮汐排班」与四种排版类型（ORCHESTRATION_MODES）处于同一行，均为切换按钮。
- *  - 「潮汐排班」仅用选中高亮（accent 边框）表达开/关，不显示「开启/关闭」字样。
- *  - 「潮汐预案」改为悬停浮层（role=tooltip），默认隐藏，仅悬停/聚焦「潮汐排班」时显示。
+ *  - 五个按钮同为单选，选中高亮（accent 边框）即唯一状态表达，不显示「开启/关闭」字样。
+ *  - 具体策略按钮不再置灰：它们就是退出潮汐排班的方式。
+ *  - 「潮汐预案」仍是悬停浮层（role=tooltip），默认隐藏，仅悬停/聚焦「潮汐排班」时显示。
  * 浮层显隐的 CSS 规则（.tide-sched-pop 默认 display:none，hover/focus-within 时 display:block）
  * 在首渲时注入一次 <style id="tide-sched-style">，不改动 style.css。
  */
@@ -545,11 +548,12 @@ export function buildTideSchedulingHtml(ctx) {
   let html = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">`;
   for (const m of ORCHESTRATION_MODES) {
     const on = !auto && m.id === st.mode;
-    html += `<button class="btn-mini" data-orch-mode="${m.id}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}${auto ? ' disabled title="随潮汐排班开启时由相位决定"' : ''}>${m.icon} ${m.short}</button>`;
+    // v4.0.6：自动排班期间策略按钮不再 disabled —— 点它本身就是「退出潮汐排班、固定这条策略」。
+    html += `<button class="btn-mini" data-orch-mode="${m.id}" aria-pressed="${on}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="${auto ? `退出潮汐排班，固定为${m.name}` : `切换为${m.name}`}">${m.icon} ${m.short}</button>`;
   }
-  // 潮汐排班：选中高亮即表示开启；无独立「开启/关闭」文字。
+  // 潮汐排班：与四种策略同级的第五个选项（选中即轮转，点其他策略即退出）；无独立「开启/关闭」文字。
   html += `<div class="tide-sched-wrap" style="position:relative;display:inline-block">
-    <button class="btn-mini" data-orch-auto="1" aria-pressed="${auto}"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''}>潮汐排班</button>`;
+    <button class="btn-mini" data-orch-auto="1" aria-pressed="${auto}"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="随潮汐相位自动轮转策略（与左侧四条策略同为单选）">潮汐排班</button>`;
   // 潮汐预案：仅悬停/聚焦「潮汐排班」时显示的浮层，默认隐藏。
   if (auto && schedOK) {
     const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;

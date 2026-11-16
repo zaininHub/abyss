@@ -78,9 +78,11 @@ import { registerFrameSystems, buildTideSchedulingHtml } from './systems/frameSy
 import { registerPanel, renderPanels, panelErrors, allPanels } from './core/panelRegistry.js';
 import { ORCHESTRATION_MODES, TIDE_ORCHESTRATION, TIDE_PHASE_NAMES, SCHEDULE_UNLOCK,
   orchestrationUnlocked, orchestrationState, scheduleUnlocked, orchestrationSchedule,
-  scheduleCustomized, setOrchestrationMode, setOrchestrationPhaseMode, resetOrchestrationSchedule,
+  scheduleCustomized, setOrchestrationPhaseMode, resetOrchestrationSchedule,
+  chooseOrchestrationMode, chooseOrchestrationAutoTide,
+  setOrchestrationMode, setOrchestrationAutoTide, toggleOrchestrationAutoTide,
   effectiveMode, effectiveModeId, orchestrationSummary,
-  setOrchestrationAutoTide, toggleOrchestrationAutoTide, orchestrationMult } from './core/orchestration.js';
+  orchestrationMult } from './core/orchestration.js';
 import './style.css';
 // v3.10.0：成就表下沉为纯数据层 + 判定注册表（可在纯 Node 下单测）
 import { ACHIEVEMENTS } from './data/achievements.js';
@@ -209,11 +211,17 @@ function bindOrchestrationPanel() {
     const btn = e.target && e.target.closest ? e.target.closest('button') : null;
     if (!btn) return;
     if (btn.dataset.orchMode) {
-      if (!setOrchestrationMode(S, btn.dataset.orchMode)) return;
-      log(`效能编排：切换为「${effectiveMode(S).name}」`, 'good');
+      // v4.0.6 反馈①：五个选项互斥——选中具体策略即退出潮汐排班并固定该策略。
+      const wasAuto = orchestrationState(S).autoTide;
+      if (!chooseOrchestrationMode(S, btn.dataset.orchMode)) return;
+      log(wasAuto
+        ? `效能编排：退出潮汐排班，固定「${effectiveMode(S).name}」`
+        : `效能编排：切换为「${effectiveMode(S).name}」`, 'good');
     } else if (btn.dataset.orchAuto) {
-      toggleOrchestrationAutoTide(S);
-      log(`效能编排：随潮汐排班${orchestrationState(S).autoTide ? '开启' : '关闭'}`, 'good');
+      // v4.0.6 反馈①：潮汐排班只是选项之一——已选中时再点不产生动作（不做「再点关闭」）。
+      if (orchestrationState(S).autoTide) return;
+      if (!chooseOrchestrationAutoTide(S)) return;
+      log('效能编排：切换为「潮汐排班」', 'good');
     } else if (btn.dataset.orchSlot !== undefined) {
       // v3.9.0：潮汐预案——逐相位改写排班表（非法/未解锁写入由读侧单一真源拦截）
       const slot = Number(btn.dataset.orchSlot);
@@ -823,17 +831,37 @@ function renderHero() {
     hireBtn.classList.toggle('poor', !canHire);
     hireBtn.setAttribute('aria-label', `招募一条线程，需要 ${fmt(staffCost())} EP`);
   }
-  // v4.0.0 反馈⑥：静态标签「专注等级:」已在 index.html 的 #focus-bar 里，此处只写值，
-  //   不再重复前缀（旧写法会渲染成「专注等级: 专注等级：Lv.32 …」）。
-  if (focusLv) { const nxt = Math.round(focusPerLevel(S.focusLevel + 1) * 100); focusLv.textContent = `Lv.${S.focusLevel} · 下一级 +${nxt}%`; focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)'; focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal'; } // v2.8.30：等级旁显示下一级加成（加成从少到多，达上限后固定）
+  // v4.0.6 反馈②：专注行与线程行同构——等级 + NEXT（下一级加成）+「强化 / 价格」按钮。
+  if (focusLv) {
+    focusLv.textContent = `Lv.${S.focusLevel}`;
+    focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)';
+    focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal';
+  }
+  const focusPrevEl = document.getElementById('focus-preview');
+  const focusCostEl = document.getElementById('focus-cost');
+  const focusBtn = document.getElementById('focus-buy');
+  const focusPrice = focusCost();
+  const focusNxtPct = Math.round(focusPerLevel(S.focusLevel + 1) * 100);
+  if (focusPrevEl) {
+    // 与线程 NEXT 同款：拆 nowrap 小块，窄列只在块之间换行；同值不重写 DOM。
+    const nextHtml = `<b class="nri">NEXT</b><span class="nri">下一级 +${focusNxtPct}%</span>`;
+    if (focusPrevEl.dataset.sig !== nextHtml) { focusPrevEl.innerHTML = nextHtml; focusPrevEl.dataset.sig = nextHtml; }
+    focusPrevEl.style.color = 'var(--text-2)';
+  }
+  if (focusCostEl) focusCostEl.textContent = fmt(focusPrice);
+  const canFocus = S.ep >= focusPrice;
+  if (focusBtn) {
+    focusBtn.disabled = !canFocus;
+    focusBtn.style.opacity = canFocus ? '1' : '0.5';
+    focusBtn.classList.toggle('poor', !canFocus);
+    focusBtn.setAttribute('aria-label', `强化专注至 Lv.${S.focusLevel + 1}，需要 ${fmt(focusPrice)} EP`);
+  }
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
-  // v4.0.4 反馈②：行内不再显示「下一级价格」，价格改到悬浮说明（一眼一行，不再挤占行宽）
   const focusBarEl = document.getElementById('focus-bar');
   if (focusBarEl) {
-    const focusNxtPct = Math.round(focusPerLevel(S.focusLevel + 1) * 100);
     focusBarEl.dataset.tip = `专注等级 Lv.${S.focusLevel}（当前加成 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%）\n`
-      + `点击强化：+${focusNxtPct}% 点击产出 · 需 ${fmt(focusCost())} EP`;
-    focusBarEl.classList.toggle('cant', !(S.ep >= focusCost()));
+      + `强化后：+${focusNxtPct}% 点击产出 · 需 ${fmt(focusPrice)} EP`;
+    focusBarEl.classList.toggle('cant', !canFocus);
   }
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
   const cbar = document.getElementById('corruption-bar');
@@ -1300,7 +1328,8 @@ function bindEvents() {
     wageTipZone.addEventListener('focusin', placeWageTip);
   }
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
-  document.getElementById('focus-bar')?.addEventListener('click', buyFocus);
+  // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
+  document.getElementById('focus-buy')?.addEventListener('click', buyFocus);
 
   // v2.1 R2：任务面板容器级事件委托——领取按钮无论面板怎么刷新都能点到
   document.getElementById('projects')?.addEventListener('click', (e) => {
@@ -2646,6 +2675,7 @@ if (typeof window !== 'undefined') {
     runSystems, systemStats, systemErrors, FRAME_PHASES, allPanels, panelErrors,
     orchestrationUnlocked, orchestrationState, effectiveModeId, effectiveMode,
     orchestrationMult, orchestrationSummary, setOrchestrationMode,
+    chooseOrchestrationMode, chooseOrchestrationAutoTide,
     setOrchestrationAutoTide, toggleOrchestrationAutoTide, ORCHESTRATION_MODES, TIDE_ORCHESTRATION,
     // v3.9.0：潮汐预案（自定义排班表）QA / 30 天推演钩子
     TIDE_PHASE_NAMES, SCHEDULE_UNLOCK, scheduleUnlocked, orchestrationSchedule,

@@ -121,6 +121,25 @@ export function toggleOrchestrationAutoTide(S) {
 }
 
 /**
+ * v4.0.6 反馈①：编排面板改为「五个互斥选项」——手动选任一策略即退出自动排班。
+ * 这两个入口只表达「选中」，不表达「开关」：chooseOrchestrationAutoTide 永远只写 true，
+ * 退出只能靠选中一条具体策略（UI 上就是点另外四个按钮），避免「再点一次到底是开还是关」。
+ * 保留 st.mode：退出自动排班后回落到玩家上一次手动选中的策略。
+ */
+export function chooseOrchestrationMode(S, id) {
+  if (!S || !MODE_BY_ID.has(id)) return false;
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  S.orchestration = { ...raw, ...orchestrationState(S), mode: id, autoTide: false };
+  return true;
+}
+export function chooseOrchestrationAutoTide(S) {
+  if (!S) return false;
+  const raw = (S.orchestration && typeof S.orchestration === 'object') ? S.orchestration : {};
+  S.orchestration = { ...raw, ...orchestrationState(S), autoTide: true };
+  return true;
+}
+
+/**
  * v3.9.0：改写某一潮汐相位的排班策略。
  * 严格校验解锁 / 相位 / 策略 id；非法输入不写状态（防存档污染与越权放大）。
  */

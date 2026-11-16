@@ -5,7 +5,7 @@
 //      任务进度真的增长（此前进度读到的是空累加器，恒为 0 → 只能等过期）。
 //   ② 线程行重排：满薪不显示「满薪」字样、只留一颗同色小圆点；异常态（懒惰等）仍保留文字角标；
 //      招募按钮 = 「招募 / 价格」两行；NEXT（只剩产出 / 消耗）位于按钮左侧同一行；
-//      专注条不再显示「下一级价格」，价格与加成一起进悬浮说明。
+//      专注行与线程同构（v4.0.6）：价格只在「强化」按钮内，下一级加成进 NEXT 行。
 //
 // 用法：node tests/v404-task-progress-browser.mjs   （Chrome 路径走 tests/_chrome.mjs 单源）
 import puppeteer from 'puppeteer-core';
@@ -106,7 +106,10 @@ try {
       btnText: btn.innerText.replace(/\n+/g, '|'), btn: rr(btn), btnChild: btn.children.length,
       btnDisabled: btn.disabled,
       focusText: focus.textContent.replace(/\s+/g, ' ').trim(), focusTip: focus.dataset.tip || '',
+      // v4.0.6：价格回到可见行内，但只允许出现在「强化」按钮内部（与线程招募同构）
       hasFocusCost: !!document.getElementById('focus-cost'),
+      costInBtn: !!(document.getElementById('focus-buy') && document.getElementById('focus-cost')
+        && document.getElementById('focus-buy').contains(document.getElementById('focus-cost'))),
     };
   });
   hero.isDot && parseFloat(hero.fontSize) === 0
@@ -123,9 +126,10 @@ try {
   hero.prev.right <= hero.btn.x + 1 && Math.abs((hero.prev.y + hero.prev.h / 2) - (hero.btn.y + hero.btn.h / 2)) <= 12
     ? ok('NEXT 位于招募按钮左侧同一行', `prev.right=${Math.round(hero.prev.right)} ≤ btn.x=${Math.round(hero.btn.x)}`)
     : bad('NEXT 与按钮位置不对', JSON.stringify({ prev: hero.prev, btn: hero.btn }));
-  !/1\.29K|1,29|K$/.test(hero.focusText) && !hero.hasFocusCost
-    ? ok('专注条不再显示下一级价格', hero.focusText)
-    : bad('专注条仍有价格', JSON.stringify({ t: hero.focusText, has: hero.hasFocusCost }));
+  // v4.0.6 反馈②：专注价签从「只进悬浮说明」改为「只进强化按钮」，行内不再散落价格
+  hero.hasFocusCost && hero.costInBtn
+    ? ok('专注价格只在「强化」按钮内', hero.focusText)
+    : bad('专注价格位置不符', JSON.stringify({ t: hero.focusText, has: hero.hasFocusCost, inBtn: hero.costInBtn }));
   /需 \d|需 [\d.]+/.test(hero.focusTip) ? ok('专注价格进悬浮说明', hero.focusTip.split('\n').pop()) : bad('悬浮说明缺价格', hero.focusTip);
   results.hero = hero;
 
