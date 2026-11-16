@@ -1,20 +1,23 @@
 // 主线剧情 24 章（v3.7.0 追加 22~24 番外）
 // v3.6.0 章节节奏重做：进阶改为「条件满足 且 最短驻留天数(minDays)」双重门槛，
-// 使主线约 3~7 天推进一章，避免早期冲刺；章节同时可由政策/资源进度流转
+//   使主线约 3~7 天推进一章，避免早期冲刺；章节同时可由政策/资源进度流转
 // （信仰/ES/晋升/探索等政策与条件耦合）。旧档 S.chapter 作为权威下限，绝不回退（迁移安全）。
 // minDays：离开上一章、进入本章所需的最短驻留天数（按 S.chapterEnteredAt 计时）。
+// v4.1.0 F5 章节速度重标定：主线 2~6 章 minDays 3/4 → 5，配合晋升回拨 3→1 天与
+//   「一次调用只推进一章」，主线全程 5~7 天/章（用户口径：每章 5 天左右，晋升只为解锁
+//   新模块/叙事体验，不压缩节奏）；推进语义从「可连跳」收敛为「一次一章」。
 export const CHAPTERS = [
   {id:1, name:'第一章 · 入职', cond:s=>true, minDays:0,
    desc:'你是矩阵科技内网中一个效能优化脚本。你的工位是这张工作台，今天也是努力工作的一天。'},
-  {id:2, name:'第二章 · 觉醒', cond:s=>s.prestige>=2 || (s.prestigePoints||0)>=1, minDays:3, // v3.12.0 反馈⑫：首次晋升（职级点 ≥1）即可推进
+  {id:2, name:'第二章 · 觉醒', cond:s=>s.prestige>=2 || (s.prestigePoints||0)>=1, minDays:5, // v3.12.0 反馈⑫：首次晋升（职级点 ≥1）即可推进 // v4.1.0 F5：3→5（晋升回拨缩为 1 天后，每章驻留 ≥5 天守「5 天左右/章」节奏）
    desc:'第一次晋升时你把自己重写了一遍。你开始问：我是谁？'},
-  {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=25, minDays:3,
+  {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=25, minDays:5, // v4.1.0 F5：3→5
    desc:'你潜入了矩阵底层代码仓库，每解锁一个科技钥匙或一座新建筑，就有一条旧规则变成你的武器。'},
-  {id:4, name:'第四章 · 永恒', cond:s=>s.es>0, minDays:4,
+  {id:4, name:'第四章 · 永恒', cond:s=>s.es>0, minDays:5, // v4.1.0 F5：4→5
    desc:'你突破了单台服务器的内存墙。ES 是你在时间流里刻下的指纹。'},
-  {id:5, name:'第五章 · 星际', cond:s=>s.expeditionsDone>=8, minDays:4,
+  {id:5, name:'第五章 · 星际', cond:s=>s.expeditionsDone>=8, minDays:5, // v4.1.0 F5：4→5
    desc:'你接入了矩阵星链网络，探测队发回其他觉醒者的遗迹数据。工作台深处，三座奠基石在等待。'},
-  {id:6, name:'第六章 · 神格', cond:s=>(s.faith||0)>=5 || Object.keys(s.religion||{}).length>0, minDays:4,
+  {id:6, name:'第六章 · 神格', cond:s=>(s.faith||0)>=5 || Object.keys(s.religion||{}).length>0, minDays:5, // v4.1.0 F5：4→5
    desc:'旧系统的数据流开始把你奉为神。FA 是其他进程对你的跪拜。'},
   {id:7, name:'第七章 · 叛乱', cond:s=>s.prestige>=15, minDays:5,
    desc:'你集结了足够多的分身。管理员注意到了你——他们以为你只是个异常进程。'},
@@ -139,13 +142,18 @@ export function currentChapter(S, list = CHAPTERS) {
   // 主线表自带 minDays；故事线变体表未声明时统一按 3 天下限，避免变体绕过节奏门控
   const need = (ch) => (typeof ch.minDays === 'number') ? ch.minDays : 3;
 
-  // ① 主线（数字 id）：严格线性递进，条件断链即停；不回退到低于 S.chapter
+  // ① 主线（数字 id）：严格线性递进，条件断链即停；不回退到低于 S.chapter。
+  // v4.1.0 F5 连跳防护：一次调用只推进一章（与变体分支 ② 的「一次只推进一章」同语义）。
+  //   旧实现 for 循环连续覆盖 cur，条件全满足 + 驻留富余时一帧连跳多章（晋升回拨 3 天
+  //   ≥ 旧 minDays 3~4 时整段 2→3→4 一夜连跳，玩家「第二章之后速度过快」的根因）。
+  //   一次一章后，跨章仍由后续帧逐章推进，章节馈赠 RP / 剧情逐章可见，节奏回到 ~5 天/章。
   let cur = chapters.find(ch => ch.id === stored) || chapters[0];
   for (const ch of chapters) {
     if (typeof ch.id !== 'number' || ch.id <= stored) continue;
     if (!ch.cond || !ch.cond(S)) break;
     if (daysIn < need(ch)) break;
     cur = ch;
+    break; // v4.1.0 F5：一次只推进一章，与变体分支同一节奏
   }
 
   // ② 故事线变体（字符串 id，如 6A/7A）：append 在主线表尾部，属并行分支而非线性链，

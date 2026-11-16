@@ -64,11 +64,16 @@ registerFlow({
 });
 
 // ========== ③ 线程懒惰态计时（对称缓冲，不含资源结算） ==========
+// v4.1.0 反馈④：lazySince/lazyLowSince 统一 Date.now() 时间基——此前这里写 ctx.now
+//   （tick 调度传 performance.now() 基，页面毫秒数 ~1e5），而 isLazy()（economy.js）与
+//   怠工时长显示（main.js）用 Date.now()（Unix 基 ~1.7e12）做差 → 差值 ≈ 17 亿秒，
+//   且 isLazy 恒 true（跳过 60s 缓冲立即惩罚）。以 Date.now() 为唯一真源（测试 v271 fakeClock 口径一致）。
 registerFlow({
   id: 'ep:lazy', phase: EP_AUX, order: 20,
-  run({ S, now }) {
+  run({ S }) {
     const capNow = epStorageCap();
     const lazyAfterMs = (BALANCE.lazy?.afterSec || 60) * 1000;
+    const now = Date.now(); // v4.1.0：与 isLazy()/显示层同基（不再用 ctx.now 的 rAF 基）
     if (isLazy()) {
       if (S.ep <= 0) { S.lazySince = null; S.lazyLowSince = null; }
       else if (S.ep < capNow * 0.98) {

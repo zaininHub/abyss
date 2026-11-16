@@ -20,7 +20,9 @@ import { chromePath } from './_chrome.mjs';
 import { BALANCE } from '../src/data/balance.js';
 
 const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version;
-const DAYS = Number(process.env.DAYS || 95);
+// v4.1.0 F5：章节速度重标定后主线 1~18 章全链 ≈ 97 天（5~7 天/章 × 17 次推进 + 终章驻留），
+//   旧 95 天窗口差 1~2 天到不了终章 → 默认上调到 100。
+const DAYS = Number(process.env.DAYS || 100);
 const STOP_AT = Number(process.env.STOP_AT || 18);
 const REPORT = process.env.REPORT || '/tmp/v3129-playthrough.json';
 const URL = 'file://' + process.cwd() + '/dist/index.html';
@@ -198,13 +200,12 @@ try {
   if (reached) ok(`章节链越过终章（目标第 ${STOP_AT} 章）`, `虚拟第 ${reached.day} 天 / 实跑 ${elapsedSec}s / 推进 ${chapterLog.length} 次 / 终点第 ${reached.chapter} 章`);
   else bad('未到达终章', `最终章节 ${await page.evaluate(() => String(window.S.chapter))}，日志 ${JSON.stringify(chapterLog.slice(-6))}`);
 
-  // 章节序列必须严格 +1、不回退、不跳章
-  // 既有设计：一次 currentChapter 调用可连跳多个 minDays 已满足的章节（v360 断言锁死），
-  // 因此只断言单调递增、无回退，不要求严格 +1。
+  // 章节序列：v4.1.0 F5 起一次调用只推进一章（连跳防护）——真实链路（frameSystems 逐帧
+  // 调 currentChapter，每次推进后重置驻留）下序列应为严格 +1、不回退、不跳章。
   const nums = chapterLog.map(x => parseInt(x.chapter, 10)).filter(Number.isFinite);
-  const seqOk = nums.length > 0 && nums.every((v, i) => i === 0 ? v >= 2 : v > nums[i - 1]);
-  if (seqOk) ok('章节序列单调递增、无回退（连跳属既有 minDays 设计）', nums.join('→'));
-  else bad('章节序列回退或异常', nums.join('→'));
+  const seqOk = nums.length > 0 && nums.every((v, i) => i === 0 ? v >= 2 : v === nums[i - 1] + 1);
+  if (seqOk) ok('章节序列严格 +1（一次只推进一章，v4.1.0 F5）', nums.join('→'));
+  else bad('章节序列跳章或回退', nums.join('→'));
 
   // 每章驻留天数不低于 minDays（容差 0.02 天 = 约 3 tick）
   const { CHAPTERS } = await import('../src/data/chapters.js');
@@ -226,9 +227,9 @@ try {
     const bar = document.getElementById('chapter-bar');
     return { name: el ? el.textContent : '', bar: bar ? bar.textContent.slice(0, 120) : '' };
   });
-  // v4.0.0 口径修正：currentChapter 允许一次连跳多个 minDays 已满足的章节（v360 断言锁死的
-  //   既有设计），修复 17 章断链后长线种子档会一路连跳到 19/20 番外，终点未必恰好停在 18。
-  //   因此全量验收看两件事：① 章节链确实越过了终章(≥18)；② 剧情栏按 S.chapter 读侧同源渲染
+  // v4.0.0 口径修正：终章验收不硬停在 18——越过终章后长线种子档会继续走向番外（19+），
+  //   v4.1.0 F5 一次只推进一章后，番外推进同理逐章可见。全量验收看两件事：
+  //   ① 章节链确实越过了终章(≥18)；② 剧情栏按 S.chapter 读侧同源渲染
   //   （名称与 CHAPTERS 表对应，且不含非法数值），而不是硬要求栏里出现「终章」二字。
   const endState = await page.evaluate(() => ({ ch: parseInt(String(window.S.chapter || '1'), 10) }));
   const showEnd = endState.ch >= 18;

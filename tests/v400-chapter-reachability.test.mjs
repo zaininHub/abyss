@@ -46,7 +46,15 @@ test('C. 终章在「默认容量 + 已建终焉圣殿」下真实可达（线�
     upgrades: {}, religion: {}, resonance: { layers: 24, focus: 'rp' },
     unlockedBuildings: Object.fromEntries(Array.from({ length: 50 }, (_, i) => ['b' + i, 1])),
   };
-  const cur = currentChapter(S, CHAPTERS);
+  // v4.1.0 F5：一次调用只推进一章（连跳防护）。真实游戏中 frameSystems 每次推进后
+  // 重置 chapterEnteredAt，驻留计时重新起算——这里按同一节奏逐章模拟 40 步，
+  // 每步驻留 30 天（远超 5~7 天门槛），40 步足够走完 18 章主线。
+  let cur = currentChapter(S, CHAPTERS);
+  for (let i = 0; i < 40 && cur.id < 18; i++) {
+    S.chapter = String(cur.id);
+    S.chapterEnteredAt = now() - 30 * 86400000;
+    cur = currentChapter(S, CHAPTERS);
+  }
   assert.ok(cur.id >= 18, `应推进到终章或之后，实际停在第 ${cur.id} 章（${cur.name}）`);
 });
 

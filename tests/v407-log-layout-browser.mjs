@@ -118,23 +118,23 @@ try {
   });
 
   const h0 = await curH();
-  // 向上拖 120px：必须真的变高（旧实现被 CSS max-height:190 卡死）
+  // v4.1.0 反馈①：方向反转——手柄在面板底部，往下拖 = 变高（旧版是往上拖变高）
   let pt = await handleXY();
   await page.mouse.move(pt.x, pt.y);
   await page.mouse.down();
-  for (let i = 1; i <= 12; i++) { await page.mouse.move(pt.x, pt.y - i * 10); await sleep(16); }
+  for (let i = 1; i <= 12; i++) { await page.mouse.move(pt.x, pt.y + i * 10); await sleep(16); }
   const duringDrag = await page.evaluate(() => document.body.classList.contains('log-resizing'));
   await page.mouse.up();
   await sleep(180);
   const h1 = await curH();
-  Math.abs(h1 - (h0 + 120)) <= 4 ? ok('向上拖动真的变高', `${h0} → ${h1}（+${h1 - h0}）`) : bad('向上拖动无效', `${h0} → ${h1}`);
+  Math.abs(h1 - (h0 + 120)) <= 4 ? ok('向下拖动真的变高', `${h0} → ${h1}（+${h1 - h0}）`) : bad('向下拖动无效', `${h0} → ${h1}`);
   duringDrag ? ok('拖拽期间全页锁定光标/选中（body.log-resizing）', '') : bad('缺少拖拽态', 'body 无 log-resizing');
 
   // 拖到极限：必须停在上限（CSS 变量与视口比例取小）
   pt = await handleXY();
   await page.mouse.move(pt.x, pt.y);
   await page.mouse.down();
-  for (let i = 1; i <= 20; i++) { await page.mouse.move(pt.x, pt.y - i * 40); await sleep(10); }
+  for (let i = 1; i <= 20; i++) { await page.mouse.move(pt.x, pt.y + i * 40); await sleep(10); }
   await page.mouse.up();
   await sleep(180);
   const hMax = await curH();
@@ -144,15 +144,15 @@ try {
     : bad('上限不符', `实际 ${hMax} / 期望 ${capExpected}`);
   hMax <= Math.round(base.vh * 0.62) + 2 ? ok('放大后不超出视口比例', `${hMax} ≤ ${Math.round(base.vh * 0.62)}`) : bad('超出版面', String(hMax));
 
-  // 向下拖到底：最小高度兜底
+  // 向上拖到底：最小高度兜底（新方向的反向）
   pt = await handleXY();
   await page.mouse.move(pt.x, pt.y);
   await page.mouse.down();
-  for (let i = 1; i <= 20; i++) { await page.mouse.move(pt.x, pt.y + i * 40); await sleep(10); }
+  for (let i = 1; i <= 20; i++) { await page.mouse.move(pt.x, pt.y - i * 40); await sleep(10); }
   await page.mouse.up();
   await sleep(180);
   const hMin = await curH();
-  hMin === 120 ? ok('向下拖到底停在最小高度', `${hMin}px`) : bad('最小高度不符', String(hMin));
+  hMin === 120 ? ok('向上拖到底停在最小高度', `${hMin}px`) : bad('最小高度不符', String(hMin));
 
   // 双击复位 240（真实两次 down/up：产品侧是自己数 pointerdown 时间戳，不依赖合成 dblclick）
   pt = await handleXY();
@@ -162,12 +162,12 @@ try {
   const hDefault = await curH();
   hDefault === 240 ? ok('双击手柄恢复默认高度', `${hDefault}px`) : bad('双击复位无效', String(hDefault));
 
-  // 键盘微调（↑ 一次 +12）
+  // 键盘微调（↓ 一次 +12，v4.1.0 与拖拽方向一致）
   await page.focus('#log-resize');
-  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowDown');
   await sleep(200);
   const hKey = await curH();
-  hKey === hDefault + 12 ? ok('方向键微调高度（↑ +12）', `${hDefault} → ${hKey}`) : bad('键盘微调无效', `${hDefault} → ${hKey}`);
+  hKey === hDefault + 12 ? ok('方向键微调高度（↓ +12）', `${hDefault} → ${hKey}`) : bad('键盘微调无效', `${hDefault} → ${hKey}`);
 
   // 刷新后记忆（同一浏览器上下文）
   await page.reload({ waitUntil: 'load' });

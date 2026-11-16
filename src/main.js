@@ -142,27 +142,33 @@ function renderOrchestrationPanel() {
   let html = '';
 
   // v3.12.13 反馈 #164：潮汐排班与四种排版类型同排；开关仅用选中高亮表达；潮汐预案改为悬停浮层。
-  html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized });
+  // v4.1.0 反馈③：「编排倍率」标签并入本行尾部（margin-left:auto 推右），倍率 grid 紧随其后；
+  //   原独立标签行「编排倍率 · 策略与相位共鸣合并」删除。
+  html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized, labelSuffix: '编排倍率' });
 
   // v4.0.0 反馈④：相位共鸣与效能编排同级——去掉说明文案与「共鸣：开/关」文字，
   //   一个纯开关样式按钮 + 四种焦点按钮同排一行；倍率读数与层数保留（读侧契约）。
   // v4.0.8 反馈①：共鸣图标整族改为三角形（开=实心 ▲ / 焦点四种不同三角形），
   //   与编排策略的方块/菱形族区分——「相位共鸣加成通过不同的三角形表示」。
+  // v4.1.0 反馈③：①「0/20 层」换行修复——层数并入开关按钮的 title 之外，压缩为
+  //   「0/20」跟在焦点按钮后（gap 4px），行内 nowrap；②倍率行加焦点三角标（当前焦点管线
+  //   的倍率前显示其焦点三角形，与按钮族一致）；③「编排倍率」标签并入策略行尾部，
+  //   不再独立一行（「策略与相位共鸣合并」文案删除）。
   if (res.unlocked) {
-    html += `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
+    html += `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
       <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">${res.enabled ? '▲' : '△'}</button>
       ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${RES_FOCUS_ICONS[f.id] || f.icon}</button>`).join('')}
-      <span style="font-size:10.5px;color:var(--text-3);margin-left:2px;white-space:nowrap">相位共鸣 · ${res.layers}/${res.maxLayers} 层</span>
+      <span style="font-size:10.5px;color:var(--text-3);margin-left:auto;white-space:nowrap" title="相位共鸣层数（每 12 秒 +1，换相位减半）">${res.layers}/${res.maxLayers}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
-      ${res.rows.map(r => `<div style="white-space:nowrap">${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
+      ${res.rows.map(r => `<div style="white-space:nowrap"><span aria-hidden="true" style="${r.focused ? 'color:var(--accent)' : 'opacity:.35'}">${RES_FOCUS_ICONS[r.key] || r.icon}</span> ${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
     </div>`;
   }
 
   // v3.10.1：明确标注这四行是编排层倍率（策略 + 相位共鸣合并），不是全部加成的总和。
   // v4.0.8 反馈①：编排倍率标改圆形族（●增益 ◐小幅 ○持平/减益），
   //   与共鸣的三角形族成对区分——「编配倍率为不同的圆」；行内 nowrap 修不正常换行。
-  html += `<div style="font-size:10.5px;color:var(--text-3);margin-bottom:4px;white-space:nowrap">编排倍率 · 策略与相位共鸣合并</div>`;
+  // v4.1.0 反馈③：标签已并入策略行（buildTideSchedulingHtml 的 labelSuffix），不再单独渲染。
   html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
     const color = x.mult > 1.0001 ? 'var(--good,#3fb950)' : x.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)';
@@ -1847,6 +1853,7 @@ function bindEvents() {
   //   而 rect.bottom 本身随高度变化 → 反馈自激、往上拖不动；叠加 CSS 的 max-height:190px 把上限钉死。
   //   现在改为「按下时记起始高度 + 指针位移」的纯增量模型，上限读 --log-max-h（随断点变化），
   //   并补上双击复位 / 方向键微调 / 窗口缩小后重新钳制。
+  // v4.1.0 反馈①：手柄在面板底部，方向反转为「往下拖 = 拉大」（对齐底部手柄惯例）。
   const bindLogResize = () => {
     const panel = document.getElementById('log-panel');
     const handle = document.getElementById('log-resize');
@@ -1873,7 +1880,7 @@ function bindEvents() {
     handle.setAttribute('tabindex', '0');
     handle.setAttribute('role', 'separator');
     handle.setAttribute('aria-orientation', 'horizontal');
-    handle.setAttribute('aria-label', '拖拽调整日志高度（双击恢复默认，方向键微调）');
+    handle.setAttribute('aria-label', '拖拽调整日志高度（往下拖拉大，双击恢复默认，方向键微调）');
     handle.removeAttribute('aria-hidden');
 
     let drag = null;
@@ -1892,7 +1899,7 @@ function bindEvents() {
     });
     handle.addEventListener('pointermove', (e) => {
       if (!drag) return;
-      apply(drag.h + (drag.y - e.clientY), false); // 往上拖 = 变高
+      apply(drag.h + (e.clientY - drag.y), false); // v4.1.0：往下拖 = 变高（底部手柄惯例）
     });
     const endDrag = () => {
       if (!drag) return;
@@ -1905,8 +1912,8 @@ function bindEvents() {
     handle.addEventListener('pointercancel', endDrag);
     handle.addEventListener('keydown', (e) => {
       const step = e.shiftKey ? 40 : 12;
-      if (e.key === 'ArrowUp') { e.preventDefault(); apply(curH() + step, true); }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); apply(curH() - step, true); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); apply(curH() + step, true); } // v4.1.0：↓=变高，与拖拽方向一致
+      else if (e.key === 'ArrowUp') { e.preventDefault(); apply(curH() - step, true); }
       else if (e.key === 'Home') { e.preventDefault(); apply(DEFAULT_H, true); }
     });
     // 窗口变小后，旧的记忆高度可能超过新上限——重新钳制，避免侧栏被一个巨块顶到底

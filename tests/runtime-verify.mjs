@@ -48,14 +48,16 @@ console.log('[P0-1] 章节推进验证：字符串 chapter 与 storyline 章节�
     assert.equal(ch.id, 1);
   });
 
-  // v3.6.0 方向⑥：章节由「条件满足 + 最短驻留 3~7 天」共同推进，不再一天连跳多章
+  // v3.6.0 方向⑥：章节由「条件满足 + 最短驻留 5~7 天」共同推进（v4.1.0 F5：3~7 → 5~7）
   S.prestige = 2;
   S.chapterEnteredAt = Date.now();
-  t('晋升条件满足但驻留 0 天：章节不推进（3-7 天/章）', () => assert.equal(currentChapter(S).id, 1));
+  t('晋升条件满足但驻留 0 天：章节不推进（5-7 天/章）', () => assert.equal(currentChapter(S).id, 1));
   S.chapterEnteredAt = Date.now() - 4 * 86400000;
+  t('驻留 4 天条件满足：仍不推进（第 2 章需 5 天）', () => assert.equal(currentChapter(S).id, 1));
+  S.chapterEnteredAt = Date.now() - 6 * 86400000;
   let ch = currentChapter(S);
   if (ch.id > S.chapter) S.chapter = String(ch.id);
-  t('驻留 4 天且条件满足：章节向前推进', () => assert.ok(Number(S.chapter) >= 2));
+  t('驻留 6 天且条件满足：章节向前推进', () => assert.ok(Number(S.chapter) >= 2));
 
   // 注册并切换到秩序线
   _resetStorylineManager();

@@ -544,16 +544,18 @@ export const FRAME_DEPS_KEYS = Object.freeze([
  * 在首渲时注入一次 <style id="tide-sched-style">，不改动 style.css。
  */
 export function buildTideSchedulingHtml(ctx) {
-  const { S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized } = ctx;
-  let html = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">`;
+  const { S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized, labelSuffix } = ctx;
+  // v4.1.0 反馈③：窄列（272px）一行装下 4 策略 + 潮汐排班 + 「编排倍率」标签——
+  //   gap 6→4、按钮文案去图标后空格、「潮汐排班」缩为「潮汐」（全称进 title）。
+  let html = `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px">`;
   for (const m of ORCHESTRATION_MODES) {
     const on = !auto && m.id === st.mode;
     // v4.0.6：自动排班期间策略按钮不再 disabled —— 点它本身就是「退出潮汐排班、固定这条策略」。
-    html += `<button class="btn-mini" data-orch-mode="${m.id}" aria-pressed="${on}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="${auto ? `退出潮汐排班，固定为${m.name}` : `切换为${m.name}`}">${m.icon} ${m.short}</button>`;
+    html += `<button class="btn-mini" data-orch-mode="${m.id}" aria-pressed="${on}"${on ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="${auto ? `退出潮汐排班，固定为${m.name}` : `切换为${m.name}`}">${m.icon}${m.short}</button>`;
   }
   // 潮汐排班：与四种策略同级的第五个选项（选中即轮转，点其他策略即退出）；无独立「开启/关闭」文字。
   html += `<div class="tide-sched-wrap" style="position:relative;display:inline-block">
-    <button class="btn-mini" data-orch-auto="1" aria-pressed="${auto}"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="随潮汐相位自动轮转策略（与左侧四条策略同为单选）">潮汐排班</button>`;
+    <button class="btn-mini" data-orch-auto="1" aria-pressed="${auto}"${auto ? ' style="border-color:var(--accent);color:var(--accent)"' : ''} title="潮汐排班：随潮汐相位自动轮转策略（与左侧四条策略同为单选）">潮汐</button>`;
   // 潮汐预案：仅悬停/聚焦「潮汐排班」时显示的浮层，默认隐藏。
   if (auto && schedOK) {
     const curPhase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
@@ -574,7 +576,11 @@ export function buildTideSchedulingHtml(ctx) {
     if (scheduleCustomized(S)) html += `<button class="btn-mini" data-orch-schedule-reset="1">恢复默认排班</button>`;
     html += `</div>`;
   }
-  html += `</div></div>`;
+  html += `</div>`;
+  // v4.1.0 反馈③：「编排倍率」标签并入策略行尾部（margin-left:auto 推右）——
+  //   原独立标签行「编排倍率 · 策略与相位共鸣合并」删除；倍率 grid 紧随本行之后。
+  if (labelSuffix) html += `<span style="font-size:10.5px;color:var(--text-3);margin-left:auto;white-space:nowrap">${labelSuffix}</span>`;
+  html += `</div>`;
 
   // 注入浮层显隐规则（默认隐藏，悬停/聚焦显示），不改动 style.css。
   if (typeof document !== 'undefined' && !document.getElementById('tide-sched-style')) {

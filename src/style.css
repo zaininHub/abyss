@@ -1119,6 +1119,18 @@ body.log-resizing, body.log-resizing * { cursor: ns-resize !important; user-sele
   box-sizing: border-box;
 }
 
+/* v4.1.0 反馈②：暂停按钮字体加色（--warn 琥珀，浅色主题自动切换深色变体）+ 移至按钮组最右。
+   边框/光晕用固定 rgba(210,153,34,…)（--warn 暗色基色）——不引入 color-mix 新依赖；浅色主题下 --warn 本身换深色变体，字色可读性由变量层保证。 */
+.pause-btn {
+  color: var(--warn);
+  border-color: rgba(210, 153, 34, .45);
+  margin-left: 6px;
+}
+.pause-btn:hover {
+  border-color: var(--warn);
+  box-shadow: 0 0 10px rgba(210, 153, 34, .3);
+}
+
 /* 窄屏：剧情条先让位，按钮组整组换到下一行并靠右 */
 @media (max-width: 899px) {
   .chapter-row { flex-wrap: wrap; gap: 6px; }
@@ -1148,7 +1160,8 @@ body.paused .pet-grid .pet-card {
 
 
 /* ========== v2.0 深渊潮汐 ========== */
-.tide-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin-left:4px;border-radius:4px;background:#8b5cf61f;border:1px solid rgba(139,92,246,.3);font-size:12px;font-weight:600;transition:all .3s}
+/* v4.1.0 反馈②：潮汐卡片固定在顶栏最右侧——margin-left:auto 把它与左侧资源项之间的空隙全部吃掉 */
+.tide-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin-left:auto;border-radius:4px;background:#8b5cf61f;border:1px solid rgba(139,92,246,.3);font-size:12px;font-weight:600;transition:all .3s}
 .tide-icon{display:inline-block;font-size:14px;line-height:1;filter:drop-shadow(0 0 4px currentColor)}
 .tide-time{color:var(--text-3);font-size:11px}
 .tide-buff{color:var(--good);font-size:11px;margin-left:2px}

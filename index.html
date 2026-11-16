@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.9</title>
+<title>深渊效能工作台 v4.1.0</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -60,7 +60,7 @@
           <button class="btn skin-opt" data-skin="autumn" title="秋日鎏金（暖调浅色主题）">🍂 秋日鎏金</button>
         </div>
       </div>
-      <button class="btn" id="pauseBtn">暂停</button>
+      <!-- v4.1.0 反馈②：暂停按钮移到按钮组最右并加警示色（字体用 --warn，浅色主题自动用深色变体） -->
       <button class="btn" id="btn-wiki" title="玩法图鉴：图例/名词、故事线区别、章节讲解">📖 Wiki</button>
       <div class="save-menu">
         <!-- v3.10.4 ④：💾 存档改为下拉直接展示所有存档（参考 KG）；每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；
@@ -80,6 +80,8 @@
           <input type="file" id="import-file" accept=".json,application/json" style="display:none">
         </div>
       </div>
+      <!-- v4.1.0 反馈②：暂停按钮移到系统按钮组最右并加警示色（字体用 --warn，浅色主题自动用深色变体） -->
+      <button class="btn pause-btn" id="pauseBtn">暂停</button>
     </div>
   </div>
 

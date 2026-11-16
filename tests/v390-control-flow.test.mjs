@@ -368,12 +368,19 @@ test('E1 新增章节进入真实章节链，防「data 层同名双实现」陷
   }
   // v3.10.0 新增 6 章均带 minDays 5~7 的驻留门控；chapterEnteredAt 必须是真实的过去时间戳
   // （旧的 0 会被 `S.chapterEnteredAt || now` 吞掉 → daysIn=0 → 永远停在第 32 章）。
+  // v4.1.0 F5：一次调用只推进一章（连跳防护）——按真实游戏节奏逐章模拟
+  // （frameSystems 每次推进后重置 chapterEnteredAt），每步驻留 30 天。
   const rich = { chapter: '32', chapterEnteredAt: Date.now() - 30 * 86400000,
     prestige: 999, projectsDone: 999,
     riftsSealed: 999, dm: 1e9, allTimeEp: 1e18, es: 1e9, faith: 1e9, expeditionsDone: 999,
     riftEmber: 1e9, tech: {}, buildings: {}, unlockedBuildings: {}, upgrades: {}, religion: {},
     wageState: { state: 'ok' }, resonance: { enabled: true, layers: 20, focus: 'rp' } };
-  const cur = story.currentChapter(rich);
+  let cur = story.currentChapter(rich);
+  for (let i = 0; i < 40 && parseInt(String(cur.id), 10) < 51; i++) {
+    rich.chapter = String(cur.id);
+    rich.chapterEnteredAt = Date.now() - 30 * 86400000;
+    cur = story.currentChapter(rich);
+  }
   assert.equal(Number.parseInt(String(cur.id), 10), 51, `真实推进应能走完新增章节，实际 ${cur.id}`);
   provider._resetProvider();
 });

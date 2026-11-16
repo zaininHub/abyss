@@ -45,7 +45,8 @@ test('C1 主线未到分叉点时，变体不得覆盖主线章节', () => {
   const S = rich(1, 3);
   const ch = currentChapter(S, LIST);
   assert.equal(typeof ch.id, 'number', '第 1 章不应被字符串变体接管');
-  assert.equal(ch.id, 3, '3 天驻留应正常推进到第 3 章（连跳属既有设计）');
+  // v4.1.0 F5：一次只推进一章 + 第 2 章 minDays 5 → 3 天驻留停在 1
+  assert.equal(ch.id, 1, '3 天驻留不足第 2 章 5 天门槛，停在 1');
 });
 
 test('C2 到达分叉点后进入变体分支，且一次只推进一章', () => {
@@ -66,10 +67,11 @@ test('C4 变体条件不满足时跳过而非断链', () => {
   assert.equal(currentChapter(rich(5, 10), list).id, '7A');
 });
 
-test('C5 默认线（无变体）保持既有连跳节奏与不回退', () => {
+test('C5 默认线（无变体）一次只推进一章且不回退（v4.1.0 F5 连跳防护）', () => {
   assert.equal(currentChapter(rich(2, 1), CHAPTERS).id, 2, '驻留 1 天停在 2');
-  assert.equal(currentChapter(rich(2, 4), CHAPTERS).id, 6, '驻留 4 天推进到 6');
-  assert.equal(currentChapter(rich(1, 3), CHAPTERS).id, 3, '第 1 章 3 天推进到 3');
+  assert.equal(currentChapter(rich(2, 4), CHAPTERS).id, 2, '驻留 4 天不足第 3 章 5 天门槛，停在 2');
+  assert.equal(currentChapter(rich(2, 30), CHAPTERS).id, 3, '驻留 30 天也只推进到 3（一次一章）');
+  assert.equal(currentChapter(rich(1, 3), CHAPTERS).id, 1, '第 1 章 3 天不足第 2 章 5 天门槛');
   assert.equal(currentChapter(rich(5, 0), CHAPTERS).id, 5, '已抵达章节不回退');
 });
 

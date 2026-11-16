@@ -65,16 +65,18 @@ try {
     const orphanCheck = el2 => [...el2.querySelectorAll('div')].filter(d => d.children.length === 0 && (d.textContent || '').length > 0)
       .map(d => ({ text: d.textContent.trim().slice(0, 24), rects: d.getClientRects().length, h: d.getBoundingClientRect().height }))
       .filter(x => x.h > 30);
-    // 编排倍率 summary grid：「编排倍率」标签的下一个兄弟（避免混入共鸣 rows grid）
-    const label = [...el.querySelectorAll('div')].find(d => d.children.length === 0 && (d.textContent || '').includes('编排倍率'));
-    const summaryGrid = label?.nextElementSibling;
+    // 编排倍率 summary grid：v4.1.0 标签并入策略行后，用「圆形倍率标」特征定位——
+    // 是 el 里最后一个 grid 容器（倍率 grid 始终是面板最后一个块）
+    const grids = [...el.querySelectorAll('div')].filter(d => (getComputedStyle(d).display === 'grid'));
+    const summaryGrid = grids[grids.length - 1] || null;
     const multMarks = summaryGrid ? [...summaryGrid.children].map(d => d.textContent.trim().slice(0, 12)) : [];
     // 共鸣开关状态（决定 ▲/△ 期望值）
     const toggleBtn = el.querySelector('[data-res-toggle]');
     return {
       visible: true,
       hasCurrentLine: /当前编排/.test(txt),
-      hasMultLabel: /编排倍率 · 策略与相位共鸣合并/.test(txt),
+      hasMultLabel: /编排倍率/.test(txt) && !/策略与相位共鸣合并/.test(txt), // v4.1.0：标签并入策略行，旧文案删除
+      hasOldLabelLine: /策略与相位共鸣合并/.test(txt),
       resUnlocked: !!toggleBtn,
       toggleState: toggleBtn?.getAttribute('aria-pressed') === 'true',
       toggleText: toggleBtn?.textContent.trim() || '',
@@ -91,7 +93,7 @@ try {
   results.orch = orch;
   orch.visible ? ok('编排卡已解锁渲染', '') : bad('编排卡未渲染', JSON.stringify(orch));
   !orch.hasCurrentLine ? ok('「当前编排」行已删除', '') : bad('「当前编排」行仍在', '');
-  orch.hasMultLabel ? ok('「编排倍率」口径标签保留', '') : bad('编排倍率标签缺失', '');
+  orch.hasMultLabel && !orch.hasOldLabelLine ? ok('「编排倍率」标签保留（已并入策略行）', '') : bad('编排倍率标签缺失或旧文案残留', JSON.stringify({ has: orch.hasMultLabel, old: orch.hasOldLabelLine }));
   // 共鸣开关联动图标：开态实心 ▲ / 关态空心 △（测试存档未开共鸣 → 期望 △）
   const toggleExpect = orch.toggleState ? '▲' : '△';
   orch.resUnlocked && orch.toggleText === toggleExpect ? ok(`共鸣开关三角随状态（${orch.toggleState ? '开▲' : '关△'}）`, orch.toggleText) : bad('共鸣开关图标不符', orch.toggleText);
@@ -206,17 +208,17 @@ try {
   results.hit = hit;
   hit.hit ? ok('手柄中心点命中自身（不被触手层吃掉）', hit.hitTag) : bad('手柄仍被遮挡', JSON.stringify(hit));
   Number(hit.zs.handle) > Number(hit.zs.tentacle) ? ok('手柄 z-index 高于触手热区', `${hit.zs.handle} > ${hit.zs.tentacle}`) : bad('z-index 未提升', JSON.stringify(hit.zs));
-  // 真实拖拽：向上拖 100px 高度增加
+  // 真实拖拽：向下拖 100px 高度增加（v4.1.0 反馈①：方向反转，往下拖=拉大）
   const hBefore = await page.evaluate(() => document.querySelector('.log-panel').getBoundingClientRect().height);
   const hr = await page.evaluate(() => { const r = document.getElementById('log-resize').getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; });
   await page.mouse.move(hr.x, hr.y);
   await page.mouse.down();
-  await page.mouse.move(hr.x, hr.y - 50, { steps: 5 });
-  await page.mouse.move(hr.x, hr.y - 100, { steps: 5 });
+  await page.mouse.move(hr.x, hr.y + 50, { steps: 5 });
+  await page.mouse.move(hr.x, hr.y + 100, { steps: 5 });
   await page.mouse.up();
   await sleep(250);
   const hAfter = await page.evaluate(() => document.querySelector('.log-panel').getBoundingClientRect().height);
-  hAfter > hBefore + 90 ? ok('窄视口真实拖拽放大生效', `${Math.round(hBefore)} → ${Math.round(hAfter)}（+${Math.round(hAfter - hBefore)}）`) : bad('窄视口拖拽无效', `${hBefore} → ${hAfter}`);
+  hAfter > hBefore + 90 ? ok('窄视口真实拖拽放大生效（向下拖）', `${Math.round(hBefore)} → ${Math.round(hAfter)}（+${Math.round(hAfter - hBefore)}）`) : bad('窄视口拖拽无效', `${hBefore} → ${hAfter}`);
 
   // 宽视口下日志专项回归（v407 已详测，此处烟囱验证未回退）
   await page.setViewport({ width: 1600, height: 960 });
@@ -228,11 +230,11 @@ try {
   const hw0 = await page.evaluate(() => document.querySelector('.log-panel').getBoundingClientRect().height);
   await page.mouse.move(wideDrag.x, wideDrag.y);
   await page.mouse.down();
-  await page.mouse.move(wideDrag.x, wideDrag.y - 60, { steps: 5 });
+  await page.mouse.move(wideDrag.x, wideDrag.y + 60, { steps: 5 });
   await page.mouse.up();
   await sleep(250);
   const hw1 = await page.evaluate(() => document.querySelector('.log-panel').getBoundingClientRect().height);
-  hw1 > hw0 + 50 ? ok('宽视口拖拽未回退', `${Math.round(hw0)} → ${Math.round(hw1)}`) : bad('宽视口拖拽回退', `${hw0} → ${hw1}`);
+  hw1 > hw0 + 50 ? ok('宽视口拖拽未回退（向下拖）', `${Math.round(hw0)} → ${Math.round(hw1)}`) : bad('宽视口拖拽回退', `${hw0} → ${hw1}`);
 
   // ============ 页面错误 ============
   errs.length === 0 ? ok('0 pageerror', '') : bad('页面有错误', errs.join(' | '));

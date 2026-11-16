@@ -68,7 +68,7 @@ test('v3.6.0 ② 新研究键经 researchMult 生效（lv8）', () => {
   S.rpTheories = {};
 });
 
-// ===== T3 剧情 3-7 天/章（minDays 门控）=====
+// ===== T3 剧情 5-7 天/章（minDays 门控；v4.1.0 F5 一次只推进一章）=====
 function chS(chapter, daysAgo) {
   return {
     chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * 86400000,
@@ -78,20 +78,22 @@ function chS(chapter, daysAgo) {
   };
 }
 test('v3.6.0 ③ 剧情进度受最短驻留天数(minDays)约束——不超前', () => {
-  // 第 2 章仅驻留 1 天：第 3 章需 3 天，绝不能跳到 3
-  assert.equal(currentChapter(chS(2, 1)).id, 2, '第2章 1 天：停在 2（ch3 需 3 天）');
-  // 第 2 章驻留 4 天：可推进至第 6 章，但第 7 章需 5 天，不能到 7
-  assert.equal(currentChapter(chS(2, 4)).id, 6, '第2章 4 天：到 6（ch7 需 5 天）');
-  // 第 1 章驻留 2 天：第 2 章需 3 天，不能到 2
-  assert.equal(currentChapter(chS(1, 2)).id, 1, '第1章 2 天：停在 1（ch2 需 3 天）');
-  // 第 1 章驻留 3 天：恰好解锁第 2、3 章（均 3 天门槛）
-  assert.equal(currentChapter(chS(1, 3)).id, 3, '第1章 3 天：推进到第 3 章');
+  // 第 2 章仅驻留 1 天：第 3 章需 5 天，绝不能跳到 3
+  assert.equal(currentChapter(chS(2, 1)).id, 2, '第2章 1 天：停在 2（ch3 需 5 天）');
+  // 第 2 章驻留 4 天：不足第 3 章 5 天门槛（v4.1.0 F5：3→5）
+  assert.equal(currentChapter(chS(2, 4)).id, 2, '第2章 4 天：停在 2（ch3 需 5 天）');
+  // 第 1 章驻留 2 天：第 2 章需 5 天，不能到 2
+  assert.equal(currentChapter(chS(1, 2)).id, 1, '第1章 2 天：停在 1（ch2 需 5 天）');
+  // 第 1 章驻留 5 天：恰好解锁第 2 章（v4.1.0 F5 一次只推进一章，不再连跳到 3）
+  assert.equal(currentChapter(chS(1, 5)).id, 2, '第1章 5 天：推进到第 2 章（一次一章）');
+  // 驻留富余（远超全部 minDays）也只推进一章：连跳防护
+  assert.equal(currentChapter(chS(1, 30)).id, 2, '第1章 30 天：仍只推进到 2（连跳防护）');
   // 不回退：已到第 5 章但时间不足 → 仍保持 5（权威下限）
   assert.equal(currentChapter(chS(5, 0)).id, 5, '已抵达章节不回退');
 });
-test('v3.6.0 ③ 章节 minDays 全表 ≥3（节奏 3-7 天/章）', () => {
+test('v3.6.0 ③ 章节 minDays 全表 ≥5（节奏 5-7 天/章；v4.1.0 F5）', () => {
   const mins = CHAPTERS.map(c => c.minDays);
-  assert.ok(mins.slice(1).every(d => d >= 3), '所有推进章节最短驻留 ≥3 天');
+  assert.ok(mins.slice(1).every(d => d >= 5), '所有推进章节最短驻留 ≥5 天');
   assert.ok(Math.max(...mins) <= 7, '最长驻留 ≤7 天');
 });
 
