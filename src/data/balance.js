@@ -272,12 +272,10 @@ export const BALANCE = {
     reserveOptions: [0.1, 0.3, 0.5], // 预留线三档（EP 上限比例）
     defaultReserve: 0.3,
     // v2.5.5：AI 自动购建（全部资源点解锁后可激活）
+    // v4.0.3 反馈①：取消独立购买间隔档位（5/10/30/60s）与「下次购建 Xs」倒计时——
+    //   自动购建与自动升级同一节拍（每个 AI 决策周期结算一次，间隔由 BALANCE.ai.interval 及缩减项统一决定）。
     aiAutoBuild: {
       activateCost: 1000,           // 激活消耗（研究点 RP，一次性；v3.12.13 ⑥ 自动购建能力迁研究点，由 EP 改为 RP）
-      rateOptions: [5, 10, 30, 60], // 购买间隔档位（秒）
-      defaultRate: 10,              // 默认间隔
-      minRate: 5,                   // 硬下限：即使改存档也不低于 5s（严格限速）
-      perTickMax: 1,                // 每个决策周期至多购买 1 栋（严格防竞争）
     },
   },
   // v3.6.0 星际探索：按星系分组的专属资源 + 跃迁（相对论）配置

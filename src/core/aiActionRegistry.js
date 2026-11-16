@@ -57,8 +57,8 @@ export const AI_ACTIONS = Object.freeze([
   }),
   Object.freeze({
     id: 'build', switchKey: 'autoBuild', name: '自动购建', group: 'advanced',
-    crewSize: 1, cadence: 'custom',
-    desc: '按购买间隔购买已解锁建筑（EP 成本最低优先，不低于预留线）',
+    crewSize: 1, cadence: 'decision',
+    desc: '每决策周期购买已解锁建筑（EP 成本最低优先，不低于预留线）；每名助手 1 栋',
   }),
   Object.freeze({
     id: 'tech', switchKey: 'autoTech', name: '自动研究', group: 'advanced',

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.2</title>
+<title>深渊效能工作台 v4.0.3</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-BpHqDZG4.js"></script>
-  <link rel="stylesheet" href="./assets/index-BsY0DFFy.css">
+  <script defer src="./assets/index-CaEMzmG8.js"></script>
+  <link rel="stylesheet" href="./assets/index-DeOmgU_d.css">
 </head>
 <body>
 <div id="app">
@@ -74,7 +74,7 @@
             <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
             <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
           </div>
-          <div class="save-list-label">存档列表</div>
+          <div class="save-list-label">存档列表 <span class="mono" id="save-count">0/3</span></div>
           <div id="save-list" class="save-list"></div>
           <!-- v3.10.5 ⑤：去除旧「导出当前/导入覆盖当前/存档管理（旧）」按钮；
                导入/导出已内聚为存档列表每条的功能，隐藏文件输入供「📥 导入」复用 -->
@@ -147,11 +147,11 @@
         <!-- v3.12.0 反馈⑯：薪资四态说明由窄 span 扩成「整块」触发——悬浮整行显气泡、点击整行弹完整说明 -->
         <div class="hero-row wage-help-zone" id="wage-help-zone" data-tip="线程薪资四态 · 点击整块查看完整规则">
           <span>线程: <b id="staff-count">0</b></span>
-          <span class="wage-help"><span id="staff-status">运行中</span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
+          <span class="wage-help"><span id="staff-status" class="wage-badge">运行中</span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
           <span class="next-recruit">
-            <span id="staff-preview" style="font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
-            <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
+            <span id="staff-preview" style="font-size:11px;color:var(--text-2)"></span>
           </span>
+          <button class="btn" id="hire-btn" title="招募一条产出线程：持续产出 EP，但每秒消耗薪资（薪资随线程数递增，单线程消耗封顶不超过产出）">招募线程</button>
         </div>
         <div id="focus-bar" class="focus-bar">
           <span>专注等级: <b id="focus-lv">0</b></span>

@@ -75,31 +75,41 @@ body {
 .ai-assistant-head[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute; top: 100%; left: 0; z-index: 999;
-  background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
-  padding: 6px 8px; font-size: 11px; color: var(--text-2); white-space: nowrap;
+  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; font-size: 11px; color: var(--tip-fg); white-space: nowrap;
   pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
 
 /* v3.12.0 反馈⑯：线程薪资说明整块触发。整行都是命中区（.hero-row 本身即块），
-   悬浮显示含换行的四态说明，点击任意空白处也会弹完整说明；刻意不用原生 title 免双弹窗。 */
+   悬浮显示含换行的四态说明，点击任意空白处也会弹完整说明；刻意不用原生 title 免双弹窗。
+   v4.0.3 反馈③：气泡改 position:fixed，坐标由 main.js 按本行 rect 实时写入
+   （absolute 会被祖先 overflow 裁剪，顶部行的首行说明整段丢失）；上方空间不足时自动翻到下方。 */
 .wage-help-zone { position: relative; cursor: help; }
 .wage-help-zone[data-tip]:hover::after {
   content: attr(data-tip);
-  position: absolute; bottom: 100%; left: 0; z-index: 999;
-  background: #1c2128; border: 1px solid var(--border); border-radius: 5px;
-  padding: 8px 10px; font-size: 11px; color: var(--text-2);
-  white-space: pre-line; width: max-content; max-width: min(360px, 80vw); line-height: 1.7;
+  position: fixed; left: var(--tip-x, 12px); top: var(--tip-y, 12px);
+  transform: translateY(-100%);
+  z-index: 1200;
+  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 5px;
+  padding: 8px 10px; font-size: 11px; color: var(--tip-fg);
+  white-space: pre-line; width: max-content; max-width: min(360px, 88vw); line-height: 1.7;
   pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.5);
 }
+.wage-help-zone.tip-below[data-tip]:hover::after { transform: translateY(0); }
+/* v4.0.3 反馈③：四态文案收成小角标（只留状态名）——原先把整句惩罚说明塞在行内，
+   把右侧 NEXT 预览挤到省略号；细则与倒计时统一进上面的悬浮说明。 */
 .wage-help {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 7px; border: 1px dashed var(--border); border-radius: 4px;
-  background: rgba(88,166,255,.06);
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+}
+#staff-status.wage-badge {
+  font-weight: 600; font-size: 10.5px; line-height: 1.6; padding: 0 6px;
+  border: 1px solid currentColor; border-radius: 99px; cursor: help;
+  background: rgba(255,255,255,.05); white-space: nowrap;
 }
 .wage-help-mark {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; flex: 0 0 14px; border-radius: 50%;
-  border: 1px solid var(--border); color: var(--text-2); font-size: 10px; line-height: 1;
+  width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%;
+  border: 1px solid var(--border); color: var(--text-2); font-size: 9px; line-height: 1;
 }
 
 .stat b { color: var(--accent); }
@@ -124,8 +134,8 @@ body {
 .drain-warn[data-tip]:hover::after {
   content: attr(data-tip);
   position: absolute; top: 100%; right: 0; z-index: 999;
-  background: #1c2128; border: 1px solid var(--border); border-radius: 4px;
-  padding: 6px 8px; font-size: 11px; color: var(--text-2);
+  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; font-size: 11px; color: var(--tip-fg);
   white-space: normal; width: max-content; max-width: min(280px, 84vw); line-height: 1.6;
   pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
@@ -282,10 +292,13 @@ body {
   font-size: 12px;
 }
 
-/* v3.12.3：NEXT（下一线程）与「招募线程」同行展示，长文本省略不挤压按钮 */
-.next-recruit { display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.next-recruit #staff-preview { flex: 1; min-width: 0; }
-.next-recruit #hire-btn { flex: 0 0 auto; }
+/* v3.12.3：NEXT（下一线程）与「招募线程」同行展示，长文本省略不挤压按钮
+   v4.0.3 反馈③：NEXT 改为独占一行（order 3 + flex-basis 100%）——左列只有约 300px，
+   与角标、招募按钮挤在同一行时「需 N EP」必被截断；独占一行后可完整换行显示，
+   第一行仍保留「线程: n / 状态角标 / 招募线程（右对齐）」。 */
+.next-recruit { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 100%; order: 3; min-width: 0; }
+.next-recruit #staff-preview { flex: 1; min-width: 0; white-space: normal; line-height: 1.5; overflow-wrap: anywhere; }
+#hire-btn { order: 2; margin-left: auto; flex: 0 0 auto; }
 
 .hero-cost { margin-left: auto; }
 
@@ -1182,7 +1195,7 @@ body.paused .pet-grid .pet-card {
 /* ========== v1.3 模块 A：AI 助手面板 ========== */
 /* v2.8.4 ⑨：AI 面板紧凑化（模块缩小） */
 #ai-card { padding: 8px 10px; }
-/* v3.11.0 反馈：浏览器实测 .ai-reserve-btn / .ai-rate-btn 仅 19px 高，点击目标偏小；
+/* v3.11.0 反馈：浏览器实测 .ai-reserve-btn 仅 19px 高，点击目标偏小；
    AI 面板内所有按钮统一 >=24x24，且不影响既有 padding 与卡面紧凑度。
    v3.12.12 ⑧：预留线已并入标题行 .ai-assist-slot，其按钮也需满足 >=24x24 命中目标。 */
 #ai-panel button, .ai-assist-slot button { min-width: 24px; min-height: 24px; box-sizing: border-box; }
@@ -1201,7 +1214,6 @@ body.paused .pet-grid .pet-card {
 .ai-build-box .ai-build-title { font-size: 11.5px; color: var(--accent); margin-bottom: 3px; }
 .ai-build-locked { opacity: 0.85; }
 .ai-build-box .btn.disabled { opacity: 0.45; cursor: not-allowed; }
-.ai-build-box .ai-rate-btn { padding: 1px 7px; font-size: 10.5px; }
 .ai-switch {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 8px; margin-bottom: 4px;
@@ -1229,8 +1241,10 @@ body.paused .pet-grid .pet-card {
 .ai-reserve-btn { padding: 2px 8px; font-size: 11px; }
 .ai-reserve-btn.on { border-color: var(--cyan); color: var(--cyan); }
 
-/* ========== v1.3 模块 C：四态徽章（hero 面板 staff-status） ========== */
-#staff-status { font-weight: 600; font-size: 12px; cursor: help; }
+/* ========== v1.3 模块 C：四态徽章（hero 面板 staff-status） ==========
+   v4.0.3 反馈③：徽章样式（尺寸 / 圆角 / 边框 / 换行）统一由上方 .wage-badge 承载，
+   此处只保留命中态，避免 id 选择器把角标字号顶回 12px。 */
+#staff-status { cursor: help; }
 
 /* v1.3 探采平台采集页头 */
 .vehicle-collect { font-size: 12px; color: var(--cyan); margin: 4px 0 8px; min-height: 0; }
@@ -1398,6 +1412,10 @@ body.paused .pet-grid .pet-card {
   --text-3: #666e82;
   --glow-purple: rgba(163, 113, 247, 0.32);
   --glow-cyan: rgba(57, 197, 207, 0.35);
+  /* v4.0.3 反馈③：悬浮气泡配色单一真源——此前气泡固定 #1c2128 + var(--text-2)，
+     浅色主题下变「深字压深底」几乎不可读；三款浅色主题各自覆盖为白底深字。 */
+  --tip-bg: #1c2128;
+  --tip-fg: #c9d1d9;
 }
 body {
   background:
@@ -1913,6 +1931,7 @@ html.theme-light {
   --purple: #8250df; --pink: #bf3989; --cyan: #0d7d90;
   --good: #1a7f37; --bad: #cf222e; --warn: #9a6700;
   --glow-purple: rgba(130, 80, 223, 0.16); --glow-cyan: rgba(13, 125, 144, 0.18);
+  --tip-bg: #ffffff; --tip-fg: #24303f; /* v4.0.3：浅色主题气泡白底深字 */
 }
 html.theme-light body {
   background:
@@ -1942,6 +1961,7 @@ html.theme-mint {
   --purple: #6f5bb5; --pink: #b03f7a; --cyan: #0a7d86;
   --good: #12805a; --bad: #c43c46; --warn: #8a6a10;
   --glow-purple: rgba(111, 91, 181, 0.14); --glow-cyan: rgba(10, 125, 134, 0.16);
+  --tip-bg: #ffffff; --tip-fg: #1d3a31; /* v4.0.3：浅色主题气泡白底深字 */
 }
 html.theme-mint body {
   background:
@@ -1957,6 +1977,7 @@ html.theme-autumn {
   --purple: #8a5aa0; --pink: #b0506a; --cyan: #2c7f86;
   --good: #4e7a2e; --bad: #b8392f; --warn: #9a6700;
   --glow-purple: rgba(138, 90, 160, 0.14); --glow-cyan: rgba(44, 127, 134, 0.14);
+  --tip-bg: #fffaf0; --tip-fg: #33270f; /* v4.0.3：浅色主题气泡浅底深字 */
 }
 html.theme-autumn body {
   background:

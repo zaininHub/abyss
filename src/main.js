@@ -9,7 +9,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
   cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
   wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
-  isLazy, lazyProdMult, lazyCostMult, // v2.7.1：线程懒惰态（EP 满上限惩罚）
+  isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
   corruptionCap, researchMult, clampRunResourceBalances, spendRes } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径）
@@ -752,34 +752,39 @@ function renderHero() {
   }
   if (staffStatus) {
     // v1.3 C：四态徽章 + 迁移倒计时 + tooltip（替代 staffUnhappy 的「资源耗尽!」）
+    // v4.0.3 反馈③：徽章只留「状态名」——原先把整句惩罚与倒计时塞在行内，把右侧 NEXT 预览挤成省略号；
+    //   细则（倍率 / 倒计时）全部改由悬浮说明承载，行内宽度还给下一线程预览。
     const w = S.wageState || {};
     const W = BALANCE.thread.wages;
     const salary = staffSalaryPerSec();
-    let txt = '满薪', color = 'var(--good)';
+    let txt = '满薪', color = 'var(--good)', detail = '';
     if (S.cultists.length === 0) { txt = '待招募'; color = 'var(--text-2)'; }
     else if (isLazy()) { // v2.7.1：懒惰态（EP 满上限惩罚）——消耗 > 产出
-      txt = `懒惰 · 产出 ${fmtMultDelta(lazyProdMult(), { digits: 1 })} 消耗 ${fmtMultDelta(lazyCostMult(), { digits: 1 })}`;
-      color = 'var(--warn)';
+      txt = '懒惰'; color = 'var(--warn)';
+      detail = `怠工已持续 ${Math.max(0, Math.floor((Date.now() - (S.lazySince || Date.now())) / 1000))}s`;
     }
     else if (w.state === 'debt') {
-      if ((w.bufferSec || 0) > 0) { txt = `欠薪 ${fmtMultDelta(wageDebtMult(), { digits: 1 })} · 恢复缓冲 ${Math.ceil(w.bufferSec)}s`; }
-      else { txt = `欠薪 ${fmtMultDelta(wageDebtMult(), { digits: 1 })} · 休眠还剩 ${Math.ceil(Math.max(0, W.dormantAfterSec - (w.debtSec || 0)))}s`; }
-      color = 'var(--warn)';
+      txt = '欠薪'; color = 'var(--warn)';
+      detail = (w.bufferSec || 0) > 0
+        ? `恢复缓冲 ${Math.ceil(w.bufferSec)}s`
+        : `休眠还剩 ${Math.ceil(Math.max(0, W.dormantAfterSec - (w.debtSec || 0)))}s`;
     } else if (w.state === 'dormant') {
-      txt = `休眠 -100% · 流失还剩 ${Math.ceil(Math.max(0, W.loseAfterSec - (w.dormantSec || 0)))}s`;
-      color = '#ff9800';
+      txt = '休眠'; color = '#ff9800';
+      detail = `流失还剩 ${Math.ceil(Math.max(0, W.loseAfterSec - (w.dormantSec || 0)))}s`;
     } else if (w.state === 'losing') {
-      txt = `流失预警 · 下次判定 ${Math.ceil(Math.max(0, 60 - (w.loseTimer || 0)))}s`;
-      color = 'var(--bad)';
+      txt = '流失预警'; color = 'var(--bad)';
+      detail = `下次判定 ${Math.ceil(Math.max(0, 60 - (w.loseTimer || 0)))}s`;
     }
     staffStatus.textContent = txt;
     staffStatus.style.color = color;
+    // 刻意不写原生 title：整行已有 [data-tip] 自定义气泡，双弹窗是本项目明确避开的坑；
+    //   细则还可在触屏上通过「点击整块 → 线程状态说明」弹窗查看。
     // v3.12.3 反馈③：问号说明框只在「满薪」状态显示（其余四态由整块悬浮说明承载）
     const wageMark = document.getElementById('wage-help-mark');
     if (wageMark) wageMark.style.display = (txt === '满薪') ? '' : 'none';
     // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块 [data-tip]，整行悬浮 / 点击均可触发。
     const wageZone = document.getElementById('wage-help-zone');
-    const wageTip = `线程薪资四态（当前：${w.state}）\n` +
+    const wageTip = `线程薪资四态（当前：${txt}${detail ? ' · ' + detail : ''}）\n` +
       `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
       `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
       `· 强制休眠（橙）：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
@@ -1260,6 +1265,21 @@ function bindEvents() {
       `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}\n` +
       `恢复：EP ≥ ${W.recoverSec}s 薪资后经 ${W.transitionSec}s 过渡 / ${W.bufferSec}s 缓冲回到满薪（恢复后休眠 ≥60s 触发补偿 +50%）`, () => {});
   });
+  // v4.0.3 反馈③：悬浮说明按本行 rect 实时定位（position:fixed + 上下自动翻转 + 左右钳制）。
+  //   原先 absolute 定位在祖先 overflow 容器里会被裁剪，首屏这一行的说明首段整段看不见。
+  const wageTipZone = document.getElementById('wage-help-zone');
+  if (wageTipZone) {
+    const placeWageTip = () => {
+      const r = wageTipZone.getBoundingClientRect();
+      const tipW = Math.min(360, window.innerWidth * 0.88);
+      const below = r.top < 260; // 上方容纳不下 7 行说明 → 翻到行下方
+      wageTipZone.classList.toggle('tip-below', below);
+      wageTipZone.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+      wageTipZone.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+    };
+    wageTipZone.addEventListener('mouseenter', placeWageTip);
+    wageTipZone.addEventListener('focusin', placeWageTip);
+  }
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   document.getElementById('focus-bar')?.addEventListener('click', buyFocus);
 
@@ -1964,10 +1984,19 @@ function onSnapSave() {
 }
 
 // v3.10.4 ④：下拉存档列表渲染（与模态列表同源数据，但每条多 覆盖/导出 操作）
-function renderSaveList() {
+// v4.0.3 反馈②：改为「按数据签名增量渲染」。此前 .save-menu 的 focusin 每次点击都整体重建列表，
+//   mousedown 与 mouseup 之间按钮节点被销毁 → 浏览器不派发 click，读取/覆盖/导出/删除全部「点了没反应」。
+let saveListSig = '';
+function renderSaveList(force = false) {
   const box = document.getElementById('save-list');
   if (!box) return;
   const snaps = listSnapshots();
+  const sig = snaps.map(s => `${s.id}|${s.time}|${(s.summary && s.summary.ep) || 0}`).join(',') || 'empty';
+  // 同一份数据且列表已在位：跳过重建，保证按下与松开落在同一个按钮节点上（click 才会派发）
+  if (!force && sig === saveListSig && box.childElementCount > 0) return;
+  saveListSig = sig;
+  const cnt = document.getElementById('save-count');
+  if (cnt) cnt.textContent = `${snaps.length}/${SNAP_MAX}`;
   box.innerHTML = '';
   if (!snaps.length) {
     box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 保存新档」生成（最多 ${SNAP_MAX} 个）。</div>`;

@@ -131,10 +131,6 @@ export function autoBuildUnlocked() { return !!(S.ai && S.ai.autoBuildUnlocked);
 export function autoBuildActivateCost() { return BALANCE.ai.aiAutoBuild.activateCost; }
 // v3.12.13 ⑥：激活消耗的资源——自动购建能力迁研究点，由 EP 改为 RP
 export function autoBuildActivateRes() { return 'rp'; }
-export function autoBuildRate() {
-  const r = (S.ai && S.ai.autoBuildRate) || BALANCE.ai.aiAutoBuild.defaultRate;
-  return Math.max(BALANCE.ai.aiAutoBuild.minRate, Math.min(3600, r)); // 硬下限 5s：改档/改存档均不生效
-}
 export function autoBuildActivable() {
   return aiUnlocked() && !autoBuildUnlocked() && allResDiscovered(S) && (S.rp || 0) >= autoBuildActivateCost();
 }
@@ -262,12 +258,8 @@ const EXECUTORS = {
     }
     return count > 0 ? { count, messages } : null;
   },
-  // d. 自动购建：严格限速（间隔硬下限 5s）；到达间隔时一次购建最多 workers 栋（成本升序）
+  // d. 自动购建：节拍与自动升级一致（每个 AI 决策周期结算一次），每名助手购建 1 栋（成本升序、不低于预留线）
   build(ctx, workers) {
-    const rate = autoBuildRate();
-    S.ai.autoBuildTimer = (S.ai.autoBuildTimer || 0) + ctx.dt;
-    if (S.ai.autoBuildTimer < rate) return null;
-    S.ai.autoBuildTimer = 0;
     const cands = V21_BUILDINGS
       .filter(b => b.via !== 'upgrade' && S.unlockedBuildings && S.unlockedBuildings[b.id] && !v21Maxed(b, S))
       .map(b => ({ b, cost: v21BuildingCost(b) }))
@@ -495,7 +487,6 @@ export function renderAiPanel(container) {
     return;
   }
   container.style.display = '';
-  const ai = S.ai;
   // v2.6.3 反馈②：混沌心智生效中 → 面板整体表达 AI 已禁用
   if (S.tech && S.tech.chaos_mind) {
     container.innerHTML = `
@@ -532,17 +523,13 @@ export function renderAiPanel(container) {
 
   // 进阶：自动研究（科技树「自动研究」）/ 自动购建（全资源点解锁后可激活）
   // v3.12.3 反馈⑨：两项都在「真正解锁后」才渲染，未解锁既不显示卡片、也不显示任何锁定文案。
-  const AB = BALANCE.ai.aiAutoBuild;
+  // v4.0.3 反馈①：自动购建取消独立秒数档位与面板底部的购建倒计时——与自动升级同一节拍（每决策周期结算）。
   const techAction = actionById('tech');
   const buildAction = actionById('build');
   const techHtml = actionAvailable('tech') ? actionCard(techAction) : '';
   let buildHtml = '';
   if (autoBuildUnlocked()) {
-    const rateBtns = AB.rateOptions.map(r =>
-      `<button class="btn ai-rate-btn ${(ai.autoBuildRate ?? AB.defaultRate) === r ? 'on' : ''}" data-ai-build-rate="${r}">${r}s</button>`).join('');
-    buildHtml = actionCard(buildAction,
-      `<div class="ai-reserve-row" style="margin-top:6px">${rateBtns}</div>
-       <div style="font-size:11px;color:var(--text-3);margin-top:4px">下次购建 ${Math.max(0, autoBuildRate() - (ai.autoBuildTimer || 0)).toFixed(1)}s</div>`);
+    buildHtml = actionCard(buildAction);
   } else if (allResDiscovered(S)) {
     // 资源点已齐：只剩一次性激活（消耗研究点 RP；激活后自动解锁并出现上面的常规卡）
     const rpOk = (S.rp || 0) >= autoBuildActivateCost();
@@ -615,12 +602,6 @@ export function renderAiPanel(container) {
           setTimeout(() => { if (actEl.isConnected && actEl.dataset.confirm === '1') { actEl.dataset.confirm = ''; actEl.textContent = '激活自动购建'; } }, 4000);
         }
         return;
-      }
-      const rateEl = e.target.closest('[data-ai-build-rate]');
-      if (rateEl) {
-        S.ai.autoBuildRate = Math.max(BALANCE.ai.aiAutoBuild.minRate, Number(rateEl.dataset.aiBuildRate));
-        save(S);
-        renderAiPanel(container);
       }
       const assistBuy = e.target.closest('[data-assist-buy]');
       if (assistBuy) {

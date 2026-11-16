@@ -51,7 +51,7 @@ function reset(over = {}) {
   Object.assign(S.ai, {
     autoUpgrade: false, autoHire: false, autoClaim: false,
     autoBuild: false, autoTech: false,
-    autoBuildUnlocked: true, autoBuildRate: 10, autoBuildTimer: 0,
+    autoBuildUnlocked: true,
     reserve: 0.1, timer: 0, assistants: 0,
     crew: {}, actionCounts: {}, _stallWarnAt: 0,
   }, over);
@@ -207,6 +207,20 @@ test('B5 自动研究 / 自动购建（进阶动作）同样绑定、不消耗�
   assert.equal(AI.tickAI(60), true, '自动购建应买到已解锁建筑');
   assert.equal(AI.assistantCount(), 5, '常驻班组不消耗');
   assert.ok(AI.actionCounts().build >= 1, '至少购建 1 栋');
+});
+
+// v4.0.3 反馈①：自动购建取消独立购买间隔（曾为 5/10/30/60s 档位 + 「下次购建 Xs」倒计时），
+//   节拍与自动升级对齐——每个决策周期结算一次，因此首个 5s 周期就应发生购建。
+test('B7 自动购建与自动升级同节拍：首个决策周期即购建，无独立秒数档位', () => {
+  reset({ assistants: 5 });
+  AI.setAiSwitch('autoBuild', true);
+  AI.setCrew('build', 1);
+  assert.equal(AI.tickAI(5), true, '首个决策周期（5s）即购建，不再等 10s 独立间隔');
+  assert.equal(AI.actionCounts().build, 1, '每周期 1 栋');
+  assert.equal(REG.actionById('build').cadence, 'decision', '注册表节拍声明与实现一致');
+  assert.ok(!AI_SRC.includes('data-ai-build-rate'), '秒数档位按钮已移除');
+  assert.ok(!AI_SRC.includes('下次购建'), '倒计时文案已移除');
+  assert.ok(!('rateOptions' in BALANCE.ai.aiAutoBuild), '配置层不再保留独立间隔档位');
 });
 
 // v3.12.3 反馈⑦：面板取消 ON/OFF 开关后，「开启但没绑定」不再是正常中间态——
