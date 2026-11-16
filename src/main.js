@@ -721,10 +721,8 @@ function renderHero() {
   const clickPower = document.getElementById('click-power');
   const staffCount = document.getElementById('staff-count');
   const staffStatus = document.getElementById('staff-status');
-  const staffCostEl = document.getElementById('staff-cost');
   const hireBtn = document.getElementById('hire-btn');
   const focusLv = document.getElementById('focus-lv');
-  const focusCostEl = document.getElementById('focus-cost');
   if (bigEp) bigEp.textContent = fmt(S.ep);
   if (clickPower) clickPower.textContent = fmt(clickMult());
   if (staffCount) staffCount.textContent = S.cultists.length;
@@ -777,6 +775,10 @@ function renderHero() {
     }
     staffStatus.textContent = txt;
     staffStatus.style.color = color;
+    // v4.0.4 反馈②：满薪是常态，不写「满薪」二字——角标收成一颗同色小圆点（颜色即状态），
+    //   文字保留在 DOM 里但 CSS 清零字号（无障碍读 aria-label，视觉只剩色点）。
+    staffStatus.classList.toggle('is-dot', txt === '满薪');
+    staffStatus.setAttribute('aria-label', detail ? `${txt}（${detail}）` : txt);
     // 刻意不写原生 title：整行已有 [data-tip] 自定义气泡，双弹窗是本项目明确避开的坑；
     //   细则还可在触屏上通过「点击整块 → 线程状态说明」弹窗查看。
     // v3.12.3 反馈③：问号说明框只在「满薪」状态显示（其余四态由整块悬浮说明承载）
@@ -794,7 +796,10 @@ function renderHero() {
     if (wageZone) wageZone.dataset.tip = wageTip;
   }
   // v2.8.10：招募行只展示「下一线程」增量（总产出/消耗移出 hero——顶栏已有，避免重复显示）
+  // v4.0.4 反馈②：NEXT 只留产出/消耗（价签移到招募按钮第二行，同一数字不再出现两次）
   const staffPrevEl = document.getElementById('staff-preview');
+  const hireCostEl = document.getElementById('hire-cost');
+  const canHire = S.ep >= staffCost();
   if (staffPrevEl) {
     const n = S.cultists.length;
     const base = BALANCE.thread.baseOutput, jit = BALANCE.thread.baseOutputJitter;
@@ -802,20 +807,33 @@ function renderHero() {
     const curOut = staffOutputPerSec();
     const avgOut = n > 0 ? curOut / n : (base + jit / 2); // 实际单线程产出（mood/加成一致口径）
     const nextSalary = Math.min(0.5 * Math.pow(BALANCE.thread.salaryBase, n), perCap);
-    staffPrevEl.textContent = `NEXT：产出 +${avgOut.toFixed(1)}/s · 消耗 +${nextSalary.toFixed(2)}/s · 需 ${fmt(staffCost())} EP`;
-    staffPrevEl.style.color = S.ep < staffCost() ? 'var(--warn,#c8a24a)' : 'var(--text-2)';
+    // v4.0.4：拆成三个不可断行的小块（NEXT / 产出 / 消耗）——窄列只会在块之间换行，
+    //   不会再出现「· 消耗」被切成半句的断法；同值不重写 DOM，避免每帧重排。
+    const nextHtml = `<b class="nri">NEXT</b><span class="nri">产出 +${avgOut.toFixed(1)}/s</span><span class="nri">消耗 +${nextSalary.toFixed(2)}/s</span>`;
+    if (staffPrevEl.dataset.sig !== nextHtml) { staffPrevEl.innerHTML = nextHtml; staffPrevEl.dataset.sig = nextHtml; }
+    // v4.0.4：NEXT 讲的是「下一线程的产出/消耗」而不是支付能力，买不起不再把整段染黄
+    //   （警示交给按钮：价格变黄 + 整体淡化），避免一行出现两处互相打架的颜色信号。
+    staffPrevEl.style.color = 'var(--text-2)';
   }
+  if (hireCostEl) hireCostEl.textContent = fmt(staffCost());
   if (hireBtn) {
-    hireBtn.disabled = S.ep < staffCost();
-    hireBtn.style.opacity = S.ep < staffCost() ? '0.5' : '1';
+    hireBtn.disabled = !canHire;
+    hireBtn.style.opacity = canHire ? '1' : '0.5';
+    hireBtn.classList.toggle('poor', !canHire);
+    hireBtn.setAttribute('aria-label', `招募一条线程，需要 ${fmt(staffCost())} EP`);
   }
   // v4.0.0 反馈⑥：静态标签「专注等级:」已在 index.html 的 #focus-bar 里，此处只写值，
   //   不再重复前缀（旧写法会渲染成「专注等级: 专注等级：Lv.32 …」）。
   if (focusLv) { const nxt = Math.round(focusPerLevel(S.focusLevel + 1) * 100); focusLv.textContent = `Lv.${S.focusLevel} · 下一级 +${nxt}%`; focusLv.style.color = S.focusLevel > 0 ? 'var(--good)' : 'var(--text-2)'; focusLv.style.fontWeight = S.focusLevel > 0 ? 'bold' : 'normal'; } // v2.8.30：等级旁显示下一级加成（加成从少到多，达上限后固定）
-  if (focusCostEl) focusCostEl.textContent = fmt(focusCost());
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
+  // v4.0.4 反馈②：行内不再显示「下一级价格」，价格改到悬浮说明（一眼一行，不再挤占行宽）
   const focusBarEl = document.getElementById('focus-bar');
-  if (focusBarEl) focusBarEl.classList.toggle('cant', !(S.ep >= focusCost()));
+  if (focusBarEl) {
+    const focusNxtPct = Math.round(focusPerLevel(S.focusLevel + 1) * 100);
+    focusBarEl.dataset.tip = `专注等级 Lv.${S.focusLevel}（当前加成 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%）\n`
+      + `点击强化：+${focusNxtPct}% 点击产出 · 需 ${fmt(focusCost())} EP`;
+    focusBarEl.classList.toggle('cant', !(S.ep >= focusCost()));
+  }
   // v2.0 腐化条（与 renderCorruption 同源，双渲染点保持与发布版一致）
   const cbar = document.getElementById('corruption-bar');
   if (cbar) {

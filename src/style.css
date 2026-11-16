@@ -106,6 +106,14 @@ body {
   border: 1px solid currentColor; border-radius: 99px; cursor: help;
   background: rgba(255,255,255,.05); white-space: nowrap;
 }
+/* v4.0.4 反馈②：满薪是常态，不占文字位——收成一颗同色小圆点（颜色即状态），
+   其余异常态（待招募/懒惰/欠薪/休眠/流失预警）仍保留文字角标。
+   文字清零字号而非清空 textContent：无障碍读 `aria-label`，视觉只留色点。 */
+#staff-status.wage-badge.is-dot {
+  width: 9px; height: 9px; min-width: 9px; padding: 0; border: 0;
+  border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor;
+  font-size: 0; line-height: 0; overflow: hidden;
+}
 .wage-help-mark {
   display: inline-flex; align-items: center; justify-content: center;
   width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%;
@@ -286,19 +294,30 @@ body {
 .hero-row {
   margin-top: 10px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
   font-size: 12px;
 }
 
-/* v3.12.3：NEXT（下一线程）与「招募线程」同行展示，长文本省略不挤压按钮
-   v4.0.3 反馈③：NEXT 改为独占一行（order 3 + flex-basis 100%）——左列只有约 300px，
-   与角标、招募按钮挤在同一行时「需 N EP」必被截断；独占一行后可完整换行显示，
-   第一行仍保留「线程: n / 状态角标 / 招募线程（右对齐）」。 */
-.next-recruit { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 100%; order: 3; min-width: 0; }
-.next-recruit #staff-preview { flex: 1; min-width: 0; white-space: normal; line-height: 1.5; overflow-wrap: anywhere; }
-#hire-btn { order: 2; margin-left: auto; flex: 0 0 auto; }
+/* v3.12.3：NEXT（下一线程）与「招募」同行展示
+   v4.0.3 反馈③：NEXT 曾独占一行（左列 300px 里与角标、按钮挤不下「需 N EP」）
+   v4.0.4 反馈②：价签移进招募按钮，NEXT 只剩「产出 / 消耗」→ 回到按钮左侧同行；
+   宽度不足时 NEXT 内部换行（不截断、不推走按钮），按钮自身永不收缩。 */
+.next-recruit { display: inline-flex; align-items: center; flex: 1 1 0; order: 2; min-width: 0; }
+/* v4.0.4：NEXT 由三个 nowrap 小块组成，换行只发生在块与块之间（窄列也不会把「· 消耗」切半句） */
+.next-recruit #staff-preview { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 0 5px; line-height: 1.45; }
+.next-recruit #staff-preview .nri { white-space: nowrap; }
+.next-recruit #staff-preview b.nri { font-weight: 600; color: var(--text-3); }
+/* v4.0.4 反馈②：招募按钮改为「招募 / 价格」两行——价签只出现在这里，NEXT 行不再重复「需 N EP」 */
+#hire-btn {
+  order: 3; margin-left: 0; flex: 0 0 auto; min-width: 64px;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; padding: 3px 10px; line-height: 1.3;
+}
+#hire-btn .recruit-label { font-size: 12px; font-weight: 600; }
+#hire-btn .recruit-cost { font-size: 10px; color: var(--text-2); }
+#hire-btn.poor .recruit-cost { color: var(--warn, #c8a24a); }
 
 .hero-cost { margin-left: auto; }
 
@@ -315,6 +334,18 @@ body {
   align-items: center;
   font-size: 12px;
   transition: background .15s;
+  position: relative; /* v4.0.4：价签移出可见行，改由悬浮说明承载 */
+}
+
+/* v4.0.4 反馈②：行内不再显示「下一级价格」，价格与加成一起进悬浮气泡
+   （与 .stat / .item 同一套 [data-tip] 外观，避免又造一套弹窗）。 */
+.focus-bar[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1200;
+  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 5px;
+  padding: 6px 9px; font-size: 11px; color: var(--tip-fg);
+  white-space: pre-line; width: max-content; max-width: min(300px, 86vw); line-height: 1.6;
+  pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.45);
 }
 
 .focus-bar:hover { background: rgba(163,113,247,.15); }

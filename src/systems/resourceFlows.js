@@ -38,6 +38,10 @@ registerFlow({
     S.runEarned += credited;
     S.allTimeEp += credited;
     S.earnedFull = (S.earnedFull || 0) + credited;
+    // v4.0.4 反馈①：挂机（线程自然产出）此前只记 runEarned/allTimeEp/earnedFull，
+    //   漏了任务系统的 _gainRes 累加器 →「限时内累计获得 EP」任务进度恒为 0（卡死到过期）。
+    //   这里补记与 addEp() 同口径的 credited（钳后增量，溢出部分不算获得）。
+    gainRes('ep', credited);
     return { resource: 'ep', produced: credited, gross: gain };
   },
 });
@@ -100,6 +104,7 @@ registerFlow({
         * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale() * mult;
       const before = S.rp || 0;
       addRp(rpGain);
+      spendRes('ep', used); // v4.0.4：蒸馏扣掉的 EP 同样计入「限时内消耗 EP」任务进度
       bookFlow('ep', 'out', used);
       return { resource: 'rp', produced: (S.rp || 0) - before, epCost: used };
     }
@@ -175,6 +180,7 @@ registerFlow({
       S.ep -= take;
       const before = S.pt || 0;
       addPt(take * rate); // v3.10.2 ④：与 RP 同口径，统一走带上限钳制的入口
+      spendRes('ep', take); // v4.0.4：孵化扣掉的 EP 计入「限时内消耗 EP」任务进度
       bookFlow('ep', 'out', take);
       return { resource: 'pt', produced: (S.pt || 0) - before, epCost: take };
     }
@@ -215,7 +221,11 @@ registerFlow({
   id: 'pt:upkeep', phase: CONVERTERS, order: 30, resource: 'pt',
   run({ S, dt, log }) {
     const petUpkeep = petUpkeepTotalPerSec();
-    if (petUpkeep > 0 && (S.pt || 0) > 0) S.pt = Math.max(0, (S.pt || 0) - petUpkeep * dt);
+    if (petUpkeep > 0 && (S.pt || 0) > 0) {
+      const used = Math.min(S.pt || 0, petUpkeep * dt);
+      S.pt = Math.max(0, (S.pt || 0) - petUpkeep * dt);
+      spendRes('pt', used); // v4.0.4：异兽维持消耗计入「限时内消耗 PT」任务进度（按实际扣量）
+    }
     const starvingNow = petStarving();
     if (starvingNow && !S._petStarving && log) log('PT 耗尽：出战异兽已回家休战（加成失效，不再消耗维持）', 'warn');
     else if (!starvingNow && S._petStarving && log) log('PT 回升：异兽重新出战', 'good');
