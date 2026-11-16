@@ -36,7 +36,9 @@ const mkSave = () => JSON.stringify({
     goal: 1000, progress: 0, startsAt: NOW, deadline: NOW + 30 * 60000,
     reward: { kind: 'ep', amount: 200 }, status: 'active', pendingAt: 0, base: 0,
   }],
-  prestige: 1, projectsDone: 1,
+  prestige: 2, projectsDone: 1,
+  // 旧档残留的小数职级点（v3.12.0 之前 ppMult 的 √2 / ×3 写出过这种值）
+  prestigePoints: 3.732050807568877,
   lastSeen: NOW, startTime: NOW,
 });
 
@@ -51,7 +53,13 @@ try {
   await page.setViewport({ width: 1600, height: 1000 });
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 200)));
-  await page.evaluateOnNewDocument(s => localStorage.setItem('abyss_idle_v2', s), mkSave());
+  // 种子只在首次导航写入：evaluateOnNewDocument 每次导航都会执行，若不加闸，
+  // 刷新验收会被种子「重新覆盖」，看起来像进度回档（v4.0.5 排查记录）。
+  await page.evaluateOnNewDocument(s => {
+    if (sessionStorage.getItem('__seeded')) return;
+    localStorage.setItem('abyss_idle_v2', s);
+    sessionStorage.setItem('__seeded', '1');
+  }, mkSave());
   await page.goto(URL, { waitUntil: 'load' });
   await sleep(1500);
 
@@ -198,6 +206,34 @@ try {
   !narrow.prevClipped ? ok('窄列 NEXT 不被截断', `prev ${Math.round(narrow.prev.w)}px / ${Math.round(narrow.prev.h)}px`) : bad('NEXT 被截断', JSON.stringify(narrow.prev));
   narrow.btn.right <= narrow.row.right + 1 ? ok('窄列按钮仍在行内', `btn.right=${Math.round(narrow.btn.right)}`) : bad('按钮溢出', JSON.stringify(narrow));
   results.narrow = narrow;
+
+  // ============ ③ 存档往返（进度不被默认值覆盖）+ 职级点整数 ============
+  console.log('\n[③] 存档往返与职级点');
+  const persistBefore = await page.evaluate(() => ({
+    chapter: window.S.chapter, prestige: window.S.prestige, pp: window.S.prestigePoints,
+    up: (window.S.upgrades || {}).reserve_bin, focus: window.S.focusLevel,
+    prog: (window.S.projects.find(x => x.metric === 'gain') || {}).progress,
+    base: (window.S.projects.find(x => x.metric === 'gain') || {}).base,
+    rankText: (document.getElementById('h-rank') || {}).textContent,
+    ppInt: Number.isInteger(window.S.prestigePoints),
+  }));
+  persistBefore.ppInt ? ok('加载后职级点已是整数', `旧档 3.732… → ${persistBefore.pp}`) : bad('职级点仍是小数', String(persistBefore.pp));
+  /^\d+$/.test(persistBefore.rankText || '') ? ok('顶栏职级点只显示整数', persistBefore.rankText) : bad('顶栏职级点含小数', String(persistBefore.rankText));
+  await page.reload({ waitUntil: 'load' });
+  await sleep(1600);
+  const persistAfter = await page.evaluate(() => ({
+    chapter: window.S.chapter, prestige: window.S.prestige, pp: window.S.prestigePoints,
+    up: (window.S.upgrades || {}).reserve_bin, focus: window.S.focusLevel,
+    prog: (window.S.projects.find(x => x.metric === 'gain') || {}).progress,
+    base: (window.S.projects.find(x => x.metric === 'gain') || {}).base,
+  }));
+  const kept = persistAfter.chapter === persistBefore.chapter && persistAfter.prestige === persistBefore.prestige
+    && persistAfter.pp === persistBefore.pp && persistAfter.up === persistBefore.up && persistAfter.focus === persistBefore.focus
+    && persistAfter.base === persistBefore.base;
+  kept ? ok('刷新后章节/职级/升级/任务基准保持原值', `第 ${persistAfter.chapter} 章 · 职级 ${persistAfter.pp} · reserve_bin ${persistAfter.up}`)
+    : bad('刷新后进度被覆盖', JSON.stringify({ persistBefore, persistAfter }));
+  persistAfter.prog >= persistBefore.prog ? ok('刷新后任务进度只增不减', `${Math.round(persistBefore.prog)} → ${Math.round(persistAfter.prog)}`) : bad('任务进度被回退', `${persistBefore.prog} → ${persistAfter.prog}`);
+  results.persist = { persistBefore, persistAfter };
 
   await page.setViewport({ width: 1600, height: 1000 });
   await sleep(300);

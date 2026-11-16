@@ -356,8 +356,24 @@ export function load() {
         migrated._v25Legacy = true;
       }
     }
-    return { ...defs, ...normalizeCrew(migrated), _version: SAVE_VERSION };
-  } catch { return defaultState(); }
+    const out = { ...defs, ...normalizeCrew(migrated), _version: SAVE_VERSION };
+    // v4.0.5：职级点必须是整数。历史版本 ppMult() 的 √2 / ×3 曾写出 1.41421356…，
+    //   只在结算侧 round 挡不住已经落盘的旧档小数（顶栏会一直显示长小数），
+    //   所以读取侧再收敛一次：旧档一次性变整数，新档本就不会产生小数。
+    out.prestigePoints = Math.max(0, Math.round(Number(out.prestigePoints) || 0));
+    return out;
+  } catch (err) {
+    // v4.0.5：加载失败绝不静默丢档——先把手上的原始串备份到独立键（玩家仍可从备份导出/回滚），
+    //   再回落默认值；错误进控制台，便于定位是哪一段迁移把存档读崩的。
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) localStorage.setItem(SAVE_KEY + '_broken_backup', raw);
+    } catch { /* 备份失败不影响启动 */ }
+    if (typeof console !== 'undefined' && console.error) {
+      console.error(`[存档] 读取失败，已备份到 ${SAVE_KEY}_broken_backup（进度未被删除）`, err);
+    }
+    return defaultState();
+  }
 }
 
 export function save(S) {

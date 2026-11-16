@@ -43,7 +43,9 @@ function withEcoFixture(fn) {
     projects: S.projects, faith: S.faith, rp: S.rp, pt: S.pt,
     _atriumTrickle: S._atriumTrickle, _ptTrickle: S._ptTrickle,
     ptAutoHatch: S.ptAutoHatch, ptDistillOn: S.ptDistillOn, ptHatchLv: S.ptHatchLv,
-    _petStarving: S._petStarving,
+    _petStarving: S._petStarving, offUpgrades: S.offUpgrades, eternal: S.eternal,
+    tech: S.tech, runTalent: S.runTalent, lastSeen: S.lastSeen, gotOffline: S.gotOffline, offHistory: S.offHistory,
+    lastOfflineSec: S.lastOfflineSec, lastOfflineGain: S.lastOfflineGain,
   };
   try {
     S.upgrades = { scribble: 1 };
@@ -55,6 +57,7 @@ function withEcoFixture(fn) {
     S.ep = 0; S.earnedFull = 0; S.faith = 0; S.rp = 0; S.pt = 0;
     S._gainRes = {}; S._spentRes = {};
     S.lazySince = null; S.lazyLowSince = null;
+    S.offUpgrades = {}; S.eternal = {}; S.offHistory = []; S.gotOffline = false; S.tech = {};
     S.projects = [];
     return fn();
   } finally {
@@ -139,7 +142,7 @@ test('B4 所有 natural 消耗分支都带 spendRes：蒸馏 / 孵化 / 涓流',
 console.log('[C] 不双记：一次性入账仍只记一次');
 
 test('C1 addEp 自身记账，触手流不得再记一次', () => withEcoFixture(() => {
-  S.tech = { tentacle_protocol: true };
+  S.tech = { tentacle_protocol: true }; // 由 withEcoFixture 恢复
   S._tentacleTimer = 59.5;
   S.ep = 0;
   const before = (S._gainRes.ep) || 0;
@@ -147,5 +150,17 @@ test('C1 addEp 自身记账，触手流不得再记一次', () => withEcoFixture
   const after = (S._gainRes.ep) || 0;
   assert.ok(after > before, '触手点击应计入获得');
   assert.ok(Math.abs(after - before - S.ep) < 1e-6, `一次入账只能记一次（记了 ${after - before}，余额 +${S.ep}）`);
-  delete S.tech;
+}));
+
+console.log('[D] 离线冻结口径：离线收益不推进任务进度（v2.6.6 不变）');
+const offline = await import('../src/modules/offline.js');
+
+test('D1 离线结算发了 EP，但 _gainRes 不涨（任务进度冻结）', () => withEcoFixture(() => {
+  S.lastSeen = Date.now() - 3 * 3600 * 1000; // 离线 3 小时
+  S.runTalent = null;
+  const before = (S._gainRes.ep) || 0;
+  const r = offline.applyOffline();
+  assert.ok(r && r.gain > 0, '夹具应产生离线收益');
+  assert.equal((S._gainRes.ep) || 0, before, '离线收益不得推进「累计获得 EP」任务');
+  assert.ok(S.ep > 0, '但 EP 余额本身要照常入账');
 }));

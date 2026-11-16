@@ -626,7 +626,8 @@ function renderTop() {
     if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
-  if (hRank) hRank.textContent = S.prestigePoints;
+  // v4.0.5：职级点按整数展示（旧档若残留 1.414… 也不会把顶栏撑成长小数）
+  if (hRank) hRank.textContent = String(Math.max(0, Math.round(Number(S.prestigePoints) || 0)));
   if (hRp) hRp.textContent = fmt(S.rp) + ' / ' + fmt(rpCap()); // v2.8.27 ②：RP 存储上限（矩阵存储库扩容）
   if (hEs) hEs.textContent = fmt(S.es);
   // v3.4.9 反馈⑧：FP 有上限就必须显示上限（此前只有数值，玩家以为「卡住不涨」）

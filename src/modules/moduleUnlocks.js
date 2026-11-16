@@ -29,7 +29,8 @@ export function moduleBuyState(key) {
   if (!m) return { ok: false, reason: '未知模块' };
   if (moduleUnlocked(key)) return { ok: false, reason: '已开启', opened: true };
   if (!moduleVisible(key)) return { ok: false, reason: '需先完成 1 次晋升' };
-  const pp = S.prestigePoints || 0;
+  // v4.0.5：职级点是整数资源——判定与展示都先取整，旧档残留小数不会出现「需 3 PP（当前 2.71）」
+  const pp = Math.max(0, Math.round(S.prestigePoints || 0));
   if (pp < m.cost) return { ok: false, reason: `需 ${m.cost} PP（当前 ${pp}）`, cost: m.cost, pp };
   return { ok: true, cost: m.cost, pp };
 }
@@ -38,7 +39,7 @@ export function moduleBuyState(key) {
 export function buyModuleUnlock(key) {
   const st = moduleBuyState(key);
   if (!st.ok) return { ok: false, reason: st.reason };
-  S.prestigePoints -= st.cost;
+  S.prestigePoints = Math.max(0, Math.round(S.prestigePoints) - st.cost); // v4.0.5：扣费后仍是整数
   if (key === 'bazaar') {
     S.bazaar = S.bazaar || {};
     S.bazaar.unlocked = true;
@@ -60,7 +61,7 @@ export function moduleUnlockCard(key) {
     <div style="font-size:13px;font-weight:600;color:var(--accent)">${m.name} · 尚未开启</div>
     <div style="font-size:11px;color:var(--text-2);line-height:1.7;margin:6px 0 10px">${m.desc}</div>
     <div class="off-stat"><span>开启消耗</span><b style="color:var(--purple)">-${m.cost} PP</b></div>
-    <div class="off-stat"><span>当前职级点</span><b>${st.pp != null ? st.pp : (S.prestigePoints || 0)} PP</b></div>
+    <div class="off-stat"><span>当前职级点</span><b>${st.pp != null ? st.pp : Math.max(0, Math.round(S.prestigePoints || 0))} PP</b></div>
     <button class="btn ${st.ok ? '' : 'disabled'}" data-module-unlock="${key}" style="margin-top:10px;width:100%">
       ${st.ok ? `消耗 ${m.cost} PP 开启「${m.name}」` : st.reason}
     </button>

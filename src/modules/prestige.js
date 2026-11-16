@@ -19,7 +19,7 @@ export function doPrestige(talentId) {
   const gain = prestigeGain();
   const rpg = prestigeRpGain();
   const esg = esGain();
-  S.prestigePoints += gain;
+  S.prestigePoints = Math.max(0, Math.round(Number(S.prestigePoints) || 0) + gain); // v4.0.5：职级点恒为整数（结算侧再兜一层）
   S.prestige++;
   if (esg > 0) { S.es += esg; gainRes('es', esg); discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
   // v2.9.0：湮灭残片改由「同归于尽」抉择结算发放（main.js），晋升不再发放/清除吞噬状态

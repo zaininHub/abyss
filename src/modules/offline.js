@@ -8,6 +8,9 @@ export function applyOffline() {
   const eff = Math.min(dt, offlineCap());
   const cps = computeCps();
   let gain = 0;
+  // v4.0.5：v2.6.6 的口径「离线不增加任务进度」必须显式守住——addEp/addRp 从 v3.12.13 起
+  //   会顺带记任务累加器（_gainRes），若不回退，离线一夜回来会让限时任务凭空完成/过期前爆满。
+  const g0 = { ep: (S._gainRes && S._gainRes.ep) || 0, rp: (S._gainRes && S._gainRes.rp) || 0 };
   if (cps > 0) {
     const raw = cps * eff * offlineEffRate(); // v3.2.4 反馈⑤：统一口径（含离线协议研究 +12%/级）
     // v2.1 拍板口径：离线收益受 EP 存储上限约束（防止离线一夜直接爆仓），
@@ -22,6 +25,13 @@ export function applyOffline() {
   if (hours >= 1) {
     bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
     if (bonusRp > 0) addRp(bonusRp); // v2.8.27 ②：RP 上限
+  }
+  // v4.0.5：把本次离线入账对任务累加器的影响整体回退（离线冻结口径，见上方 v2.6.6 注释）。
+  //   放在早退判断之前——实发不足 1 EP 时也会被记一笔，不能漏。
+  if (S._gainRes) {
+    for (const [k, before] of Object.entries(g0)) {
+      if ((S._gainRes[k] || 0) > before) S._gainRes[k] = before;
+    }
   }
   if (gain < 1 && bonusRp === 0) return null;
   S.lastOfflineSec = Math.floor(eff);
