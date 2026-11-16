@@ -1759,36 +1759,74 @@ function bindEvents() {
   }
 
   // v4.0.2 反馈②：系统日志面板高度可拖拽调整（持久化到 localStorage）
+  // v4.0.7 反馈②：旧实现用「手柄当前 rect.bottom - 指针 y」当新高度——每次移动都会重算 rect.bottom，
+  //   而 rect.bottom 本身随高度变化 → 反馈自激、往上拖不动；叠加 CSS 的 max-height:190px 把上限钉死。
+  //   现在改为「按下时记起始高度 + 指针位移」的纯增量模型，上限读 --log-max-h（随断点变化），
+  //   并补上双击复位 / 方向键微调 / 窗口缩小后重新钳制。
   const bindLogResize = () => {
     const panel = document.getElementById('log-panel');
     const handle = document.getElementById('log-resize');
     if (!panel || !handle) return;
     const KEY = 'abyss_log_h';
-    const clamp = (h) => Math.max(96, Math.min(window.innerHeight * 0.8, h));
+    const DEFAULT_H = 240;
+    const MIN_H = 120;
+    // 上限：CSS 变量（桌面 520 / 单屏 420 / 窄屏更矮）× 视口比例，两者取小——窗口再小也不会把侧栏撑爆
+    const maxH = () => {
+      const cssMax = parseFloat(getComputedStyle(panel).getPropertyValue('--log-max-h'));
+      const cap = Number.isFinite(cssMax) && cssMax > 0 ? cssMax : 520;
+      return Math.max(MIN_H, Math.min(cap, Math.round(window.innerHeight * 0.62)));
+    };
+    const clamp = (h) => Math.max(MIN_H, Math.min(maxH(), Math.round(Number(h) || 0)));
+    const apply = (h, persist) => {
+      const v = clamp(h);
+      panel.style.height = v + 'px';
+      if (persist) { try { localStorage.setItem(KEY, v); } catch { /* ignore */ } }
+    };
+    const curH = () => panel.getBoundingClientRect().height;
     const saved = (() => { try { return Number(localStorage.getItem(KEY)); } catch { return NaN; } })();
-    panel.style.height = (Number.isFinite(saved) ? clamp(saved) : 240) + 'px';
-    let dragging = false;
-    const onMove = (e) => {
-      if (!dragging) return;
-      const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
-      const rect = panel.getBoundingClientRect();
-      panel.style.height = clamp(rect.bottom - y + handle.offsetHeight) + 'px';
-    };
-    const onUp = () => {
-      if (!dragging) return;
-      dragging = false;
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.body.style.userSelect = '';
-      try { localStorage.setItem(KEY, Math.round(panel.getBoundingClientRect().height)); } catch { /* ignore */ }
-    };
+    apply(Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_H, false);
+
+    handle.setAttribute('tabindex', '0');
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'horizontal');
+    handle.setAttribute('aria-label', '拖拽调整日志高度（双击恢复默认，方向键微调）');
+    handle.removeAttribute('aria-hidden');
+
+    let drag = null;
+    let lastTapAt = 0;
     handle.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      // 双击复位：自己数时间戳而不是监听 dblclick —— pointerdown 上的 preventDefault（防止拖拽时选中文字）
+      // 会抑制浏览器合成 click/dblclick，靠原生 dblclick 在真机上永远收不到。
+      const now = Date.now();
+      if (now - lastTapAt < 320) { lastTapAt = 0; apply(DEFAULT_H, true); return; }
+      lastTapAt = now;
       e.preventDefault();
-      dragging = true;
-      document.body.style.userSelect = 'none';
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
+      drag = { y: e.clientY, h: curH(), id: e.pointerId };
+      try { handle.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      document.body.classList.add('log-resizing');
     });
+    handle.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      apply(drag.h + (drag.y - e.clientY), false); // 往上拖 = 变高
+    });
+    const endDrag = () => {
+      if (!drag) return;
+      try { handle.releasePointerCapture(drag.id); } catch { /* ignore */ }
+      drag = null;
+      document.body.classList.remove('log-resizing');
+      apply(curH(), true); // 落盘的是钳制后的真实高度
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+    handle.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 40 : 12;
+      if (e.key === 'ArrowUp') { e.preventDefault(); apply(curH() + step, true); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); apply(curH() - step, true); }
+      else if (e.key === 'Home') { e.preventDefault(); apply(DEFAULT_H, true); }
+    });
+    // 窗口变小后，旧的记忆高度可能超过新上限——重新钳制，避免侧栏被一个巨块顶到底
+    window.addEventListener('resize', () => apply(curH(), false));
   };
   bindLogResize();
 

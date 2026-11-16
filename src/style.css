@@ -324,18 +324,18 @@ body {
 .hero-cost { margin-left: auto; }
 
 /* ========== 专注条 ========== */
-/* v4.0.6 反馈②：与线程行同构——等级 + NEXT +「强化 / 价格」按钮；整条不再可点（cursor/点击都收进按钮） */
+/* v4.0.6 反馈②：与线程行同构——等级 + NEXT +「强化 / 价格」按钮；整条不再可点（cursor/点击都收进按钮）
+   v4.0.7 反馈①：去掉卡片式内缩（padding/border/背景色）——原实现让文字比线程行右移 11px、按钮右缘也内缩 11px，
+   两行并排看是「错位」。现在左右基线完全对齐，hover 只加一层淡底不占位（不参与盒模型，故不会破坏对齐）。 */
 .focus-bar {
   margin-top: 8px;
-  padding: 5px 10px;
-  background: rgba(163,113,247,.08);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
   font-size: 12px;
+  border-radius: 4px;
   transition: background .15s;
   position: relative; /* v4.0.4：价签移出可见行，改由悬浮说明承载 */
 }
@@ -351,7 +351,8 @@ body {
   pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.45);
 }
 
-.focus-bar:hover { background: rgba(163,113,247,.15); }
+/* v4.0.7：淡底只做 hover 提示，用 inset 负值外扩，不占布局（不改变文字与按钮的对齐基线） */
+.focus-bar:hover { background: rgba(163,113,247,.07); box-shadow: 0 0 0 4px rgba(163,113,247,.07); }
 
 /* v4.0.6：专注价格改在按钮内（.recruit-cost），旧的整条 .cost 样式已无消费点，删除 */
 
@@ -917,21 +918,41 @@ body {
 }
 
 /* ========== 日志 ========== */
-/* v4.0.2 反馈②：面板高度可拖拽调整（main.js bindLogResize 设置 inline height，故此处不再固定 max-height） */
-.log-panel { display: flex; flex-direction: column; }
+/* v4.0.2 反馈②：面板高度可拖拽调整（main.js bindLogResize 设置 inline height，故此处不再固定 max-height）
+   v4.0.7 反馈②：① 日志永不横向滚动——长 URL / 无空格长串一律在行内折行；
+                  ② 高度上限改由 --log-max-h 统一声明（JS 读同一变量做钳制，拖到顶就停住）。 */
+.log-panel { --log-max-h: 360px; display: flex; flex-direction: column; }
 
 .log-content {
   flex: 1 1 auto;
   min-height: 60px;
   height: auto;
   overflow-y: auto;
+  overflow-x: hidden;          /* 不提供横向滚动：溢出只会出现在行内折行之后 */
   font-size: 11.5px;
   line-height: 1.6;
 }
+.log-content > div { overflow-wrap: anywhere; word-break: break-word; }
 
-/* v4.0.2 反馈②：日志高度拖拽手柄 */
-.log-resize { flex: 0 0 auto; height: 7px; margin-top: 4px; border-radius: 4px; background: var(--border); opacity: .45; cursor: ns-resize; transition: opacity .15s; }
-.log-resize:hover, .log-resize:active { opacity: 1; }
+/* v4.0.2 反馈②：日志高度拖拽手柄
+   v4.0.7：从「一条灰条」改为「居中小横条」——灰条容易被当成面板边框/分割线，小横条才是可拖拽的通用语言；
+   热区加高到 12px（视觉仍是 3px 细条），hover/聚焦时才变宽变 accent。 */
+.log-resize {
+  flex: 0 0 auto; height: 12px; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; cursor: ns-resize; touch-action: none;
+}
+.log-resize::after {
+  content: ''; display: block; width: 40px; height: 3px; border-radius: 2px;
+  background: var(--border); transition: width .15s, background .15s;
+}
+.log-resize:hover::after, .log-resize:active::after, .log-resize:focus-visible::after {
+  width: 60px; background: var(--accent);
+}
+.log-resize:focus-visible { outline: none; }
+
+/* v4.0.7：拖拽期间全页统一光标 + 禁选中，避免拖到面板外时选中日志文本 */
+body.log-resizing, body.log-resizing * { cursor: ns-resize !important; user-select: none !important; }
 
 .log-content .t {
   color: var(--text-3);
@@ -1184,9 +1205,9 @@ body.paused .pet-grid .pet-card {
     min-height: 0;
     overflow-y: auto;
   }
-  /* 单屏下的紧凑化：日志面板收矮 */
-  .log-panel { max-height: 190px; }
-  .log-content { height: 140px; }
+  /* 单屏下的紧凑化：日志面板默认高度收矮（v4.0.7：上限交给 --log-max-h，不再用 max-height 钉死——
+     原先的 max-height:190px 会把拖拽放大直接吃掉，玩家怎么往上拖都停在 190） */
+  .log-panel { --log-max-h: 520px; }
   .hero-click { padding: 12px; }
   .big { font-size: 30px; }
 }
