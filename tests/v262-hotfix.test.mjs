@@ -8,6 +8,7 @@ const rec = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '�
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
 const ai = readFileSync(new URL('../src/modules/ai.js', import.meta.url), 'utf8');
+const shop = readFileSync(new URL('../src/modules/shop.js', import.meta.url), 'utf8'); // v4.0.9 反馈⑧：激活卡迁入研究点页
 const rel = readFileSync(new URL('../src/modules/religions.js', import.meta.url), 'utf8');
 const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const state = readFileSync(new URL('../src/state.js', import.meta.url), 'utf8');
@@ -44,8 +45,10 @@ rec('V1 点击动画一次性轻抬 + 冷光转青（不再有常驻 glow）',
   && css.includes('.tentacle-deco.tap .td-rim') && !css.includes('tentacleGlow'), '');
 
 // ===== ② AI 激活按钮 =====
-rec('V2 AI 激活按钮未达标带 disabled 属性', ai.includes("${rpOk ? '' : 'disabled'}"), 'data-ai-build-activate'); // v3.12.13 ⑥：激活消耗由 EP 改为研究点 RP（epOk→rpOk）
-rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };"), 'activateAutoBuild');
+// v4.0.9 反馈⑧：激活卡由 ai.js 迁入研究点页 shop.js（购买期望归研究点类目）；
+// v4.0.9 实现改用 cant 灰态 + autoBuildActivable 二次校验（等价于 disabled 禁点）。
+rec('V2 AI 激活按钮未达标灰态（cant class）+ 点击二次校验', shop.includes("(rpOk ? '' : ' cant')") && shop.includes('if (!autoBuildActivable()) return'), 'data-auto-build-activate');
+rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovered(S)) return { ok: false, reason: '未解锁全部资源点' };"), 'activateAutoBuild（仍在 ai.js）');
 
 // ===== ③ 宗教 =====
 rec('V3 唤醒按钮未达标带 disabled 属性（含每秒 affordability 刷新）', rel.includes('data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? \'\' : \'disabled\'}') && rel.includes('w.disabled = !canUnlockReligion() || (S.ep || 0) < religionWakeCost()'), '');

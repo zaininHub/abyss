@@ -70,6 +70,11 @@ export const RUN_RESET_KEYS = Object.freeze([
   // v3.12.0 反馈⑪：以下资产改为「本局制」——晋升 / 轮回一律清零，只保留跨局资产
   // （职级点 / ES / 成就 / 宗教 / 深潜 / 回响 / 永恒 / 已完成故事线）。
   'ai', 'rp', 'rpTheories', 'riftEmber', 'riftUpgrades', 'riftLevelTech', 'riftExpedition',
+  // v4.0.9 反馈⑫：自动转化开关全套随本局重置——「晋升以后自动转化应该全部初始化」。
+  // 玩家开关（converterOn / 镜像三键）回默认开启；能力解锁（ptAutoHatch，EP 购买）与
+  // 级数（ptHatchLv）是本局投入，随 upgrades 同寿命；裂隙自动动作（riftAuto）与自动
+  // 净化开关（autoPurify）依赖的 riftUpgrades 跨局保留，但「本局开不开」是本局决策。
+  'converterOn', 'atriumOn', '_probeEnabled', 'ptDistillOn', 'ptAutoHatch', 'ptHatchLv', 'riftAuto', 'autoPurify',
 ]);
 
 // ⑤-b 本局运行时快照：EP 上限「时间基座」与满仓涓流计时器。

@@ -13,6 +13,7 @@
   --purple: #a371f7;
   --pink: #f778ba;
   --cyan: #39c5cf;
+  --cyan-2: #7fdce2; /* v4.0.9 反馈⑦：组标题 hover 色（此前 rp-group-title:hover 引用了未定义变量，静默回落继承色） */
   --good: #3fb950;
   --bad: #f85149;
   --warn: #d29922;
@@ -243,7 +244,9 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
      命中恢复正常（v408 专项锁定）。 */
   #app { height: auto; overflow: visible !important; }
   body { overflow: auto; }
-  .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
+  /* v4.0.9 反馈⑤：两轨回退的列定义移至 900 块之后的区间查询（见下方）——
+     此处保留会输给源顺序靠后的 @media(min-width:900) .grid{var(--grid-cols-4)}，
+     900~1280 视口四列最小宽 880px+gap 溢出视口（实测 900px 下 scrollWidth=918） */
   .first-col, .side-col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; overflow: visible !important; }
 }
 @media (max-width: 860px) {
@@ -527,6 +530,16 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 .policy-state-open { background: rgba(88,166,255,.14); color: var(--accent); border: 1px solid rgba(88,166,255,.34); }
 .policy-state-lock, .dealer-state-lock { background: rgba(110,118,129,.14); color: var(--text-3); border: 1px solid var(--border); }
 .dealer-state-bad { background: rgba(248,81,73,.14); color: var(--red); border: 1px solid rgba(248,81,73,.34); }
+/* v4.0.9 反馈⑩：待选政策组 NEW 角标（选定后消失）——浅色主题换深色变体保证可读 */
+.policy-new-badge {
+  display: inline-block; margin-left: 6px; padding: 0 5px;
+  border-radius: 3px; background: rgba(88,166,255,.2);
+  border: 1px solid rgba(88,166,255,.42);
+  color: var(--accent); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .8px; vertical-align: 1px;
+}
+html.theme-light .policy-new-badge, html.theme-mint .policy-new-badge { color: #1d6fd8; }
+html.theme-autumn .policy-new-badge { color: #8a5a00; }
 .policy-foot, .dealer-meta { font-size: 10.5px !important; color: var(--text-3) !important; line-height: 1.6; }
 .dealer-cost { font-size: 11px !important; line-height: 1.6; }
 
@@ -600,7 +613,19 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 /* v4.0.2 反馈⑤：预留线下拉框并入标题行 h3 内（与助手数量同处一行），百分比改为 <select> */
 .ai-reserve-inline { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 10px; color: var(--text-3); white-space: nowrap; }
 .ai-reserve-label { white-space: nowrap; }
-.ai-reserve-select { font-size: 11px; min-height: 24px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-2, #1a1030); color: var(--text-1, #e8e0f5); }
+.ai-reserve-select { font-size: 11px; min-height: 24px; padding: 1px 4px; border-radius: 4px; }
+/* v4.0.9 反馈①：全部下拉框跟随皮肤配色——此前班组筛选/岗位 select 无样式，
+   浅色皮肤（light/mint/autumn）下仍渲染浏览器原生深底白字，与面板割裂。
+   统一走主题变量：面板底 + 主题边框 + 主题文字；option 在多数浏览器继承 select 底色。
+   .ai-reserve-select 保留自身字号/内边距（特异性更高），颜色来源并入本规则。 */
+select {
+  background: var(--panel);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+select option { background: var(--panel); color: var(--text-1); }
+select:focus { outline: 1px solid var(--accent); outline-offset: 1px; }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
 .ai-assistant-head b { font-size: 13px; }
 .ai-assist-sep { color: var(--text-3); margin: 0 1px; }
@@ -1232,6 +1257,13 @@ body.paused .pet-grid .pet-card {
   .hero-click { padding: 12px; }
   .big { font-size: 30px; }
 }
+/* v4.0.9 反馈⑤：窄屏两轨回退必须在 900 块之后才能赢过源顺序（同特异性后写胜）。
+   用区间查询 (min-width:861px) and (max-width:1280px)：≤860 交给既有单列回退，
+   ≥1281 走四列单屏布局，互不越界。900~1280 视口（窄笔记本/半屏/多屏副屏）
+   此前四列最小宽 880px+gap 直接溢出视口 18px+。 */
+@media (min-width: 861px) and (max-width: 1280px) {
+  .grid { grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); }
+}
 
 /* ========== v1.3 模块 E：已升级折叠分区 ========== */
 .owned-header {
@@ -1514,6 +1546,20 @@ body {
 }
 .btn:disabled { filter: saturate(0.45); }
 .panel h3 { color: var(--purple); letter-spacing: 1.2px; font-size: 11px; }
+/* v4.0.9 反馈⑦：商店页分区/组标题字体统一——研究点组标题（rp-group-title，13px/cyan/可折叠）
+   是收起范式的基准样式，产出强化/效能建筑组标题复用后自动对齐；
+   「设施」h3 另加 foldable-h3 修饰（12.5px/cyan/可点），与其余组标题观感一致。
+   注意不加 .panel 前缀：bld-title/v21-title/thread-title 位于 .tab-pane（无 .panel 祖先），
+   带前缀会让规则静默不命中（v409 浏览器专项抓出：字号回落浏览器默认 15.21px）。 */
+h3.foldable-h3 {
+  color: var(--cyan);
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+}
+h3.foldable-h3:hover { color: var(--cyan-2); }
+h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: center; color: var(--text-3); font-size: 10px; }
 .tech-grid .tech:hover { border-color: var(--purple); box-shadow: 0 0 0 1px var(--glow-purple); }
 .tech-grid .tech .n { letter-spacing: 0.4px; }
 .group-title { color: var(--text-2); letter-spacing: 1px; font-size: 11px; }
@@ -2003,7 +2049,7 @@ html.theme-light {
   --bg: #eef1f6; --panel: #ffffff; --border: #cfd6e1;
   --text: #1d2530; --text-1: #1d2530; --text-2: #3d4757; --text-3: #5a6472; --dim: #3d4757;
   --accent: #1d6fd8; --green: #1a7f37; --red: #cf222e; --yellow: #9a6700;
-  --purple: #8250df; --pink: #bf3989; --cyan: #0d7d90;
+  --purple: #8250df; --pink: #bf3989; --cyan: #0d7d90; --cyan-2: #085b68; /* hover 深变体 */
   --good: #1a7f37; --bad: #cf222e; --warn: #9a6700;
   --glow-purple: rgba(130, 80, 223, 0.16); --glow-cyan: rgba(13, 125, 144, 0.18);
   --tip-bg: #ffffff; --tip-fg: #24303f; /* v4.0.3：浅色主题气泡白底深字 */
@@ -2018,7 +2064,7 @@ html.theme-ember {
   --bg: #171210; --panel: #201a16; --border: #3d322a;
   --text: #e8ddcf; --text-2: #b3a491; --text-3: #8a7c6a; --dim: #b3a491;
   --accent: #f0a24a; --green: #9ac25c; --red: #e5534b; --yellow: #d8a548;
-  --purple: #c9925e; --pink: #d98a7a; --cyan: #5fb8a5;
+  --purple: #c9925e; --pink: #d98a7a; --cyan: #5fb8a5; --cyan-2: #8ad4c3; /* hover 亮变体 */
   --good: #9ac25c; --bad: #e5534b; --warn: #d8a548;
   --glow-purple: rgba(240, 162, 74, 0.22); --glow-cyan: rgba(95, 184, 165, 0.2);
 }
@@ -2033,7 +2079,7 @@ html.theme-mint {
   --bg: #e7f4ee; --panel: #f6fdf9; --border: #bcded0;
   --text: #16302a; --text-1: #16302a; --text-2: #33564b; --text-3: #557567; --dim: #33564b;
   --accent: #0f8a68; --green: #12805a; --red: #c43c46; --yellow: #8a6a10;
-  --purple: #6f5bb5; --pink: #b03f7a; --cyan: #0a7d86;
+  --purple: #6f5bb5; --pink: #b03f7a; --cyan: #0a7d86; --cyan-2: #055a61; /* hover 深变体 */
   --good: #12805a; --bad: #c43c46; --warn: #8a6a10;
   --glow-purple: rgba(111, 91, 181, 0.14); --glow-cyan: rgba(10, 125, 134, 0.16);
   --tip-bg: #ffffff; --tip-fg: #1d3a31; /* v4.0.3：浅色主题气泡白底深字 */
@@ -2049,7 +2095,7 @@ html.theme-autumn {
   --bg: #f6efdf; --panel: #fffaf0; --border: #ddc9a4;
   --text: #33270f; --text-1: #33270f; --text-2: #56452a; --text-3: #6f5e3f; --dim: #56452a;
   --accent: #b4771a; --green: #4e7a2e; --red: #b8392f; --yellow: #9a6700;
-  --purple: #8a5aa0; --pink: #b0506a; --cyan: #2c7f86;
+  --purple: #8a5aa0; --pink: #b0506a; --cyan: #2c7f86; --cyan-2: #1d5c62; /* hover 深变体 */
   --good: #4e7a2e; --bad: #b8392f; --warn: #9a6700;
   --glow-purple: rgba(138, 90, 160, 0.14); --glow-cyan: rgba(44, 127, 134, 0.14);
   --tip-bg: #fffaf0; --tip-fg: #33270f; /* v4.0.3：浅色主题气泡浅底深字 */

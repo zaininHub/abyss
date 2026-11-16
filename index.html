@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.0.8</title>
+<title>深渊效能工作台 v4.0.9</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -69,7 +69,7 @@
         <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
         <div class="save-menu-pop" id="save-pop">
           <div class="save-actions">
-            <button class="btn" id="save-new" title="保存当前进度为新快照（最多 3 个，已满则覆盖最早）">+ 保存新档</button>
+            <button class="btn" id="save-new" title="新建一份全新初始存档入槽（不影响当前进度，读取即可开始新档；最多 3 个，已满则覆盖最早）">+ 新建初始空档</button>
             <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
             <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
           </div>
@@ -246,7 +246,7 @@
         <!-- v2.5 ④：研究点（RP 独立栏目，解锁唯一入口 = 购入矩阵存储库） -->
         <div class="tab-pane" id="tab-rp">
           <div id="rp-panel"></div>
-          <h3 style="margin-top:16px" id="research-upgrade-title">研究升级</h3>
+          <!-- v4.0.9 反馈⑨：去「研究升级」大类标题——分组标题已足够定位，直接展示其下类目 -->
           <div id="research-upgrade-list"></div>
           <h3 style="margin-top:16px" id="rp-upgrade-title">晋升 RP 加成</h3>
           <div id="rp-upgrade-list" class="shop-grid"></div>

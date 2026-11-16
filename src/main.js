@@ -16,7 +16,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
-import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, overwriteSnapshot, importToSnapshot, SNAP_MAX, fmtStamp } from './modules/snapshots.js';
+import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, overwriteSnapshot, importToSnapshot, createFreshSnapshot, SNAP_MAX, fmtStamp } from './modules/snapshots.js';
 // v3.10.4 ④：导入模式（'current' = 覆盖当前；'snapshot' = 导入为新快照）；模块级声明，供模块级的 importSave 读取
 let importMode = 'current';
 // v2.0：故事线管理器
@@ -1031,12 +1031,24 @@ function updateProjectProgress() {
 
 // ========== Tab 切换 ==========
 // v2.8.6 B2a：政策开放组哈希（变化时刷新面板与按钮）
+// v4.0.9 反馈⑩：新组开放要有存在感——diff 出本轮新开放的政策组，toast + 日志提示
+// （首个哈希为空集 → 首次出现不提示，避免开局/读档刷屏；跨轮重置由晋升清空 policies 自然带回「新组」语义）
 let _policyOpenHash = '';
 function policyTickRefresh() {
-  const h = policyOpenGroups().map(g => g.id).sort().join(',');
+  const open = policyOpenGroups();
+  const h = open.map(g => g.id).sort().join(',');
   if (h !== _policyOpenHash) {
+    const prevIds = _policyOpenHash ? _policyOpenHash.split(',') : [];
+    const fresh = open.filter(g => !prevIds.includes(g.id));
     _policyOpenHash = h;
     dirty.policy = true;
+    // v4.0.9 ⑩：仅提示「新开放」的组；_policyOpenHash 为空（开局首帧/读档首帧）不提示
+    if (_policyOpenHash && fresh.length) {
+      for (const g of fresh) {
+        toast(`🏛 新政策组开放：${g.name}${g.hint ? `（${g.hint}）` : ''}`);
+        log(`政策组「${g.name}」已开放${g.hint ? `——${g.hint}` : ''}，可到政策页选用`, 'good');
+      }
+    }
     refreshTabVisibility();
   }
 }
@@ -1237,15 +1249,14 @@ function renderRpPanel() {
   if (!anchorDone('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
-    <div class="stat"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></div>
-    <div class="stat"><b>蒸馏效率</b><span>${fmt(rpDistillRate())} EP → 1 RP</span></div>
-    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP</button>
-      <span style="font-size:11px;color:var(--text-2)" id="rp-distill-preview">预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP</span>
+    <!-- v4.0.9 反馈②：顶部说明压到 1-2 行——当前 RP/上限/效率/蒸馏按钮收成一行，蒸馏按钮并入同行 -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
+      <span class="stat" style="display:inline"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></span>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP（效率 ${fmt(rpDistillRate())} EP→1，预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP）</button>
     </div>
     <!-- v3.3.1 反馈①：灵感工坊自动蒸馏开关（设施区只保留购买/升级） -->
     <div id="atrium-switch-host" style="margin-top:10px"></div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行
   renderAtriumSwitch(document.getElementById('atrium-switch-host'));
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
@@ -1693,7 +1704,23 @@ function bindEvents() {
   // v3.10.4 ④：存档管理简化为「💾 存档」下拉直接展示所有存档列表（参考 KG）。
   //   每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；导入导出作为每条的功能。
   importMode = 'current'; // 复位为默认（'current' = 旧「导入覆盖当前」；'snapshot' = 导入为新快照入列）
-  document.getElementById('save-new')?.addEventListener('click', () => { onSnapSave(); renderSaveList(); });
+  // v4.0.9 反馈③：「+ 保存新档」改「+ 新建初始空档」——生成一份全新初始存档入槽（不覆盖当前进度），
+  //   供玩家从列表「读取」切换开新路线；槽满时走「覆盖最早」二级确认（v403 回归抓出
+  //   静默覆盖会丢玩家快照，与 saveSnapshot 同纪律：任何覆盖玩家数据的操作必须确认）。
+  document.getElementById('save-new')?.addEventListener('click', () => {
+    const r = createFreshSnapshot();
+    if (r.ok) {
+      renderSaveList(true);
+      renderSnapshotList();
+      toast('初始空档已创建（读取即可开始新档）');
+    } else if (r.needCover) {
+      askConfirm('存档已满，覆盖最早的存档', `已保存 ${SNAP_MAX} 个存档。新初始空档将覆盖最早的「${r.needCover.name}（${fmtStamp(r.needCover.time)}）」，确定创建？`, () => {
+        const res = coverOldest(r.snap);
+        if (res.ok) { renderSaveList(true); renderSnapshotList(); toast('初始空档已创建（已覆盖最早存档）'); }
+        else toast('创建失败：本地存储不可用');
+      });
+    } else toast(r.reason || '创建失败：本地存储不可用');
+  });
   document.getElementById('clear-game')?.addEventListener('click', () => {
     askConfirm('清档（删除当前游戏）', '将删除当前本地游戏，回到全新开局。\n存档快照保留，可逐个删除；此操作不可撤销，确定继续？', () => { doReset(); });
   });
@@ -2142,7 +2169,7 @@ function renderSaveList(force = false) {
   if (cnt) cnt.textContent = `${snaps.length}/${SNAP_MAX}`;
   box.innerHTML = '';
   if (!snaps.length) {
-    box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 保存新档」生成（最多 ${SNAP_MAX} 个）。</div>`;
+    box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 新建初始空档」生成（最多 ${SNAP_MAX} 个）。</div>`;
     return;
   }
   for (const sn of snaps) {
@@ -2485,7 +2512,7 @@ function checkAch() {
   if (fresh.length) { dirty.achievements = true; dirty.storyline = true; }
 }
 // v2.8.1：成就页面——只显示已解锁成就（达成即点亮，未达成不展示）
-const ACH_PAGE_SIZE = 10; // v3.3.3 反馈⑩：成就一页 10 条 + 分页（与班组同范式，会话级页码）
+const ACH_PAGE_SIZE = 5; // v3.3.3 反馈⑩：成就分页（与班组同范式，会话级页码）；v4.0.9 反馈⑪：一页 10 → 5 条
 let achPage = 0;
 function renderAchievementPanel(container) {
   if (!container) return;

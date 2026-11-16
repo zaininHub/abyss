@@ -14,6 +14,7 @@ import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, st
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v3.4.6 反馈⑤：卡面产出与 tick 同口径（绑定加成封顶 ×2）
+import { autoBuildUnlocked, autoBuildActivateCost, autoBuildActivable, activateAutoBuild, allResDiscovered } from './ai.js'; // v4.0.9 反馈⑧：自动购建激活入口迁入研究点「AI 助手」类目
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
@@ -659,6 +660,7 @@ export function renderThreadShop(container) {
   renderChainedGroups(container, split, [
     { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速
   ], makeThreadItem, (u, el) => threadItemEls.set(u.id, el), { verb: '升级' }); // v2.8.18 ③：已购终态收折叠
+  applyGroupFold(container); // v4.0.9 反馈⑦：产出强化组支持收起（对齐研究点/效能建筑 rp-group-title）
   bindDelegate(container, (id) => {
     const u = UPGRADES.find(x => x.id === id);
     if (!u) return;
@@ -1076,6 +1078,11 @@ export function renderBuildings(container) {
       /* v2.8.2 反馈⑪：EP 不足不弹框 */
     }
   });
+  // v4.0.9 反馈⑦：「设施」静态标题接入收起（收起同时覆盖并入设施区尾部的线程强化/效能建筑卡）
+  if (bldTitle && !bldTitle.dataset.foldBound) {
+    bldTitle.dataset.foldBound = '1';
+    bindFoldToggle(bldTitle);
+  }
 }
 
 // v3.0.8：设施卡存储文案同口径 → v3.0.9 反馈④：数据中心「EP 存储上限 +{本级增量}」，其余设施原样
@@ -1348,8 +1355,14 @@ const V21_GROUPS = [
 // v3.12.13 反馈②：效能建筑分组收起/展开——复刻研究点 rp-group-title 的交互与定位
 // （箭头居标题左侧、整行可点、会话级折叠态），与「设施」分区折叠一致的观感。
 // 仅改分组显示，不触碰底层建筑数据或购买公式。
-let v21Fold = {}; // 分组折叠态（会话级，不落盘），key = 组标题
-function applyV21GroupFold(container) {
+// v4.0.9 反馈⑦：通用化为 applyGroupFold——「产出强化」（线程区）接入同一范式，
+// 折叠态共用 foldState（会话级，不落盘），key = 标题文本；sibling 停止条件扩到
+// h3 / rp-group-title，避免同面板混排分区标题（设施 h3）时越界隐藏。
+let foldState = {};
+function isFoldStop(el) {
+  return el.classList.contains('group-title') || el.classList.contains('rp-group-title') || el.tagName === 'H3';
+}
+function applyGroupFold(container) {
   if (!container) return;
   const titles = Array.from(container.querySelectorAll('.group-title'));
   for (const t of titles) {
@@ -1360,25 +1373,58 @@ function applyV21GroupFold(container) {
     t.dataset.rpFold = key;
     const arrow = document.createElement('span');
     arrow.className = 'rp-fold-arrow';
-    arrow.textContent = v21Fold[key] ? '▶' : '▼';
+    arrow.textContent = foldState[key] ? '▶' : '▼';
     t.prepend(arrow);
     t.addEventListener('click', () => {
-      v21Fold[key] = !v21Fold[key];
-      arrow.textContent = v21Fold[key] ? '▶' : '▼';
+      foldState[key] = !foldState[key];
+      arrow.textContent = foldState[key] ? '▶' : '▼';
       let sib = t.nextElementSibling;
-      while (sib && !sib.classList.contains('group-title')) {
-        sib.style.display = v21Fold[key] ? 'none' : '';
+      while (sib && !isFoldStop(sib)) {
+        sib.style.display = foldState[key] ? 'none' : '';
         sib = sib.nextElementSibling;
       }
     });
-    if (v21Fold[key]) {
+    if (foldState[key]) {
       let sib = t.nextElementSibling;
-      while (sib && !sib.classList.contains('group-title')) {
+      while (sib && !isFoldStop(sib)) {
         sib.style.display = 'none';
         sib = sib.nextElementSibling;
       }
     }
   }
+}
+// v3.12.13 时期名称，v4.0.9 反馈⑦ 起由 applyGroupFold 承担
+const applyV21GroupFold = applyGroupFold;
+
+// v4.0.9 反馈⑦：静态 h3 分区标题（如「设施」）接入同一收起交互——
+// 标题为 index.html 静态元素，绑定一次（dataset.foldBound 防重）；折叠目标是
+// 标题的后续兄弟节点。可见的 h3 是分区边界（停止）；隐藏的分区标题（线程强化/
+// 效能建筑，v3.4.7 反馈⑥ 恒隐藏的合并分区壳）不构成视觉边界，其内容卡片仍属
+// 本分区——跳过继续收起，但不改写其 display（各分区门控自管）。
+function foldSiblings(titleEl, hide) {
+  let sib = titleEl.nextElementSibling;
+  while (sib) {
+    if (sib.tagName === 'H3') {
+      if (sib.hidden || sib.style.display === 'none') { sib = sib.nextElementSibling; continue; }
+      break;
+    }
+    sib.style.display = hide ? 'none' : '';
+    sib = sib.nextElementSibling;
+  }
+}
+function bindFoldToggle(titleEl) {
+  const key = 'h3:' + titleEl.textContent.trim();
+  const arrow = document.createElement('span');
+  arrow.className = 'rp-fold-arrow';
+  arrow.textContent = foldState[key] ? '▶' : '▼';
+  titleEl.prepend(arrow);
+  titleEl.classList.add('foldable-h3');
+  titleEl.addEventListener('click', () => {
+    foldState[key] = !foldState[key];
+    arrow.textContent = foldState[key] ? '▶' : '▼';
+    foldSiblings(titleEl, foldState[key]);
+  });
+  if (foldState[key]) foldSiblings(titleEl, true);
 }
 
 export function renderV21Buildings(container) {
@@ -1644,9 +1690,22 @@ function bindFamilyDelegate(container) {
 //  不用 anchorShown——它含跨转生持久标记，会在资源实际未解锁时误放行。
 //  新增同类资源只需在此加一行映射，渲染 / 购买 / 重建签名三处自动生效。
 export const RESEARCH_RES_ANCHORS = Object.freeze({ faith: 'faith' });
+// v4.0.9 反馈⑥：研究项的「宿主模块」门控——模块本身未解锁时对应研究项不摆出。
+//   「深渊协议」组解锁（prod 累计 4 级）会一次性带出集市/远征/载具/AI 相关升级，
+//   但这些玩法各自有自己的解锁链；宿主未开就摆出升级卡，玩家既买不了（或买了没处用）也看不懂。
+//   谓词只读已持久化字段（与 policies unlock 同口径），模块解锁当帧由既有门控刷新链带动重建。
+const RESEARCH_MODULE_GATES = {
+  rp_dm:         (s) => !!s._riftSeen,                                  // 载具 DM：裂隙触发（探采平台解锁）
+  rp_expedition: (s) => starChartUnlocked(s),                           // 远征：星图已开启
+  rp_bazaar:     (s) => !!(s.bazaar && s.bazaar.unlocked),              // 集市：职级点买断后
+  rp_ai:         (s) => !!(s.tech && s.tech.ai_core),                   // AI 助手：科技树「AI 管理核心」（rp_ai_unit 已挂 requiresTech，双保险）
+};
 export function researchResourceUnlocked(u, state = S) {
   const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];
   if (key && !anchorDone(key, state)) return false;
+  // v4.0.9 反馈⑥：宿主模块未解锁 → 整卡不显示也不可购
+  const gate = u && RESEARCH_MODULE_GATES[u.id];
+  if (gate && !gate(state)) return false;
   // v3.10.5 ③：研究项可要求前置科技（如星图同调要求「深空探测」），未解锁科技不显示也不可购
   if (u && u.requiresTech && !hasTech(u.requiresTech)) return false;
   return true;
@@ -1690,7 +1749,9 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
   //   prod = 开局显现的产出/全局/离线基础项；res = 深渊协议（资源/政策/项目/班组/远征/集市）；
   //   abyss = 深渊终局两根核心轴；ai = AI 助手（效率 + 扩编）；star = 星际（研究点已解锁 + 星图已开启 双门控）。
-  { key: 'res',   name: '深渊协议', ids: ['rp_wage', 'rp_storage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）
+  // v4.0.9 反馈⑨：「存储扩容」独立成类（rp_storage 自深渊协议移出）——各类存储上限提升单独归组，玩家找扩容项不用翻混在玩法协议里。
+  { key: 'store', name: '存储扩容',  ids: ['rp_storage'],                                                                                      unlock: { prev: 'prod', need: 4 } },
+  { key: 'res',   name: '深渊协议', ids: ['rp_wage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）；v4.0.9 反馈⑨：rp_storage 移出至「存储扩容」
   { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），
   // 「自动能力」与「购买」同处一个研究点类目，解锁仍留在升级商店科技树。
@@ -1742,9 +1803,16 @@ export function renderResearchUpgrades(container) {
   // v3.10.2 ③：门控状态纳入重建签名——FP 解锁当帧即刷新研究面板，不等 RP 变化。
   const gateSig = Object.keys(RESEARCH_RES_ANCHORS)
     .map(k => `${k}:${anchorDone(RESEARCH_RES_ANCHORS[k], S) ? 1 : 0}`).join(',');
+  // v4.0.9 反馈⑥：宿主模块门控状态也纳入签名——裂隙触发/星图开启/集市买断当帧刷新研究面板
+  const modSig = Object.keys(RESEARCH_MODULE_GATES).map(id => {
+    const u = (BALANCE.researchUpgs || []).find(x => x.id === id);
+    try { return u ? `${id}:${RESEARCH_MODULE_GATES[id](S) ? 1 : 0}` : ''; } catch { return ''; }
+  }).filter(Boolean).join(',');
+  // v4.0.9 反馈⑧：自动购建激活卡显隐状态纳入签名（全资源点解锁 / 激活完成当帧刷新）
+  const abSig = `${allResDiscovered(S) ? 1 : 0}:${autoBuildUnlocked() ? 1 : 0}`;
   const sig = RP_GROUPS.map(g =>
     `${g.key}:${rpGroupShown(g) ? 1 : 0}:${rpFold[g.key] ? 1 : 0}:${g.ids.map(id => (S.rpTheories?.[id] || 0)).join('.')}`
-  ).join('|') + `:${Math.floor(S.rp || 0)}:${gateSig}`; // v2.8.13：RP 变化即重建；v3.10.2 ③：门控状态变化亦重建
+  ).join('|') + `:${Math.floor(S.rp || 0)}:${gateSig}:${modSig}:${abSig}`; // v2.8.13：RP 变化即重建；v3.10.2 ③ / v4.0.9 ⑥⑧：门控与激活卡状态变化亦重建
   if (container._lastSig === sig) return; // 增量：内容未变不重建（v2.6.7 纪律）
   container._lastSig = sig;
   container.innerHTML = '';
@@ -1780,6 +1848,24 @@ export function renderResearchUpgrades(container) {
         <div class="cost mono">${maxed ? '✦ 已满级' : fmt(cost) + ' RP'}</div>`;
       grid.appendChild(div);
     }
+    // v4.0.9 反馈⑧：自动购建「激活」入口迁入研究点「AI 助手」类目——
+    //   购买期望（消耗 RP 解锁自动化能力）与扩编协议同处一区；激活成功后卡消失，
+    //   自动购建动作卡照旧出现在 AI 助手面板（占编步进器仍是动作的执行配置，不是购买入口）。
+    //   展示条件 = AI 已解锁 ∧ 全资源点已解锁 ∧ 未激活（aiUnlocked 由 aiUnlocked 前置：助手面板可见才有意义）。
+    if (g.key === 'ai' && allResDiscovered(S) && !autoBuildUnlocked()) {
+      const cost = autoBuildActivateCost();
+      const rpOk = (S.rp || 0) >= cost;
+      const div = document.createElement('div');
+      div.className = 'item' + (rpOk ? '' : ' cant');
+      div.dataset.autoBuildActivate = '1';
+      div.title = rpOk
+        ? `消耗 ${fmt(cost)} 研究点一次性激活「自动购建」——AI 将在每个决策周期自动购建建筑（消耗 EP，遵守预留线）`
+        : `研究点不足（需 ${fmt(cost)} RP）；还需全部资源点解锁后才可激活`;
+      div.innerHTML = `<div class="name"><span>🛠 自动购建</span><span class="count mono">未激活</span></div>
+        <div class="desc">一次性激活：AI 每决策周期自动购建建筑（消耗 EP）；需全部资源点解锁</div>
+        <div class="cost mono">${fmt(cost)} RP</div>`;
+      grid.appendChild(div);
+    }
     frag.appendChild(grid);
   }
   container.appendChild(frag);
@@ -1790,6 +1876,21 @@ export function renderResearchUpgrades(container) {
       if (foldEl && container.contains(foldEl)) {
         rpFold[foldEl.dataset.rpFold] = !rpFold[foldEl.dataset.rpFold];
         renderResearchUpgrades(container);
+        return;
+      }
+      // v4.0.9 反馈⑧：自动购建激活（二次确认防误触——首点置确认态，4s 未再点复原）
+      const actEl = ev.target.closest('[data-auto-build-activate]');
+      if (actEl && container.contains(actEl)) {
+        if (!autoBuildActivable()) return; // 条件不满足走卡面灰态，不弹 toast
+        if (actEl.dataset.confirm === '1') {
+          const r = activateAutoBuild();
+          if (r.ok) log(`自动购建已激活（-${fmt(r.cost)} 研究点）——AI 将按决策周期自动购建建筑`, 'good');
+          renderResearchUpgrades(container);
+        } else {
+          actEl.dataset.confirm = '1';
+          actEl.querySelector('.cost').textContent = '再次点击确认';
+          setTimeout(() => { if (actEl.isConnected && actEl.dataset.confirm === '1') { actEl.dataset.confirm = ''; const c = actEl.querySelector('.cost'); if (c) c.textContent = fmt(autoBuildActivateCost()) + ' RP'; } }, 4000);
+        }
         return;
       }
       const el = ev.target.closest('[data-research]');

@@ -37,8 +37,8 @@ test('v3.6.0 ① 现存研究项齐全且 fx.key 正确', () => {
 test('v3.6.0 ① 研究菜单分组与全部研究项一一对应，无遗漏/重复/幽灵 id', () => {
   const all = RP_GROUPS.flatMap(g => g.ids);
   const defined = BALANCE.researchUpgs.map(u => u.id);
-  // v3.12.12 ⑧：新增「AI 助手」独立分组 → 5 组
-  assert.equal(RP_GROUPS.length, 5, '研究菜单 5 组（prod/res/abyss/ai/star）');
+  // v3.12.12 ⑧：新增「AI 助手」独立分组 → 5 组；v4.0.9 反馈⑨：rp_storage 移出深渊协议，新增「存储扩容」独立组 → 6 组
+  assert.equal(RP_GROUPS.length, 6, '研究菜单 6 组（prod/store/res/abyss/ai/star）');
   assert.equal(new Set(all).size, all.length, '分组内 id 不重复');
   assert.equal(all.length, defined.length, '分组覆盖全部研究项（数量与实际表动态对齐）');
   for (const id of defined) assert.ok(all.includes(id), `研究项 ${id} 未进分组 → 面板不可见/不可购买`);

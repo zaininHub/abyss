@@ -521,23 +521,15 @@ export function renderAiPanel(container) {
       ${extra}
     </div>`;
 
-  // 进阶：自动研究（科技树「自动研究」）/ 自动购建（全资源点解锁后可激活）
+  // 进阶：自动研究（科技树「自动研究」）/ 自动购建（激活入口 v4.0.9 反馈⑧ 迁至研究点「AI 助手」类目）
   // v3.12.3 反馈⑨：两项都在「真正解锁后」才渲染，未解锁既不显示卡片、也不显示任何锁定文案。
   // v4.0.3 反馈①：自动购建取消独立秒数档位与面板底部的购建倒计时——与自动升级同一节拍（每决策周期结算）。
+  // v4.0.9 反馈⑧：面板不再渲染「激活自动购建」卡——一次性激活（消耗研究点）是购买期望，
+  //   归入研究点「AI 助手」类目与扩编协议同区；面板只保留已激活后的动作卡（占编步进器）。
   const techAction = actionById('tech');
   const buildAction = actionById('build');
   const techHtml = actionAvailable('tech') ? actionCard(techAction) : '';
-  let buildHtml = '';
-  if (autoBuildUnlocked()) {
-    buildHtml = actionCard(buildAction);
-  } else if (allResDiscovered(S)) {
-    // 资源点已齐：只剩一次性激活（消耗研究点 RP；激活后自动解锁并出现上面的常规卡）
-    const rpOk = (S.rp || 0) >= autoBuildActivateCost();
-    buildHtml = `<div class="ai-build-box ${rpOk ? '' : 'ai-build-locked'}">
-      <div class="ai-build-title">${buildAction.name}</div>
-      <button class="btn ${rpOk ? '' : 'disabled'}" data-ai-build-activate="1" ${rpOk ? '' : 'disabled'} title="消耗 ${fmt(autoBuildActivateCost())} 研究点 激活自动购建">激活（${fmt(autoBuildActivateCost())} 研究点）</button>
-    </div>`;
-  }
+  const buildHtml = autoBuildUnlocked() ? actionCard(buildAction) : '';
   const basicHtml = actionsByGroup('basic').map(a => actionCard(a)).join('');
   const advancedHtml = (techHtml || buildHtml) ? `<div class="ai-action-grid">${techHtml}${buildHtml}</div>` : '';
   const section = renderAssistantSection();
@@ -587,22 +579,8 @@ export function renderAiPanel(container) {
       }
       // v3.12.7 ⑩：面板上的「一键全关」按钮已移除（占编 − 到 0 就是关闭）。
       //   allOffActions() 保留为自动化 / 测试 / 未来快捷入口的单一实现，不再挂 UI。
-      // v2.5.5：激活自动购建——二次确认（首次点击变确认态，再点执行）
-      const actEl = e.target.closest('[data-ai-build-activate]');
-      if (actEl) {
-        if (!autoBuildActivable()) { ailog('激活条件未满足：需全部资源点解锁且研究点充足', 'bad'); return; }
-        if (actEl.dataset.confirm === '1') {
-          const r = activateAutoBuild();
-          if (r.ok) { ailog(`自动购建已激活（-${fmt(r.cost)} 研究点）；设置购买间隔与开关即可开始`, 'good'); }
-          else ailog(`激活失败：${r.reason}`, 'bad');
-          renderAiPanel(container);
-        } else {
-          actEl.dataset.confirm = '1';
-          actEl.textContent = `再次点击确认（消耗 ${fmt(autoBuildActivateCost())} 研究点）`;
-          setTimeout(() => { if (actEl.isConnected && actEl.dataset.confirm === '1') { actEl.dataset.confirm = ''; actEl.textContent = '激活自动购建'; } }, 4000);
-        }
-        return;
-      }
+      // v4.0.9 反馈⑧：「激活自动购建」按钮随激活卡迁至研究点「AI 助手」类目，
+      //   面板内不再有该入口（旧 data-ai-build-activate 分支删除）。
       const assistBuy = e.target.closest('[data-assist-buy]');
       if (assistBuy) {
         buyAssistant();

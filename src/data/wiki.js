@@ -12,6 +12,7 @@ import { fmt, corruptionCap } from '../modules/economy.js';
 import { delveDepth } from '../modules/delve.js';
 import { getRegisteredStorylines, getStorylinePackage } from '../core/storylineManager.js'; // v3.7.0：故事线特色章节
 import { LINE_RULE_LABELS } from '../core/lineRules.js';
+import { GALAXIES } from '../modules/expedition.js'; // v4.0.9 反馈④：星空与远征专章
 
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -42,10 +43,12 @@ const purify = D.corruption.purge;
 export const WIKI_GROUPS = [
   { key: 'loop', name: '核心循环', hint: '先看这一卷：一分钟能上手', ids: ['intro', 'flows', 'res'] },
   { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance'] },
-  { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'line'] },
-  { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'] },
+  // v4.0.9 反馈④：深渊层卷纳入星空与远征
+  { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市 / 星空', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'expedition', 'line'] },
+  // v4.0.9 反馈④：长线卷纳入永恒矩阵专章；查阅卷收许愿池与彩蛋
+  { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'eternals', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'] },
   { key: 'auto', name: '自动化', hint: 'AI 助手的编制与节拍', ids: ['assistant', 'supply', 'ledger', 'automation_num'] },
-  { key: 'ref', name: '查阅', hint: '解锁条件与公式', ids: ['unlock', 'appendix'] },
+  { key: 'ref', name: '查阅', hint: '解锁条件与公式', ids: ['unlock', 'appendix', 'misc'] },
 ];
 
 export const WIKI_SECTIONS = [
@@ -66,6 +69,8 @@ export const WIKI_SECTIONS = [
       <li>买「备用粮仓」把存储上限顶高，让 EP 真的溢出一次，商店才会摆出「矩阵存储库」。</li>
       <li>买下矩阵存储库 → 解锁研究点 → 走科技树；第 5 章后命运的岔路口开放（秩序/深渊/信仰三线立誓）。</li>
     </ol>
+    <h4>想找 AI 助手？</h4>
+    <p>AI 助手（自动化挂机的核心）走这条线：<b>研究点攒 50 RP + 100 万 EP → 科技树买「AI 管理核心」→ 右侧出现 AI 助手面板 → 研究点页「AI 助手」分组买「助手扩编协议」扩编</b>。详细编制/占编/节拍说明见左栏「自动化」卷的四章；自动购建（AI 自动买建筑）需全部资源点解锁后，在研究点页「AI 助手」分组一次性激活。</p>
     <p>挂机张力来自三层：<b>存储上限</b>（EP 满了必须花，否则浪费产出）、<b>线程薪资四态</b>（EP 不足会欠薪→休眠→流失）、<b>矩阵腐化</b>（深入裂隙/深潜累积腐化，满额触发深渊吞噬倒计时）。</p>
     <p class="wiki-hint">看数习惯：面板上的「/秒」「/10 分钟」是同一套账，想核对就比同一帧的顶栏产出与本局增量。</p>
   ` },
@@ -212,7 +217,7 @@ export const WIKI_SECTIONS = [
     <h4>系统/功能解锁条件总表（研发手册口径，与代码同步）</h4>
     <table class="wiki-tbl"><tr><th>内容</th><th>解锁条件</th><th>说明</th></tr>
       <tr><td>科技树</td><td>第 1 章 ∧ 购入「矩阵存储库」（RP 锚点）</td><td>RP 消耗，开辟玩法</td></tr>
-      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>共 ${D.researchUpgs.length} 项、分五组：产出强化（开局显现）→ 深渊协议（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（三者并列，再累计 4 级；星际另需星图开启）；未达条件的组不占版面</td></tr>
+      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>共 ${D.researchUpgs.length} 项、分六组：产出强化（开局显现）→ 存储扩容（累计 4 级）→ 深渊协议（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（三者并列，再累计 4 级；星际另需星图开启）；未达条件的组不占版面</td></tr>
       <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点 tab「晋升 RP 加成」分区</td></tr>
       <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点 tab 底部，RP + 里程碑双门控，逐档线性</td></tr>
       <tr><td>异兽（PT/宠物）</td><td>PT 锚点完成：购入「饵料仓库」/「PT 金库」或首次持有 PT（本局制）</td><td>与顶栏 PT 同口径，PT 未解锁时异兽模块不会开放；自动孵化需首次购买「孵化升级」解锁；出战异兽维持消耗 PT（不足自动休战）。星图排在它之后：远征要花 PT、还靠出战异兽加成，宠物没开时星图不会开放</td></tr>
@@ -366,6 +371,32 @@ export const WIKI_SECTIONS = [
     <p>每个动作是一个「岗位」：开启时默认占编 crewSize（1）名助手，其余留在空闲池；你可在动作行用 +/− 手动调整占编数。每个决策周期，该动作执行次数 = 它绑定的助手数（绑定越多跑得越勤）；自动领取会一次领完所有待领取任务。编制只决定频次，不决定单产倍率；关闭开关或按 − 解绑即把占编释放回空闲池，常驻不消耗。</p>
     <h4>口径一致性</h4>
     <p>每项动作的占编基准（crewSize）在动作表里显式声明，绑定、台账与日志共用同一处实现；没有隐式「没写就不占编」的分支。这也是面板能把五项动作统一标注为「需 AI 助手编制」的原因。</p>
+  ` },
+  // v4.0.9 反馈④：百科补健全——星空（远征/殖民/燃料）、永恒矩阵（ES 购买/皮肤）、许愿池此前无专章
+  { id: 'expedition', name: '星空与远征', unlock: 'policy', body: () => {
+    const g1 = GALAXIES[0], gN = GALAXIES[GALAXIES.length - 1];
+    return `
+    <h4>远征是什么</h4>
+    <p>星图页派出探测队远征星系：消耗 EP/RP/PT 发射，航行 ${g1.durDays}~${gN.durDays} 天（游戏内天数），完成拿星际燃料 CPS 与星尘类资源；跃迁理论（研究）每级 +6% 缩短航行时间。携带的出战异兽每只 +10% CPS 收益。</p>
+    <h4>殖民地与燃料模式</h4>
+    <p>远征过的星系可花 CPS 建立殖民地：殖民地带来源源不断的 CPS/min 与 RP/min（星系越远越丰厚）。燃料模式可选开启：每秒燃烧 2 CPS 换全局产出 ×1.5——燃不完就会自动关闭，是爆发期手法。</p>
+    <h4>去多远</h4>
+    <p>${GALAXIES.map(g => `${g.icon}${g.name}（CPS 门槛 ${fmt(g.cpsReq)}，奖励 CPS ${fmt(g.cps)}${g.es ? ` + ES ${g.es}` : ''}）`).join(' → ')}。银河边缘与仙女座额外给 ES，是晋升之外唯一稳定 ES 来源。</p>
+    <p class="wiki-hint">星图未开放时研究分组「星际」也不摆出；PT 是本局制，转生后需重新点亮异兽才会再开星图。</p>
+  `; } },
+  { id: 'eternals', name: '永恒矩阵', unlock: 'es', body: () => `
+    <h4>ES 花在哪</h4>
+    <p>科技树 tab 底部的「永恒矩阵（ES 购买）」用晋升攒下的 ES 买永久强化：全局产出、成本折扣、点击、离线、事件、项目、里程碑、开局 EP，以及主打 AI 的「永恒拟我」（决策间隔 -8%/级，下限 40%）与前期丝滑的「永恒摇篮」（开局 +12 RP/级）。</p>
+    <h4>计价与上限</h4>
+    <p>每项按 base × growth^已购级 几何计价，多数无上限可一直买；皮肤四款（晨光白昼/余烬琥珀/薄荷绿潮/秋日鎏金）为一次性解锁，买断后存档顶栏皮肤菜单出现对应选项。</p>
+    <h4>和晋升 RP 的分工</h4>
+    <p>晋升给的职级点管全局 +10%/点（三选一天赋另算），ES 管细分方向的定向强化。两者都跨晋升保留，是长线滚雪球的两条主轴。</p>
+  ` },
+  { id: 'misc', name: '许愿池与彩蛋', unlock: null, body: () => `
+    <h4>许愿池（设施「许愿池」购入后出现）</h4>
+    <p>购入通用设施「许愿池」（100K EP）后，屏幕边缘出现可拖动/可收起的许愿池浮窗：投一枚硬币（100 EP，3 秒冷却）——万分之 1 概率获得 100K EP（受存储上限约束，溢出转入 RP 池）。文案「万一呢？」就是这个玩法的全部设计说明；投币计数与中奖各挂一枚成就。</p>
+    <h4>离职礼盒</h4>
+    <p>线程进入休眠/流失预警或全员不开心时，任务版会出现一次性任务「离职礼盒」：花 1 EP 给流失线程买礼盒，完成本局特殊任务。温柔对待你的线程。</p>
   ` },
 ];
 

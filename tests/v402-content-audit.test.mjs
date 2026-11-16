@@ -109,10 +109,10 @@ test('W2 wiki 解锁表中所有「第 N 章」引用均为真实章节号（1..
   assert.equal(bad.length, 0, `wiki 引用了不存在的章节号：${bad.join(', ')}`);
 });
 
-test('W3 wiki「五组研究 / 13 组政策」声明与真实分组数一致', () => {
-  assert.equal(RP_GROUPS.length, 5, 'wiki 声称研究分五组，实际 RP_GROUPS 数量不符');
+test('W3 wiki「六组研究 / 13 组政策」声明与真实分组数一致', () => {
+  assert.equal(RP_GROUPS.length, 6, 'wiki 声称研究分六组，实际 RP_GROUPS 数量不符');
   assert.equal(POLICY_GROUPS.length, 13, 'wiki 提及政策组数，实际 POLICY_GROUPS 数量不符');
-  assert.ok(WIKI_SRC.includes('分五组') || WIKI_SRC.includes('五组'), 'wiki 研究分组描述未体现「五组」');
+  assert.ok(WIKI_SRC.includes('分六组') || WIKI_SRC.includes('六组'), 'wiki 研究分组描述未体现「六组」');
 });
 
 console.log('[③ 文案] 成就 / 章节 / 百科 完整性');

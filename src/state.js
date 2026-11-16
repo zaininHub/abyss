@@ -93,6 +93,16 @@ export function defaultState() {
     buildings: {},
     // v3.3.0 线程绑定系统：转化器开关（关闭→释放绑定→线程消耗恢复、EP 产出恢复）
     converterOn: { vehicles: true, atrium: true },
+    // v4.0.9 反馈⑫：自动转化开关默认值显式声明——此前 6 个开关是「未声明字段」（读侧 `!== false` 兜底），
+    // 不在 RUN_RESET_KEYS 任何清单里，晋升/轮回后残留上一局的选择（用户实报「晋升以后自动转化应该
+    // 全部初始化，目前晋升后还存在并且生效」）。现在 defaultState 是默认值唯一真源，重置走同一赋值路径。
+    atriumOn: true,        // 灵感工坊自动蒸馏（镜像 S.converterOn.atrium，threadBinding 双读同源）
+    _probeEnabled: true,   // 载具探采开关（镜像 S.converterOn.vehicles）
+    ptDistillOn: true,     // 异兽孵化开关（镜像 S.converterOn.hatch；孵化能力本身看 ptAutoHatch）
+    ptAutoHatch: false,    // 自动孵化能力：购「异兽孵化工坊」解锁——EP 购买属本局投入，随本局重置
+    ptHatchLv: 1,          // 孵化工坊级数（懒初始化字段转正，与 ptAutoHatch 同寿命）
+    riftAuto: null,        // 裂隙自动动作选择（依赖的 riftUpgrades 跨局保留，但「本轮选哪个动作」是本局决策）
+    autoPurify: false,     // 自动净化开关（依赖的 riftUpgrades.auto_purify 跨局保留，开关本身每局重置）
     // v2.1 建筑驱动：已解锁建筑标记 + 旧档超封溢出记账 + 溢出池统计
     unlockedBuildings: {},
     buildingOverflow: {},

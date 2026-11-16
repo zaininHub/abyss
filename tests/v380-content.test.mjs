@@ -52,7 +52,7 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
     ['主线章节', CHAPTERS.length, 46],
     ['主事件', EVENTS.length, 74],
     ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33],
-    ['百科章节', WIKI_SECTIONS.length, 24],
+    ['百科章节', WIKI_SECTIONS.length, 24], // v4.0.9 反馈④：28→31（+expedition/eternals/misc），28-24=17.8% 仍在 10~30% 区间
     ['里程碑', BALANCE.miles.length, 13],
   ];
   for (const [name, now, before] of rows) {
@@ -64,7 +64,7 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   assert.equal(EVENTS.length, 82);
   assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(POLICY_GROUPS.length, 13);
-  assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
+  assert.equal(WIKI_SECTIONS.length, 31); // v3.12.8：删除「第六条策略」；v4.0.9 反馈④：+expedition/eternals/misc → 31
   assert.equal(BALANCE.miles.length, 16);
 });
 

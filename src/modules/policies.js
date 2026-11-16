@@ -96,7 +96,9 @@ export function renderPolicyPanel(container) {
   // 当前组：第一个未选且开放的组
   const curGroup = groups.find(g => !groupPolicyId(g.id));
   if (curGroup) {
-    html += `<div class="group-title" style="margin-top:10px">${curGroup.name}${curGroup.hint ? ` <span style="color:var(--text-3);font-weight:400">（${curGroup.hint}）</span>` : ''}</div><div class="shop-grid">`;
+    // v4.0.9 反馈⑩：待选组标题加 NEW 角标——玩家一眼看出「有新政策可选」，
+    // 不再是「玩了一阵子都不知道解锁了新的」；选定后角标自然消失
+    html += `<div class="group-title" style="margin-top:10px">${curGroup.name}<span class="policy-new-badge">NEW</span>${curGroup.hint ? ` <span style="color:var(--text-3);font-weight:400">（${curGroup.hint}）</span>` : ''}</div><div class="shop-grid">`;
     for (const p of curGroup.policies) {
       const gate = p.unlock ? p.unlock() : true;
       html += card(curGroup, p, gate ? 'open' : 'lock');

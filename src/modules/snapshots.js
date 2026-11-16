@@ -1,6 +1,6 @@
 // v2.5.4 ①：快照存档系统——最多 3 个快照，可覆盖当前本地游戏（二级确认由 UI 层负责）
 // 快照 = 当前完整存档 JSON 字符串（与导出/导入同源，经 SAVE_KEY 落盘），存于独立 key
-import { SAVE_KEY } from '../state.js';
+import { SAVE_KEY, defaultState } from '../state.js';
 
 export const SNAP_KEY = 'abyss_idle_v2_snapshots';
 export const SNAP_MAX = 3;
@@ -35,6 +35,23 @@ export function saveSnapshot() {
     list.push(snap);
     write(list);
     return { ok: true, covered: null, snap };
+  }
+  const oldest = [...list].sort((a, b) => a.time - b.time)[0];
+  return { ok: false, needCover: oldest, snap }; // UI 二次确认后调用覆盖
+}
+
+// v4.0.9 反馈③：新建初始空档——生成一份全新 initial 存档入槽（不触碰当前进度）。
+//   原「保存新档」语义是「把当前进度复制成新快照」，玩家要的是「开一个干净的新档位」，
+//   之后可从列表「读取」切过去开新路线；当前进度不受影响。
+//   槽满时不静默覆盖：返回 needCover 走 UI 二级确认（与 saveSnapshot 同纪律，
+//   v403 回归抓出静默覆盖会丢玩家快照——「初始空档」不比玩家旧档更贵重）。
+export function createFreshSnapshot() {
+  const list = read();
+  const snap = { id: 'snap_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name: '初始空档', time: Date.now(), data: JSON.stringify(defaultState()) };
+  if (list.length < SNAP_MAX) {
+    list.push(snap);
+    write(list);
+    return { ok: true, covered: null };
   }
   const oldest = [...list].sort((a, b) => a.time - b.time)[0];
   return { ok: false, needCover: oldest, snap }; // UI 二次确认后调用覆盖

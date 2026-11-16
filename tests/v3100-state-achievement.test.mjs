@@ -45,7 +45,7 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 134, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 资源统计三键');
+  assert.equal(keys.length, 141, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 三键 + v4.0.9 ⑫ 的自动转化开关七键（atriumOn/_probeEnabled/ptDistillOn/ptAutoHatch/ptHatchLv/riftAuto/autoPurify）');
   assert.deepEqual(d.moduleUnlocks, { reincarn: false, bazaar: false }, '新档两个大模块均未开启');
 });
 
@@ -411,7 +411,7 @@ test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(EVENTS.length, 82);    // v3.12.9：74→82 事件
   assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(BALANCE.miles.length, 16);
-  assert.equal(WIKI_SECTIONS.length, 28); // v3.12.8：删除「第六条策略」
+  assert.equal(WIKI_SECTIONS.length, 31); // v3.12.8：删除「第六条策略」；v4.0.9 反馈④：+expedition/eternals/misc → 31
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 39);
   assert.equal(orch.ORCHESTRATION_MODES.length, 4); // v3.12.8：值守/级联已移除

@@ -63,7 +63,7 @@ test('D1 研究项 22 项，全部归属 RP_GROUPS 且无幽灵 id', () => {
   assert.equal(grouped.length, defined.length, '分组数与研究项数不一致');
   for (const id of defined) assert.ok(grouped.includes(id), `${id} 未进分组 → 面板不可见/买不到`);
   for (const id of grouped) assert.ok(defined.includes(id), `分组引用了幽灵 id ${id}`);
-  assert.equal(RP_GROUPS.length, 5); // v3.12.12 ⑧：prod/res/abyss/ai/star
+  assert.equal(RP_GROUPS.length, 6); // v3.12.12 ⑧：prod/res/abyss/ai/star；v4.0.9 ⑨：+store（存储扩容独立组）
 });
 
 test('D2 所有研究项 fx.key 都有 researchMult 消费点（无死升级）', () => {
