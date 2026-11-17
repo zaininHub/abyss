@@ -347,27 +347,12 @@ async function uiCheck(page) {
     const orchText = (orchPanel && orchPanel.innerText) || '';
     const summary = q.orchestrationSummary(S);
     const orchTextOk = summary.every(x => orchText.includes(x.label) && orchText.includes('×' + x.mult.toFixed(2)));
-    // v3.10.1：新增「编排倍率」口径标签必须单行呈现，窄卡不得出现孤字换行（与共鸣区同范式）
-    // v4.1.0 反馈③：标签改并入策略行（span，margin-left:auto），不再是独立 div——
-    //   改查 span 且与策略按钮同一行。比较口径用「中心 y」（容差 3px）：策略行
-    //   align-items:center 下 28px 按钮与 10.5px 标签的 top 天然差 ~4px（垂直居中偏移），
-    //   top 差口径会把居中对齐误判为换行（v410 专项同款修正；30 天全量首跑暴露）。
+    // v4.2.3 反馈②：「编排倍率」行尾标签已删除（与下方倍率 grid 重复）——
+    //   原「标签同行 + 无孤字换行」断言反转为「标签不存在」。
     const orchLabel = [...(orchPanel ? orchPanel.querySelectorAll('span') : [])]
       .find(d => (d.textContent || '').trim() === '编排倍率');
-    let orchLabelOrphans = -1;
-    let orchLabelSameRow = false;
-    if (orchLabel) {
-      const range = document.createRange();
-      range.selectNodeContents(orchLabel);
-      const rects = [...range.getClientRects()];
-      orchLabelOrphans = rects.length > 1 && rects[rects.length - 1].width < 28 ? 1 : 0;
-      // 与第一个策略按钮同行（中心 y 比较）
-      const modeBtn = orchPanel.querySelector('[data-orch-mode]');
-      if (modeBtn) {
-        const cy = n => { const r = n.getBoundingClientRect(); return r.y + r.height / 2; };
-        orchLabelSameRow = Math.abs(cy(orchLabel) - cy(modeBtn)) <= 3;
-      }
-    }
+    const orchLabelOrphans = orchLabel ? 1 : 0;
+    const orchLabelSameRow = !orchLabel;
     // 成就面板为「已解锁分页」制，新增 3 条在列表末尾（末页）。
     // 只取第一页会漏判，故逐页点击「下一页」收集全量文本再与读侧比对。
     const achPanel = document.getElementById('achievement-panel');
@@ -1024,8 +1009,8 @@ try {
     ok('效能编排卡可见，四条倍率文本与读侧一致', ui.orch.text.replace(/\n/g, ' ').slice(0, 90));
   } else if (!ui.orch.unlocked) bad('编排卡未解锁，新玩法对玩家不可见', JSON.stringify(ui.orch));
   else bad('编排卡 UI 与读侧不一致', JSON.stringify(ui.orch));
-  if (ui.orch.labelOk) ok('编排倍率标签并入策略行且同行呈现（v4.1.0）', `同行=${ui.orch.labelSameRow}`);
-  else bad('编排倍率标签缺失/换行/未并入策略行', JSON.stringify(ui.orch.labelOrphans) + ' sameRow=' + ui.orch.labelSameRow);
+  if (ui.orch.labelOk) ok('「编排倍率」冗余标签已删除（v4.2.3）', '倍率 grid 紧随策略行');
+  else bad('「编排倍率」标签仍在卡面', `found=${ui.orch.labelOrphans}`);
   if (ui.achPanelTextLen > 0 && ui.achNew.length === ui.achNewUnlocked.length) {
     ok('成就面板逐页渲染与读侧一致（已解锁的新成就全部可见）',
       `${ui.achPages} 页 / 全页 ${ui.achPanelTextLen} 字；已解锁新成就 ${ui.achNewUnlocked.length} 条，面板可见 ${ui.achNew.length} 条`);

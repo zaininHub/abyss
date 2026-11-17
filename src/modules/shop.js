@@ -229,6 +229,10 @@ export function renderShop(container) {
     { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
     { title: '存储与资源建筑', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });
+  // v4.2.3 反馈④：三个分类标题（基础产出 / 集市 / 存储与资源建筑）此前是纯文本小标题，
+  //   与线程区「产出强化」的 ▸ 折叠标题风格不一致。统一接入 applyGroupFold——
+  //   同款箭头 + 可收起 + 会话级折叠态，商店内所有分类块观感一致。
+  applyGroupFold(container);
 
   bindDelegate(container, (id, el) => {
     const u = UPGRADES.find(x => x.id === id);

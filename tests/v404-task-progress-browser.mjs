@@ -172,8 +172,10 @@ try {
       const pop = document.getElementById('wage-tip-pop');
       const bg = parse(getComputedStyle(pop).backgroundColor);
       const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      // v4.2.3：薪资气泡文案精简后 .w-bad 可能缺席——只对实际存在的语义类取样
       for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
-        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+        const el = pop.querySelector('.' + cls);
+        if (el) ratios[cls] = ratio(parse(getComputedStyle(el).color), bg);
       }
       out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }

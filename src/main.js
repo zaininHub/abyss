@@ -8,7 +8,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   offlineRate, offlineCap, offlineEffRate, addEp, // v3.2.4 反馈⑤：offlineEffRate 统一离线效率口径（含离线协议研究）
   tidePhaseInfo, tideMult, corruptionPenalty, purifierCleanRate, tickCorruption,
   cancelCollapse, purgeCostFor, purgeDmFor, addDm, // v2.9.0：吞噬自救 + 主动净化经济
-  wageDebtMult, wageKeepCostMult, wageLoseChance, // v1.3 C：四态徽章展示用
+  wageDebtMult, wageKeepCostMult, // v1.3 C：四态徽章展示用（v4.2.3：wageLoseChance 随文案精简移出——概率不再对玩家展示）
   isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
@@ -16,7 +16,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
-import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, overwriteSnapshot, importToSnapshot, createFreshSnapshot, SNAP_MAX, fmtStamp } from './modules/snapshots.js';
+import { saveSnapshot, coverOldest, listSnapshots, snapshotData, deleteSnapshot, overwriteSnapshot, importToSnapshot, createFreshSnapshot, renameSnapshot, SNAP_MAX, SNAP_NAME_MAX, fmtStamp } from './modules/snapshots.js';
 // v3.10.4 ④：导入模式（'current' = 覆盖当前；'snapshot' = 导入为新快照）；模块级声明，供模块级的 importSave 读取
 let importMode = 'current';
 // v2.0：故事线管理器
@@ -148,9 +148,10 @@ function renderOrchestrationPanel() {
 
   // ===== 块一：效能编排（策略按钮 + 潮汐排班 + 编排倍率） =====
   html += `<section class="orch-block" data-orch-block="orchestration">`;
-  html += blockTitle('◈', '效能编排', '策略与潮汐排班');
-  // v3.12.13 反馈 #164：潮汐排班与四种策略同排；v4.1.0 反馈③：倍率标签并入本行尾部。
-  html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized, labelSuffix: '编排倍率' });
+  // v4.2.3 反馈②：删除标题注脚「策略与潮汐排班」与行尾「编排倍率」标签——两块内容自明，标签纯冗余。
+  html += blockTitle('◈', '效能编排');
+  // v3.12.13 反馈 #164：潮汐排班与四种策略同排。
+  html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized });
   // v3.10.1：四行编排倍率（策略层，不含共鸣），圆族标记（●增益 ◐小幅 ○持平/减益）。
   html += `<div class="orch-mult-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
@@ -819,13 +820,15 @@ function renderWageTipPop({ txt, detail, W, salary }) {
     pop.setAttribute('aria-hidden', 'true');
     document.body.appendChild(pop);
   }
-  const html = `<b>线程薪资状态（当前：<span class="${WAGE_TIP_CLS[txt] || 'w-dim'}">${txt}</span>${detail ? ' · ' + detail : ''}）</b>\n`
-    + `<span class="w-good">· 满薪：EP ≥ ${W.warnSec}s 薪资，无惩罚</span>\n`
-    + `<span class="w-warn">· 欠薪降效：EP &lt; ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠</span>\n`
-    + `<span class="w-orange">· 强制休眠：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警</span>\n`
-    + `<span class="w-bad">· 流失预警：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程（维修坞 → 0，免疫）</span>\n`
-    + `<span class="w-warn">· 懒惰：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}（消耗 &gt; 产出）；EP 跌到 0 或任意升级/线程购买解除</span>\n`
-    + `<span class="w-dim">恢复：EP ≥ ${W.recoverSec}s 薪资（当前薪资 ${fmt(salary)} EP/s，恢复线 ${fmt(salary * W.recoverSec)} EP）</span>`;
+  // v4.2.3 反馈①：文案精简——原文 6 行含大量重复前缀（「满薪：」「欠薪降效：」）与内置机制细节
+  //   （维修坞免疫、EP 跌 0 解除等），且 .wage-tip-pop 缺 white-space:pre-line 导致 \n 全折叠成
+  //   一大段（「字数多又重复」的真因）。现在只留「当前状态」+ 四态一行结论 + 恢复线。
+  const html = `<b>当前：<span class="${WAGE_TIP_CLS[txt] || 'w-dim'}">${txt}</span>${detail ? ' · ' + detail : ''}</b>\n`
+    + `<span class="w-dim">满薪：EP ≥ ${W.warnSec}s 薪资，无惩罚</span>\n`
+    + `<span class="w-warn">欠薪：产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}，持续 ${W.dormantAfterSec}s 转休眠</span>\n`
+    + `<span class="w-orange">休眠：产出归零，只扣保底；久拖会流失线程</span>\n`
+    + `<span class="w-warn">怠工（满仓 ${BALANCE.lazy.afterSec}s）：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}</span>\n`
+    + `<span class="w-good">恢复：EP 回到 ${W.recoverSec}s 薪资（${fmt(salary * W.recoverSec)} EP）</span>`;
   if (pop._tipSig !== html) {
     pop._tipSig = html;
     pop.innerHTML = html;
@@ -1547,16 +1550,16 @@ function bindEvents() {
   document.getElementById('hire-btn')?.addEventListener('click', hireCultist);
   // v2.8.10：线程状态点击弹出四态说明（欠薪/休眠状态悬停提示对点击无响应，改为点击弹窗）
   // v3.12.0 反馈⑯：整块触发（招募按钮除外，避免误弹说明）
+  // v4.2.3 反馈①：与悬浮气泡同口径精简——只留结论，不写内置机制（维修坞免疫 / 过渡缓冲 / 补偿细节）。
   document.getElementById('wage-help-zone')?.addEventListener('click', (e) => {
     if (e.target.closest('#hire-btn')) return;
     const W = BALANCE.thread.wages;
-    askConfirm('线程状态说明', `线程薪资四态（当前：${(S.wageState || {}).state || 'ok'}）\n` +
-      `· 满薪（绿）：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
-      `· 欠薪降效（黄）：EP < ${W.warnSec}s 薪资，产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}；连续 ${W.dormantAfterSec}s 进入休眠\n` +
-      `· 强制休眠（橙）：产出 -100%，保命成本 = 薪资 ${fmtMultDelta(wageKeepCostMult(), { digits: 1 })}；持续 ${W.loseAfterSec}s 进入流失预警\n` +
-      `· 流失预警（红）：每 60s ${Math.round(wageLoseChance() * 100)}% 概率流失 1 线程\n` +
-      `· 懒惰（黄）：EP 持续满上限 ${BALANCE.lazy.afterSec}s → 线程怠工：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}\n` +
-      `恢复：EP ≥ ${W.recoverSec}s 薪资后经 ${W.transitionSec}s 过渡 / ${W.bufferSec}s 缓冲回到满薪（恢复后休眠 ≥60s 触发补偿 +50%）`, () => {});
+    askConfirm('线程薪资 · 四态说明', `当前：${(S.wageState || {}).state || 'ok'}\n` +
+      `满薪：EP ≥ ${W.warnSec}s 薪资，无惩罚\n` +
+      `欠薪：产出 ${fmtMultDelta(wageDebtMult(), { digits: 1 })}，持续 ${W.dormantAfterSec}s 转休眠\n` +
+      `休眠：产出归零，只扣保底；久拖会流失线程\n` +
+      `怠工（满仓 ${BALANCE.lazy.afterSec}s）：产出 ${fmtMultDelta(BALANCE.lazy.prodMult, { digits: 1 })}、消耗 ${fmtMultDelta(BALANCE.lazy.costMult, { digits: 1 })}\n` +
+      `恢复：EP 回到 ${W.recoverSec}s 薪资即可`, () => {});
   });
   // v4.0.3 反馈③：悬浮说明按本行 rect 实时定位（position:fixed + 上下自动翻转 + 左右钳制）。
   //   原先 absolute 定位在祖先 overflow 容器里会被裁剪，首屏这一行的说明首段整段看不见。
@@ -1840,38 +1843,6 @@ function bindEvents() {
 
   // v2.5.4 ①：快照存档系统（3 槽 / 覆盖当前本地游戏 / 二级确认 / 新快照可覆盖旧快照）
   document.getElementById('snap-save')?.addEventListener('click', onSnapSave);
-  document.getElementById('snap-close')?.addEventListener('click', () => { const m = document.getElementById('snap-modal'); if (m) m.style.display = 'none'; });
-  document.getElementById('snap-list')?.addEventListener('click', (e) => {
-    // v2.8.6：清档行不在 [data-snap] 内，须先处理（否则无快照行时被 li 早退拦截）
-    if (e.target.classList.contains('snap-reset')) {
-      askConfirm('清档（删除当前游戏）', '将删除当前本地游戏，回到全新开局。\n存档快照保留，可逐个删除；此操作不可撤销，确定继续？', () => {
-        doReset();
-      });
-      return;
-    }
-    const li = e.target.closest('[data-snap]');
-    if (!li) return;
-    const id = li.dataset.snap;
-    const label = `${li.dataset.name}（${li.dataset.time}）`;
-    if (e.target.classList.contains('snap-use')) {
-      askConfirm('使用快照覆盖当前进度', `将用「${label}」覆盖当前本地游戏，当前进度将丢失。\n确定继续？`, () => {
-        const data = snapshotData(id);
-        if (!data) { toast('快照不存在'); return; }
-        const cur = localStorage.getItem(SAVE_KEY);
-        if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
-        localStorage.setItem(SAVE_KEY, data);
-        toast('已恢复快照，页面即将刷新');
-        setTimeout(() => location.reload(), 600);
-      });
-    } else if (e.target.classList.contains('snap-del')) {
-      askConfirm('删除快照', `确定删除快照「${label}」？`, () => {
-        deleteSnapshot(id);
-        renderSnapshotList();
-        toast('快照已删除');
-      });
-    }
-  });
-
   // v3.10.4 ④：存档管理简化为「💾 存档」下拉直接展示所有存档列表（参考 KG）。
   //   每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；导入导出作为每条的功能。
   importMode = 'current'; // 复位为默认（'current' = 旧「导入覆盖当前」；'snapshot' = 导入为新快照入列）
@@ -1882,8 +1853,7 @@ function bindEvents() {
     const r = createFreshSnapshot();
     if (r.ok) {
       renderSaveList(true);
-      renderSnapshotList();
-      toast('新档已创建（读取即可开始新档）');
+          toast('新档已创建（读取即可开始新档）');
     } else toast(r.reason || '创建失败：本地存储不可用');
   });
   document.getElementById('clear-game')?.addEventListener('click', () => {
@@ -2257,61 +2227,60 @@ document.getElementById('collapse-mutual')?.addEventListener('click', () => {
   askConfirm('同归于尽 · 最终确认', '崩溃将吞没本局（强制转生，湮灭残片 +1），深渊与你一同湮灭。\n确定执行？', () => resolveCollapseChoice('mutual'));
 });
 
-// v2.5.4 ①：快照面板
-function renderSnapshotList() {
-  const box = document.getElementById('snap-list');
-  if (!box) return;
-  const snaps = listSnapshots();
-  box.innerHTML = '';
-  if (!snaps.length) {
-    box.innerHTML = '<div style="font-size:12px;color:var(--text-2);padding:8px;border:1px dashed var(--border);border-radius:5px">暂无快照。点击上方「保存当前进度为快照」生成（最多 ' + SNAP_MAX + ' 个）。</div>';
-    // v2.8.6：无快照时清档行仍需渲染（清档 = 重置当前本地游戏，与快照有无无关）
-  } else {
-  for (const sn of snaps) {
-    const row = document.createElement('div');
-    row.className = 'item snap-row';
-    row.dataset.snap = sn.id;
-    row.dataset.name = sn.name;
-    row.dataset.time = sn.timeText;
-    row.title = '「读取」= 用快照覆盖当前本地游戏（二次确认）；「删除」= 移除该快照';
-    const sm = sn.summary || {};
-    const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
-    row.innerHTML = `<div class="name"><span>${sn.slot}. ${sn.name}</span><span class="count mono">${sn.timeText}</span></div>
-      <div style="font-size:10.5px;color:var(--text-3);margin-top:2px">EP ${fmt(sm.ep || 0)} · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
-      <div style="display:flex;gap:4px;margin-top:4px">
-        <button class="btn snap-use" style="flex:1;padding:2px 4px;font-size:10px">读取</button>
-        <button class="btn snap-del" style="flex:1;padding:2px 4px;font-size:10px;background:transparent">删除</button>
-      </div>`;
-    box.appendChild(row);
-  }
-  }
-  // v2.8.5 A4：清档移入快照列表（外侧移除）——v2.8.6：无条件渲染（无快照时同样可清档）
-  const clearRow = document.createElement('div');
-  clearRow.className = 'snap-reset-row';
-  clearRow.style.cssText = 'margin-top:8px;border-top:1px dashed var(--border);padding-top:8px;text-align:center';
-  clearRow.innerHTML = `<button class="btn snap-reset" style="width:100%;padding:3px 6px;font-size:11px;background:transparent;color:var(--red,#f85149)">清档（删除当前游戏，快照保留）</button>`; // v2.8.8：清档只删当前，快照逐个删
-  box.appendChild(clearRow);
-}
-
-function openSnapshotModal() {
-  renderSnapshotList();
-  const m = document.getElementById('snap-modal');
-  if (m) m.style.display = 'flex';
+// v4.2.3 反馈③：快照改名——点名称原地变输入框（Enter/失焦提交，Esc 取消）。
+//   不用原生 prompt（阻塞主线程、样式脱离主题）；改名只动 name 不动 time，
+//   覆盖最早仍按 time 排序，语义不变。
+function beginSnapRename(spanEl, id) {
+  if (!spanEl || spanEl._renaming) return;
+  spanEl._renaming = true;
+  const cur = spanEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'snap-rename-input';
+  input.maxLength = SNAP_NAME_MAX;
+  input.value = cur;
+  input.setAttribute('aria-label', '快照名称');
+  spanEl.textContent = '';
+  spanEl.appendChild(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = (saveIt) => {
+    if (done) return;
+    done = true;
+    spanEl._renaming = false;
+    if (!saveIt) { input.remove(); spanEl.textContent = cur; return; }
+    const r = renameSnapshot(id, input.value);
+    if (r.ok) {
+      renderSaveList(true);
+      toast(`快照已改名为「${r.name}」`);
+    } else {
+      input.remove();
+      spanEl.textContent = cur;
+      toast(r.reason || '改名失败');
+    }
+  };
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // 不让输入内容触发全局快捷键
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('click', (e) => e.stopPropagation());
 }
 
 // 保存快照：槽未满直接存；已满走二级确认覆盖最早快照
 function onSnapSave() {
   const r = saveSnapshot();
   if (r.ok) {
-    renderSnapshotList();
-    renderSaveList();
+    renderSaveList(true);
     toast('快照已保存（' + listSnapshots().length + '/' + SNAP_MAX + '）');
     return;
   }
   if (r.needCover) {
     askConfirm('快照已满，覆盖最早的快照', `已保存 ${SNAP_MAX} 个快照。新快照将覆盖最早的「${r.needCover.name}（${fmtStamp(r.needCover.time)}）」，确定保存？`, () => {
       const res = coverOldest(r.snap);
-      if (res.ok) { renderSnapshotList(); renderSaveList(); toast(res.covered ? '已覆盖旧快照，新快照已保存' : '快照已保存'); }
+      if (res.ok) { renderSaveList(true); toast(res.covered ? '已覆盖旧快照，新快照已保存' : '快照已保存'); }
       else toast('保存失败：本地存储不可用');
     });
   } else {
@@ -2327,7 +2296,7 @@ function renderSaveList(force = false) {
   const box = document.getElementById('save-list');
   if (!box) return;
   const snaps = listSnapshots();
-  const sig = snaps.map(s => `${s.id}|${s.time}|${(s.summary && s.summary.ep) || 0}`).join(',') || 'empty';
+  const sig = snaps.map(s => `${s.id}|${s.time}|${s.name}|${(s.summary && s.summary.ep) || 0}`).join(',') || 'empty'; // v4.2.3：name 入签名（改名后需重建行内文案）
   // 同一份数据且列表已在位：跳过重建，保证按下与松开落在同一个按钮节点上（click 才会派发）
   if (!force && sig === saveListSig && box.childElementCount > 0) return;
   saveListSig = sig;
@@ -2354,7 +2323,7 @@ function renderSaveList(force = false) {
     const sm = sn.summary || {};
     const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
     row.innerHTML = `<div class="snap-main">
-        <div class="name"><span>${sn.slot}. ${sn.name}</span><span class="count mono">${sn.timeText}</span></div>
+        <div class="name"><span>${sn.slot}. <span class="snap-name" title="点击重命名" tabindex="0" role="button">${escHtml(sn.name)}</span></span><span class="count mono">${sn.timeText}</span></div>
         <div class="snap-sub">EP ${fmt(sm.ep || 0)} · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
       </div>
       <div class="snap-btns">
@@ -2388,7 +2357,7 @@ function onSaveListClick(e) {
       const cur = localStorage.getItem(SAVE_KEY);
       if (!cur) { toast('当前无存档'); return; }
       const r = overwriteSnapshot(id, cur);
-      if (r.ok) { renderSaveList(); renderSnapshotList(); toast('已用当前进度覆盖该存档'); }
+      if (r.ok) { renderSaveList(true); toast('已用当前进度覆盖该存档'); }
       else toast(r.reason || '覆盖失败');
     });
   } else if (e.target.classList.contains('snap-export')) {
@@ -2404,9 +2373,11 @@ function onSaveListClick(e) {
   } else if (e.target.classList.contains('snap-del')) {
     askConfirm('删除快照', `确定删除快照「${label}」？`, () => {
       deleteSnapshot(id);
-      renderSaveList(); renderSnapshotList();
+      renderSaveList(true);
       toast('快照已删除');
     });
+  } else if (e.target.classList.contains('snap-name')) {
+    beginSnapRename(e.target, id); // v4.2.3 反馈③：点名称改名
   }
 }
 
@@ -2428,7 +2399,7 @@ function importSave(e) {
         const sum = `EP ${fmt(data.ep || 0)} · 职级 ${data.prestige || 0}`;
         askConfirm('导入存档为新快照', `导入外部存档（${sum}）将作为新快照保存至下拉列表。\n槽位已满时会覆盖最早的快照。确定？`, () => {
           const r = importToSnapshot(JSON.stringify(data), '导入的存档');
-          if (r.ok) { renderSaveList(); renderSnapshotList(); toast(r.covered ? '已覆盖旧快照，新快照已保存' : '已保存为新快照'); }
+          if (r.ok) { renderSaveList(true); toast(r.covered ? '已覆盖旧快照，新快照已保存' : '已保存为新快照'); }
           else toast('保存失败：本地存储不可用');
         });
         return;
@@ -2803,9 +2774,6 @@ function tick(now) {
     render();
     return;
   }
-  // v2.8.7：打开存档管理时暂停所有产出/计时（防存档窗口内进度漂移）
-  const snapOpen = document.getElementById('snap-modal') && document.getElementById('snap-modal').style.display === 'flex';
-  if (snapOpen) { lastTick = now; return; }
   // v2.9.0 优化②：模态暂停（确认/抉择弹框打开期间一切计时暂停；绝对时间戳恢复时顺延）
   if (modalPauseAt) { lastTick = now; return; }
 

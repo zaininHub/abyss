@@ -416,7 +416,10 @@ t('C-UI：四态徽章 + 倒计时 + tooltip 全覆盖（源码断言）', () =>
   for (const kw of ['满薪', '欠薪', '休眠', '流失预警', 'wage-help-zone', 'fmtMultDelta']) {
     assert.ok(src.includes(kw), `renderHero 应含 ${kw}`);
   }
-  assert.ok(src.includes('wageDebtMult()') && src.includes('wageKeepCostMult()') && src.includes('wageLoseChance()'), 'tooltip 应展示当前生效值（含建筑修正）');
+  // v4.2.3 反馈①：说明精简——概率/机制细节不再对玩家展示（wageLoseChance 移出 main.js），
+  //   仍须展示「当前生效值」（欠薪产出倍率 / 保底成本倍率）与恢复线。
+  assert.ok(src.includes('wageDebtMult()') && src.includes('wageKeepCostMult()'), 'tooltip 应展示当前生效值（含建筑修正）');
+  assert.ok(src.includes('恢复：EP 回到'), 'tooltip 应给出恢复线');
 });
 t('E：分区通用件落地（源码断言：折叠 key / 1s 移入 / 原地更新 / 委托）', () => {
   const lk = readFileSync(new URL('../src/modules/listkit.js', import.meta.url), 'utf8');

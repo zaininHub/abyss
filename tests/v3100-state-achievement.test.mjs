@@ -465,11 +465,11 @@ test('F1 Wiki 两节都写明「编排调倍率 / 班组调人头 / 分层相乘
 });
 
 test('F2 编排卡倍率行标注口径，四条倍率仍由统一读侧驱动', () => {
-  // v4.1.0 反馈③：标签并入策略行（labelSuffix='编排倍率'），旧独立文案「策略与相位共鸣合并」删除。
+  // v4.2.3 反馈②：「编排倍率」行尾标签与「策略与潮汐排班」注脚删除（与倍率 grid / 分块标题重复）。
   // 断言剥掉行注释——注释里的历史字面量不代表真实产出（v380 G5 踩坑：源码正则会连注释一起匹配）。
   const mainCode = MAIN.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-  assert.ok(mainCode.includes("labelSuffix: '编排倍率'"), '卡面需标注「编排倍率」（并入策略行）');
-  assert.ok(!mainCode.includes('策略与相位共鸣合并'), '旧文案「策略与相位共鸣合并」已删除');
+  assert.ok(!mainCode.includes('labelSuffix'), '「编排倍率」标签已删除（labelSuffix 参数一并移除）');
+  assert.ok(!mainCode.includes('策略与潮汐排班'), '标题注脚「策略与潮汐排班」已删除');
   assert.ok(mainCode.includes('const summary = orchestrationSummary(S)'));
   assert.ok(mainCode.includes('for (const x of summary)'), '倍率行仍走统一读侧，不得内联数值');
 });

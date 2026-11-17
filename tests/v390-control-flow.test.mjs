@@ -192,8 +192,11 @@ test('C1 主循环只剩 7 次阶段调用，且执行顺序与 v3.8.0 逐字对
   for (const fn of ['tickWages(', 'tickAI(', 'tickReligion(', 'refreshShopAffordability(', 'renderShop(', 'checkAch(']) {
     assert.ok(!body.includes(fn), `主循环不应再直调 ${fn}`);
   }
-  assert.ok(body.includes('S.paused') && body.includes('snap-modal') && body.includes('modalPauseAt') && body.includes('_riftCatchup'),
-    '暂停 / 存档弹窗 / 模态暂停 / 裂隙补时四条原有行为必须保留');
+  // v4.2.3：旧「存档管理」模态框已删除（入口在 v3.10.5 就被下拉替代、模态不可达）——
+  //   其暂停分支随之清退，改由 modalPauseAt 统一承担。
+  assert.ok(body.includes('S.paused') && body.includes('modalPauseAt') && body.includes('_riftCatchup'),
+    '暂停 / 模态暂停 / 裂隙补时三条原有行为必须保留');
+  assert.ok(!body.includes('snap-modal'), 'v4.2.3：不可达的存档模态暂停分支已清退');
 });
 
 test('C2 43 条系统声明与 FRAME_SYSTEM_IDS 清单双向对齐', () => {

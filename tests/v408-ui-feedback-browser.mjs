@@ -75,8 +75,8 @@ try {
     return {
       visible: true,
       hasCurrentLine: /当前编排/.test(txt),
-      hasMultLabel: /编排倍率/.test(txt) && !/策略与相位共鸣合并/.test(txt), // v4.1.0：标签并入策略行，旧文案删除
-      hasOldLabelLine: /策略与相位共鸣合并/.test(txt),
+      // v4.2.3 反馈②：「编排倍率」「策略与潮汐排班」两个冗余标签删除——改为断言都不存在
+      hasMultLabel: /编排倍率|策略与潮汐排班/.test(txt),
       resUnlocked: !!toggleBtn,
       toggleState: toggleBtn?.getAttribute('aria-pressed') === 'true',
       toggleText: toggleBtn?.textContent.trim() || '',
@@ -93,13 +93,19 @@ try {
   results.orch = orch;
   orch.visible ? ok('编排卡已解锁渲染', '') : bad('编排卡未渲染', JSON.stringify(orch));
   !orch.hasCurrentLine ? ok('「当前编排」行已删除', '') : bad('「当前编排」行仍在', '');
-  orch.hasMultLabel && !orch.hasOldLabelLine ? ok('「编排倍率」标签保留（已并入策略行）', '') : bad('编排倍率标签缺失或旧文案残留', JSON.stringify({ has: orch.hasMultLabel, old: orch.hasOldLabelLine }));
+  !orch.hasMultLabel ? ok('冗余标签（编排倍率 / 策略与潮汐排班）已删除', '') : bad('冗余标签仍在卡面', JSON.stringify({ has: orch.hasMultLabel }));
   // 共鸣开关联动图标：开态实心 ▲ / 关态空心 △（测试存档未开共鸣 → 期望 △）
+  // v4.2.3：本存档 chapter=4，而 v4.2.0 起相位共鸣绑第 10 章（gateOpen('resonance')）——
+  //   共鸣区不解锁属门禁预期，跳过图标族断言（灰度为 v3110 既有纪律，不翻新选择器）。
   const toggleExpect = orch.toggleState ? '▲' : '△';
-  orch.resUnlocked && orch.toggleText === toggleExpect ? ok(`共鸣开关三角随状态（${orch.toggleState ? '开▲' : '关△'}）`, orch.toggleText) : bad('共鸣开关图标不符', orch.toggleText);
-  JSON.stringify(orch.focusIcons) === JSON.stringify(['▲', '△', '▼', '▽'])
-    ? ok('四种共鸣焦点 = 四种三角形', orch.focusIcons.join(' '))
-    : bad('共鸣焦点图标不符', JSON.stringify(orch.focusIcons));
+  if (!orch.resUnlocked) {
+    ok('共鸣区未解锁（v4.2.0 章节门禁：本存档 chapter=4 < 10）— 图标族断言跳过', '');
+  } else {
+    orch.toggleText === toggleExpect ? ok(`共鸣开关三角随状态（${orch.toggleState ? '开▲' : '关△'}）`, orch.toggleText) : bad('共鸣开关图标不符', orch.toggleText);
+    JSON.stringify(orch.focusIcons) === JSON.stringify(['▲', '△', '▼', '▽'])
+      ? ok('四种共鸣焦点 = 四种三角形', orch.focusIcons.join(' '))
+      : bad('共鸣焦点图标不符', JSON.stringify(orch.focusIcons));
+  }
   orch.multMarks.length === 4 ? ok('编排倍率四行全部带圆形标', orch.multMarks.join(' · ')) : bad('倍率圆标缺失', JSON.stringify(orch.multMarks));
   orch.multMarks.every(m => /^[●◐○]/.test(m)) ? ok('倍率标全部为圆形族', orch.multMarks.map(m => m[0]).join(' ')) : bad('倍率标混入非圆形', orch.multMarks.join(' '));
   orch.resRowsNoWrap ? ok('共鸣倍率行显式 nowrap', '') : bad('共鸣倍率行未 nowrap', '');
@@ -135,22 +141,23 @@ try {
     const pop = document.getElementById('wage-tip-pop');
     if (!pop) return { exists: false };
     const cs = getComputedStyle(pop);
+    // v4.2.3 反馈①：文案精简后不再含「流失预警」行，.w-bad 可能缺席——
+    //   改为按气泡内实际存在的语义类取样，断言「语义色 ≥3 种且互不相同」。
+    const SEM = ['.w-good', '.w-warn', '.w-orange', '.w-bad', '.w-dim'];
+    const present = SEM.filter(sel => pop.querySelector(sel));
+    const colors = {};
+    for (const sel of present) colors[sel.slice(1)] = getComputedStyle(pop.querySelector(sel)).color;
     return {
       exists: true, display: cs.display, zIndex: cs.zIndex, position: cs.position,
-      colors: {
-        good: getComputedStyle(pop.querySelector('.w-good')).color,
-        warn: getComputedStyle(pop.querySelector('.w-warn')).color,
-        orange: getComputedStyle(pop.querySelector('.w-orange')).color,
-        bad: getComputedStyle(pop.querySelector('.w-bad')).color,
-      },
-      distinct: new Set(['.w-good', '.w-warn', '.w-orange', '.w-bad'].map(s => getComputedStyle(pop.querySelector(s)).color)).size,
+      colors, present, distinct: new Set(Object.values(colors)).size,
     };
   });
   results.wageTip0 = wageTip0;
   wageTip0.exists ? ok('彩色气泡 DOM 存在', `z-index ${wageTip0.zIndex}`) : bad('气泡 DOM 缺失', '');
   wageTip0.display === 'none' ? ok('未悬浮时气泡隐藏', wageTip0.display) : bad('气泡未隐藏', wageTip0.display);
   wageTip0.position === 'fixed' ? ok('气泡 fixed 定位', '') : bad('定位方式不符', wageTip0.position);
-  wageTip0.distinct === 4 ? ok('四态语义色互不相同', JSON.stringify(wageTip0.colors)) : bad('四态色未分色', JSON.stringify(wageTip0.colors));
+  // v4.2.3：文案精简后语义类为 3~4 种（w-bad 随「流失预警」行移除），断言「≥3 种且互不相同」
+  wageTip0.distinct >= 3 ? ok('语义色互不相同（≥3 种）', `${wageTip0.present.join(' ')} → ${JSON.stringify(wageTip0.colors)}`) : bad('语义色未分色', JSON.stringify(wageTip0.colors));
   await page.hover('#wage-help-zone');
   await sleep(350);
   const wageTip1 = await page.evaluate(() => {

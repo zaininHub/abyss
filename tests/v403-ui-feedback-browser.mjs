@@ -199,15 +199,18 @@ try {
     label: (document.getElementById('save-count') || {}).textContent,
   }));
   filled.n === SNAP_MAX ? ok('保存补满到上限', `${filled.label}`) : bad('未补满到上限', JSON.stringify(filled));
+  // v4.2.0 反馈④（v4.2.3 同步测试口径）：满槽后「+ 新建」直接灰显，不再弹「覆盖最早」确认——
+  //   弹窗会静默覆盖玩家旧档，用户要的是禁用。断言改为「按钮 disabled 且不弹确认」。
   await page.evaluate(() => { document.getElementById('save-new').click(); });
   await sleep(400);
   const capConfirm = await page.evaluate(() => ({
     display: document.getElementById('confirm-modal').style.display,
     title: document.getElementById('confirm-title').textContent,
+    disabled: document.getElementById('save-new').disabled,
   }));
-  capConfirm.display === 'flex' && /覆盖最早/.test(capConfirm.title)
-    ? ok('已满时保存走「覆盖最早」二级确认', capConfirm.title)
-    : bad('未触发覆盖确认', JSON.stringify(capConfirm));
+  capConfirm.disabled && capConfirm.display !== 'flex'
+    ? ok('已满时「+ 新建」灰显且不弹覆盖确认（v4.2.0 口径）', `disabled=${capConfirm.disabled}`)
+    : bad('满槽新建行为不符', JSON.stringify(capConfirm));
   await page.evaluate(() => document.getElementById('confirm-cancel').click());
   await sleep(200);
   const stillMax = await page.evaluate(() => JSON.parse(localStorage.getItem('abyss_idle_v2_snapshots') || '[]').length);
@@ -269,7 +272,8 @@ try {
     tip.tipX && tip.tipY ? ok('按本行 rect 实时写入坐标', `x=${tip.tipX} y=${tip.tipY}${tip.below ? ' · 已翻到下方' : ' · 在行上方'}`) : bad('未写入定位变量', JSON.stringify({ x: tip.tipX, y: tip.tipY }));
     (tip.left >= 0 && tip.left <= tip.vw - 40) ? ok('气泡水平位置在视口内', `left=${tip.left}`) : bad('气泡水平溢出视口', `left=${tip.left}`);
     (tip.top >= 0 && tip.top <= tip.vh) ? ok('气泡锚点垂直在视口内', `top=${tip.top} / vh=${tip.vh}`) : bad('气泡垂直溢出视口', `top=${tip.top}`);
-    /线程薪资状态/.test(tip.content) ? ok('气泡首行内容存在（未被裁掉）') : bad('气泡内容缺失', tip.content.slice(0, 60));
+    // v4.2.3 反馈①：标题由「线程薪资状态（当前：…）」精简为「当前：…」
+    /当前：/.test(tip.content) ? ok('气泡首行内容存在（未被裁掉）', tip.content.slice(0, 24)) : bad('气泡内容缺失', tip.content.slice(0, 60));
   })();
 
   // 气泡配色随主题（浅色主题此前是「深字压深底」）——四语义色逐一对底色，取最差
@@ -287,8 +291,11 @@ try {
       const pop = document.getElementById('wage-tip-pop');
       const bg = parse(getComputedStyle(pop).backgroundColor);
       const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      // v4.2.3：文案精简后 .w-bad 可能缺席——只对实际存在的语义类取样（避免 querySelector 为 null 抛错）
+      // 只取四个语义色（w-dim 是弱化说明色，本就低于正文对比度，不属断言范围）
       for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
-        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+        const el = pop.querySelector('.' + cls);
+        if (el) ratios[cls] = ratio(parse(getComputedStyle(el).color), bg);
       }
       out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }

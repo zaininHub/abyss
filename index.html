@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.2.2</title>
+<title>深渊效能工作台 v4.2.3</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -69,9 +69,10 @@
         <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
         <div class="save-menu-pop" id="save-pop">
           <div class="save-actions">
+            <button class="btn" id="snap-save" title="把当前进度保存为快照（最多 3 个，满槽时覆盖最早的）">💾 存快照</button>
             <button class="btn" id="save-new" title="新建一份全新初始存档（不影响当前进度，读取即可开始新档；最多 3 个，满槽后需先删除旧档）">+ 新建</button>
             <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
-            <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
+            <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">⊗ 清档</button>
           </div>
           <div class="save-list-label">存档列表 <span class="mono" id="save-count">0/3</span></div>
           <div id="save-list" class="save-list"></div>
@@ -417,17 +418,6 @@
       <div id="tab-offline" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
         <div id="offline-panel"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- v2.5.4 ①：快照存档模态框（最多 3 槽，可覆盖当前本地游戏 / 被新快照覆盖） -->
-  <div id="snap-modal" class="modal">
-    <div class="modal-box" style="position:relative">
-      <button id="snap-close" class="modal-x" title="关闭" aria-label="关闭">×</button>
-      <h3 style="margin-top:0;color:var(--accent)">存档管理</h3>
-      <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">保存当前进度为快照（最多 3 个）；「读取」= 用快照覆盖当前本地游戏；「导入」= 用外部存档覆盖当前。保存新快照时槽位已满会覆盖最早的快照。</p>
-      <button class="btn" id="snap-save" style="width:100%;margin-bottom:10px">保存当前进度</button>
-      <div id="snap-list" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
   </div>
 

@@ -239,8 +239,10 @@ try {
       // 气泡本体：底色 vs 默认字色；四个语义色行逐一对底色断言
       const bg = parse(getComputedStyle(pop).backgroundColor);
       const ratios = { base: ratio(parse(getComputedStyle(pop).color), bg) };
+      // v4.2.3：薪资气泡文案精简后 .w-bad 缺席——只取样实际存在的语义类
       for (const cls of ['w-good', 'w-warn', 'w-orange', 'w-bad']) {
-        ratios[cls] = ratio(parse(getComputedStyle(pop.querySelector('.' + cls)).color), bg);
+        const el = pop.querySelector('.' + cls);
+        if (el) ratios[cls] = ratio(parse(getComputedStyle(el).color), bg);
       }
       out[theme] = Math.round(Math.min(...Object.values(ratios)) * 10) / 10;
     }

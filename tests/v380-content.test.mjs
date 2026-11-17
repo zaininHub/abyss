@@ -232,7 +232,9 @@ test('G5 面板文案不写跨面板指引、不暴露实现术语', () => {
   //   断言剥掉行注释，只看真实产出的字符串字面量。
   const code = body.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
   assert.ok(!code.includes('当前编排'), 'v4.0.8：不再单独渲染「当前编排」行（易与相位共鸣混淆）');
-  assert.ok(code.includes('编排倍率'), '编排卡仍陈述自身数据（编排倍率四行）');
+  // v4.2.3 反馈②：卡面「编排倍率」标签与标题注脚删除——改为断言倍率四行仍由统一读侧产出。
+  assert.ok(code.includes('for (const x of summary)'), '编排卡仍陈述自身数据（四行倍率）');
+  assert.ok(!code.includes('编排倍率'), 'v4.2.3：冗余标签「编排倍率」已删除');
 });
 
 test('G6 数值读侧未解锁时不影响任何既有乘区', () => {

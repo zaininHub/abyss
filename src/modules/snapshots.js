@@ -98,6 +98,19 @@ export function deleteSnapshot(id) {
   write(read().filter(x => x.id !== id));
 }
 
+// v4.2.3 反馈③：快照改名——名称是玩家标识（区分「深渊线」「秩序线」等），不参与覆盖时序
+//   （time 不动，覆盖最早仍按 time 排序）。清洗：去 HTML 元字符、截断 16 字、空名回落「快照」。
+export const SNAP_NAME_MAX = 16;
+export function renameSnapshot(id, name) {
+  const list = read();
+  const idx = list.findIndex(x => x.id === id);
+  if (idx < 0) return { ok: false, reason: '快照不存在' };
+  const nm = String(name == null ? '' : name).replace(/[<>&]/g, '').trim().slice(0, SNAP_NAME_MAX) || '快照';
+  list[idx] = { ...list[idx], name: nm };
+  write(list);
+  return { ok: true, name: nm };
+}
+
 // v3.10.4 ④：用当前进度覆盖指定槽位（列表「覆盖」按钮）
 export function overwriteSnapshot(id, dataStr) {
   const list = read();

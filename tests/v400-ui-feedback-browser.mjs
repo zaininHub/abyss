@@ -26,7 +26,9 @@ const bad = (m, d = '') => { fail++; console.log(`  ✗ ${m}${d ? ' — ' + d : 
 // 种子存档：只给「产品可达的解锁态」，不伪造本轮要验收的 UI 结果。
 // 皮肤已购 2 项用于验证「已学完收进折叠区」，另 2 项保持未购用于验证菜单锁定态。
 const mkSave = () => JSON.stringify({
-  _version: 6, chapter: '4', storyline: 'line_order',
+  // v4.2.3：章节 4 → 12——v4.2.0 起永恒矩阵绑第 8 章、相位共鸣绑第 10 章，
+  //   原种子在第 4 章会导致两块都不渲染（4 条断言空转失败，非产品缺陷）。
+  _version: 6, chapter: '12', storyline: 'line_order',
   ep: 1e12, rp: 1e6, es: 1e6, dm: 1e6, pt: 1e6, faith: 1e6,
   upgrades: {}, buildings: {}, cultists: [
     { id: 1, name: '外勤干员 A', mood: '超频', profession: 'acolyte', level: 3, boundTo: '' },

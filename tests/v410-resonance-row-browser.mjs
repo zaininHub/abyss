@@ -4,8 +4,8 @@
 //   ① 「0/20」层数文字不再不正常换行——多档视口（1600/1440/1366/1280）下，
 //      层数 span 与 5 个共鸣按钮同一行（y 差 ≤2px），且自身文本节点不被拆行。
 //   ② 共鸣倍率行前有焦点三角标——四行倍率各带焦点三角形（焦点行实色、非焦点淡显）。
-//   ③ 「编排倍率」标签与「均衡/产能…」策略按钮同行（margin-left:auto 推右）；
-//      旧文案「策略与相位共鸣合并」删除；「编排倍率 · 」独立标签行不再存在。
+//   ③ v4.2.3 起：「编排倍率」标签连同「策略与潮汐排班」注脚一并删除（与倍率 grid/分块标题重复）——
+//      本项反转为断言两者都不在卡面；旧文案「策略与相位共鸣合并」仍锁删除。
 //   ④ 回归：共鸣开关/焦点 aria 契约、按钮 ≥24×24、倍率与读侧一致。
 import puppeteer from 'puppeteer-core';
 import { chromePath } from './_chrome.mjs';
@@ -66,19 +66,10 @@ try {
         const m = d.querySelector('span');
         return m ? { icon: m.textContent.trim(), dim: m.style.opacity === '0.35', accent: (m.style.color || '').includes('accent') } : null;
       }) : [];
-      // ③ 编排倍率标签与策略按钮同行（中心 y 比较）
+      // ③ v4.2.3：两个冗余标签（编排倍率 / 策略与潮汐排班）必须都不存在
       const labelSpan = [...el.querySelectorAll('span')].find(s => (s.textContent || '').trim() === '编排倍率');
-      const modeBtn = el.querySelector('[data-orch-mode]');
-      const labelOk = labelSpan && modeBtn
-        ? Math.abs(cy(labelSpan) - cy(modeBtn)) <= 3
-        : false;
-      // 推右判定：标签右缘贴近行右缘（行内 gap 余量 < 8px），且 marginLeft 声明为 auto（查行内 style）
-      const labelRightPushed = labelSpan
-        ? (labelSpan.getAttribute('style') || '').includes('margin-left:auto')
-        : false;
-      const labelAtRightEdge = labelSpan
-        ? (() => { const rr = labelSpan.getBoundingClientRect(); const pr = el.getBoundingClientRect(); return pr.right - rr.right < 40; })()
-        : false;
+      const noteSpan = [...el.querySelectorAll('span')].some(s => (s.textContent || '').trim() === '策略与潮汐排班');
+      const labelOk = !labelSpan && !noteSpan;
       const txt = el.textContent || '';
       return {
         visible: true, resUnlocked: true,
@@ -86,7 +77,7 @@ try {
         sameRow, spanRects,
         rowMarks: rowMarks.map(x => x ? x.icon : '?'),
         focusedMarked: rowMarks.filter(x => x && (x.accent || !x.dim)).length,
-        labelOk, labelRightPushed, labelAtRightEdge,
+        labelOk,
         hasOldText: /策略与相位共鸣合并/.test(txt),
         hasOldLabelDiv: [...el.querySelectorAll('div')].some(d => d.children.length === 0 && /编排倍率 · /.test(d.textContent || '')),
       };
@@ -100,8 +91,7 @@ try {
     r.spanRects === 1 ? ok('层数文本单行不拆行', `${r.spanRects} 段`) : bad('层数文本被拆行', String(r.spanRects));
     r.rowMarks.length === 4 ? ok('四行倍率全部带三角标', r.rowMarks.join(' ')) : bad('倍率三角标缺失', JSON.stringify(r.rowMarks));
     r.focusedMarked >= 1 ? ok('焦点倍率高亮（accent 实色）', `${r.focusedMarked}/4`) : bad('焦点倍率未高亮', '');
-    r.labelOk ? ok('「编排倍率」标签与策略按钮同行', '') : bad('编排倍率标签未对位', '');
-    (r.labelRightPushed && r.labelAtRightEdge) ? ok('标签 margin-left:auto 推右且贴近右缘', `right-edge 差 ${r.labelAtRightEdge}`) : bad('标签未推右', JSON.stringify({ pushed: r.labelRightPushed, atEdge: r.labelAtRightEdge }));
+    r.labelOk ? ok('两个冗余标签（编排倍率 / 策略与潮汐排班）均已删除', '') : bad('冗余标签仍在卡面', JSON.stringify({ label: r.labelOk }));
     !r.hasOldText ? ok('旧文案「策略与相位共鸣合并」已删除', '') : bad('旧文案仍在', '');
     !r.hasOldLabelDiv ? ok('独立「编排倍率 · 」标签行已删除', '') : bad('独立标签行仍在', '');
     await page.close();

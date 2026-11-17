@@ -97,6 +97,7 @@ body {
   background: var(--tip-bg); border: 1px solid var(--border); border-radius: 5px;
   padding: 8px 10px; font-size: 11px; color: var(--tip-fg);
   width: max-content; max-width: min(360px, 88vw); line-height: 1.7;
+  white-space: pre-line; /* v4.2.3 反馈①：说明按 \n 分行——此前缺此声明，6 行文案被折叠成一大段（「字数多又重复」的真因） */
   pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.5);
   display: none;
 }
@@ -2105,8 +2106,8 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .qs-fab:hover::after { pointer-events: auto; }
 .qs-fab:hover .qs-fab-pop,
 .qs-fab.kbd-open .qs-fab-pop { display: flex; }
-.save-actions { display: flex; gap: 4px; }
-.save-actions .btn { width: auto; flex: 1; padding: 4px 6px; font-size: 11px; }
+.save-actions { display: flex; gap: 4px; flex-wrap: wrap; } /* v4.2.3：四个入口（存快照/新建/导入/清档）改 2×2，窄下拉不再挤成一行 */
+.save-actions .btn { width: auto; flex: 1 1 calc(50% - 4px); padding: 4px 6px; font-size: 11px; white-space: nowrap; }
 .save-list-label { font-size: 11px; color: var(--text-3); margin: 6px 0 4px; }
 .save-list { display: flex; flex-direction: column; gap: 6px; }
 .save-empty { font-size: 12px; color: var(--text-2); padding: 8px; border: 1px dashed var(--border); border-radius: 5px; }
@@ -2115,6 +2116,16 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .save-list .snap-sub { font-size: 10.5px; color: var(--text-3); }
 .save-list .snap-btns { display: flex; gap: 4px; }
 .save-list .snap-btns .btn { flex: 1; width: auto; padding: 3px 4px; font-size: 10px; }
+/* v4.2.3 反馈③：快照名称可点改名——虚线下划线提示可编辑（两处列表共用） */
+.snap-name {
+  cursor: text; border-bottom: 1px dashed transparent; transition: border-color .15s, color .15s;
+}
+.snap-name:hover, .snap-name:focus-visible { border-bottom-color: var(--accent); color: var(--accent); outline: none; }
+.snap-rename-input {
+  font: inherit; color: var(--text-1); background: var(--bg-2, #141821);
+  border: 1px solid var(--accent); border-radius: 3px;
+  padding: 0 3px; min-width: 90px; max-width: 140px; outline: none;
+}
 .save-sep { border: none; border-top: 1px dashed var(--border); margin: 8px 0; }
 .save-legacy { display: flex; flex-direction: column; gap: 4px; }
 .save-legacy .btn { width: 100%; font-size: 11px; padding: 3px 6px; }

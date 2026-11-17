@@ -33,7 +33,7 @@ const NOW = Date.now();
 //   cultists 10 → 班组面板显（筛选 select 存在）；achievements 7 条 → 成就分页 5+2
 //   eternal.skin_light → 浅色皮肤已拥有（可切换）
 const mkSave = () => JSON.stringify({
-  _version: 6, chapter: 6, ep: 8e5, rp: 1e6, es: 0, dm: 0, pt: 0, faith: 0,
+  _version: 6, chapter: 8, ep: 8e5, rp: 1e6, es: 0, dm: 0, pt: 0, faith: 0,
   upgrades: { reserve_bin: 12, rp_vault: 1 },
   // canteen（基础四栋）已建成 → anyBuilt=true → renderBuildings 不提前返回，设施 h3 折叠绑定生效；
   // 注意 warmup_node 属 v21 表，不计入 anyBuilt 判定
@@ -42,7 +42,7 @@ const mkSave = () => JSON.stringify({
   cultists: Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: '线程 ' + (i + 1), mood: '正常', profession: 'acolyte', level: 1, boundTo: '' })),
   tech: { ai_core: 1 }, focusLevel: 10,
   resDiscovered: { ep: true, cps: true, run: true, tide: true, rank: true, rp: true, es: true, faith: true, pt: true, dm: true },
-  prestige: 2, projectsDone: 9, prestigePoints: 3,
+  prestige: 2, projectsDone: 10, prestigePoints: 3, // v4.2.3：任务 9→10（v4.2.1 起深化组门槛=职级≥3 或任务≥10）
   rpTheories: { rp_entropy: 2, rp_matrix: 2, rp_wage: 4 },
   achievements: { ep1k: 1, ep100k: 1, ep1m: 1, own10: 1, thread3: 1, thread10: 1, pre1: 1 },
   eternal: { skin_light: 1, skin_ember: 1 },
@@ -331,7 +331,7 @@ try {
   await page.hover('#save-menu-btn');
   await sleep(350);
   const f3label = await page.$eval('#save-new', b => b.textContent.trim());
-  f3label === '+ 新建初始空档' ? ok('按钮文案「+ 新建初始空档」', f3label) : bad('按钮文案不符', f3label);
+  f3label === '+ 新建' ? ok('按钮文案「+ 新建」', f3label) : bad('按钮文案不符', f3label);
   await page.click('#save-new');
   await sleep(400);
   const f3 = await page.evaluate(() => {
@@ -356,7 +356,7 @@ try {
   f3.count === 1 ? ok('快照槽新增 1 条', `count=${f3.count}`) : bad('快照数量异常', `count=${f3.count}`);
   f3.name === '初始空档' ? ok('条目名「初始空档」', f3.name) : bad('条目名不符', f3.name);
   f3.dataOk ? ok('快照数据为全新初始档（chapter=1 / prestige=0 / 无线程）', '') : bad('快照数据非初始态', '');
-  f3.curChapter === 6 && f3.curPrestige === 2 ? ok(`当前进度未受影响（chapter=${f3.curChapter} / prestige=${f3.curPrestige}）`, '') : bad('当前进度被污染', JSON.stringify({ c: f3.curChapter, p: f3.curPrestige }));
+  f3.curChapter === 8 && f3.curPrestige === 2 ? ok(`当前进度未受影响（chapter=${f3.curChapter} / prestige=${f3.curPrestige}）`, '') : bad('当前进度被污染', JSON.stringify({ c: f3.curChapter, p: f3.curPrestige }));
   f3.saveCount === '1/3' ? ok('存档计数 1/3', f3.saveCount) : bad('计数不符', f3.saveCount);
   /初始空档/.test(f3.firstRow) ? ok('列表首行展示初始空档', f3.firstRow) : bad('列表未刷新', f3.firstRow);
 

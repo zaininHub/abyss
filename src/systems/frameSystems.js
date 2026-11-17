@@ -550,7 +550,7 @@ export const FRAME_DEPS_KEYS = Object.freeze([
  * 在首渲时注入一次 <style id="tide-sched-style">，不改动 style.css。
  */
 export function buildTideSchedulingHtml(ctx) {
-  const { S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized, labelSuffix } = ctx;
+  const { S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized } = ctx;
   // v4.1.0 反馈③：窄列（272px）一行装下 4 策略 + 潮汐排班 + 「编排倍率」标签——
   //   gap 6→4、按钮文案去图标后空格、「潮汐排班」缩为「潮汐」（全称进 title）。
   let html = `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px">`;
@@ -583,9 +583,7 @@ export function buildTideSchedulingHtml(ctx) {
     html += `</div>`;
   }
   html += `</div>`;
-  // v4.1.0 反馈③：「编排倍率」标签并入策略行尾部（margin-left:auto 推右）——
-  //   原独立标签行「编排倍率 · 策略与相位共鸣合并」删除；倍率 grid 紧随本行之后。
-  if (labelSuffix) html += `<span style="font-size:10.5px;color:var(--text-3);margin-left:auto;white-space:nowrap">${labelSuffix}</span>`;
+  // v4.2.3 反馈②：行尾「编排倍率」标签删除（与其下方倍率 grid 内容重复），labelSuffix 参数一并移除。
   html += `</div>`;
 
   // 注入浮层显隐规则（默认隐藏，悬停/聚焦显示），不改动 style.css。
