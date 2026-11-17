@@ -913,6 +913,12 @@ export function drainBreakdown() {
   if (hatch > 0.005) parts.push(`异兽孵化 -${fmt(hatch)}/s`);
   const atrium = atriumDrainPerSec(); // v3.3.2 反馈③：灵感工坊蒸馏 EP 扣减计入消耗值
   if (atrium > 0.005) parts.push(`灵感工坊 -${fmt(atrium)}/s`);
+  // v4.1.2：RP 满仓时工坊转满仓涓流（每 5s -5万 EP，非连续速率），不进连续消耗数值，
+  //   但在明细里单独说明，避免玩家疑惑「工坊开着怎么消耗没变」。
+  if ((S.upgrades && S.upgrades.atrium) > 0 && (S.rp || 0) >= rpCap()
+    && S.atriumOn !== false && !(S.converterOn && S.converterOn.atrium === false)) {
+    parts.push('灵感工坊·RP满仓涓流（每 5s -5万 EP，非连续）');
+  }
   return parts;
 }
 // v3.3.1 反馈⑪：消耗口径与实际扣减对齐——
@@ -969,8 +975,16 @@ export function hatchDrainPerSec() {
 export function atriumDrainPerSec() {
   const n = (S.upgrades && S.upgrades.atrium) || 0;
   if (n < 1) return 0;
-  if (!converterEnabled('atrium')) return 0; // 工坊关闭：不蒸馏不消耗（与 tick 同口径）
+  const enabled = (S.atriumOn !== false) && !(S.converterOn && S.converterOn.atrium === false); // 与 converterEnabled('atrium') 同口径（避免循环导入）
+  if (!enabled) return 0; // 工坊关闭：不蒸馏不消耗（与 tick 同口径）
   if ((S.ep || 0) <= 0) return 0; // EP 已空：扣费被钳到 0
+  // v4.1.2 BUGFIX：RP 满仓时 rp:atrium 流改走「满仓涓流」（每 5s 扣 5 万 EP，且仅 EP≥5 万触发），
+  //   不再按 150×n² 连续扣。旧实现不判满仓 → 顶栏消耗虚高 1350/s（3 级工坊），
+  //   与 computeCps 比较后误报红色❗「净流为负」，但 EP 实际仍在涨（用户截图 778<863 却 EP 上涨）。
+  //   涓流是「每 5s 跳变 5 万」的周期扣减，不是连续速率，无法与 computeCps（连续）在顶栏同口径比较；
+  //   把它按 10000/s 均摊会让 drain 虚高（EP 一旦 <5 万涓流即停），故满仓期间不计入连续消耗，
+  //   改由悬浮说明单独交代「RP 满仓：灵感工坊转为每 5s -5万 EP 的满仓涓流」。
+  if ((S.rp || 0) >= rpCap()) return 0;
   // v3.12.13 反馈⑫：EP 消耗改随等级平方增长（×n²），快于 RP 产出（×n 线性）——消耗增长明显快于产出
   return (BALANCE.atrium.epRate || 150) * n * n;
 }

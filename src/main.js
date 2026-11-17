@@ -139,43 +139,42 @@ function renderOrchestrationPanel() {
   // v3.12.8 ④：策略描述按需渲染——「均衡编排」无增益无代价，不再补一句说明文字。
   // v4.0.8 反馈①：删除「当前编排」行——按钮的 aria-pressed 高亮已表达当前策略，
   //   单独一行文字与相位共鸣的焦点按钮并存时反生歧义（用户反馈「容易引起误解」）。
+  // v4.1.2 反馈②：按「效能编排 / 相位共鸣」分块展示——原实现策略行、共鸣三角按钮、
+  //   两组倍率 grid 混排在一段里，文字与图标看不出归属。现在每块自带标题行，
+  //   块间用分隔线区隔，倍率只读本块数据（编排 summary / 共鸣 res.rows）。
   let html = '';
+  const blockTitle = (icon, name, note) => `<div class="orch-block-title"><span aria-hidden="true">${icon}</span> ${name}${note ? `<span class="orch-block-note">${note}</span>` : ''}</div>`;
 
-  // v3.12.13 反馈 #164：潮汐排班与四种排版类型同排；开关仅用选中高亮表达；潮汐预案改为悬停浮层。
-  // v4.1.0 反馈③：「编排倍率」标签并入本行尾部（margin-left:auto 推右），倍率 grid 紧随其后；
-  //   原独立标签行「编排倍率 · 策略与相位共鸣合并」删除。
+  // ===== 块一：效能编排（策略按钮 + 潮汐排班 + 编排倍率） =====
+  html += `<section class="orch-block" data-orch-block="orchestration">`;
+  html += blockTitle('◈', '效能编排', '策略与潮汐排班');
+  // v3.12.13 反馈 #164：潮汐排班与四种策略同排；v4.1.0 反馈③：倍率标签并入本行尾部。
   html += buildTideSchedulingHtml({ S, st, auto, schedOK, sched, ORCHESTRATION_MODES, scheduleCustomized, labelSuffix: '编排倍率' });
-
-  // v4.0.0 反馈④：相位共鸣与效能编排同级——去掉说明文案与「共鸣：开/关」文字，
-  //   一个纯开关样式按钮 + 四种焦点按钮同排一行；倍率读数与层数保留（读侧契约）。
-  // v4.0.8 反馈①：共鸣图标整族改为三角形（开=实心 ▲ / 焦点四种不同三角形），
-  //   与编排策略的方块/菱形族区分——「相位共鸣加成通过不同的三角形表示」。
-  // v4.1.0 反馈③：①「0/20 层」换行修复——层数并入开关按钮的 title 之外，压缩为
-  //   「0/20」跟在焦点按钮后（gap 4px），行内 nowrap；②倍率行加焦点三角标（当前焦点管线
-  //   的倍率前显示其焦点三角形，与按钮族一致）；③「编排倍率」标签并入策略行尾部，
-  //   不再独立一行（「策略与相位共鸣合并」文案删除）。
-  if (res.unlocked) {
-    html += `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
-      <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">${res.enabled ? '▲' : '△'}</button>
-      ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${RES_FOCUS_ICONS[f.id] || f.icon}</button>`).join('')}
-      <span style="font-size:10.5px;color:var(--text-3);margin-left:auto;white-space:nowrap" title="相位共鸣层数（每 12 秒 +1，换相位减半）">${res.layers}/${res.maxLayers}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
-      ${res.rows.map(r => `<div style="white-space:nowrap"><span aria-hidden="true" style="${r.focused ? 'color:var(--accent)' : 'opacity:.35'}">${RES_FOCUS_ICONS[r.key] || r.icon}</span> ${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
-    </div>`;
-  }
-
-  // v3.10.1：明确标注这四行是编排层倍率（策略 + 相位共鸣合并），不是全部加成的总和。
-  // v4.0.8 反馈①：编排倍率标改圆形族（●增益 ◐小幅 ○持平/减益），
-  //   与共鸣的三角形族成对区分——「编配倍率为不同的圆」；行内 nowrap 修不正常换行。
-  // v4.1.0 反馈③：标签已并入策略行（buildTideSchedulingHtml 的 labelSuffix），不再单独渲染。
-  html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
+  // v3.10.1：四行编排倍率（策略层，不含共鸣），圆族标记（●增益 ◐小幅 ○持平/减益）。
+  html += `<div class="orch-mult-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;font-size:11px;color:var(--text-2)">`;
   for (const x of summary) {
     const color = x.mult > 1.0001 ? 'var(--good,#3fb950)' : x.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)';
     const mark = x.mult > 1.05 ? '●' : x.mult > 1.0001 || (x.mult < 0.9999 && x.mult >= 0.95) ? '◐' : '○';
     html += `<div style="white-space:nowrap"><span aria-hidden="true">${mark}</span> ${x.label} <b class="mono" style="color:${color}">×${x.mult.toFixed(2)}</b></div>`;
   }
-  html += `</div>`;
+  html += `</div></section>`;
+
+  // ===== 块二：相位共鸣（开关 + 焦点三角按钮 + 共鸣倍率 + 层数） =====
+  // v4.0.0 反馈④：共鸣与编排同级——一个开关 + 四种焦点按钮同排；倍率读数与层数保留。
+  // v4.0.8 反馈①：共鸣图标整族三角形（开=▲ / 四种焦点不同三角），与编排方/菱形族区分。
+  // v4.1.0 反馈③：层数压缩为「0/20」跟在焦点后（nowrap）；焦点管线的倍率前显示其三角标。
+  if (res.unlocked) {
+    html += `<section class="orch-block" data-orch-block="resonance">`;
+    html += blockTitle('▲', '相位共鸣');
+    html += `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:8px 0 6px">
+      <button class="btn-mini" data-res-toggle="1" aria-label="切换相位共鸣开关" aria-pressed="${res.enabled}" title="相位共鸣 ${res.layers}/${res.maxLayers} 层" style="min-height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;${res.enabled ? 'border-color:var(--accent);color:var(--accent);' : ''}">${res.enabled ? '▲' : '△'}</button>
+      ${RESONANCE_FOCI.map(f => `<button class="btn-mini" data-res-focus="${f.id}" title="共鸣焦点改为${f.name}" aria-label="共鸣焦点改为${f.name}" aria-pressed="${res.focus === f.id}" style="min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;${res.focus === f.id ? 'border-color:var(--accent);color:var(--accent);' : ''}">${RES_FOCUS_ICONS[f.id] || f.icon}</button>`).join('')}
+      <span style="font-size:10.5px;color:var(--text-3);margin-left:auto;white-space:nowrap" title="相位共鸣层数（每 12 秒 +1，换相位减半）">${res.layers}/${res.maxLayers}</span>
+    </div>
+    <div class="orch-mult-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
+      ${res.rows.map(r => `<div style="white-space:nowrap"><span aria-hidden="true" style="${r.focused ? 'color:var(--accent)' : 'opacity:.35'}">${RES_FOCUS_ICONS[r.key] || r.icon}</span> ${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
+    </div></section>`;
+  }
   el.innerHTML = html;
   placeTideSchedPop(); // v4.0.0 ⑤：fixed 浮层按触发按钮视口坐标重定位
 }
@@ -628,11 +627,9 @@ function renderTop() {
   }
   if (hEp) hEp.textContent = `${fmt(S.ep)} / ${fmt(epStorageCap())}`; // v2.1 P1：EP 常显「当前/上限」
   if (hCps) hCps.textContent = fmt(cps) + '/s';
-  // v2.8.22 ④：来源悬浮气泡（只留自定义 CSS 气泡，移除原生 title —— 双弹窗）；气泡含来源 + 加成明细
-  if (hCps) {
-    const st = hCps.closest('.stat');
-    if (st) { const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : ''; st.dataset.tip = `产出来源：${cpsBreakdown().join(' · ') || '无'}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}${focusTag ? '｜' + focusTag : ''}`; } // v2.8.30 ⑥：专注总加成并入产出悬浮（按分段曲线累加）
-  }
+  // v4.1.2：来源悬浮改真实 DOM 气泡（#flow-tip-pop），按来源/加成分组换行；
+  //   旧 data-tip 纯文本 + nowrap 会把长串挤成一团且被顶栏 overflow 裁剪，这里不再写入。
+  //   气泡显示时由 refreshFlowTip() 同步最新数值（见下）。
   const hDrainWarn = document.getElementById('h-drain-warn');
   if (hDrainWarn) {
     hDrainWarn.style.display = drainWarn ? '' : 'none';
@@ -641,13 +638,14 @@ function renderTop() {
     if (warnTip) hDrainWarn.dataset.tip = warnTip; else hDrainWarn.removeAttribute('data-tip');
     hDrainWarn.setAttribute('aria-label', warnTip);
   }
-  if (hSalary) {
-    hSalary.textContent = fmt(drain) + '/s';
-    const st2 = hSalary.closest('.stat');
-    // v3.3.1 反馈⑪：消耗按实际扣减口径展示（休眠只扣保命成本、探采 EP 不足跳过、圣所关闭不扣）
-    const wSt = (S.wageState || {}).state;
-    const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `（休眠期仅扣保命成本 ×${wageKeepCostMult()}）` : '';
-    if (st2) st2.dataset.tip = `消耗来源：${drainBreakdown().join(' · ') || '无'}${wageNote}${multBreakdown().length ? '｜加成：' + multBreakdown().join(' · ') : ''}`;
+  if (hSalary) hSalary.textContent = fmt(drain) + '/s';
+  // v4.1.2：气泡显示期间同步最新来源明细（数值每秒在变，避免悬浮时看到旧数据）
+  if (_flowTipKind) {
+    const p = document.getElementById('flow-tip-pop');
+    if (p) {
+      const html = flowTipHtml(_flowTipKind);
+      if (p._tipSig !== html) { p._tipSig = html; p.innerHTML = html; }
+    }
   }
   if (hRun) hRun.textContent = fmt(S.runEarned);
   // v4.0.5：职级点按整数展示（旧档若残留 1.414… 也不会把顶栏撑成长小数）
@@ -800,6 +798,99 @@ function bindWageTipPop() {
   // 滚动/改尺寸时气泡跟着挪（旧 ::after 随 hover 天然跟随，DOM 版需手动）
   window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) place(); }, true);
   window.addEventListener('resize', () => { if (pop() && pop().classList.contains('show')) place(); });
+}
+
+// ========== v4.1.2：顶栏产出/消耗悬浮——真实 DOM 气泡 + 分组换行（复用 wage-tip-pop 范式） ==========
+// 旧实现用 attr(data-tip) + ::after{white-space:nowrap}，长串「产出来源：A · B｜加成：C · D」挤成一团，
+// 且 absolute 定位被顶栏 overflow 裁剪。这里改 fixed + JS rect 定位 + 每条来源/加成独占一行。
+let _flowTipKind = null;
+function flowTipHtml(kind) {
+  const isOut = kind === 'output';
+  const parts = isOut ? cpsBreakdown() : drainBreakdown();
+  const mults = multBreakdown();
+  const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : '';
+  const wSt = (S.wageState || {}).state;
+  const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `休眠期仅扣保命成本 ×${wageKeepCostMult()}` : '';
+  const title = isOut
+    ? `<b>产出/s <span class="w-good">${fmt(computeCps())}/s</span></b>`
+    : `<b>消耗/s <span class="w-bad">${fmt(totalDrainPerSec())}/s</span></b>`;
+  let html = title;
+  html += `<div class="ft-group"><span class="ft-label">${isOut ? '产出来源' : '消耗来源'}</span>`;
+  if (!parts.length) html += `<div class="w-dim">· 无</div>`;
+  else for (const p of parts) html += `<div>· ${escHtml(p)}</div>`;
+  html += `</div>`;
+  if (mults.length || focusTag || wageNote) {
+    html += `<div class="ft-group"><span class="ft-label">加成与说明</span>`;
+    for (const m of mults) html += `<div>· ${escHtml(m)}</div>`;
+    if (focusTag) html += `<div>· ${escHtml(focusTag)}</div>`;
+    if (wageNote) html += `<div class="w-warn">· ${escHtml(wageNote)}</div>`;
+    html += `</div>`;
+  }
+  // v4.1.2：净流口径说明——明确「理论速率 vs 实际扣减」的差异来源，消除「产<消 EP 仍涨」的疑惑
+  const cps = computeCps(), drain = totalDrainPerSec();
+  const net = cps - drain;
+  if (drain > cps) {
+    const eta = fmtDepletionEta(epDepletionSec(S.ep, cps, drain));
+    html += `<div class="ft-note w-warn">当前理论净流出 ${fmt(-net)}/s，若持续按此速率 EP 约 ${eta} 耗尽。</div>`;
+  } else {
+    html += `<div class="ft-note w-good">当前理论净流入 +${fmt(net)}/s。</div>`;
+  }
+  html += `<div class="ft-note w-dim">注：显示值为连续速率；实际入账受 EP 上限、余额不足钳制，以及满仓涓流等周期机制影响，瞬时余额变化可能与之略有出入。</div>`;
+  return html;
+}
+function escHtml(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function bindFlowTipPop() {
+  if (typeof document === 'undefined') return;
+  // 移除旧 data-tip，避免与真实 DOM 气泡双弹
+  for (const id of ['h-output-stat', 'h-drain-stat']) {
+    const st = document.getElementById(id);
+    if (st) st.removeAttribute('data-tip');
+  }
+  let pop = document.getElementById('flow-tip-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'flow-tip-pop';
+    pop.className = 'wage-tip-pop flow-tip-pop';
+    pop.setAttribute('role', 'tooltip');
+    pop.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(pop);
+  }
+  const place = (zone) => {
+    const r = zone.getBoundingClientRect();
+    const p = document.getElementById('flow-tip-pop');
+    if (!p) return;
+    const tipW = Math.min(420, window.innerWidth * 0.9);
+    const below = r.top < 300; // 顶栏在页面顶部 → 一律翻到下方
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const show = (kind, zone) => {
+    const p = document.getElementById('flow-tip-pop');
+    if (!p) return;
+    _flowTipKind = kind;
+    const html = flowTipHtml(kind);
+    if (p._tipSig !== html) { p._tipSig = html; p.innerHTML = html; }
+    place(zone);
+    p.classList.add('show');
+    p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => {
+    const p = document.getElementById('flow-tip-pop');
+    if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); }
+    _flowTipKind = null;
+  };
+  for (const [id, kind] of [['h-output-stat', 'output'], ['h-drain-stat', 'drain']]) {
+    const zone = document.getElementById(id);
+    if (!zone || zone._flowTipBound) continue;
+    zone._flowTipBound = true;
+    zone.addEventListener('mouseenter', () => show(kind, zone));
+    zone.addEventListener('focusin', () => show(kind, zone));
+    zone.addEventListener('mouseleave', hide);
+    zone.addEventListener('focusout', hide);
+  }
+  window.addEventListener('scroll', () => { if (_flowTipKind) hide(); }, true);
+  window.addEventListener('resize', () => { if (_flowTipKind) hide(); });
 }
 
 function renderHero() {
@@ -1404,6 +1495,7 @@ function bindEvents() {
   //   原先 absolute 定位在祖先 overflow 容器里会被裁剪，首屏这一行的说明首段整段看不见。
   // v4.0.8 反馈②：定位与显隐整体移交 bindWageTipPop（彩色 DOM 气泡），旧 ::after 定位绑定删除。
   bindWageTipPop();
+  bindFlowTipPop(); // v4.1.2：顶栏产出/消耗悬浮改真实 DOM 气泡（分组换行 + 净流说明）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
   document.getElementById('focus-buy')?.addEventListener('click', buyFocus);

@@ -116,6 +116,16 @@ html.theme-light .wage-tip-pop .w-good, html.theme-mint .wage-tip-pop .w-good, h
 html.theme-light .wage-tip-pop .w-warn, html.theme-mint .wage-tip-pop .w-warn, html.theme-autumn .wage-tip-pop .w-warn { color: #7a5200; }
 html.theme-light .wage-tip-pop .w-orange, html.theme-mint .wage-tip-pop .w-orange, html.theme-autumn .wage-tip-pop .w-orange { color: #8a4b00; }
 html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, html.theme-autumn .wage-tip-pop .w-bad { color: #b3161d; }
+/* v4.1.2：顶栏产出/消耗悬浮气泡——继承 wage-tip-pop 的 fixed/显隐/语义色，
+   额外加宽 + 分组换行：每条来源独占一行，避免旧 attr(data-tip) 长串挤成一团。 */
+.flow-tip-pop {
+  width: max-content; max-width: min(420px, 90vw);
+  padding: 10px 12px; font-size: 11.5px; line-height: 1.65;
+}
+.flow-tip-pop > div { margin-top: 2px; overflow-wrap: anywhere; }
+.flow-tip-pop .ft-group { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.flow-tip-pop .ft-label { display: block; margin-bottom: 3px; color: var(--accent); font-weight: 600; }
+.flow-tip-pop .ft-note { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 /* v4.0.3 反馈③：四态文案收成小角标（只留状态名）——原先把整句惩罚说明塞在行内，
    把右侧 NEXT 预览挤到省略号；细则与倒计时统一进上面的悬浮说明。 */
 .wage-help {
@@ -1958,6 +1968,11 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 @media (max-width: 520px) { .crew-grid { grid-template-columns: 1fr; } }
 /* v4.0.0 反馈④：效能编排 / 相位共鸣与下方班组明确隔开，避免三段糊成一块。 */
 #crew-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+/* v4.1.2 反馈②：效能编排 / 相位共鸣分块——每块自带标题行，块间虚线分隔，
+   图标族（编排方菱 / 共鸣三角）与文字各归其位，不再挤成一行。 */
+.orch-block + .orch-block { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.orch-block-title { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+.orch-block-note { margin-left: auto; font-size: 10.5px; font-weight: 400; color: var(--text-3); white-space: nowrap; }
 .crew-card { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--panel); }
 .crew-card.more { justify-content: center; color: var(--text-3); font-size: 11px; }
 .crew-avatar { font-size: 20px; line-height: 1; flex: none; }

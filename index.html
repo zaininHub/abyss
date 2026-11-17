@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.1.1</title>
+<title>深渊效能工作台 v4.1.2</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -11,7 +11,7 @@
 <div id="app">
   <!-- 顶部栏（v2.1 P1：全部图标配文字标签 + hover 说明，hover 覆盖率 100%） -->
   <div class="topbar">
-    <div class="stat" id="h-output-stat"><b>产出/s</b><span id="h-cps">0</span></div> <!-- v2.8.30 ⑤：原生 title 已移除（双弹窗）· v3.10.2 ②：产出/消耗置于顶栏最左 -->
+    <div class="stat" id="h-output-stat"><b>产出/s</b><span id="h-cps">0</span></div> <!-- v2.8.30 ⑤：原生 title 已移除（双弹窗）· v3.10.2 ②：产出/消耗置于顶栏最左 · v4.1.2：悬浮改真实 DOM 气泡 #flow-tip-pop -->
     <div class="stat" id="h-drain-stat"><b>消耗/s</b><span id="h-salary" style="color:var(--bad)">0</span><span id="h-drain-warn" class="drain-warn" style="display:none" aria-label="">❗</span></div> <!-- v3.12.3 反馈⑧：EP 耗尽预警独立成感叹号（自带悬浮），不再写进消耗气泡 -->
     <div class="stat" title="EP（能量点）：核心资源。点击英雄区或挂机产出获得。显示「当前 / 存储上限」；溢出上限会累积矩阵腐化，购买「备用粮仓/存储节点」或达成里程碑可扩容。"><b>⚡EP</b><span id="h-ep">0</span></div>
     <div class="stat" title="本局累计获得 EP：从上次晋升（转生）起计算，晋升收益按此结算；晋升后清零。"><b>本局</b><span id="h-run">0</span></div>
@@ -188,7 +188,7 @@
       <!-- v3.10.3：效能编排 + 班组合并为单一面板（完成 3 任务/1 晋升 或 ≥10 线程解锁其一即显示）；
            从首列移至此处，避免与深渊裂隙卡互相挤压；编排控件在 #orchestration-panel，班组在 #crew-panel（siblings） -->
       <div class="panel" id="orchestration-card" style="display:none">
-        <h3 style="color:var(--accent)">◈ 效能编排 · 🧵 班组</h3>
+        <h3 style="color:var(--accent)">◈ 效能编排与班组</h3>
         <div id="orchestration-panel"></div>
         <div id="crew-panel"></div>
       </div>
