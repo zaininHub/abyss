@@ -77,6 +77,8 @@ registerFlow({
     if (isLazy()) {
       if (S.ep <= 0) { S.lazySince = null; S.lazyLowSince = null; }
       else if (S.ep < capNow * 0.98) {
+        // v4.1.1：旧档 rAF 基脏值（<1e12）视为未计时，重新起算，避免差值≈17 亿秒瞬间误解除
+        if (!(S.lazyLowSince > 1e12)) S.lazyLowSince = null;
         if (!S.lazyLowSince) S.lazyLowSince = now;
         if (now - S.lazyLowSince >= lazyAfterMs) S.lazySince = null;
       } else S.lazyLowSince = null;

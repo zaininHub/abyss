@@ -462,8 +462,13 @@ export function wageKeepCostMult() {
 // 流失预警期流失概率/分钟（维修坞 → 0）
 // v2.7.1：线程懒惰态（EP 满上限惩罚）——持续满上限 afterSec 后进入；
 // 懒惰中消耗 > 产出，EP 跌到 0 或任意升级/线程购买/招募解除
+// v4.1.1 BUGFIX：v4.1.0 只修了写入侧（ctx.now rAF 基 → Date.now Unix 基），旧档已落盘的
+//   rAF 基脏值（performance.now() 几万 ms）被原样读回，Date.now()-脏值 ≈ 17 亿秒 → isLazy
+//   恒 true + 显示层算出「怠工已持续 1794875137s」。读取侧兜底：Unix 毫秒时间戳必 > 1e12
+//   （2001-09-09 之后），小于阈值的历史脏值一律视为「未开始计时」（与 v4.0.5 职级点取整同构）。
 export function isLazy() {
-  return !!S.lazySince && Date.now() - S.lazySince >= (B.lazy?.afterSec || 60) * 1000;
+  if (!(S.lazySince > 1e12)) return false;
+  return Date.now() - S.lazySince >= (B.lazy?.afterSec || 60) * 1000;
 }
 export function lazyProdMult() {
   return isLazy() ? (B.lazy?.prodMult || 1) : 1;

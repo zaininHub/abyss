@@ -845,7 +845,10 @@ function renderHero() {
     if (S.cultists.length === 0) { txt = '待招募'; color = 'var(--text-2)'; }
     else if (isLazy()) { // v2.7.1：懒惰态（EP 满上限惩罚）——消耗 > 产出
       txt = '懒惰'; color = 'var(--warn)';
-      detail = `怠工已持续 ${Math.max(0, Math.floor((Date.now() - (S.lazySince || Date.now())) / 1000))}s`;
+      // v4.1.1 BUGFIX：脏值（rAF 基 <1e12）不参与时长计算——旧档曾显示「怠工已持续 1794875137s」。
+      //   isLazy() 已有同口径防御，这里再兜一层：即使非 load 路径注入脏值也不显示天文数字。
+      const since = (S.lazySince > 1e12) ? S.lazySince : Date.now();
+      detail = `怠工已持续 ${Math.max(0, Math.floor((Date.now() - since) / 1000))}s`;
     }
     else if (w.state === 'debt') {
       txt = '欠薪'; color = 'var(--warn)';

@@ -371,6 +371,13 @@ export function load() {
     //   只在结算侧 round 挡不住已经落盘的旧档小数（顶栏会一直显示长小数），
     //   所以读取侧再收敛一次：旧档一次性变整数，新档本就不会产生小数。
     out.prestigePoints = Math.max(0, Math.round(Number(out.prestigePoints) || 0));
+    // v4.1.1 BUGFIX：清理旧档 rAF 基计时脏值。v4.1.0 前 resourceFlows 用 ctx.now
+    //   （performance.now() 毫秒 ~1e5）写 lazySince/lazyLowSince，而 isLazy() 与显示层用
+    //   Date.now()（Unix ~1.7e12）做差 → 「怠工已持续 1794875137s」且 isLazy 恒 true。
+    //   v4.1.0 只修了写入侧、存量未迁移；这里按时间戳量级兜底（Unix 毫秒必 > 1e12），
+    //   旧档一次性归零，新档本就不会产生脏值。0/null/未声明一律归零（本就是「未计时」语义）。
+    if (!(out.lazySince > 1e12)) out.lazySince = null;
+    if (!(out.lazyLowSince > 1e12)) out.lazyLowSince = null;
     return out;
   } catch (err) {
     // v4.0.5：加载失败绝不静默丢档——先把手上的原始串备份到独立键（玩家仍可从备份导出/回滚），
