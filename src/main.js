@@ -659,30 +659,102 @@ function renderTop() {
 }
 
 // ========== v2.0 潮汐卡片 ==========
+// v4.2.2 反馈④：加成明细（产出/薪资/科技成本/事件权重）改为真实 DOM 悬浮气泡，
+//   顶栏只留「图标 + 相位名 + 倒计时」——原内联 epTag/salTag/techTag 三段把顶栏挤满，
+//   悬浮说明走 v4.1.2 flow-tip-pop 同款范式（fixed + JS rect 写坐标 + 语义色浅色主题覆盖）。
 function renderTide() {
   const el = document.getElementById('h-tide');
   if (!el) return;
   const info = tidePhaseInfo(S.tidePhase);
+  el.innerHTML = `<span class="tide-icon ${info.cssClass}">${info.icon}</span><span>${info.name}</span><span class="tide-time mono">${fmtTime(S.tideTimer)}</span>`;
+  updateTideTip();
+  document.body.classList.remove('tide-flood', 'tide-calm', 'tide-ebb', 'tide-chaos');
+  document.body.classList.add(info.cssClass);
+}
+
+/** v4.2.2 反馈④：潮汐明细气泡内容（相位 + 全部生效效果分组展示）。 */
+function tideTipHtml() {
+  const info = tidePhaseInfo(S.tidePhase);
   const epMult = tideMult('ep');
   const salMult = tideMult('salary');
   const techMult = tideMult('techCost');
-  // v2.1.2 修复：效果标签统一带属性名——产出效果原为裸百分比（如退潮"-30%"）不可读
   const pct = (m) => `${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`;
-  const epTag = epMult !== 1 ? `<span class="${epMult > 1 ? 'tide-buff' : 'tide-debuff'}">产出${pct(epMult)}</span>` : '';
-  const salTag = salMult !== 1 ? `<span class="${salMult > 1 ? 'tide-buff' : 'tide-debuff'}">薪资${pct(salMult)}</span>` : '';
-  const techTag = techMult !== 1 ? `<span class="${techMult < 1 ? 'tide-buff' : 'tide-debuff'}">科技成本${pct(techMult)}</span>` : '';
-  // v2.1.2：hover 提示——当前相位与全部生效效果
-  // v1.3 L1：techCostMult 已接入 buyTech 扣费，hover 补充科技成本效果
-  const effects = [];
-  if (epMult !== 1) effects.push(`产出${pct(epMult)}`);
-  if (salMult !== 1) effects.push(`薪资${pct(salMult)}`);
-  if (techMult !== 1) effects.push(`科技成本${pct(techMult)}（科技树按当前相位价格结算）`);
-  if (info.eventBadWeight !== 1) effects.push(`负面事件概率×${info.eventBadWeight}`);
-  if (info.eventGoodDur !== 1) effects.push(`正面事件持续时长×${info.eventGoodDur}`);
-  el.title = `潮汐·${info.name}：${effects.length ? effects.join('，') : '无修正'}（每相位 150 秒轮转）`;
-  el.innerHTML = `<span class="tide-icon ${info.cssClass}">${info.icon}</span><span>${info.name}</span><span class="tide-time mono">${fmtTime(S.tideTimer)}</span>${epTag}${salTag}${techTag}`;
-  document.body.classList.remove('tide-flood', 'tide-calm', 'tide-ebb', 'tide-chaos');
-  document.body.classList.add(info.cssClass);
+  const row = (label, txt, cls) => `<div>· <span class="w-dim">${label}</span> <b class="${cls}">${txt}</b></div>`;
+  let html = `<b>潮汐·${info.name} <span class="w-dim">（每相位 150 秒轮转）</span></b>`;
+  html += `<div class="ft-group"><span class="ft-label">当前加成</span>`;
+  let any = false;
+  if (epMult !== 1) { html += row('产出', pct(epMult), epMult > 1 ? 'w-good' : 'w-bad'); any = true; }
+  if (salMult !== 1) { html += row('薪资', pct(salMult), salMult > 1 ? 'w-good' : 'w-bad'); any = true; }
+  if (techMult !== 1) { html += row('科技成本', pct(techMult), techMult < 1 ? 'w-good' : 'w-bad'); any = true; }
+  if (info.eventBadWeight !== 1) { html += row('负面事件概率', `×${info.eventBadWeight}`, info.eventBadWeight > 1 ? 'w-bad' : 'w-good'); any = true; }
+  if (info.eventGoodDur !== 1) { html += row('正面事件持续', `×${info.eventGoodDur}`, info.eventGoodDur > 1 ? 'w-good' : 'w-bad'); any = true; }
+  if (!any) html += `<div class="w-dim">· 无修正</div>`;
+  html += `</div>`;
+  html += `<div class="ft-note w-dim">四相位循环：涨潮（产出↑薪资↑）→ 平潮（无修正）→ 退潮（产出↓薪资↓）→ 乱流（负面事件↑）。科技树按当前相位价格结算。</div>`;
+  return html;
+}
+
+/** v4.2.2 反馈④：潮汐气泡显隐与定位（复用 flow-tip-pop 的 wage-tip-pop 基类）。 */
+function bindTideTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('h-tide');
+  if (!zone || zone._tideTipBound) return;
+  zone._tideTipBound = true;
+  // 移除 index.html 里的静态长 title，避免与真实 DOM 气泡双弹
+  zone.removeAttribute('title');
+  let pop = document.getElementById('tide-tip-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'tide-tip-pop';
+    pop.className = 'wage-tip-pop tide-tip-pop';
+    pop.setAttribute('role', 'tooltip');
+    pop.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(pop);
+  }
+  const place = () => {
+    const r = zone.getBoundingClientRect();
+    const p = document.getElementById('tide-tip-pop');
+    if (!p) return;
+    const tipW = Math.min(340, window.innerWidth * 0.9);
+    const below = r.top < 300; // 顶栏在页面顶部 → 一律翻到下方
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const show = () => {
+    const p = document.getElementById('tide-tip-pop');
+    if (!p) return;
+    const html = tideTipHtml();
+    if (p._tipSig !== html) { p._tipSig = html; p.innerHTML = html; }
+    place();
+    p.classList.add('show');
+    p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => {
+    const p = document.getElementById('tide-tip-pop');
+    if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); }
+  };
+  zone.addEventListener('mouseenter', show);
+  zone.addEventListener('focusin', show);
+  zone.addEventListener('mouseleave', hide);
+  zone.addEventListener('focusout', hide);
+  window.addEventListener('scroll', () => { if (pop.classList.contains('show')) place(); }, true);
+  window.addEventListener('resize', () => { if (pop.classList.contains('show')) place(); });
+}
+
+/** v4.2.2 反馈④：气泡显示期间同步倒计时/加成变化（数值每秒在变，避免悬浮时看到旧数据）。 */
+function updateTideTip() {
+  if (typeof document === 'undefined') return;
+  const p = document.getElementById('tide-tip-pop');
+  if (!p || !p.classList.contains('show')) return;
+  const html = tideTipHtml();
+  if (p._tipSig !== html) { p._tipSig = html; p.innerHTML = html; }
+  const zone = document.getElementById('h-tide');
+  if (zone) {
+    const r = zone.getBoundingClientRect();
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - 348)) + 'px');
+    p.style.setProperty('--tip-y', (r.top < 300 ? r.bottom + 8 : r.top - 8) + 'px');
+  }
 }
 
 // ========== v2.0 腐化条 ==========
@@ -1491,6 +1563,7 @@ function bindEvents() {
   // v4.0.8 反馈②：定位与显隐整体移交 bindWageTipPop（彩色 DOM 气泡），旧 ::after 定位绑定删除。
   bindWageTipPop();
   bindFlowTipPop(); // v4.1.2：顶栏产出/消耗悬浮改真实 DOM 气泡（分组换行 + 净流说明）
+  bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
   document.getElementById('focus-buy')?.addEventListener('click', buyFocus);

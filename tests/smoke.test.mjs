@@ -323,21 +323,23 @@ t('P1-A：封印/拥抱裂隙后立即置 dirty.rift 重渲染（源码断言）
   assert.ok(n >= 2, `sealRift 与 embraceRift 应各置位一次，实际 ${n} 处`);
 });
 
-console.log('[8] v2.1.2 修复断言（潮汐效果标签带属性名 + hover 提示）');
-t('v2.1.2：潮汐产出/薪资标签均带属性名前缀（源码断言）', () => {
+console.log('[8] v2.1.2 修复断言（v4.2.2 起潮汐效果标签迁入 DOM 气泡，顶栏只留状态+时间）');
+t('v2.1.2→v4.2.2：潮汐加成标签已迁入 tideTipHtml 气泡且带属性名（源码断言）', () => {
   const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  // 新写法：模板插值动态选 buff/debuff 类，文本统一「产出${pct}」「薪资${pct}」
-  assert.ok(src.includes('>产出${pct(epMult)}</span>'), '产出标签应带属性名前缀');
-  assert.ok(src.includes('>薪资${pct(salMult)}</span>'), '薪资标签应带属性名前缀');
-  // 旧裸百分比写法（tide-buff">+30% 这类无属性名）应已消除
-  assert.ok(!/tide-(buff|debuff)">\+?\$\{Math/.test(src), '不应再存在裸百分比标签');
+  // v4.2.2 反馈④：顶栏不再内联 epTag/salTag/techTag，明细统一进 tideTipHtml() 气泡
+  assert.ok(src.includes('function tideTipHtml()'), '气泡内容函数应存在');
+  assert.ok(src.includes("row('产出', pct(epMult)"), '产出行应带属性名');
+  assert.ok(src.includes("row('薪资', pct(salMult)"), '薪资行应带属性名');
+  assert.ok(src.includes("row('科技成本', pct(techMult)"), '科技成本行应带属性名');
+  // 旧内联标签写法（tide-buff">产出${pct}）应已从顶栏渲染移除
+  assert.ok(!src.includes('tide-buff'), '顶栏不应再内联加成标签');
 });
-t('v2.1.2→v1.3 L1：潮汐卡片 hover 提示包含相位效果（v1.3 起含科技成本）', () => {
+t('v2.1.2→v4.2.2：潮汐明细气泡包含相位与全部效果（源码断言）', () => {
   const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('el.title = `潮汐·${info.name}'), '应生成动态 hover 提示');
-  assert.ok(src.includes('eventBadWeight'), '提示应含负面事件权重');
-  // v1.3 L1：techCostMult 已接入 buyTech 扣费，hover 应展示科技成本效果
-  assert.ok(src.includes('科技成本${pct(techMult)}'), 'hover 提示应含科技成本效果');
+  assert.ok(src.includes('bindTideTipPop()'), '气泡绑定函数应存在并被调用');
+  assert.ok(src.includes('eventBadWeight'), '气泡应含负面事件权重');
+  assert.ok(src.includes('每相位 150 秒轮转'), '气泡应含相位轮转说明');
+  assert.ok(src.includes('科技树按当前相位价格结算'), '气泡应含科技成本结算说明');
 });
 
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.2.1</title>
+<title>深渊效能工作台 v4.2.2</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -30,6 +30,7 @@
     <div class="stat" id="echo-stat" title="深渊回响：晋升结算获得，跨晋升保留，每点全局产出 +5%。集市回响刷新、回响商店消耗它。" style="display:none"><b>🔮回响</b><span id="h-echo">0</span></div>
     <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
     <!-- v2.0 潮汐状态 -->
+    <!-- v4.2.2 反馈④：潮汐顶栏只留「图标+相位名+倒计时」，加成明细改 DOM 气泡（bindTideTipPop 启动时移除本静态 title 防双弹） -->
     <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
   </div>
 
@@ -186,9 +187,10 @@
       </div>
 
       <!-- v3.10.3：效能编排 + 班组合并为单一面板（完成 3 任务/1 晋升 或 ≥10 线程解锁其一即显示）；
-           从首列移至此处，避免与深渊裂隙卡互相挤压；编排控件在 #orchestration-panel，班组在 #crew-panel（siblings） -->
+           从首列移至此处，避免与深渊裂隙卡互相挤压；编排控件在 #orchestration-panel，班组在 #crew-panel（siblings）
+           v4.2.2 反馈③：卡面标题删除——panel 内部已有「效能编排 / 相位共鸣」分块标题与班组概要行，
+           顶层「效能编排与班组」纯重复且与分块标题层级冲突 -->
       <div class="panel" id="orchestration-card" style="display:none">
-        <h3 style="color:var(--accent)">◈ 效能编排与班组</h3>
         <div id="orchestration-panel"></div>
         <div id="crew-panel"></div>
       </div>

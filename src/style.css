@@ -126,6 +126,13 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 .flow-tip-pop .ft-group { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 .flow-tip-pop .ft-label { display: block; margin-bottom: 3px; color: var(--accent); font-weight: 600; }
 .flow-tip-pop .ft-note { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+/* v4.2.2 反馈④：潮汐明细气泡——继承 wage-tip-pop 的 fixed/显隐/语义色，
+   顶栏潮汐项只留「图标+相位名+倒计时」，加成与相位说明全部收进本气泡。 */
+.tide-tip-pop { width: max-content; max-width: min(340px, 90vw); padding: 10px 12px; font-size: 11.5px; line-height: 1.65; }
+.tide-tip-pop > div { margin-top: 2px; overflow-wrap: anywhere; }
+.tide-tip-pop .ft-group { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.tide-tip-pop .ft-label { display: block; margin-bottom: 3px; color: var(--accent); font-weight: 600; }
+.tide-tip-pop .ft-note { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
 /* v4.0.3 反馈③：四态文案收成小角标（只留状态名）——原先把整句惩罚说明塞在行内，
    把右侧 NEXT 预览挤到省略号；细则与倒计时统一进上面的悬浮说明。 */
 .wage-help {
@@ -636,7 +643,14 @@ html.theme-autumn .policy-new-badge { color: #8a5a00; }
 /* v3.12.3 反馈⑦：动作卡改为「名称 + 占编步进器」，占编 > 0 时左缘亮起表示正在执行 */
 .ai-action-name { font-size: 12px; color: var(--text-1); font-weight: 600; white-space: nowrap; }
 .ai-action.on { border-color: rgba(80,220,140,.45); box-shadow: inset 2px 0 0 var(--good); }
-.ai-action .ai-crew-btn { padding: 0 8px; font-size: 13px; line-height: 1; }
+/* v4.2.2 反馈②：＋/− 号此前 line-height:1 + padding:0 8px，全角字符字面顶满按钮上下缘
+   （视觉上「碰到块的边缘」），且按钮净高 ~15px 不满足 ≥24×24 触控纪律。
+   改为 inline-flex 居中 + min 尺寸，字符不再贴边。 */
+.ai-action .ai-crew-btn {
+  padding: 0 8px; font-size: 13px; line-height: 1;
+  min-width: 24px; min-height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 .ai-lock-hint { font-size: 11px; color: var(--text-3); margin-top: 3px; line-height: 1.6; }
 /* v3.12.7 ⑤：助手信息收进面板标题行——「🤖 AI 助手 4/7 …… 购买助手」单行，
    slot 靠右吸收剩余宽度；台账/占编进悬浮，卡片区不再被这块占三行 */
@@ -1197,11 +1211,10 @@ body.paused .pet-grid .pet-card {
 
 /* ========== v2.0 深渊潮汐 ========== */
 /* v4.1.0 反馈②：潮汐卡片固定在顶栏最右侧——margin-left:auto 把它与左侧资源项之间的空隙全部吃掉 */
-.tide-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin-left:auto;border-radius:4px;background:#8b5cf61f;border:1px solid rgba(139,92,246,.3);font-size:12px;font-weight:600;transition:all .3s}
+.tide-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin-left:auto;border-radius:4px;background:#8b5cf61f;border:1px solid rgba(139,92,246,.3);font-size:12px;font-weight:600;transition:all .3s;cursor:help}
 .tide-icon{display:inline-block;font-size:14px;line-height:1;filter:drop-shadow(0 0 4px currentColor)}
 .tide-time{color:var(--text-3);font-size:11px}
-.tide-buff{color:var(--good);font-size:11px;margin-left:2px}
-.tide-debuff{color:var(--bad);font-size:11px;margin-left:2px}
+/* v4.2.2 反馈④：.tide-buff/.tide-debuff 随内联加成标签一并删除（明细已迁入 #tide-tip-pop 气泡，语义色走 w-good/w-bad） */
 .tide-flood{box-shadow:inset 0 0 0 1px #6366f14d}
 .tide-flood .tide-stat{background:#6366f12e;border-color:#6366f180}
 .tide-calm .tide-stat{background:#6e768126;border-color:#6e768166}
