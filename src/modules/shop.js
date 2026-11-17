@@ -301,6 +301,8 @@ export function renderRpFamily(container) {
   const preTitle = document.getElementById('rp-upgrade-title');
   const preShown = (S.prestige || 0) >= 1;
   if (preTitle) preTitle.style.display = preShown ? '' : 'none';
+  // v4.2.5 反馈①：标题显示时按 foldState 重放容器折叠态，清掉此前「越界折叠」残留的 none
+  if (preShown) container.style.display = foldDisplayFor(preTitle);
   if (!preShown) { container.innerHTML = ''; rpFamilyItemEls.clear(); return; }
   const rpItems = (BALANCE.buildingsV21 || []).filter(u => RP_IDS.includes(u.id)) // v2.8.26：数据源修复——thread.upgrades 不存在（实为裂隙配置），cat F 建筑在 buildingsV21；v2.8.7 声称修复但一直渲染为空
     .slice().sort((a, b) => (a.base || Infinity) - (b.base || Infinity));
@@ -911,6 +913,8 @@ export function renderDmShop(container) {
   const dmTitle = document.getElementById('dm-shop-title');
   const dmShown = riftShown(S);
   if (dmTitle) dmTitle.style.display = dmShown ? '' : 'none';
+  // v4.2.5 反馈①：标题显示时按 foldState 重放容器折叠态，清掉此前「越界折叠」残留的 none
+  if (dmShown) container.style.display = foldDisplayFor(dmTitle);
   if (!dmShown) { container.innerHTML = ''; return; }
   container.innerHTML = '';
   dmItemEls.clear();
@@ -1395,6 +1399,9 @@ const applyV21GroupFold = applyGroupFold;
 // 标题的后续兄弟节点。可见的 h3 是分区边界（停止）；隐藏的分区标题（线程强化/
 // 效能建筑，v3.4.7 反馈⑥ 恒隐藏的合并分区壳）不构成视觉边界，其内容卡片仍属
 // 本分区——跳过继续收起，但不改写其 display（各分区门控自管）。
+// v4.2.5 反馈①：导出 bindFoldToggle——研究点（晋升 RP 加成/族升级）、科技树（裂隙等级）、
+// 遗物（深渊商店）的纯类目 h3 统一接入同一折叠范式；带数据行的页级标题（科技树/永恒矩阵/
+// 探采平台）不接，保持页级观感。
 function foldSiblings(titleEl, hide) {
   let sib = titleEl.nextElementSibling;
   while (sib) {
@@ -1406,8 +1413,9 @@ function foldSiblings(titleEl, hide) {
     sib = sib.nextElementSibling;
   }
 }
-function bindFoldToggle(titleEl) {
+export function bindFoldToggle(titleEl) {
   const key = 'h3:' + titleEl.textContent.trim();
+  titleEl.dataset.foldKey = key; // v4.2.5 反馈①：渲染器重放折叠态用（prepend 箭头后 textContent 变化，不能现算）
   const arrow = document.createElement('span');
   arrow.className = 'rp-fold-arrow';
   arrow.textContent = foldState[key] ? '▶' : '▼';
@@ -1419,6 +1427,15 @@ function bindFoldToggle(titleEl) {
     foldSiblings(titleEl, foldState[key]);
   });
   if (foldState[key]) foldSiblings(titleEl, true);
+}
+
+// v4.2.5 反馈①：分区标题由隐藏转显示时，其列表容器可能残留此前「越界折叠」写入的
+// display:none（如收起「晋升 RP 加成」时「族升级」标题彼时隐藏不构成边界，其列表被连带
+// 收起；族升级后来解锁、标题显示，若不清残留 none 则内容永不可见）。渲染器在标题显示时
+// 按本区自身 foldState 重放：本区被折叠保持 none，未折叠恢复 ''（回到 CSS 类定义的布局）。
+export function foldDisplayFor(titleEl) {
+  const key = titleEl && titleEl.dataset ? titleEl.dataset.foldKey : null;
+  return key && foldState[key] ? 'none' : '';
 }
 
 export function renderV21Buildings(container) {
@@ -1627,6 +1644,8 @@ export function renderFamilyUpgrades(container) {
   const famShown = anchorShown('rp', S) && Object.keys(S.milesDone || {}).length >= famMilestone;
   const famTitle = document.getElementById('family-upgrade-title');
   if (famTitle) famTitle.style.display = famShown ? '' : 'none';
+  // v4.2.5 反馈①：标题显示时按 foldState 重放容器折叠态，清掉此前「越界折叠」残留的 none
+  if (famShown) container.style.display = foldDisplayFor(famTitle);
   if (!famShown) { container.innerHTML = ''; familyItemEls.clear(); return; }
   container.innerHTML = '';
   familyItemEls.clear();

@@ -1613,15 +1613,19 @@ body {
 .panel h3 { color: var(--purple); letter-spacing: 1.2px; font-size: 11px; }
 /* v4.0.9 反馈⑦：商店页分区/组标题字体统一——研究点组标题（rp-group-title，13px/cyan/可折叠）
    是收起范式的基准样式，产出强化/效能建筑组标题复用后自动对齐；
-   「设施」h3 另加 foldable-h3 修饰（12.5px/cyan/可点），与其余组标题观感一致。
+   「设施」h3 另加 foldable-h3 修饰（13px/cyan/可点），与其余组标题观感一致。
    注意不加 .panel 前缀：bld-title/v21-title/thread-title 位于 .tab-pane（无 .panel 祖先），
-   带前缀会让规则静默不命中（v409 浏览器专项抓出：字号回落浏览器默认 15.21px）。 */
+   带前缀会让规则静默不命中（v409 浏览器专项抓出：字号回落浏览器默认 15.21px）。
+   v4.2.5 反馈①：foldable-h3 字号 12.5px → 13px 与 rp-group-title 完全一致——
+   研究点（晋升 RP 加成/族升级）、科技树（裂隙等级）、遗物（深渊商店）同期接入同一范式，
+   全 tab 纯类目标题字号/颜色/箭头/可点性四要素一致。 */
 h3.foldable-h3 {
   color: var(--cyan);
-  font-size: 12.5px;
+  font-size: 13px;
   letter-spacing: 0.5px;
   cursor: pointer;
   user-select: none;
+  margin-bottom: 8px;
 }
 h3.foldable-h3:hover { color: var(--cyan-2); }
 h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: center; color: var(--text-3); font-size: 10px; }

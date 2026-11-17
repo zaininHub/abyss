@@ -206,7 +206,7 @@ try {
   f7a.threadFontSize === '13px' ? ok('产出强化组字号 13px（向研究点看齐）', f7a.threadFontSize) : bad('字号不符', f7a.threadFontSize);
   f7a.threadCursor === 'pointer' ? ok('产出强化组整行可点', '') : bad('cursor 非 pointer', f7a.threadCursor);
   /foldable-h3/.test(f7a.bldCls) ? ok('设施 h3 接入 foldable-h3', f7a.bldCls) : bad('设施 h3 未接入', f7a.bldCls);
-  f7a.bldFontSize === '12.5px' ? ok('设施 h3 字号 12.5px（cyan 口径）', f7a.bldFontSize) : bad('设施 h3 字号不符', f7a.bldFontSize);
+  f7a.bldFontSize === '13px' ? ok('设施 h3 字号 13px（v4.2.5 与 rp-group-title 完全一致）', f7a.bldFontSize) : bad('设施 h3 字号不符', f7a.bldFontSize); // v4.2.5 反馈①：12.5px → 13px 统一口径
   f7a.bldHasArrow ? ok('设施 h3 带折叠箭头', '') : bad('设施 h3 缺箭头', '');
   // 真实点击收起/展开：设施 h3（覆盖并入设施区尾部的线程强化/效能建筑卡）
   await page.click('#bld-title');

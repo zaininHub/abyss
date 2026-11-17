@@ -61,6 +61,9 @@ function purifierFamilySeen() {
 // 面板渲染
 export function renderRelics(container) {
   if (!container) return;
+  // v4.2.5 反馈①：index.html 新增静态「深渊遗物」h3 在本面板之前——它是「深渊商店」
+  // 折叠的边界（foldSiblings 遇 h3 即停），也统一了遗物分区的类目标题观感；
+  // 标题恒显示（未解锁时面板渲染引导卡，标题与卡片语义一致），本函数不触碰其 display。
   if (!relicsUnlocked()) {
     container.innerHTML = `<div class="panel" style="padding:14px">
       <h3 style="margin-top:0;color:var(--dim)">🌀 深渊遗物未苏醒</h3>

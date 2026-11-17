@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.2.4</title>
+<title>深渊效能工作台 v4.2.5</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-BCMWk3R8.js"></script>
-  <link rel="stylesheet" href="./assets/index-CGM3rlpG.css">
+  <script defer src="./assets/index-CE6eBE_N.js"></script>
+  <link rel="stylesheet" href="./assets/index-CHsL_xMS.css">
 </head>
 <body>
 <div id="app">
@@ -266,6 +266,10 @@
           <div id="vehicle-shop" class="shop-grid"></div>
           <h3 style="margin-top:16px" id="dm-shop-title">深渊商店</h3>
           <div id="dm-shop" class="shop-grid"></div>
+          <!-- v4.2.5 反馈①：「深渊遗物」补类目标题——此前遗物面板裸排在深渊商店之后且无 h3 边界，
+               深渊商店收起时 foldSiblings 会把遗物面板连带收起（越界误伤）；补标题后深渊商店
+               折叠到此处停止，遗物自身也获得与其他分区一致的 13px cyan 可折叠类目标题 -->
+          <h3 style="margin-top:16px" id="relic-title">深渊遗物</h3>
           <div id="relics-panel" style="margin-top:16px"></div>
         </div>
         <div class="tab-pane" id="tab-pets">

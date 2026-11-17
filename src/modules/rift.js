@@ -83,12 +83,21 @@ function riftTechTip(lv, cur) {
   const next = Math.min(riftMaxLevel(), cur + 1);
   return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP） · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM\n当前裂隙 Lv.${cur}`;
 }
+let riftTechShownPrev = null; // v4.2.5 反馈①：门控态记忆（null=首帧必写一次）
 export function renderRiftLevelTech(container) {
   if (!container) return;
   const title = document.getElementById('rift-tech-title');
   const shown = !!S._riftSeen || (S.riftsSealed || 0) > 0;
-  if (title) title.style.display = shown ? '' : 'none';
-  container.style.display = shown ? '' : 'none';
+  // v4.2.5 反馈①：本函数被 300ms 低频帧系统反复驱动，若每帧强写 container.style.display
+  // 会顶掉 bindFoldToggle 的折叠态（玩家收起 #rift-tech-list 后 300ms 内被强制还原）。
+  // 门控显示只在 shown 状态切换时写入；折叠交互（foldSiblings 写的 display）不被触碰。
+  // 边界安全：shown 只会 false→true 单向出现（_riftSeen / riftsSealed 均为粘性），
+  // 标题隐藏期玩家无法点击折叠，不存在「折叠后门控翻转把内容顶回展开」的组合。
+  if (shown !== riftTechShownPrev) {
+    riftTechShownPrev = shown;
+    if (title) title.style.display = shown ? '' : 'none';
+    container.style.display = shown ? '' : 'none';
+  }
   if (!shown) { container.innerHTML = ''; riftTechSig = ''; return; }
   const lv = riftLevelTech();
   const cost = riftLevelTechCost();

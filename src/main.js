@@ -28,7 +28,7 @@ import { policyOpenGroups, hasPendingPolicy, policyMult, POLICY_GROUPS } from '.
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
-import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
+import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS, bindFoldToggle } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组） // v4.2.5 ①：bindFoldToggle 导出（研究点/科技树/遗物纯类目 h3 统一折叠）
 import { EXPAND_KEY, anchorShown, anchorDone, riftShown, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
@@ -1229,11 +1229,30 @@ function switchTab(id) {
   if (pane) pane.classList.add('on');
   if (btn) btn.classList.add('on');
   if (id === 'shop') dirty.shop = true;
-  if (id === 'tech') dirty.tech = true;
-  if (id === 'rp') { renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list')); } // v3.3.1 反馈①：灵感工坊开关并入研究点页 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
+  if (id === 'tech') {
+    dirty.tech = true;
+    // v4.2.5 反馈①：「裂隙等级（EP + DM 购买）」纯类目 h3 接入折叠；
+    // 「科技树」「永恒矩阵」带动态数据行（当前 RP/ES），保持页级标题观感不接。
+    const riftT = document.getElementById('rift-tech-title');
+    if (riftT && !riftT.dataset.foldBound) { riftT.dataset.foldBound = '1'; bindFoldToggle(riftT); }
+  }
+  if (id === 'rp') {
+    renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list'));
+    // v4.2.5 反馈①：纯类目 h3 统一折叠——「晋升 RP 加成」「族升级」接入 foldable-h3（与商店设施同范式）
+    for (const tid of ['rp-upgrade-title', 'family-upgrade-title']) {
+      const el = document.getElementById(tid);
+      if (el && !el.dataset.foldBound) { el.dataset.foldBound = '1'; bindFoldToggle(el); }
+    }
+  } // v3.3.1 反馈①：灵感工坊开关并入研究点页 // v2.5 ④ + v2.8.4 ④：研究升级：研究点独立栏目 + v2.7.5 ④：族升级并入 + v2.8.2 ④：RP 加成组并入
   if (id === 'relics') {
     renderVehicles(document.getElementById('vehicle-shop'));
     renderDmShop(document.getElementById('dm-shop'));
+    // v4.2.5 反馈①：「深渊商店」「深渊遗物」纯类目 h3 接入折叠（探采平台带数据行保持页级观感）；
+    // 遗物标题同时是深渊商店的折叠边界（foldSiblings 到 h3 即停），防越界收起遗物面板
+    for (const tid of ['dm-shop-title', 'relic-title']) {
+      const t = document.getElementById(tid);
+      if (t && !t.dataset.foldBound) { t.dataset.foldBound = '1'; bindFoldToggle(t); }
+    }
   } // v2.7.5 ⑦：探采平台与深渊商店并入遗物 tab（DM 资源系统合一）
   if (id === 'pets') dirty.pets = true;
   if (id === 'prestige') dirty.prestige = true;
