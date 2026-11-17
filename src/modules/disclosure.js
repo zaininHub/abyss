@@ -94,8 +94,10 @@ export function starChartUnlocked(S) {
 // v2.4 及以前旧档（S._v25Legacy，迁移时按 DM/RP 锚点进度自动打标）保持解锁不回退；
 // v2.5 起新档购入载具/灵感工坊不再解锁（解锁前提唯一 = 触发深渊裂隙）。
 export function riftShown(S) {
-  if (S && (S._riftSeen === true || S._v25Legacy === true)) return true;
-  return false;
+  // v4.2.X：纳入「已封印裂隙」——旧实现 main.js 顶栏/tab 各内联一份 _riftSeen || riftsSealed>0，
+  //   与本函数的 _riftSeen || _v25Legacy 不一致。统一真源后三处同口径（老档 _v25Legacy 仍放行）。
+  if (!S) return false;
+  return S._riftSeen === true || S._v25Legacy === true || (S.riftsSealed || 0) > 0;
 }
 
 // 核心：链窗口切分（纯函数，基于 S 即时判定，无持久状态）

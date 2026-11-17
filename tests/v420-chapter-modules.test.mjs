@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { S } from '../src/state.js';
-import { chapterNumOf, chapterAtLeast, gateOpen, CHAPTER_GATES, runUpgrades, UPGRADE_VER } from '../src/core/chapterGates.js';
+import { chapterNumOf, gateOpen, CHAPTER_GATES, runUpgrades, UPGRADE_VER } from '../src/core/chapterGates.js';
 import { CHAPTER_UNLOCKS, unlocksAtChapter, allUnlockedUpTo } from '../src/data/chapterUnlocks.js';
 import { canUnlockReligion } from '../src/modules/religions.js';
 import { policyOpenGroups, hasPendingPolicy, policyMult } from '../src/data/policies.js';

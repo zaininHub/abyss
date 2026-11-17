@@ -90,7 +90,4 @@ export function fxBest(key, state = S) {
   return best;
 }
 
-// 便捷读侧（消费层语义化入口）
-export const buildingGlobalAdd = (state = S) => fxValue('globalAdd', state);
-export const buildingGlobalMul = (state = S) => fxValue('globalMul', state);
-export const buildingCapAdd    = (state = S) => fxValue('capAdd', state);
+// v4.2.X：buildingGlobalAdd/Mul/CapAdd 死导出已删除（全仓零调用，消费层直接走 fxValue）。

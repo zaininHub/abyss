@@ -15,7 +15,11 @@ export const POLICY_GROUPS = [
     ],
   },
   {
-    id: 'deepen', name: '路线深化', unlock: (S) => !!groupPolicyId('route'), hint: '需先选定路线',
+    // v4.2.X 反馈③：旧实现 unlock = !!groupPolicyId('route')——玩家一选定路线 A，
+    //   下一帧整组「路线深化」连 B/C 两个候选立刻弹出，形成「选完 A 立马解锁 BC」的连锁。
+    //   改为独立资产门槛（与 route 选择解耦）：职级 ≥3 或完成 10 个任务才开放；
+    //   组内两个深化项仍按已选路线方向限制（那是对 A 的延续，不是自动解锁 BC）。
+    id: 'deepen', name: '路线深化', unlock: (S) => (S.prestige || 0) >= 3 || (S.projectsDone || 0) >= 10, hint: '需职级 ≥3 或完成 10 个任务',
     policies: [
       { id: 'order_deep', name: '秩序深化', unlock: () => groupPolicyId('route') === 'order_route', effect: { recruit: 0.30, collab: 0.20 }, desc: '线程招募 +30%，协作加成 +20%' },
       { id: 'abyss_deep', name: '深渊深化', unlock: () => groupPolicyId('route') === 'abyss_route', effect: { delve: 0.15, ember: 0.10 }, desc: '深潜产出 +15%，余烬产出 +10%' },
@@ -166,7 +170,9 @@ function effectKeyUnlocked(key, state) {
     case 'delve':
       return !!(state.delve && state.delve.unlocked) || (state.vs || 0) > 0;
     case 'ember':
-      return !!state._riftSeen || (state.riftsSealed || 0) > 0 || (state.ember || 0) > 0;
+      // v4.2.X：旧实现读 state.ember——该字段从不在 defaultState 声明（真实字段是 riftEmber），
+      //   OR 分支恒 false。改为读真源 riftEmber，与 economy/rift 模块同口径。
+      return !!state._riftSeen || (state.riftsSealed || 0) > 0 || (state.riftEmber || 0) > 0;
     case 'bazaarRate': case 'bazaarStock': case 'bazaarRefresh': case 'bazaarGain':
       return !!(state.bazaar && state.bazaar.unlocked);
     default:
@@ -191,8 +197,6 @@ export function policyMult(key, state = S) {
   return base;
 }
 
-export function groupHasChoice(groupId) { return !!groupPolicyId(groupId); }
-
 // 「AI 自动采纳每组最优政策」入口此前定义在此处，但全库无调用点，且内部调用了只存在于
 // modules/policies.js 的 selectPolicy —— data 层反向依赖 modules 层，一旦触发即抛 ReferenceError。
 // 该功能从未生效，故移除；如需启用，应在 modules/policies.js 内实现并显式接线，避免破坏分层。
@@ -214,10 +218,6 @@ export function policyRerollCost(groupId) {
   let cost = 1 * Math.pow(2, n);
   if (!S.vowPolicyBoost) cost = Math.ceil(cost * 0.5);
   return cost;
-}
-export function canPayReroll(groupId) {
-  const cost = policyRerollCost(groupId);
-  return (S.abyssEcho || 0) >= cost || (S.devotion || 0) >= cost;
 }
 // v2.8.6 B2a：本轮政策走向记入历史（跨周期保留；晋升/轮回时调用）
 export function recordPolicyRun() {

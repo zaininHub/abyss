@@ -129,8 +129,6 @@ export function allResDiscovered(S) {
 }
 export function autoBuildUnlocked() { return !!(S.ai && S.ai.autoBuildUnlocked); }
 export function autoBuildActivateCost() { return BALANCE.ai.aiAutoBuild.activateCost; }
-// v3.12.13 ⑥：激活消耗的资源——自动购建能力迁研究点，由 EP 改为 RP
-export function autoBuildActivateRes() { return 'rp'; }
 export function autoBuildActivable() {
   return aiUnlocked() && !autoBuildUnlocked() && allResDiscovered(S) && (S.rp || 0) >= autoBuildActivateCost();
 }

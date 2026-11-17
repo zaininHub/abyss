@@ -36,7 +36,7 @@ const STATE_KEYS = new Set([
   'cultists', 'policies', 'projects', 'pets', 'activePets', 'colonies',
   'cosmos', 'orchestration', 'resonance', 'religion', 'bazaar', 'ai', 'delve',
   'upgrades', 'buildings', 'tech', 'unlockedBuildings', 'prestigePoints',
-  'reincarned', 'allTimeEp', 'totalClicks', 'gotOffline', 'abyssGazeUnlocked',
+  'allTimeEp', 'totalClicks', 'gotOffline', 'abyssGazeUnlocked',
   'storyline', '_easterEggsFound', 'wishCoins', 'wishWon', 'collapsed',
   'starCps', 'faith', 'dm', 'es', 'prestige', 'riftsSealed', 'expeditionsDone',
   'riftEmber', 'projectsDone',

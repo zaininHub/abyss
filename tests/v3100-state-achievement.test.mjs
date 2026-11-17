@@ -45,8 +45,10 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  assert.equal(keys.length, 141, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 三键 + v4.0.9 ⑫ 的自动转化开关七键（atriumOn/_probeEnabled/ptDistillOn/ptAutoHatch/ptHatchLv/riftAuto/autoPurify）');
-  assert.deepEqual(d.moduleUnlocks, { reincarn: false, bazaar: false }, '新档两个大模块均未开启');
+  // v4.2.X：v2.2 即废弃的 _forkTriggered 已删除（141→140）；其余字段不变。
+  assert.equal(keys.length, 140, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 三键 + v4.0.9 ⑫ 的自动转化开关七键（atriumOn/_probeEnabled/ptDistillOn/ptAutoHatch/ptHatchLv/riftAuto/autoPurify）');
+  // v4.2.X：轮回移除，大模块买断只剩集市一项。
+  assert.deepEqual(d.moduleUnlocks, { bazaar: false }, '新档集市未开启（轮回已移除）');
 });
 
 test('A2 资源发现键 / 顶栏锚点 / 默认值三者同源', () => {
@@ -151,14 +153,15 @@ test('A7 resetRunState：晋升 / 轮回共用一条路径，差异由 opts 表�
 
 test('A8 静态接线：各处不再内联手写清单', () => {
   const st = read('state.js'), main = read('main.js');
-  const pre = read(join('modules', 'prestige.js')), rein = read(join('modules', 'reincarn.js'));
+  const pre = read(join('modules', 'prestige.js'));
   assert.ok(st.includes('mergeCrossRun(') && st.includes('fillMissingFields(') && st.includes('applyNestedDefaults('));
   assert.ok(!st.includes("const crossRun = ['es'"), 'load() 不得再内联跨局白名单');
   assert.ok(main.includes('shiftAbsoluteClocks(S, shift)'));
   assert.ok(!main.includes('riftExpedition.until += shift'), '时钟顺延不得再手写');
   assert.ok(main.includes('RESOURCE_DISCOVERY') && !main.includes("const discAnchorKeys = ['es'"));
-  assert.ok(pre.includes('resetRunState(') && rein.includes('resetRunState('));
-  assert.ok(!pre.includes('S.ep = 0;') && !rein.includes('S.ep = 0;'), '两份复制重置代码已消除');
+  // v4.2.X：轮回已移除，唯一转生路径是晋升——不再有「两份复制重置代码」问题。
+  assert.ok(pre.includes('resetRunState('));
+  assert.ok(!pre.includes('S.ep = 0;'), '晋升不得内联重置 EP（走 resetRunState 真源）');
   assert.ok(main.includes('PANEL_DIRTY_ON_START'));
 });
 
@@ -210,10 +213,11 @@ test('B5 main.js 只保留薄适配，成就表与判定都在新层', () => {
 
 console.log('[C] 面板键 / deps 清单双向锁死');
 
-test('C1 PANEL_KEYS 27 个、always 3 个、受脏标记控制 24 个', () => {
-  assert.equal(pk.PANEL_KEYS.length, 27);
+// v4.2.X：轮回面板移除（26 个面板、23 个受脏标记控制）。
+test('C1 PANEL_KEYS 26 个、always 3 个、受脏标记控制 23 个', () => {
+  assert.equal(pk.PANEL_KEYS.length, 26);
   assert.equal(pk.ALWAYS_PANEL_KEYS.length, 3);
-  assert.equal(pk.dirtyDrivenPanels().length, 24);
+  assert.equal(pk.dirtyDrivenPanels().length, 23);
   const main = read('main.js');
   const registered = [...main.matchAll(/registerPanel\(\{ key: '([^']+)'/g)].map(m => m[1]);
   assert.deepEqual(registered, [...pk.PANEL_KEYS], '注册顺序必须与清单逐字一致');

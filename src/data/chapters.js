@@ -1,4 +1,5 @@
 // 主线剧情 24 章（v3.7.0 追加 22~24 番外）
+import { daysSince } from '../core/time.js'; // v4.2.X：章节驻留计时统一走时间真源
 // v3.6.0 章节节奏重做：进阶改为「条件满足 且 最短驻留天数(minDays)」双重门槛，
 //   使主线约 3~7 天推进一章，避免早期冲刺；章节同时可由政策/资源进度流转
 // （信仰/ES/晋升/探索等政策与条件耦合）。旧档 S.chapter 作为权威下限，绝不回退（迁移安全）。
@@ -136,7 +137,7 @@ function hasTech(s, id) { return !!(s.tech || {})[id]; }
 export function currentChapter(S, list = CHAPTERS) {
   const now = Date.now();
   const entered = S.chapterEnteredAt || now;
-  const daysIn = Math.max(0, (now - entered) / 86400000);
+  const daysIn = daysSince(entered, now); // v4.2.X：统一 time.js 真源（原内联 /86400000）
   const stored = parseInt(S.chapter || '1', 10);
   const chapters = (list && list.length) ? list : CHAPTERS;
   // 主线表自带 minDays；故事线变体表未声明时统一按 3 天下限，避免变体绕过节奏门控

@@ -50,13 +50,13 @@ export function defaultState() {
     _gainRes: {}, _spentRes: {}, _buyRes: {},
     // 探索/宗教
     expeditions: [], expeditionsDone: 0, galaxyDone: {}, // v3.12.7 ⑦：按星系的探索回数（深空殖民入口门槛；星际里程碑已并入成就）
-    cosmos: { lv: {} }, // v3.0.3 后续反馈④：宇宙探索工程等级（本局制，晋升/轮回重置）
+    cosmos: { lv: {} }, // v3.0.3 后续反馈④：宇宙探索工程等级（本局制，晋升重置）
     chaptersUnlocked: {}, // v2.8.5 A3：故事线章节解锁持久化（图鉴）
     devotion: 0, transcend: 0, secretSanctums: {}, // v2.8.6 B1a：虔诚/超验/隐密圣学（跨周期）
     policies: {}, policyRerolls: {}, vowPolicyBoost: false, policyRuns: [], // v2.8.6 B2a：周期政策（每轮重选）+ 政策走向历史
     // v3.12.3 反馈②：摊位（lineup）/ 品质（quality）/ 30 分钟整体刷新计时器；旧档 shuffleTimer/regenTimer 已废弃
     bazaar: { unlocked: false, trades: 0, refreshCount: 0, marketTimer: 0, rates: {}, stock: {}, quality: {}, lineup: [] }, // v3.0.0：深渊集市（成交笔数跨周期，摊位/库存/汇率每轮重置）
-    moduleUnlocks: { reincarn: false, bazaar: false }, // v3.12.0 反馈⑬：首次晋升后用职级点买断的大模块（跨局保留）
+    moduleUnlocks: { bazaar: false }, // v3.12.0 反馈⑬：首次晋升后用职级点买断的大模块（跨局保留）；v4.2.X 轮回项已移除
     religion: {}, faith: 0,
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,
@@ -126,7 +126,6 @@ export function defaultState() {
     storyline: 'default',          // 当前故事线 ID
     storylinesCompleted: [],       // 已完成的故事线（多周目解锁用）
     earnedFull: 0,                // v2.5.1：本局 EP 产出全量（含被存储上限钳制部分；任务进度口径，晋升清零）
-    _forkTriggered: false,         // [v2.2 废弃] 弹窗触发标记——读取不再写入，保留一个版本周期，v2.3 清除
     // v2.2 岔路口重设计：三栋互斥定向建筑状态机（inactive → open → locked 单向）+ 族升级档位
     crossroad: 'inactive',         // 'inactive'（ch<5 不可见）/ 'open'（三栋可购，中立路径合法）/ 'locked'（已立誓）
     crossroadLockedBy: null,       // 立誓定向建筑 id（order_pillar / abyss_anchor / faith_shrine）
@@ -203,7 +202,6 @@ function migrateSave(raw) {
   if (fromVer < 3) {
     if (!data.storyline) data.storyline = 'default';
     if (!data.storylinesCompleted) data.storylinesCompleted = [];
-    if (data._forkTriggered === undefined) data._forkTriggered = false;
     if (!data._specialTasksDone) data._specialTasksDone = {};
     if (!data._easterEggsFound) data._easterEggsFound = {};
     if (data._pauseCycles === undefined) data._pauseCycles = 0;

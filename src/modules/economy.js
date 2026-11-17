@@ -33,7 +33,6 @@ export function hasTech(id) { return !!S.tech[id]; }
 export function elv(id) { return S.eternal[id] || 0; }
 export function esCost(e) { return _esCost(e, S.eternal); }
 export function petCount() { return Object.keys(S.pets).length; }
-export function hasGen(g) { return Object.values(S.pets).some(p => p.gen >= g); }
 
 // ========== 异兽乘数 ==========
 export function activePetIds() {
@@ -239,9 +238,16 @@ export function purgeDmFor(cutPct) { // DM 析出 = cut² × 0.02（50% → 50 D
   return Math.round(cutPct * cutPct * (BALANCE.corruption.purge?.dmPerPctSq || 0.02) * 100) / 100;
 }
 
-// v3.12.0 反馈⑫：职级点加速资源发展的唯一真源（每点 +10%）。
-// 过去硬编码在 globalMult / clickMult 两处且 UI 无处展示，玩家误以为「职级点不推动发展」。
-export function prestigeBoost() { return 1 + (S.prestigePoints || 0) * 0.10; }
+// v3.12.0 反馈⑫：职级点加速资源发展的唯一真源。
+// v4.2.X 软递减：前 softCap 点维持 +perPoint%/点（早期手感不变），超出部分按 sqrt 减速，
+//   压制「PP 指数滚雪球 → 晋升后产出爆炸」；参数统一读 BALANCE.prestigeBoost。
+export function prestigeBoost() {
+  const c = BALANCE.prestigeBoost;
+  const pp = Math.max(0, Number(S.prestigePoints) || 0);
+  if (pp <= c.softCap) return 1 + pp * c.perPoint;
+  const over = pp - c.softCap;
+  return 1 + c.softCap * c.perPoint + c.perPoint * c.tailScale * Math.sqrt(over);
+}
 
 // ========== 全局乘数 ==========
 export function globalMult() {
@@ -293,9 +299,10 @@ export function globalMult() {
   return m;
 }
 
-// v2.7.3 ⑤：轮回回响——全局倍率 = 1 + 0.05×回响 + 回响升级（echo_global，×1.3/级）
+// v2.7.3 ⑤：轮回回响——全局倍率 = 1 + echoPerPoint×回响 + 回响升级（echo_global，×1.3/级）
+// v4.2.X：0.05 提到 BALANCE.reincarn.echoPerPoint 单一真源（文案/测试同读）。
 export function echoMult() {
-  let m = 1 + (S.abyssEcho || 0) * 0.05;
+  let m = 1 + (S.abyssEcho || 0) * (BALANCE.reincarn?.echoPerPoint ?? 0.05);
   const glv = (S.echoUpgrades && S.echoUpgrades.echo_global) || 0;
   if (glv > 0) m *= Math.pow(1.3, glv);
   return m;
@@ -423,14 +430,7 @@ export function eventFreqMult() {
   return m;
 }
 
-export function critRate() {
-  // v2.1 建筑驱动：暴击反应堆 1% / ·锐 5%（取最高档）；期望乘算见 critExpectedMult()
-  let r = (fxBest('autoCrit') || { chance: 0 }).chance;
-  if (S.runTalent === 'crit') r *= 3;
-  r += elv('crit') * 0.005;
-  return r;
-}
-
+// v4.2.X：critRate 死导出已删除（期望乘算走 critExpectedMult，暴击率本身从未被消费）。
 // v2.1：自动暴击期望乘算（独立掷骰期望值连乘：+9% 与 +45% 同时持有 = ×1.585），进 computeCps
 export function critExpectedMult() {
   // 无暴击建筑时 fxValue('crit') 返回 null（聚合 def），乘算侧必须兜底为中性值 1
@@ -572,10 +572,6 @@ export function vehicleEpPerDm() {
   // v3.6.1：几何单价（不取整）委托 pricing.js
   return geomCostRaw({ base: BALANCE.vehicles.epPerDm, growth: BALANCE.vehicles.epPerDmGrowth || 1, owned: 0, qty: total, mult: 1 });
 }
-export function vehicleDmEpCostPerMin() {
-  return vehicleDmPerMin() * vehicleEpPerDm();
-}
-
 // ========== v1.3 L1：科技成本潮汐乘数 ==========
 // v2.8.7：科技树成本多资源（综合产物齐耗，量最大）——cost 为 {rp,ep,dm...} 对象；退潮乘数仅作用于 RP 部分
 export function techCostOf(t) {
@@ -614,7 +610,7 @@ export function staffSalaryPerSec() {
   if (S.upgrades.dmmind) m *= 0.6;
   m *= fxValue('fuelMul'); // v2.1 建筑驱动：节能电池 ×0.90^级 / ·II ×0.85^级
   m *= researchMult('wage'); // v2.8.25 ②：薪酬协商（研究点）线程消耗 -4%/级
-  m *= echoWageMult(); // v2.9.0：回响·薪酬共鸣 ×0.94/级（跨轮回）
+  m *= echoWageMult(); // v2.9.0：回响·薪酬共鸣 ×0.94/级（跨晋升）
   // v3.4.8 反馈⑥：薪资 = 线程产出 × (1/1.5) —— 锁死「产出:薪资 ≈ 1.5:1」。
   //   旧口径「单线程基数 min(0.5×1.12^i, 1.8)」在 CPU/GPU/专注放大产出后完全跟不上，
   //   实际跑出 20.97K : 452（46:1），EP 只涨不跌。现在薪资随产出线性走：
@@ -858,7 +854,7 @@ export function computeCps() {
 // v2.8.22 ④：全局加成明细（与 globalMult 同口径，悬浮气泡展示）——只列实际生效项
 export function multBreakdown() {
   const parts = [];
-  if (S.prestigePoints > 0) parts.push(`职级 ×${(1 + S.prestigePoints * 0.10).toFixed(2)}`);
+  if (S.prestigePoints > 0) parts.push(`职级 ×${prestigeBoost().toFixed(2)}`); // v4.2.X：明细与真实乘区同源（软递减）
   const ga = fxValue('globalAdd');
   if (ga > 0.001) parts.push(`全局加成 +${(ga * 100).toFixed(0)}%`);
   const pol = policyMult('collab');
@@ -1024,7 +1020,16 @@ function epCapBasisCps() {
     if (!capBasisBusy) {
       capBasisBusy = true;
       let cps = 0;
-      try { cps = computeCps(); } catch { cps = 0; } finally { capBasisBusy = false; }
+      // v4.2.1：快照剥离限时 buff——buff（最高 ×20）混入快照会让「结构性产能」随
+      // 购买时是否恰好有 buff 大幅虚高；buff 过期后下一次购买触发重算，cap 骤降，
+      // 存量 EP 一帧内超上限（v3129 回放 flaky 实证 124%~280%，且超限窗口每帧重现）。
+      // 临时屏蔽 buffMult / restBonusMult 两个限时乘区，快照回归「结构性投入」本义。
+      const svBU = S.buffUntil, svBM = S.buffMult, svRU = S.restBonusUntil, svRM = S.restBonusMult;
+      S.buffUntil = 0; S.restBonusUntil = 0;
+      try { cps = computeCps(); } catch { cps = 0; } finally {
+        S.buffUntil = svBU; S.buffMult = svBM; S.restBonusUntil = svRU; S.restBonusMult = svRM;
+        capBasisBusy = false;
+      }
       S._epCapBasisCps = isFinite(cps) && cps > 0 ? cps : 0;
     }
   }
@@ -1069,8 +1074,8 @@ export function epStorageCap() {
   // v3.7.0：线专属仓储加成由规则表给出（深渊线 ×1.15 / 秩序线 ×1.10，行为与旧硬编码一致）
   cap *= lineRule(K.EP_CAP, 1, S);
   // 级制累计带小数尾差，按设计口径四舍五入（20 级满级 146,105）
-  cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨轮回 ×2/座；return 处 round）
-  cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨轮回）
+  cap *= legacyCapMult(); // v2.8.4：记忆库遗存（跨晋升 ×2/座；return 处 round）
+  cap *= echoStorageMult(); // v2.9.0：回响·仓储共鸣 ×1.25/级（跨晋升）
   // v3.6.4 反馈②：首次溢出后叠加「时间基座」——按结构性投入快照产能 × capHoursFloor 小时。
   //   与 v3.4.9 ⑤ 的直接 cps 口径不同：这里用 epCapBasisCps()（只在买升级/建筑时刷新、
   //   单调不回落），所以线程数量/心情/薪资/懒惰/吞噬的实时波动不会让上限抖动；
@@ -1081,10 +1086,10 @@ export function epStorageCap() {
   //   买扩容会等比抬高最终上限 —— 扩容件重新成为 EP 上限的唯一成长来源。
   if (S._rpOverflowSeen) {
     const baseCap = cap;
+    const basis = epCapBasisCps();
     const hours = B.capHoursFloor != null ? B.capHoursFloor : 2;
     const mult = B.capOverflowMult != null ? B.capOverflowMult : 3;
     const hardRatio = B.capOverflowHardRatio != null ? B.capOverflowHardRatio : 6;
-    const basis = epCapBasisCps();
     const timeFloor = basis * 3600 * hours;
     const floor = Math.min(Math.max(timeFloor, baseCap * mult), baseCap * hardRatio);
     if (isFinite(floor) && floor > 0 && isFinite(cap) && cap > 0) cap = Math.max(cap, floor);

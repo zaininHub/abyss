@@ -94,10 +94,6 @@ export function petStarving() {
 
 // v3.12.13 反馈#168：异兽链式解锁——深渊龙需前置全部购买，深潜者需深渊龙已购。
 // 未解锁的异兽在商店显示为「???」占位，且不可购买（仅影响可见性，不动购买/升级逻辑）。
-export function petPrereqs(id) {
-  const def = petTable().find(x => x.id === id);
-  return (def && def.req) ? def.req : [];
-}
 export function isUnlocked(petDef) {
   if (!petDef) return true;
   for (const r of (petDef.req || [])) if (!S.pets[r]) return false;

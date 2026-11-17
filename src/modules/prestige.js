@@ -1,8 +1,11 @@
 import { S, defaultState } from '../state.js';
 import { resetRunState } from '../core/stateSchema.js';
+import { MS_PER_DAY } from '../core/time.js'; // v4.2.X：时间常数单一真源
 import { recordPolicyRun } from '../data/policies.js';
 import { TALENTS } from '../data/talents.js';
 import { crossRunUpgradeSubset } from '../data/upgrades.js'; // v3.12.3 反馈⑤：DM 计价升级跨转生保留
+import { BALANCE } from '../data/balance.js'; // v4.2.X：回响/遗物传承配置单一真源
+import { renderEchoShop } from './echoShop.js'; // v4.2.X：回响商店并入晋升面板（轮回已移除）
 import { prestigeGain, prestigeRpGain, esGain, prestigeNeed, fmt, elv, discoverEs, addRp, clampRunResourceBalances, gainRes } from './economy.js';
 import { spawnProject } from './projects.js';
 import { resetBazaarRun } from './bazaar.js'; // v3.0.0：集市本局状态（库存/汇率/刷新次数）每轮重置
@@ -15,10 +18,40 @@ export function canPrestige() {
   return prestigeGain() >= 1;
 }
 
+// v4.2.X：轮回已移除，原「深度轮回」的回响结算 + 遗物传承并入每次晋升。
+//   评分口径沿用旧 echoScore（本局晋升/深潜/余烬/信仰的加权和），但单次增益按晋升频率下调
+//   （BALANCE.reincarn.echoBase 8→2、cap 100→60），避免与 PP 软递减的克制目标冲突。
+function prestigeEchoScore() {
+  const W = BALANCE.reincarn.scoreWeights;
+  return (S.prestige || 0) * W.prestige
+    + ((S.delve && S.delve.depth) || 0) * W.delve
+    + (S.riftEmber || 0) * W.ember
+    + (S.faith || 0) * W.faith;
+}
+function prestigeEchoGain() {
+  const w = BALANCE.reincarn;
+  return Math.min(w.echoCap, Math.floor(w.echoBase * Math.sqrt(Math.max(0, prestigeEchoScore()))));
+}
+// 遗物传承：每次晋升按本局最强维度携带至多 1 座（同种 cap 3，跨晋升保留）。
+function grantPrestigeLegacy() {
+  const w = BALANCE.reincarn;
+  S.relicLegacy = S.relicLegacy || {};
+  const colonyLv = Object.values(S.colonies || {}).filter(Boolean).length;
+  const vals = { delve: (S.delve && S.delve.depth) || 0, colony: colonyLv, rift: S.riftsSealed || 0 };
+  const cands = (w.legacy || [])
+    .filter(L => (S.relicLegacy[L.id] || 0) < w.legacyCap && vals[L.needKey] >= L.need)
+    .sort((a, b) => vals[b.needKey] / b.need - vals[a.needKey] / a.need);
+  if (!cands.length) return null;
+  const pick = cands[0];
+  S.relicLegacy[pick.id] = (S.relicLegacy[pick.id] || 0) + 1;
+  return pick;
+}
+
 export function doPrestige(talentId) {
   const gain = prestigeGain();
   const rpg = prestigeRpGain();
   const esg = esGain();
+  const echo = prestigeEchoGain(); // v4.2.X：回响在重置前按本局评分结算
   S.prestigePoints = Math.max(0, Math.round(Number(S.prestigePoints) || 0) + gain); // v4.0.5：职级点恒为整数（结算侧再兜一层）
   S.prestige++;
   if (esg > 0) { S.es += esg; gainRes('es', esg); discoverEs(); } // v2.8.4：首次晋升获得 ES → 点亮 ES 发现锚点
@@ -31,9 +64,14 @@ export function doPrestige(talentId) {
   resetBazaarRun(); // 集市库存/汇率/刷新次数归位（成交笔数与等级跨周期保留）
   // v3.12.3 反馈⑤：DM 计价的升级（深渊科技 / 净化节点）跨转生保留——DM 本身不清零，升级也不该清零。
   const keepUpgrades = crossRunUpgradeSubset(S.upgrades);
+  const legacy = grantPrestigeLegacy(); // v4.2.X：遗物传承用「重置前」的本局维度挑选，返回项供日志
+  // v4.2.X：轮回移除——晋升不保留 AI 核心，opts 不含 keepAiCore（resetRunState 会清空 tech）。
   // v3.10.2 ④：重置后上限回落到新档值，隐式保留的 RP/PT/DM 余额同步钳制。
   resetRunState(S, defaultState(), { keepFocus: talentId === 'legacy', clamp: clampRunResourceBalances });
   S.upgrades = keepUpgrades;
+  // v4.2.X：回响与遗物跨晋升保留（原轮回专属收益并入）——发放放在重置后，避免被清零。
+  S.abyssEcho = (S.abyssEcho || 0) + echo;
+  if (legacy) crewPush(`晋升传承：深渊遗存·${legacy.name}（跨晋升保留）`, 'good');
   // v3.12.0 反馈⑪：本次晋升的 RP 奖励在重置之后发放（否则会被清零），仍受新上限约束。
   addRp(rpg);
   // v3.12.12 反馈⑥：永恒摇篮——开局 RP 启动资金，提前启动研究点扩展玩法（受 RP 上限钳制）
@@ -45,8 +83,8 @@ export function doPrestige(talentId) {
   //   「晋升 = 立即跳下一章」让第 2 章之后的推进速度远超设计（用户反馈「第二章及之后速度过快」）。
   //   现在回拨只抵 1 天驻留：晋升仍能提前 ~1 天进下一章（保留推进体感），但每章 5~7 天
   //   的驻留门槛由真实游玩时间承担，「每次晋升只解锁体验、不压缩节奏」。
-  S.chapterEnteredAt = Date.now() - 1 * 86400000;
-  crewPush('晋升：班组解散，新轮回再聚', ''); // v3.1.0 反馈③：班组流水 // v4.0.2 反馈④：晋升转生→晋升
+  S.chapterEnteredAt = Date.now() - 1 * MS_PER_DAY;
+  crewPush('晋升：班组解散，下一局再聚', ''); // v3.1.0 反馈③：班组流水 // v4.0.2 反馈④：晋升转生→晋升
   // v2.9.0：晋升不再清除 collapsed/_collapseAt——转生不可脱离深渊（吞噬仅由命运抉择结算）
   let startEp = 0;
   if (talentId === 'rich') startEp = 500;
@@ -69,7 +107,7 @@ export function doPrestige(talentId) {
     S.faith = (S.faith || 0) + 1;
     gainRes('fp', 1);
   }
-  return { gain, rpg, esg };
+  return { gain, rpg, esg, echo, legacy };
 }
 
 export function getTalentChoices() {
@@ -87,17 +125,19 @@ export function renderPrestige(container) {
   // 不再整面板 innerHTML 重建（原每 2s 重建使按钮在慢速点击窗口被替换 → click 丢失）
   if (!container._prgBuilt) {
     container._prgBuilt = true;
-    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升</b>结算职级（第一层循环）→ 本局晋升 ≥1 且累计 EP ≥10 亿后可<b style="color:var(--purple)">轮回</b>（第二层循环），结算深渊回响（全局 +5%/点，跨轮回保留）。</div>
+    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升</b>是唯一循环——清空本局，结算职级点 / RP / ES / 深渊回响，并按本局最强维度传承深渊遗存。所有收益跨晋升保留。</div>
       <div class="off-stat"><span>本局累计</span><b id="prg-run">0</b></div>
       <div class="off-stat"><span>晋升需求</span><b id="prg-need">0</b></div>
       <div class="off-stat"><span>可获得职级点</span><b id="prg-gain">0/1 PP</b></div>
       <div class="off-stat"><span>可获得 RP</span><b id="prg-rpg">0/1</b></div>
       <div class="off-stat"><span>可获得 ES</span><b id="prg-esg">0/1</b></div>
+      <div class="off-stat"><span>可获得回响</span><b id="prg-echo">0/1</b></div>
       <div class="prestige-bar" id="prg-bar"><div id="prg-bar-fill" style="width:0%"></div></div>
       <div class="prestige-status no" id="prg-status">未达标</div>
       <button class="btn prestige-btn no" id="prestige-btn" title="">晋升</button>
       <div style="margin-top:6px;font-size:11px;color:var(--text-3)" id="prg-note"></div>
-      <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display"></div>`;
+      <div style="margin-top:8px;font-size:11px;color:var(--text-2)" id="talent-display"></div>
+      <div id="echo-shop-slot"></div>`;
   }
   const need = prestigeNeed();
   const gain = prestigeGain();
@@ -128,7 +168,7 @@ export function renderPrestige(container) {
     btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '晋升：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升与轮回均被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `清空所有资源，下局开局获得 ${reward}` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
+  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `清空所有资源，下局开局获得 ${reward}` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
   const td = container.querySelector('#talent-display');
   if (td) {
     // v3.12.3 反馈⑩：本局天赋同时展示名称与效果（原只有名字，玩家看不到自己这一局拿到了什么）
@@ -137,6 +177,9 @@ export function renderPrestige(container) {
       ? `本局天赋：<b style="color:var(--purple)">${t.name}</b><span style="color:var(--text-2)"> —— ${t.desc}</span>`
       : '';
   }
+  const echoGainEl = container.querySelector('#prg-echo');
+  if (echoGainEl) echoGainEl.textContent = prestigeEchoGain();
+  renderEchoShop(container.querySelector('#echo-shop-slot')); // v4.2.X：轮回移除，回响商店嵌此
 }
 
 export function renderTalentModal(container) {

@@ -189,12 +189,4 @@ export function checkEasterEggs(trigger, S, log, toast, markDirty) {
   }
 }
 
-// 获取特殊任务完成数
-export function specialTasksCompleted(S) {
-  return Object.keys(S._specialTasksDone || {}).length;
-}
-
-// 获取彩蛋发现数
-export function easterEggsFound(S) {
-  return Object.keys(S._easterEggsFound || {}).length;
-}
+// v4.2.X：specialTasksCompleted / easterEggsFound 死导出已删除（成就侧直读 S 字段）。

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.2.0</title>
+<title>深渊效能工作台 v4.2.1</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -26,9 +26,8 @@
     <div class="stat" id="ember-stat" style="display:none" title="裂隙余烬：封印/拥抱/深入积累，跨转生保留，用于裂隙科技。"><b>🔥余烬</b><span id="h-ember">0</span></div>
     <div class="stat" id="vs-stat" style="display:none" title="VS（虚空碎片）：深潜中产出，跨转生保留，用于深潜升级树。"><b>🌑VS</b><span id="h-vs">0</span></div>
     <div class="stat" id="splinter-stat" title="湮灭残片：被深渊吞噬（崩溃）后强制转生获得 ×1。暂无消费用途，仅作保留（跨转生累计）。" style="display:none"><b>🧩湮灭残片</b><span id="h-splinter">0</span></div>
-    <div class="stat" id="reincarn-stat" title="轮回：终极循环，结算深渊回响（全局 +5%/点）。鼠标悬停查看加成明细。" style="display:none"><b>♻️轮回</b><span id="h-reincarn">0</span></div>
-    <!-- v3.12.3 反馈⑥：回响数值独立成项（原只在「轮回」气泡里） -->
-    <div class="stat" id="echo-stat" title="深渊回响：轮回结算获得，跨轮回保留，每点全局产出 +5%。集市回响刷新、部分特殊升级消耗它。" style="display:none"><b>🔮回响</b><span id="h-echo">0</span></div>
+    <!-- v4.2.X：轮回 stat 已移除；回响改由晋升结算获得，顶栏保留回响余额 -->
+    <div class="stat" id="echo-stat" title="深渊回响：晋升结算获得，跨晋升保留，每点全局产出 +5%。集市回响刷新、回响商店消耗它。" style="display:none"><b>🔮回响</b><span id="h-echo">0</span></div>
     <div id="h-buff" title="当前全局增益/减益：来自随机事件、裂隙拥抱、项目奖励等。"></div>
     <!-- v2.0 潮汐状态 -->
     <div id="h-tide" class="tide-stat" title="深渊潮汐：150 秒一相、四相位循环。涨潮产出+30%/薪资+50%；平潮无修正；退潮产出-30%/薪资-20%；乱流负面事件权重×2。"></div>
@@ -209,8 +208,7 @@
         <button class="btn" id="btn-delve">深潜</button>
         <button class="btn" id="btn-rift-tab">裂隙</button>
         <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
-        <!-- v3.12.0 反馈⑬：轮回从晋升面板拆出，成为首次晋升后可购买开启的独立大模块 -->
-        <button class="btn" id="btn-reincarn" title="轮回：第二层循环，首次晋升后可用职级点开启">轮回</button>
+        <!-- v4.2.X：轮回 tab 已移除，回响商店并入晋升面板 -->
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
              保留隐藏桩元素与 switchTab 绑定（兼容程序化切换与既有测试） -->
         <button class="btn" id="btn-prestige" style="display:none">晋升</button>
@@ -290,9 +288,6 @@
         <!-- v3.0.0：深渊集市 -->
         <div class="tab-pane" id="tab-bazaar">
           <div id="bazaar-panel"></div>
-        </div>
-        <div class="tab-pane" id="tab-reincarn">
-          <div id="reincarn-panel"></div>
         </div>
       </div>
     </div>

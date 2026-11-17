@@ -72,9 +72,8 @@ test('v2.9.2 ② 转生重置 _farewellBought（每局可再次触发）', async
   const st = await import('../src/state.js');
   assert.ok(schema.RUN_RESET_KEYS.includes('_farewellBought'), '本局重置清单含 _farewellBought');
   const prestigeSrc = readFileSync(new URL('../src/modules/prestige.js', import.meta.url), 'utf8');
-  const reincarnSrc = readFileSync(new URL('../src/modules/reincarn.js', import.meta.url), 'utf8');
-  assert.ok(prestigeSrc.includes('resetRunState(') && reincarnSrc.includes('resetRunState('),
-    '两条转生路径共用本局重置');
+  // v4.2.X：轮回已移除，唯一转生路径就是晋升——只验晋升走本局重置真源。
+  assert.ok(prestigeSrc.includes('resetRunState('), '晋升走本局重置真源');
   const defs = st.defaultState();
   const s = { ...defs, _farewellBought: true };
   schema.resetRunState(s, defs, {});

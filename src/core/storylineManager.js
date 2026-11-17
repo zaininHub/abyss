@@ -5,7 +5,7 @@ import { registerGate, _clearGates } from './gates.js';
 
 let _registered = new Map();
 let _current = 'default';
-let _unlocked = new Set(['default']);
+// v4.2.X：_unlocked 死状态已删除（唯一写入者 unlockStoryline 亦为死导出）。
 let _locked = false;
 
 export function registerStoryline(pkg) {
@@ -59,10 +59,7 @@ export function switchStoryline(id) {
 
 export function getCurrentStoryline() { return _current; }
 export function getRegisteredStorylines() { return Array.from(_registered.keys()); }
-export function unlockStoryline(id) { _unlocked.add(id); }
-export function getUnlockedStorylines() { return Array.from(_unlocked); }
 export function lockStorylineSwitch() { _locked = true; }
-export function isLocked() { return _locked; }
 export function getStorylinePackage(id) { return _registered.get(id); }
 
 // 静态注册故事线。
@@ -81,6 +78,5 @@ import orderStoryline from '../storylines/line_order.js';
 export function _resetStorylineManager() {
   _registered.clear();
   _current = 'default';
-  _unlocked = new Set(['default']);
   _locked = false;
 }

@@ -113,7 +113,4 @@ export function getStorylinePets() {
   return out;
 }
 
-// 仅返回当前线声明的变体事件（供故事线面板展示「本线专属事件」）
-export function currentLineEvents() {
-  return getStorylineEvents().filter(e => e.weight != null || e.buffMult != null || e.lineOnly === true);
-}
+// v4.2.X：currentLineEvents 死导出已删除（故事线面板走 getStorylineEvents 直读）。

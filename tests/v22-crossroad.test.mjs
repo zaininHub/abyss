@@ -219,9 +219,11 @@ t('index.html 已无 fork-modal DOM，含 crossroad-list / family-upgrade-list �
   assert.ok(html.includes('id="crossroad-list"'), '缺 crossroad-list 容器');
   assert.ok(html.includes('id="family-upgrade-list"'), '缺 family-upgrade-list 容器');
 });
-t('progressive P4 模块名更名 crossroad_buildings 且 P5 判定不变', () => {
+t('progressive P5 故事线判定不变（P4 死映射已删）', () => {
+  // v4.2.X：MODULE_VISIBILITY 是 v3.x 解耦后遗留的死数据（全仓零引用），已删除；
+  //   断言改盯真实消费点——P5 故事线门控判定仍完好。
   const prog = srcText[join(SRC_DIR, 'core', 'progressive.js')];
-  assert.ok(prog.includes("'crossroad_buildings'"), 'P4 模块名未更名');
+  assert.ok(!prog.includes('MODULE_VISIBILITY'), '死数据 MODULE_VISIBILITY 不应复活');
   assert.ok(!prog.includes('storyline_choice'), '旧模块名残留');
   assert.ok(prog.includes("S.storyline !== 'default'"), 'P5 判定被改动');
 });

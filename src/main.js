@@ -29,12 +29,12 @@ import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnloc
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组）
-import { EXPAND_KEY, anchorShown, anchorDone, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
+import { EXPAND_KEY, anchorShown, anchorDone, riftShown, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
-// 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
+// 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
-import { gateOpen } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
+import { gateOpen, chapterAtLeast } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
 import { renderTech, refreshTechState, renderEternal, buyTech } from './modules/tech.js';
 import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
@@ -51,7 +51,7 @@ import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, 
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
-import { renderReincarn, doReincarn, reincarnReady } from './modules/reincarn.js'; // v3.12.0 反馈⑬：轮回独立大模块
+import { renderEchoShop } from './modules/echoShop.js'; // v4.2.X：轮回移除，回响商店并入晋升面板
 import { moduleVisible, buyModuleUnlock } from './modules/moduleUnlocks.js'; // v3.12.0 反馈⑬：职级点买断大模块
 import { isStageUnlocked } from './core/progressive.js';
 import { checkGate, getAllGates } from './core/gates.js';
@@ -371,7 +371,8 @@ let lastCrRenderState = null; // v3.2.4：岔路口卡重建去重
 // ========== v2.2 岔路口状态机（替代 v2.0 弹窗触发：资产持有即走向，open 不买是合法中立路径） ==========
 let lastCrossroadState = null;
 function updateCrossroad() {
-  if (S.crossroad === 'inactive' && parseInt(String(S.chapter || '1'), 10) >= 5) {
+  // v4.2.X：内联 parseInt(chapter)>=5 改走章节门禁真源（与 CHAPTER_GATES / 其它章节判定同口径）。
+  if (S.crossroad === 'inactive' && chapterAtLeast(5, S)) {
     S.crossroad = 'open'; // inactive → open 单向转移；open → locked 由 buyCrossroadBuilding 购买钩子承担
   }
   if (lastCrossroadState !== S.crossroad) {
@@ -464,7 +465,7 @@ function registerAllPanels() {
   registerPanel({ key: 'prestige', render: () => {
     syncPrestigePanelVisibility(); // v3.7.3 反馈⑤：P3 未到时整块隐藏
     const preEl = document.getElementById('prestige-panel');
-    if (preEl) renderPrestige(preEl); // v3.12.0 反馈⑬：轮回已拆到独立 tab
+    if (preEl) renderPrestige(preEl); // v4.2.X：回响商店已并入晋升面板
   } });
   registerPanel({ key: 'relics', render: () => renderRelics(document.getElementById('relics-panel')) });
   registerPanel({ key: 'projects', render: renderProjects });
@@ -503,11 +504,7 @@ function registerAllPanels() {
     const expEl = document.getElementById('expedition-panel');
     if (expEl) renderExpeditions(expEl);
   } });
-  // v3.12.0 反馈⑬：轮回从晋升面板拆出，注册为独立的第 27 个面板（顺序与 PANEL_KEYS 一致）
-  registerPanel({ key: 'reincarn', render: () => {
-    const rcEl = document.getElementById('reincarn-panel');
-    if (rcEl) renderReincarn(rcEl);
-  } });
+  // v4.2.X：轮回已移除——回响商店并入晋升面板（见 renderPrestige 的 echo-shop 容器），无独立面板。
 }
 
 /** v3.9.0：渲染入口只负责把脏标记交给注册表，顺序与消费规则由注册声明决定。 */
@@ -593,7 +590,7 @@ function renderTop() {
   const hEmber = document.getElementById('h-ember');
   const emberStat = document.getElementById('ember-stat');
   if (hEmber && emberStat) { // v2.8.30 ③：裂隙余烬顶部展示（裂隙解锁后常显）
-    emberStat.style.display = S._riftSeen ? '' : 'none';
+    emberStat.style.display = riftShown(S) ? '' : 'none'; // v4.2.X：统一裂隙门控真源
     hEmber.textContent = Math.floor(S.riftEmber || 0); // v3.3.8 反馈②：整数显示，与购买判定同口径（原四舍五入会出现「显示 20 但买不了 20 的项」）
   }
   const hVs = document.getElementById('h-vs');
@@ -603,23 +600,14 @@ function renderTop() {
     hVs.textContent = fmt(S.vs || 0);
   }
   const hBuff = document.getElementById('h-buff');
-  // v2.7.5 ⑧：顶部轮回次数 + 悬停弹框显示回响加成（全局 +5%/点）
-  const hReincarn = document.getElementById('h-reincarn');
-  const reincarnStat = document.getElementById('reincarn-stat');
-  if (hReincarn && reincarnStat) {
-    const n = S.reincarned || 0;
-    const echo = S.abyssEcho || 0;
-    reincarnStat.style.display = n > 0 ? '' : 'none';
-    hReincarn.textContent = n;
-    reincarnStat.title = `轮回 ${n} 次 · 深渊回响 ${echo} · 全局产出 +${(echo * 5).toFixed(0)}%（每点回响 +5%，跨轮回保留）`;
-  }
-  // v3.12.3 反馈⑥：回响数值在顶栏独立显示（原只藏在「轮回」的气泡里，玩家看不到余额）
+  // v4.2.X：轮回已移除，轮回次数 stat 不再渲染；回响数值保留顶栏独立显示（由晋升结算获得）。
   const hEcho = document.getElementById('h-echo');
   const echoStat = document.getElementById('echo-stat');
   if (hEcho && echoStat) {
     const echo = S.abyssEcho || 0;
-    echoStat.style.display = (echo > 0 || (S.reincarned || 0) > 0) ? '' : 'none';
+    echoStat.style.display = echo > 0 ? '' : 'none';
     hEcho.textContent = fmt(echo);
+    echoStat.title = `深渊回响 ${echo} · 全局产出 +${(echo * (BALANCE.reincarn?.echoPerPoint ?? 0.05) * 100).toFixed(0)}%（晋升时结算，跨晋升保留）`;
   }
   // v2.8.4 ②：湮灭残片（崩溃转生 +1，>0 才显示）
   const hSpl = document.getElementById('h-splinter');
@@ -1203,12 +1191,11 @@ function switchTab(id) {
     const bzPanel = document.getElementById('bazaar-panel');
     if (bzPanel) renderBazaarPanel(bzPanel);
   }
-  if (id === 'reincarn') dirty.reincarn = true;
 }
 
 // v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性）
 // v3.12.3 反馈③：锁定态不再挂任何解锁条件文案（title / toast 全部移除，只表达「不可用」）
-const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市', 'btn-reincarn': '轮回' };
+const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市' };
 function setTabLocked(btn, locked) {
   if (!btn) return;
   const base = TAB_LABELS[btn.id] || btn.textContent;
@@ -1251,7 +1238,7 @@ function refreshTabVisibility() {
   setTabLocked(document.getElementById('btn-delve'), !(delveUnlocked() || canUnlockDelve()));
   // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后开放
   const riftBtn = document.getElementById('btn-rift-tab');
-  setTabLocked(riftBtn, !(S._riftSeen || (S.riftsSealed || 0) > 0));
+  setTabLocked(riftBtn, !riftShown(S)); // v4.2.X：统一裂隙门控真源
   // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
   // v3.12.3 反馈③：统一不再提示解锁条件——锁定态只保留「不可用」
   if (riftBtn && riftBtn.dataset.locked === '1') riftBtn.removeAttribute('title');
@@ -1268,7 +1255,6 @@ function refreshTabVisibility() {
   }
   // v3.12.0 反馈⑬：集市 / 轮回在首次晋升后常驻入口；未买断也可点进去看「职级点开启」卡。
   setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
-  setTabLocked(document.getElementById('btn-reincarn'), !moduleVisible('reincarn'));
 }
 
 // ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
@@ -1370,7 +1356,7 @@ function renderRpPanel() {
   // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
   panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
     askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 +15%）+ 产出基座（+当前 EP 上限的 25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；转生 / 轮回后本局扩容与产出基座一起归零，回到 2,500 再逐次扩容。达到上限后停止积累。', () => {});
+      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 +15%）+ 产出基座（+当前 EP 上限的 25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；晋升后本局扩容与产出基座一起归零，回到 2,500 再逐次扩容。达到上限后停止积累。', () => {});
   });
 }
 
@@ -1622,7 +1608,6 @@ function bindEvents() {
   // v3.0.0：深渊集市
   document.getElementById('btn-bazaar')?.addEventListener('click', () => switchTab('bazaar'));
   bindBazaarPanel(document.getElementById('bazaar-panel'));
-  document.getElementById('btn-reincarn')?.addEventListener('click', () => switchTab('reincarn'));
   // v3.12.0 反馈⑬：模块购买卡（轮回页 / 集市页共用同一 data 属性与同一购买入口）
   document.addEventListener('click', (e) => {
     const el = e.target && e.target.closest && e.target.closest('[data-module-unlock]');
@@ -1630,7 +1615,7 @@ function bindEvents() {
     const r = buyModuleUnlock(el.dataset.moduleUnlock);
     if (r.ok) {
       toast(`已开启「${r.name}」：消耗 ${r.cost} PP`);
-      dirty.reincarn = true; dirty.bazaar = true; dirty.top = true; dirty.prestige = true;
+      dirty.bazaar = true; dirty.top = true; dirty.prestige = true;
       refreshTabVisibility();
     } else if (r.reason !== '已开启' && toast) toast(r.reason);
   });
@@ -1705,7 +1690,7 @@ function bindEvents() {
   function hintFor(key) {
     const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 3 章后商店开放「饵料仓库」，购入即解锁 PT',
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
-      prestige:'完成首次晋升', reincarn:'完成首次轮回', policy:'开放任一政策组（晋升/深潜/信仰）',
+      prestige:'完成首次晋升', policy:'开放任一政策组（晋升/深潜/信仰）',
       bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链
     return m[key] || '推进主线解锁';
   }
@@ -2889,7 +2874,7 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
-  window.__qa = { doPrestige, doReincarn, canPrestige, reincarnReady, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
+  window.__qa = { doPrestige, canPrestige, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
     faithCap, // v3.5.0 ②：FP 上限（已从圣所搬到誓约圣龛）测试钩子
     crewStateMeta, // v4.0.0 ④：全局薪资状态真源转为只读 QA 钩子（面板不再展示状态行，但机制仍可查询）
@@ -2936,7 +2921,7 @@ if (typeof window !== 'undefined') {
     resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
     setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus,
     // v3.7.0 30 天 mock 推演：自动玩家只调用产品真实入口，禁止直接写 S 伪造进度
-    sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige, reincarnReady, doReincarn,
+    sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige,
       claimProject,
       // v3.11.0：AI 自动化的产品真实入口（推演不直接写 S 伪造进度）
       buyAssistant, setAiSwitch, allOffActions, recordAction, activateAutoBuild }, // v3.8.0：30 天推演自动玩家经产品真实入口领取任务，验证任务链路可达

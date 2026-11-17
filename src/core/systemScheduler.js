@@ -193,7 +193,6 @@ export function systemStats() {
   return Object.fromEntries([..._stats.entries()].map(([id, s]) => [id, { ...s }]));
 }
 export function systemErrors() { return _errors.slice(); }
-export function setSystemProfiling(on) { _profiling = !!on; }
 export function resetSystemStats() { _stats.clear(); _errors.length = 0; }
 
 /** 仅测试用：清空全部注册（调用方需重新声明） */

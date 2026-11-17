@@ -146,16 +146,9 @@ function colonize(g) {
   toast(`🛸 ${g.name} 殖民地已建立`);
 }
 
-// v3.6.0 方向⑨：供 AI 助手自动殖民调用——建立当前最便宜可负担的未殖民星系
-export function aiBuyCheapestColony() {
-  if (!starColoniesUnlocked()) return false;
-  // v3.12.7 ⑦：只买「已探索过」的星系（与面板可见口径同源），避免 AI 抢先殖民玩家还没去过的星
-  const avail = GALAXIES.filter(g => !isColonized(g.id) && galaxyDone(g.id) > 0);
-  if (!avail.length) return false;
-  const best = avail.slice().sort((a, b) => a.colonyCps - b.colonyCps)[0];
-  if ((S.starCps || 0) >= best.colonyCps) { colonize(best); return true; }
-  return false;
-}
+// v4.2.X：删除 aiBuyCheapestColony——v3.6.0 标注「供 AI 助手自动殖民调用」但 AI 动作注册表
+//   （core/aiActionRegistry.js 仅 upgrade/hire/claim/build）从未接线，全仓零调用 = 死代码。
+//   玩家殖民仍走 expedition 面板的真实点击路径（见下方 [data-colonize] 绑定）。
 
 // v3.0.5 反馈②：星图面板（深空殖民 / 宇宙探索）可购态快刷——只切 cant，不重建 DOM
 export function refreshExpeditionAffordability() {

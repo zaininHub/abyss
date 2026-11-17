@@ -299,9 +299,9 @@ test('D4 行为：满仓涓流走统一入口，不再把 RP/PT 顶出上限', a
   assert.ok(FLOWS.includes('addRp(0.01 * mult)') && FLOWS.includes('addPt(0.01 * ptMult)'));
 });
 
-test('D5 接线：两条转生路径都注入 clamp，startApp 有旧档兜底', () => {
+test('D5 接线：晋升注入 clamp，startApp 有旧档兜底', () => {
+  // v4.2.X：轮回已移除，唯一转生路径是晋升。
   assert.ok(readSrc(join('modules', 'prestige.js')).includes('clamp: clampRunResourceBalances'));
-  assert.ok(readSrc(join('modules', 'reincarn.js')).includes('clamp: clampRunResourceBalances'));
   assert.ok(MAIN.includes('clampRunResourceBalances();'), '启动期兜底');
   assert.ok(MAIN.includes('fmtDepletionEta, epDepletionSec'), 'QA 钩子暴露');
 });
@@ -310,7 +310,8 @@ console.log('[E] 文案与注释口径');
 
 test('E1 Wiki / RP 说明弹框写出产出基座与转生回落，过期注释已修正', () => {
   assert.ok(WIKI.includes('产出基座「当前 EP 上限 ×25%」'));
-  assert.ok(WIKI.includes('转生或轮回后，本局扩容与产出基座一起归零'));
+  // v4.2.X：轮回移除，wiki 口径统一为晋升。
+  assert.ok(WIKI.includes('晋升后，本局扩容与产出基座一起归零'));
   assert.ok(MAIN.includes('上限：基础 2,500 + 矩阵存储库逐级扩容'));
   // v3.12.0 项⑪：RP 本局制后新档上限为 2,500（不再含 500 产出基座），旧文案 3,000 已修正。
   assert.ok(MAIN.includes('回到 2,500 再逐次扩容'));

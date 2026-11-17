@@ -82,7 +82,7 @@ export const ALL_OFF_SWITCH_KEYS = Object.freeze(AI_ACTIONS.map(a => a.switchKey
 const BY_ID = new Map(AI_ACTIONS.map(a => [a.id, a]));
 
 export function actionById(id) { return BY_ID.get(id) || null; }
-export function groupByKey(key) { return AI_ACTION_GROUPS.find(g => g.key === key) || null; }
+// v4.2.X：groupByKey 死导出已删除（全仓零调用）。
 export function actionsByGroup(key) { return AI_ACTIONS.filter(a => a.group === key); }
 export function crewSizeOf(id) {
   const a = actionById(id);

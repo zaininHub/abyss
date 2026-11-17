@@ -60,9 +60,10 @@ test('B2 驻留不足时停在本章', () => {
 
 test('C 晋升回拨恒为 1 天（doPrestige 源码锁定）', () => {
   const src = readFileSync(new URL('../src/modules/prestige.js', import.meta.url), 'utf8');
-  assert.ok(/chapterEnteredAt = Date\.now\(\) - 1 \* 86400000/.test(src),
+  // v4.2.X：86400000 提到 core/time.js 的 MS_PER_DAY 真源，断言改锁符号名而非字面量。
+  assert.ok(/chapterEnteredAt = Date\.now\(\) - 1 \* MS_PER_DAY/.test(src),
     'doPrestige 应回拨 1 天驻留（v4.1.0 F5：3→1，晋升只抵 1 天不再整章抹平）');
-  assert.ok(!/Date\.now\(\) - 3 \* 86400000/.test(src), '不得恢复 3 天回拨');
+  assert.ok(!/Date\.now\(\) - 3 \* (MS_PER_DAY|86400000)/.test(src), '不得恢复 3 天回拨');
 });
 
 test('D 主线全链节奏 ≈ 5 天/章（1~18 章总驻留 85~110 天带）', () => {

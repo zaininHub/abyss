@@ -218,7 +218,7 @@ test('C3 dirty 键 ↔ 面板消费者一一对应（无孤儿脏键、无死面
   for (const k of PANEL_DIRTY_ON_START) assigned.add(k);
   const consumers = new Set(panelKeys.filter(k => !alwaysKeys.has(k)));
   assert.equal(new Set(panelKeys).size, panelKeys.length, '面板 key 重复注册');
-  assert.equal(consumers.size, 24, 'v3.12.0 起应有 24 个受脏标记控制的面板（新增 reincarn）');
+  assert.equal(consumers.size, 23, 'v4.2.X 轮回面板移除后应有 23 个受脏标记控制的面板');
   for (const k of assigned) assert.ok(consumers.has(k), `dirty.${k} 无注册面板消费（幽灵脏键）`);
   for (const k of consumers) assert.ok(assigned.has(k), `面板 ${k} 无任何置脏点（死面板）`);
   assert.deepEqual([...consumers].sort(), [...assigned].sort());

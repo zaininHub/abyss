@@ -8,8 +8,7 @@ import { ACHIEVEMENTS } from '../data/achievements.js';
 export const ACHIEVEMENT_IDS = Object.freeze(ACHIEVEMENTS.map(a => a.id));
 const BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));
 
-export function achievementById(id) { return BY_ID.get(id) || null; }
-export function achievementCount() { return ACHIEVEMENTS.length; }
+// v4.2.X：achievementById / achievementCount 死导出已删除（全仓零调用；BY_ID 仍供 checkAch 使用）。
 
 /**
  * 求值全部自动成就，写入 S.achievements 并返回本次新解锁的定义（供 UI 层播报）。

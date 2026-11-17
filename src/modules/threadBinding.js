@@ -278,14 +278,6 @@ export function autoAssignThreads(only = null) {
   for (const c of cultists) if ((c.boundTo || null) !== before.get(c)) changed++;
   return changed;
 }
-export function leastLoadedConverter(types) {
-  let best = null, bestN = Infinity;
-  for (const t of types) {
-    const n = (S.cultists || []).filter(c => c.boundTo === t && bindingActive(c)).length;
-    if (n < bestN) { bestN = n; best = t; }
-  }
-  return best;
-}
 
 // ---- 方向⑤：AI 与线程职业联动 —— 招募时按需求建议职业 ----
 export function aiSuggestedProfession() {

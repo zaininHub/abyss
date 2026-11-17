@@ -1,5 +1,6 @@
-// v3.0.3 后续反馈⑥回归：晋升（doPrestige）与轮回（doReincarn）后宗教完整保留
+// v3.0.3 后续反馈⑥回归：晋升（doPrestige）后宗教完整保留
 // （分支/解锁标记/圣印/圣所/神谕塔/圣战军/信仰/虔诚 均不清空）
+// v4.2.X：轮回已移除并入晋升，原 doReincarn 用例删除（宗教跨周期保留统一由晋升验收）。
 import assert from 'node:assert';
 import test from 'node:test';
 
@@ -8,7 +9,6 @@ global.window = { addEventListener() {} };
 
 const { S } = await import('../src/state.js');
 const pg = await import('../src/modules/prestige.js');
-const rc = await import('../src/modules/reincarn.js');
 
 function setup() {
   Object.assign(S, {
@@ -46,9 +46,4 @@ test('doPrestige 后宗教完整保留', () => {
   assertReligionIntact('prestige');
 });
 
-test('doReincarn 后宗教完整保留', () => {
-  setup();
-  const r = rc.doReincarn();
-  assert.ok(r.ok);
-  assertReligionIntact('reincarn');
-});
+// v4.2.X：轮回已移除——原「doReincarn 后宗教保留」用例并入上面的 doPrestige 用例。

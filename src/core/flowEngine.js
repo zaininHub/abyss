@@ -191,9 +191,4 @@ export function resetFlowStats() {
   _errors = [];
 }
 
-/** 仅测试用：清空全部注册（修饰器一并清空，调用方需重新声明） */
-export function _resetFlows() {
-  _flows.length = 0; _byPhase.clear(); _modifiers.clear(); _stats.clear();
-  _errors = []; _seq = 0;
-  for (const k of Object.keys(_ledger)) delete _ledger[k];
-}
+// v4.2.X：_resetFlows 死代码已删除（标注「仅测试用」但全仓零调用，包括测试）。

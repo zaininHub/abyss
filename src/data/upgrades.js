@@ -112,19 +112,7 @@ export function upgradeCost(u, count, costMultFn) {
   return Math.ceil(u.base * Math.pow(1.15, count) * mult);
 }
 
-export function bulkCost(u, n, costMultFn) {
-  let t = 0;
-  const owned = u.count || 0;
-  for (let i = 0; i < n; i++) t += upgradeCost(u, owned + i, costMultFn);
-  return t;
-}
-
-export function isUpgradeUnlocked(u, S) {
-  if (u.cat === 'dm') return true; // DM 科技单独判断
-  const owned = S.upgrades[u.id] || 0;
-  return owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
-}
-
+// v4.2.X：bulkCost / isUpgradeUnlocked 死导出已删除（全仓零调用）。
 // v3.12.3 反馈⑤：花「跨转生货币」买的升级必须跨转生保留。
 //   深渊科技（cat:'dm'，DM 购买）与净化节点（cat:'purifier'，DM 购买）的计价货币 DM 本身就是
 //   跨转生资产（不在本局重置清单里），一旦连升级一起清零，玩家会看到「DM 还在、买到的节点没了」。

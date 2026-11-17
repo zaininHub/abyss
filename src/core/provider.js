@@ -82,18 +82,10 @@ export function getTable(name) {
 export function getChapters() { return getTable('chapters') || []; }
 export function getTechs() { return getTable('techs') || []; }
 export function getUpgrades() { return getTable('upgrades') || []; }
-export function getEternals() { return getTable('eternals') || []; }
 export function getBalance() { return getTable('balance') || { ...DEFAULT_BALANCE }; }
 export function getBuildings() { return getTable('buildings') || []; }
 export function getEvents() { return getTable('events') || []; }
 export function getPets() { return getTable('pets') || []; }
-
-// 供单测/面板检查：当前线在指定表上声明的变体条目（append 部分）
-export function variantEntries(name) {
-  return (_storylineVariants[name] || [])
-    .filter(v => v.storyline === _storylineId)
-    .flatMap(v => (v.ops && Array.isArray(v.ops.append)) ? v.ops.append : []);
-}
 
 // Reset for testing
 export function _resetProvider() {

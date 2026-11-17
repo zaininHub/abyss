@@ -1,5 +1,6 @@
 // v2.0 渐进开放阶段定义（PM 设计 P0→P9）
 // 每阶段解锁特定模块/功能，未解锁内容以灰色占位展示
+import { MS_PER_DAY } from './time.js'; // v4.2.X：时间常数单一真源
 
 // 从章节 ID 提取数值：'5'→5, '6A'→6, '12B'→12
 function chapterNum(ch) {
@@ -11,7 +12,8 @@ function chapterNum(ch) {
 // v3.6.0 方向⑦：模块解锁改为按「游玩天数」推进（约 2 大块/天），
 // 与章节叙事（3~7 天/章）解耦——旧档无 startedAt 时回退为 999 天（全解锁，迁移安全）。
 export function daysPlayed(S) {
-  return S.startedAt ? (Date.now() - S.startedAt) / 86400000 : 999;
+  // v4.2.X：统一走 time.js 的 MS_PER_DAY（旧实现内联 86400000，与章节驻留/晋升回拨三处重复）。
+  return S.startedAt ? (Date.now() - S.startedAt) / MS_PER_DAY : 999;
 }
 
 export const PROGRESSIVE_STAGES = [
@@ -41,24 +43,4 @@ export function getCurrentStage(S) {
   return current;
 }
 
-export function getUnlockedStages(S) {
-  return PROGRESSIVE_STAGES.filter(s => isStageUnlocked(s.id, S));
-}
-
-export function getLockedStages(S) {
-  return PROGRESSIVE_STAGES.filter(s => !isStageUnlocked(s.id, S));
-}
-
-// 模块可见性映射：stageId -> 模块ID列表
-export const MODULE_VISIBILITY = {
-  'P0': ['workbench', 'log', 'shop_basic', 'hero_panel'],
-  'P1': ['tech_tree'],
-  'P2': ['pets'],
-  'P3': ['prestige'],
-  'P4': ['expedition', 'crossroad_buildings'],
-  'P5': ['rift', 'line_modules'],
-  'P6': ['buildings', 'line_buildings'],
-  'P7': ['ai_assistant'],
-  'P8': ['eternal_matrix'],
-  'P9': ['offline_extended'],
-};
+// v4.2.X：模块可见性映射死数据已删除（v3.x 解耦后模块入口各走 own gate，全仓零引用）。

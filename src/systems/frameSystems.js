@@ -142,7 +142,6 @@ export function registerFrameSystems(deps = {}) {
       if (delveUnlocked()) ctx.dirty.delve = true;
       // v3.12.0 反馈⑬：未买断时购买卡也要随 PP 变化刷新（低频，不吞点击）
       ctx.dirty.bazaar = true;
-      ctx.dirty.reincarn = true;
     },
   });
 

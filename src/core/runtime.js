@@ -1,5 +1,5 @@
 // v3.0.0 测试性解耦：把原本散落在 main.js 顶层的「侧效工具」(日志 / toast / 脏检查 / 通用确认框)
-// 下沉到 DOM 无关的 core 模块，使 shop / expedition / reincarn / rift / tech 等核心逻辑模块
+// 下沉到 DOM 无关的 core 模块，使 shop / expedition / echoShop / rift / tech 等核心逻辑模块
 // 可在纯 Node 环境被单测（import 不再牵连整棵 DOM 依赖树）。
 // 浏览器中这些函数仍代理到真实 DOM；Node(测试) 下为 no-op 或自动确认。
 

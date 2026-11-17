@@ -37,6 +37,10 @@ export const FP_BALANCE = Object.freeze({
 });
 
 export const BALANCE = {
+  // v4.2.X：职级点加速的软递减真源——前 softCap 点全额 +perPoint%，超出部分按平方根减速。
+  //   旧实现 1+PP×0.1 线性无上限，终章一次晋升 PP 600→3007 令全局乘区 61×→301×（正反馈爆炸）。
+  //   前 30 点完全不变（保住 v3.12.0 既定的早期手感），30 点后按 sqrt 减速，3007 点 ≈20×（仍有成长感）。
+  prestigeBoost: { perPoint: 0.10, softCap: 30, tailScale: 3 },
   // 初始与前期
   initialEp: 0, // v2.8.1：EP 开局不送（新档从 0 开始，靠点击/线程产出起步）
   scribble: { base: 120, cps: 0.12 },  // v2.8.27：首轮 7-10 天节奏——基础成本 ×3、产出 ×0.5（原 v2.8.3 base 40/cps 0.25）
@@ -220,9 +224,12 @@ export const BALANCE = {
   // v2.7.3 ⑤：轮回（终极重置）——回响获取克制：8×√(本局成就评分)，单次上限 100；
   // 升级克制：基准 50 × 1.6^级，cap 3~5，回响池有限 → 自然克制增长
   reincarn: {
-    echoBase: 8, echoCap: 100,
+    // v4.2.X：轮回已移除，回响结算并入晋升。晋升频率 3~5 天/轮（远高于旧轮回），
+    //   故单次增益从 8×√score 降为 2×√score、上限 100→60，避免与 PP 软递减的克制目标冲突。
+    echoBase: 2, echoCap: 60,
+    echoPerPoint: 0.05, // v4.2.X：每点回响全局 +5% 的单一真源（原 economy.js 内联 0.05，文案/测试各写一份）
     scoreWeights: { prestige: 2, delve: 0.5, ember: 0.1, faith: 0.05 },
-    needEp: 1e9, // 本局累计 EP ≥ 10 亿才可轮回（且本局 ≥ 1 次晋升）
+    needEp: 1e9, // v4.2.X：轮回已移除，此项保留供历史存档兼容（不再作为任何门槛判定）
     // v2.8.4：深渊遗存——每次轮回按本局最强维度自动携带 1 座（跨轮回保留，cap 3，克制）
     // 参考 KG：跨周期资源通过「建筑」承载而非直接继承数值
     legacy: [
@@ -239,8 +246,8 @@ export const BALANCE = {
       { id: 'echo_faith', name: '信仰共鸣', cap: 3, desc: 'FP 产出 +50%/级' },
       { id: 'echo_pet', name: '异兽共鸣', cap: 3, desc: '宠物经验获取 +100%/级' },
       // v2.9.0 大项②（参考 KG 长线克制）：扩充 2 项回响升级——存储/薪资双维度
-      { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 +25%/级（跨轮回）' },
-      { id: 'echo_wage', name: '薪酬共鸣', cap: 3, desc: '线程消耗 -6%/级（跨轮回）' },
+      { id: 'echo_storage', name: '仓储共鸣', cap: 3, desc: 'EP 存储上限 +25%/级（跨晋升）' },
+      { id: 'echo_wage', name: '薪酬共鸣', cap: 3, desc: '线程消耗 -6%/级（跨晋升）' },
     ],
   },
   crossroadToLine: { order_pillar: 'line_order', abyss_anchor: 'line_abyss', faith_shrine: 'line_faith' },

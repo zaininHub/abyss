@@ -42,25 +42,36 @@ export function delveNextSettleSec() {
   return Math.max(0, DELVE.cycleSec - t);
 }
 
-// 解锁判定：ES ≥ 3 且 DM 资源点已发现 且 宗教已信奉（贯穿全流程的终点层）
+// v4.2.X：深潜解锁条件单一真源——旧实现 canUnlockDelve（UI 按钮）与 unlockDelve（真实解锁）
+//   各写一份条件，且 canUnlockDelve 不接受「星尘金库 dm_vault 买入即算发现 DM」的兜底，
+//   导致买了金库的存档「底层可解锁但按钮永远灰」。两处统一读此函数，杜绝口径分叉。
+// 条件：第 11 章 ∧ ES ≥ 3 ∧ DM 已发现（或已购星尘金库）∧ 宗教已信奉。
+export function delvePrereqOk(state = S) {
+  if (!gateOpen('delve', state)) return false;
+  if ((state.es || 0) < DELVE.unlockEs) return false;
+  if (!(state.resDiscovered && state.resDiscovered.dm)
+      && !(state.upgrades && (state.upgrades.dm_vault || 0) > 0)) return false;
+  return !!(state.religion && state.religion.unlocked);
+}
+// 未满足时的具体原因（面板提示与 toast 共用，避免两处文案漂移）。
+export function delvePrereqReason(state = S) {
+  if (!gateOpen('delve', state)) return '深潜需推进至第 11 章「虚空」';
+  if ((state.es || 0) < DELVE.unlockEs) return `需转生 ES ≥ ${DELVE.unlockEs}`;
+  if (!(state.resDiscovered && state.resDiscovered.dm)
+      && !(state.upgrades && (state.upgrades.dm_vault || 0) > 0)) return '需先发现深渊之力（DM）';
+  if (!(state.religion && state.religion.unlocked)) return '需先信奉一个宗教分支';
+  return '';
+}
+
 export function canUnlockDelve() {
   if (delveUnlocked()) return true;
-  // v4.2.0：深潜绑第 11 章「虚空」（穿越信号源=VS）——原资产条件保留，AND 章节门禁。
-  if (!gateOpen('delve', S)) return false;
-  if ((S.es || 0) < DELVE.unlockEs) return false;
-  if (!S.resDiscovered || !S.resDiscovered.dm) return false;
-  return religionUnlocked();
+  return delvePrereqOk(S);
 }
 
 export function unlockDelve() {
   if (delveUnlocked()) return { ok: false, reason: '已解锁' };
-  if (!gateOpen('delve', S)) return { ok: false, reason: '深潜需推进至第 11 章「虚空」' };
-  if ((S.es || 0) < DELVE.unlockEs) return { ok: false, reason: `需转生 ES ≥ ${DELVE.unlockEs}` };
-  if (!S.resDiscovered || !S.resDiscovered.dm) {
-    // v3.0.3 第二批②：星尘金库买入即算发现 DM（与顶栏 anchorDone 同口径）
-    if (!S.upgrades || !(S.upgrades.dm_vault || 0)) return { ok: false, reason: '需先发现深渊之力（DM）' };
-  }
-  if (!religionUnlocked()) return { ok: false, reason: '需先信奉一个宗教分支' };
+  const why = delvePrereqReason(S);
+  if (why) return { ok: false, reason: why };
   S.delve = S.delve || {};
   S.delve.unlocked = true;
   S.delve.up = S.delve.up || {};

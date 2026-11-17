@@ -11,7 +11,7 @@
 //
 // 接线纪律（由 tests/v3100-state-schema.test.mjs 静态审计锁死）：
 //   - 清单内每个键必须存在于 defaultState() 输出（无孤儿键）；
-//   - state.js / main.js / prestige.js / reincarn.js 不得再内联同名清单，必须消费本模块；
+//   - state.js / main.js / prestige.js 不得再内联同名清单，必须消费本模块；
 //   - 新增状态字段时，只需在此声明一次，并用审计测试确认覆盖。
 // 注意：本模块刻意不 import state.js —— state.js 需要消费本模块的清单，反向 import 会形成循环。
 // 覆盖率审计由调用方传入 Object.keys(defaultState())。
@@ -30,7 +30,7 @@ export const CROSS_RUN_KEYS = Object.freeze([
 export const COMPAT_KEYS = Object.freeze([
   'tidePhase', 'tideTimer', 'corruption', 'wageState', 'buildings', 'vehCollectTimer', 'ai',
   'boughtOrder', 'unlockedBuildings', 'buildingOverflow', 'epOverflowTotal', '_overflowRpAcc',
-  'delve', 'vs', 'storyline', 'storylinesCompleted', '_forkTriggered', '_specialTasksDone',
+  'delve', 'vs', 'storyline', 'storylinesCompleted', '_specialTasksDone',
   '_easterEggsFound', '_pauseCycles', 'crossroad', 'crossroadLockedBy', 'familyUpgrades',
   '_farewellBought', 'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
   'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar', 'cosmos', 'moduleUnlocks',
@@ -178,7 +178,7 @@ export function shiftAbsoluteClocks(S, ms) {
 }
 
 /**
- * 晋升 / 轮回共用的本局重置。
+ * 晋升用的本局重置（v4.2.X：轮回已移除，重置只剩这一条路径）。
  * @param {object} S 当前状态
  * @param {object} defs defaultState() 的输出（默认值唯一真源）
  * @param {{keepAiCore?:boolean, keepFocus?:boolean}} opts 两条转生路径的差异

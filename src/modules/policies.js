@@ -51,11 +51,11 @@ export function renderPolicyPanel(container) {
   if (!container) return;
   const groups = policyOpenGroups();
   if (groups.length === 0) {
-    container.innerHTML = `<div class="religion-desc">周期政策：每轮（晋升/轮回）后按跨周期资产开放政策槽位，组内互斥单选——让每次游戏周期走向不同。</div>
+    container.innerHTML = `<div class="religion-desc">周期政策：每轮（晋升后）按跨周期资产开放政策槽位，组内互斥单选——让每次游戏周期走向不同。</div>
       <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 路线抉择（需职级 ≥1）<br>· 信仰组（需信仰解锁）<br>· 集市组（需集市开张）</div>`;
     return;
   }
-  let html = `<div class="religion-desc">周期政策：每轮（晋升/轮回）后重选；一次只开放一个政策组，选定后自动解锁下一组。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
+  let html = `<div class="religion-desc">周期政策：每轮（晋升后）重选；一次只开放一个政策组，选定后自动解锁下一组。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
   const stateBadge = (kind) => {
     const M = {
       on:   ['policy-state-on', '✓ 当前生效'],

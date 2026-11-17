@@ -19,7 +19,7 @@
 //   - 新玩法「相位共鸣」：自动玩家在解锁后经产品真实入口开启共鸣、轮换焦点，
 //     长期推演中核对叠层 / 换相位减半 / 上限 20 / 四管线增益与代价 / CPS 同口径；
 //   - 抽象层：状态生命周期单一真源、成就注册表、面板键 / deps 清单在真实浏览器里
-//     核对旧档兼容（无 resonance 字段）、成就逐页渲染、27 面板 / 43 帧系统零异常；
+//     核对旧档兼容（无 resonance 字段）、成就逐页渲染、26 面板 / 43 帧系统零异常；
 //   - 内容扩充：主表事件 62 + 线专属 12、研究 55、政策 11 组 33 项、编排 4 条策略、百科 24 章；
 //   - UI 侧新增：共鸣开关 / 四焦点按钮的 aria-label / aria-pressed / ≥24×24 点击目标、
 //     窄卡孤字换行（getClientRects）、真实 DOM 点击后读侧同步；排班表升级为 4×6 槽位。
@@ -771,7 +771,8 @@ try {
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
   // v3.12.8：成就基线 140 → 138（守夜人 / 潮汐级联两条随策略移除）
-  if (bootState.panels === 27 && bootState.achievements === 138) {
+  // v4.2.X：面板基线 27 → 26（轮回面板移除，回响商店并入晋升面板）
+  if (bootState.panels === 26 && bootState.achievements === 138) {
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -805,12 +806,12 @@ try {
   else bad('EP 主产出流漏帧', `${last.flowTicks} / ${totalTicks}`);
 
   // v3.9.0 控制流层：帧系统 / 面板注册表全程零异常，render 无漏帧，声明完整
-  if (last.sysErrors === 0 && last.panelErrs === 0) ok('43 条帧系统与 27 个注册面板 30 天零异常（异常隔离生效）');
+  if (last.sysErrors === 0 && last.panelErrs === 0) ok('帧系统与注册面板 30 天零异常（异常隔离生效）');
   else bad('控制流层出现运行异常', JSON.stringify({ sys: last.sysErrors, panel: last.panelErrs }));
   const sysIds = Object.keys(last.sysStats || {});
   if (last.renderTicks >= totalTicks) ok('render 帧系统每帧执行（无漏帧）', `${last.renderTicks} ticks / ${totalTicks} 帧`);
   else bad('render 帧系统漏帧', `${last.renderTicks} / ${totalTicks}`);
-  if (sysIds.length >= 40 && last.panelCount === 27) ok('帧系统 / 面板声明完整接线', `${sysIds.length} 个系统已运行 / ${last.panelCount} 个面板已注册`);
+  if (sysIds.length >= 40 && last.panelCount === 26) ok('帧系统 / 面板声明完整接线', `${sysIds.length} 个系统已运行 / ${last.panelCount} 个面板已注册`);
   else bad('声明缺失', JSON.stringify({ sys: sysIds.length, panels: last.panelCount }));
 
   if (last.projectsDone >= 3) ok('任务链路在线可达（领取即计入累计完成）',
@@ -1038,7 +1039,7 @@ try {
   if (s.clickOk && s.resetOk) ok('排班表真实点击后读侧同步，恢复默认按钮生效',
     `${s.before} → ${s.after} → 默认排班`);
   else bad('排班表点击链路异常', JSON.stringify({ clickOk: s.clickOk, resetOk: s.resetOk }));
-  if (s.panelCount === 27 && s.panelErrs === 0 && s.sysErrs === 0) {
+  if (s.panelCount === 26 && s.panelErrs === 0 && s.sysErrs === 0) {
     ok('渲染分发层与控制流层台账零异常', `${s.panelCount} 面板 / ${s.sysCount} 系统`);
   } else bad('控制流层台账异常', JSON.stringify({ p: s.panelCount, pe: s.panelErrs, se: s.sysErrs }));
   // v3.10.0 相位共鸣 UI 准确性

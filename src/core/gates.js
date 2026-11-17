@@ -18,11 +18,6 @@ export function checkGate(moduleId, context = {}) {
   }
 }
 
-export function getGateLabel(moduleId) {
-  const gate = _gates.get(moduleId);
-  return gate ? gate.label : '';
-}
-
 export function getAllGates() {
   return Array.from(_gates.entries()).map(([id, g]) => ({ id, ...g }));
 }

@@ -70,3 +70,17 @@ test('policyRerollCost：第 1 次改选 → 未立誓 1、立誓 2（×2^1）',
   setup({ policyRerolls: { route: 1 }, vowPolicyBoost: true });
   assert.equal(pol.policyRerollCost('route'), 2, '立誓：2');
 });
+
+// v4.2.X 反馈③：选完路线 A 不得立即整组解锁「路线深化」的 B/C 候选
+test('v4.2.X 路线深化不再随选定路线立即解锁', () => {
+  setup({ chapter: '7', prestige: 1, projectsDone: 0, policies: {} });
+  const openIds = () => pol.policyOpenGroups().map(g => g.id);
+  assert.ok(openIds().includes('route'), '职级 1 开放路线抉择');
+  assert.ok(!openIds().includes('deepen'), '低资产时深化组未开放');
+  // 选完路线 A（旧实现此时 deepen 会因 groupPolicyId('route') 立刻开放）
+  S.policies.route = { id: 'order_route', lv: 1 };
+  assert.ok(!openIds().includes('deepen'), '选完路线 A 后深化组仍不立即解锁');
+  // 达到独立资产门槛才开放
+  S.prestige = 3;
+  assert.ok(openIds().includes('deepen'), '职级 ≥3 后深化组开放');
+});

@@ -1119,17 +1119,7 @@ function updateBldItem(b) {
 }
 
 // ========== 刷新（每秒快刷，不重建 DOM；v2.1 R4 口径延续） ==========
-export function refreshAllShop() {
-  // v1.3 E：仅供整列表结构变化时调用（解锁数变化 / 批量档位切换 / tab 进入）
-  if (shopContainer) renderShop(shopContainer);
-  if (threadContainer) renderThreadShop(threadContainer);
-  if (vehicleContainer) renderVehicles(vehicleContainer);
-  if (dmContainer) renderDmShop(dmContainer);
-  if (bldContainer) renderBuildings(bldContainer);
-  if (v21Container) renderV21Buildings(v21Container);
-  if (crossroadContainer) renderCrossroadBuildings(crossroadContainer);
-  if (familyContainer) renderFamilyUpgrades(familyContainer);
-}
+// v4.2.X：refreshAllShop 死导出已删除（全仓零调用，各 tab 走自己的 registerPanel 渲染）。
 
 export function refreshShopAffordability() {
   if (!shopContainer) return;
