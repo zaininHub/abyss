@@ -163,7 +163,8 @@ test('C5 反馈⑯：薪资四态说明整块触发', () => {
   const css = src('src/style.css');
   const main = src('src/main.js');
   assert.ok(html.includes('id="wage-help-zone"') && html.includes('class="hero-row wage-help-zone"'), '整块触发区');
-  assert.ok(html.includes('wage-help-mark'), '保留问号徽章');
+  // v4.2.0 反馈⑥：绿色状态圆圈旁的问号徽章已移除——说明仍由整块悬浮/点击承载
+  assert.ok(!html.includes('wage-help-mark'), '问号徽章已移除（整块触发保留）');
   // v4.0.8 反馈②：说明气泡改彩色 DOM（#wage-tip-pop）——attr(data-tip) 拼不出四态分色文本
   assert.ok(css.includes('.wage-tip-pop') && css.includes('display: none') && css.includes('.wage-tip-pop.show'), '彩色气泡用真实 DOM 承载（默认隐藏、.show 显示）');
   assert.ok(css.includes('.wage-tip-pop .w-good') && css.includes('.wage-tip-pop .w-warn') && css.includes('.wage-tip-pop .w-orange') && css.includes('.wage-tip-pop .w-bad'), '四态语义色类齐备');

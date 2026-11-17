@@ -20,7 +20,7 @@ const bad = (m, d = '') => { fail++; console.log(`  ✗ ${m}${d ? ' — ' + d : 
 
 const NOW = Date.now();
 const mkSave = () => JSON.stringify({
-  _version: 6, chapter: '4', storyline: 'line_order',
+  _version: 6, chapter: '10', storyline: 'line_order', // v4.2.0：共鸣绑第 10 章——本测试验共鸣行 UI，章节放到已过线
   ep: 1e12, rp: 1e6, es: 1e6, dm: 1e6, pt: 1e6, faith: 1e6,
   buildings: {}, cultists: Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: '线程' + (i + 1), mood: '正常', profession: 'acolyte', level: 1, boundTo: '' })),
   tech: {}, religion: { unlocked: true, branch: 'sun', seal: 4, temple: 6, devotion: 500, transcend: 2 },

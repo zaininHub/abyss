@@ -4,6 +4,7 @@
 //       立誓（岔路口买建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。
 import { S } from '../state.js';
 import { researchMult } from '../core/research.js'; // v3.7.0：律令演绎走标准研究读侧，不再内联第二份公式
+import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：政策绑第 7 章
 
 export const POLICY_GROUPS = [
   {
@@ -153,18 +154,40 @@ export function selectedPolicy(groupId) {
   return g.policies.find(p => p.id === pid) || null;
 }
 
+// v4.2.0 反馈②：政策效果只对「已解锁资源」生效（与 wiki「未解锁资源」口径一致）。
+//   旧实现里 route/delve 等组的 delve/ember/faith 加成会落到尚未解锁的资源上——
+//   玩家还没开深潜就吃到「深潜 +25%」的死加成，既无实际产出又误导数值面板。
+//   这里在读侧按资源锚点过滤：未解锁资源 key 恒返回 1（基础产出 ep/global/thread/recruit/collab 恒解锁）。
+//   只读 S 字段（不 import modules，避免 data ← modules 反向依赖），与 economy/delve 的锚点判定同源。
+function effectKeyUnlocked(key, state) {
+  switch (key) {
+    case 'faith': case 'devotion':
+      return !!(state.religion && state.religion.unlocked) || !!(state.resDiscovered && state.resDiscovered.faith) || (state.faith || 0) > 0;
+    case 'delve':
+      return !!(state.delve && state.delve.unlocked) || (state.vs || 0) > 0;
+    case 'ember':
+      return !!state._riftSeen || (state.riftsSealed || 0) > 0 || (state.ember || 0) > 0;
+    case 'bazaarRate': case 'bazaarStock': case 'bazaarRefresh': case 'bazaarGain':
+      return !!(state.bazaar && state.bazaar.unlocked);
+    default:
+      return true; // ep/global/thread/recruit/collab/corruption/aiCap 等基础或机制键恒生效
+  }
+}
+
 // 读侧乘区：policyMult(key) → 1 + Σ(已选政策 effect[key])；立誓时正向项整体 +5% 幅度
-export function policyMult(key) {
-  if (!S.policies) return 1;
+export function policyMult(key, state = S) {
+  if (!effectKeyUnlocked(key, state)) return 1;
+  if (!state.policies) return 1;
   let sum = 0;
   for (const g of POLICY_GROUPS) {
-    const pid = groupPolicyId(g.id);
+    const v = (state.policies && state.policies[g.id]) || null;
+    const pid = typeof v === 'string' ? v : (v && v.id) || null;
     if (!pid) continue;
     const p = g.policies.find(x => x.id === pid);
     if (p && p.effect[key] !== undefined) sum += p.effect[key];
   }
   let base = (1 + sum) * researchMult('policy'); // v3.6.0 律令演绎；v3.7.0 改走 core 标准读侧（数值不变）
-  if (S.vowPolicyBoost && sum > 0) base += 0.05; // 立誓：本局政策幅度 +5%（仅正向）
+  if (state.vowPolicyBoost && sum > 0) base += 0.05; // 立誓：本局政策幅度 +5%（仅正向）
   return base;
 }
 
@@ -173,8 +196,16 @@ export function groupHasChoice(groupId) { return !!groupPolicyId(groupId); }
 // 「AI 自动采纳每组最优政策」入口此前定义在此处，但全库无调用点，且内部调用了只存在于
 // modules/policies.js 的 selectPolicy —— data 层反向依赖 modules 层，一旦触发即抛 ReferenceError。
 // 该功能从未生效，故移除；如需启用，应在 modules/policies.js 内实现并显式接线，避免破坏分层。
+// v4.2.0：周期政策绑第 7 章「叛乱」（集结分身=自主立法）——在开放入口统一 AND 章节门禁，
+//   不改 POLICY_GROUPS 各组既有资产门槛（原条件保留防跳过）。老玩家 S.chapter 已过 7 章恒放行。
 export function policyOpenGroups() {
+  if (!gateOpen('policy', S)) return [];
   return POLICY_GROUPS.filter(g => { try { return !!g.unlock(S); } catch { return false; } });
+}
+
+// v4.2.0 反馈②：有「开放但尚未选定」的政策组 → tab 上挂感叹号提示；全部选定后消失。
+export function hasPendingPolicy() {
+  return policyOpenGroups().some(g => !groupPolicyId(g.id));
 }
 
 // 改选成本：基础 1 回响/虔诚 × 2^次数；中立（未立誓）半价（ceil 取整）

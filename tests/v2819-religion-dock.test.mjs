@@ -8,6 +8,8 @@ import { canUnlockReligion } from '../src/modules/religions.js';
 function fresh() {
   S.ep = 0; S.upgrades = {}; S.tech = {}; S.resDiscovered = { rp: true };
   S.upgrades.storage = 3;
+  // v4.2.0：宗教绑第 4 章门禁——本测试只验「解锁条件不再要求 EP 库存」，故把章节放到已过线。
+  S.chapter = '4';
 }
 test('R1 宗教解锁不再要求 EP 库存（存储3级+RP觉醒即可，EP 为 0 也达标）', () => {
   fresh(); S.ep = 0;

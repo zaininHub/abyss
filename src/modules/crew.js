@@ -16,6 +16,7 @@ import {
 // v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
+const escAttr = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STATE_META = {
   ok:      { label: '满薪运行', color: 'var(--good,#3fb950)' },
   debt:    { label: '欠薪降效', color: 'var(--warn,#c8a24a)' },
@@ -95,15 +96,20 @@ export function renderCrewPanel(container) {
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
-    // v4.0.0 反馈④：成员卡不再按全局状态染色（原橙/红左边框即「怠惰等状态」的视觉暗示）。
-    cards += `<div class="crew-card" style="border-left:3px solid var(--border)">
-      <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
-      <div class="crew-info">
-        <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}</div>
-        <div class="crew-stat">${affinityIcon} · Lv.${lvl}</div>
-        <div class="crew-stat">产出 <b class="c-out">0</b>/s</div>
-        <div class="crew-stat">${bindCtrl}${leaderBtn}</div>
+    // v4.2.0 反馈③：重设计卡片布局——旧版头像与四行信息在 align-items:center 下整块错位、
+    //   affinity emoji 与「· Lv.10」直接相连 baseline 不齐。改为三段式：
+    //   ① 头部（头像 + 名字/心情/等级/擅长同行）；② 产出独占一行；③ 岗位下拉 + 晋升按钮独占一行。
+    //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子（测试与事件委托不改）。
+    cards += `<div class="crew-card">
+      <div class="crew-card-head">
+        <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
+        <div class="crew-info">
+          <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}</div>
+          <div class="crew-stat"><span class="crew-lv">Lv.${lvl}</span><span class="crew-aff-wrap">${affinityIcon}<span class="crew-aff-label">${escAttr(affinityName)}</span></span></div>
+        </div>
       </div>
+      <div class="crew-card-out">产出 <b class="c-out">0</b>/s</div>
+      <div class="crew-card-ops">${bindCtrl}${leaderBtn}</div>
     </div>`;
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;

@@ -12,6 +12,7 @@ import {
 } from '../data/religions.js';
 import { policyMult } from '../data/policies.js';
 import { dirty } from '../core/runtime.js'; // v3.5.0：FP 越界钳回后需要立刻重渲染面板
+import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：宗教绑第 4 章（EP 出口时序）
 
 let logFn = null;
 let toastFn = null;
@@ -24,7 +25,14 @@ function rlog(msg, cls) { if (logFn) logFn(`[宗教] ${msg}`, cls); }
 //   ② EP 库存 ≥ 存储上限 80%（深度囤积，不能只囤半仓）
 //   ③ RP 已觉醒（首次溢出过——已触及效能外溢，进入研究阶段）
 // v2.8.7：解锁前置条件保留（存储≥3 + RP 觉醒），但「唤醒信仰」需消耗 EP（当前上限的 20%），而非达标自动解锁
+// v4.2.0：超验/隐密圣学绑第 6 章「神格」（赞颂→虔诚→超验→成神；消耗 FP/虔诚不抢 EP 出口）。
+//   老玩家 S.chapter 已过 6 章恒放行；宗教本体（唤醒/圣所/分支）不受此限，第 4 章起完整可用。
+export function transcendUnlocked() { return gateOpen('transcend', S); }
+
 export function canUnlockReligion() {
+  // v4.2.0 章节门禁：宗教绑第 4 章「永恒」（信仰是跨越时间线的永恒；保住前中期 EP 出口时序）。
+  //   老玩家 S.chapter 已过 4 章则恒放行（跨转生不回退），零回退。
+  if (!gateOpen('religion', S)) return false;
   // v3.4.6 反馈⑫：存储节点曲线对调后改「备用粮仓 ≥3 级」（前期防死锁关键件，节奏不变）；
   // 旧档按存储节点 ≥3 兼容
   const granaryLv = S.upgrades.reserve_bin || 0;
@@ -165,6 +173,7 @@ export function buyCrusade() {
 // 赞颂：信仰 ≥ 容量 80% → 消耗全部信仰 → 虔诚 += ⌊信仰 × 转化率⌋（永久跨周期）
 export function praiseSun() {
   if (!religionUnlocked() || !branchOf()) return { ok: false, reason: '需先信奉一个分支' };
+  if (!transcendUnlocked()) return { ok: false, reason: '赞颂与超验需推进至第 6 章解锁' };
   const f = S.faith || 0;
   if (f < faithCap() * PRAISE.thresholdRatio) return { ok: false, reason: `FP 未满 ${Math.round(PRAISE.thresholdRatio * 100)}%（当前 ${f.toFixed(2)} / 需 ${Math.round(faithCap() * PRAISE.thresholdRatio)}）` };
   const gain = Math.floor(f * praiseRate() * policyMult('devotion')); // v2.8.6 B2a：牺牲——虔诚获取 ×1.5
@@ -178,6 +187,7 @@ export function praiseSun() {
 // 超验：消耗虔诚提升层级（成本 100×2.2^层级；提升赞颂转化率 + 解锁隐密圣学）
 export function transcendNow() {
   if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
+  if (!transcendUnlocked()) return { ok: false, reason: '超验需推进至第 6 章解锁' };
   const cost = transcendCost();
   if ((S.devotion || 0) < cost) return { ok: false, reason: `虔诚不足（需 ${cost}，当前 ${S.devotion || 0}）` };
   S.devotion -= cost;
@@ -190,6 +200,7 @@ export function transcendNow() {
 // 隐密圣学：余烬 + 虔诚门槛（跨周期保留；解锁科技每轮重研=门槛每轮重新达成）
 export function buySecretSanctum(id) {
   if (!religionUnlocked()) return { ok: false, reason: '未解锁' };
+  if (!transcendUnlocked()) return { ok: false, reason: '隐密圣学需推进至第 6 章解锁' };
   const d = SECRET_SANCTUMS.find(x => x.id === id);
   if (!d) return { ok: false, reason: '未知圣学' };
   if (transcendLevel() < d.needTranscend) return { ok: false, reason: `需超验 Lv.${d.needTranscend}` };
@@ -400,7 +411,9 @@ export function renderReligionPanel(container) {
         title="${(S.religion && S.religion.templeOff) ? '重启：恢复 FP 产出（无代价）' : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
         style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}
     </div>
-    ${seal >= 1 ? `
+    ${seal >= 1 && !transcendUnlocked() ? `
+    <div class="religion-sec-head"><span>赞颂与超验</span><span class="religion-gated">第 6 章「神格」解锁</span></div>` : ''}
+    ${seal >= 1 && transcendUnlocked() ? `
     <div class="religion-sec-head"><span>赞颂与超验</span></div>
     <div class="off-stat"><span>虔诚（永久）</span><b style="color:var(--purple)">${S.devotion || 0}</b></div>
     <div class="off-stat"><span>超验层级</span><b style="color:var(--purple)">Lv.${transcendLevel()}（赞颂转化率 ×${praiseRate().toFixed(2)}）</b></div>
@@ -417,7 +430,9 @@ export function renderReligionPanel(container) {
         title="消耗虔诚提升超验层级——赞颂转化率提升、解锁隐密圣学门槛">超验</button>
     </div>` : ''}
     ` : ''}
-    ${transcendLevel() >= 1 ? `
+    ${transcendLevel() >= 1 && !transcendUnlocked() ? `
+    <div class="religion-sec-head"><span>隐密圣学</span><span class="religion-gated">第 6 章「神格」解锁</span></div>` : ''}
+    ${transcendLevel() >= 1 && transcendUnlocked() ? `
     <div class="religion-sec-head"><span>隐密圣学</span></div>
     ${SECRET_SANCTUMS.map(s2 => {
       const lv = secretSanctumLv(s2.id);

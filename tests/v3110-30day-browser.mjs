@@ -841,24 +841,36 @@ try {
     else bad('策略切换与 CPS 脱钩', `最大误差 ${worst}`);
   }
   // v3.10.0 新玩法「相位共鸣」在长期推演中的可达性与叠层行为
+  // v4.2.0：相位共鸣改绑第 10 章门禁——30 天推演通常只到第 5 章，共鸣锁定属预期设计，
+  //   此处按「是否在门禁章之后」条件化：未到第 10 章时验证「锁定态正确」，到了才验完整玩法。
   const R = last.resonance || {};
-  if (R.unlocked && last.stats.resonanceEnables > 0 && R.enabled) {
+  const chNow = parseInt(String(last.chapter || '1'), 10) || 1;
+  const resonanceDue = chNow >= 10;
+  if (!resonanceDue) {
+    !R.unlocked ? ok('相位共鸣按第 10 章门禁保持锁定（30 天推演未到门禁章）', `当前第 ${chNow} 章`)
+      : bad('第 10 章前共鸣异常解锁', `当前第 ${chNow} 章`);
+    (last.stats.resonanceEnables || 0) === 0 ? ok('共鸣未解锁时自动玩家不尝试开启') : bad('门禁前仍触发共鸣开启');
+  } else if (R.unlocked && last.stats.resonanceEnables > 0 && R.enabled) {
     ok('相位共鸣在长期推演中解锁并经产品入口开启',
       `开启 ${last.stats.resonanceEnables} 次 / 焦点轮换 ${last.stats.focusSwitches} 次 / 终局 ${R.layers} 层`);
-  } else if (!R.unlocked) bad('相位共鸣 30 天内未解锁（新玩法不可达）',
+  } else if (!R.unlocked) bad('相位共鸣到第 10 章后仍未解锁',
     `projectsDone=${last.projectsDone} prestige=${last.prestige}`);
   else bad('共鸣已解锁但自动玩家未开启', JSON.stringify(R));
   const samples = last.stats.layerSamples || [];
-  if (samples.some(x => x.layers > 0) && samples.every(x => x.layers <= 20)) {
+  if (!resonanceDue) {
+    ok('共鸣叠层断言在门禁章前跳过（无采样属预期）');
+  } else if (samples.some(x => x.layers > 0) && samples.every(x => x.layers <= 20)) {
     ok('共鸣层数真实累积且不超过上限 20',
       `采样 ${samples.length} 次 / 峰值 ${Math.max(...samples.map(x => x.layers))} 层 / 终局 ${R.layers} 层`);
   } else bad('共鸣叠层异常', JSON.stringify(samples.slice(0, 3)));
-  if (last.stats.phaseDecays > 0) ok('换相位时共鸣层数减半在长期推演中真实发生',
+  if (resonanceDue && last.stats.phaseDecays > 0) ok('换相位时共鸣层数减半在长期推演中真实发生',
     `记录 ${last.stats.phaseDecays} 次`);
-  else console.log('  · 推演期内未捕捉到相位切换减半（随机性，非缺陷）');
+  else console.log('  · 推演期内未捕捉到相位切换减半（门禁章前或随机性，非缺陷）');
   const resChecks = (last.stats.resonanceChecks || []).flat();
   const resWorst = resChecks.length ? Math.max(...resChecks.map(c => Math.abs(c.got - c.expect))) : 0;
-  if (resChecks.length > 0 && resWorst < 1e-9) {
+  if (!resonanceDue) {
+    ok('共鸣乘区断言在门禁章前跳过（读侧恒 1 由单测覆盖）');
+  } else if (resChecks.length > 0 && resWorst < 1e-9) {
     ok('四管线 orchestrationMult = 编排基准 × resonanceMult（长期同口径）',
       `${resChecks.length} 次实测，最大误差 ${resWorst.toExponential(2)}`);
   } else bad('共鸣乘区与读侧脱钩', `最大误差 ${resWorst}`);
@@ -956,7 +968,8 @@ try {
   // v3.10.0 相位共鸣数值：用纯读侧探针核对焦点增益 / 其余代价 / 上限 / 未解锁回落
   const resProbe = await page.evaluate(() => {
     const q = window.__qa, T = q.RESONANCE_TUNING;
-    const mk = (layers, focus = 'ep') => ({ projectsDone: 999, prestige: 0,
+    // v4.2.0：共鸣第 10 章门禁——这是纯读侧数值探针，章节放到已过线（v3100 单测同口径）。
+    const mk = (layers, focus = 'ep') => ({ chapter: '10', projectsDone: 999, prestige: 0,
       resonance: { enabled: true, layers, focus, phase: 1, acc: 0 } });
     const s10 = mk(10), s20 = mk(20);
     const off = { ...s10, projectsDone: 0, prestige: 0, resonance: { ...s10.resonance, enabled: false } };
@@ -1029,25 +1042,33 @@ try {
     ok('渲染分发层与控制流层台账零异常', `${s.panelCount} 面板 / ${s.sysCount} 系统`);
   } else bad('控制流层台账异常', JSON.stringify({ p: s.panelCount, pe: s.panelErrs, se: s.sysErrs }));
   // v3.10.0 相位共鸣 UI 准确性
+  // v4.2.0：共鸣第 10 章门禁——未到门禁章时 UI 不渲染是预期，四断言改条件化（v410 专项仍全量验 UI）。
   const rui = ui.resonanceUI || {};
-  if (rui.ok && rui.buttons === 5 && rui.labelsOk && rui.pressedOk && rui.sizeOk) {
+  if (!resonanceDue) {
+    ok('共鸣 UI 断言在门禁章前跳过（第 10 章后才渲染，v410 专项全量覆盖）');
+  } else if (rui.ok && rui.buttons === 5 && rui.labelsOk && rui.pressedOk && rui.sizeOk) {
     ok('共鸣开关 + 四焦点按钮均有 aria-label / aria-pressed 且点击目标 ≥24×24',
       `最小 ${Math.min(...rui.sizes.map(x => x.w))}×${Math.min(...rui.sizes.map(x => x.h))}px`);
   } else bad('共鸣按钮可访问性不达标', JSON.stringify(rui));
-  if (rui.ok && rui.orphanLines === 0) ok('编排卡窄卡文案无孤字换行', 'getClientRects 末行宽度检测');
-  else bad('编排卡存在孤字换行', JSON.stringify({ orphanLines: rui.orphanLines }));
-  if (rui.ok && rui.clickOk && rui.focusOk) ok('共鸣开关 / 焦点真实 DOM 点击后读侧即时同步',
+  if (resonanceDue && rui.ok && rui.orphanLines === 0) ok('编排卡窄卡文案无孤字换行', 'getClientRects 末行宽度检测');
+  else if (resonanceDue) bad('编排卡存在孤字换行', JSON.stringify({ orphanLines: rui.orphanLines }));
+  if (resonanceDue && rui.ok && rui.clickOk && rui.focusOk) ok('共鸣开关 / 焦点真实 DOM 点击后读侧即时同步',
     '开关双态回环 + 焦点切换生效');
-  else bad('共鸣真实点击链路异常', JSON.stringify({ clickOk: rui.clickOk, focusOk: rui.focusOk }));
-  if (rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
+  else if (resonanceDue) bad('共鸣真实点击链路异常', JSON.stringify({ clickOk: rui.clickOk, focusOk: rui.focusOk }));
+  if (resonanceDue && rui.ok && rui.textOk) ok('共鸣层数与四管线倍率文本与读侧一致',
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
-  else bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
+  else if (resonanceDue) bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
   // v3.12.8：基线下移到 138（删除 orch_vigil / cascade 两条随策略一并移除的成就）
   if (ui.achTotal === 138) ok('成就注册表 138 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
-  if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在 30 天推演中真实达成',
-    ui.achV3100Unlocked.join(', '));
-  else bad('v3.10.0 新增成就不可达', JSON.stringify(ui.achV3100Unlocked));
+  // v4.2.0：v3.10.0 成就（共鸣三连 + chapter35/policy11/research55）均落在长线门槛上；
+  //   第 10 章门禁前 30 天推演本就不可达，属预期节奏——结构有效性由 138 条注册表断言兜底。
+  if (resonanceDue) {
+    if (ui.achV3100Unlocked.length >= 2) ok('v3.10.0 新增成就在长期推演中真实达成', ui.achV3100Unlocked.join(', '));
+    else bad('v3.10.0 新增成就不可达', JSON.stringify(ui.achV3100Unlocked));
+  } else {
+    ok('v3.10.0 长线成就断言在门禁章前跳过（30 天推演未到玩法阶段，注册表 138 条已验）');
+  }
   // v3.9.0 成就分批可达性验收（接 v3.8.0 编排三连 orch_switch / orch_tide / chapter25）：
   //  · 旗舰玩法成就 schedule_edit（改写潮汐预案）是 30 天 mock 真实可达的 v3.9.0 成就，必须解锁——
   //    它是潮汐排班玩法（#164）的核心可达目标，直接证明该批次非「死成就」。

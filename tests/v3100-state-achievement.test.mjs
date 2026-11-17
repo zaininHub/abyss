@@ -289,7 +289,8 @@ test('D2 非法存档一律回落安全值，绝不放大数值', () => {
 });
 
 test('D3 倍率：未解锁 / 关闭 / 0 层 / 非法键一律 1，增益与代价成对', () => {
-  const base = { projectsDone: 50, prestige: 0,
+  // v4.2.0：共鸣绑第 10 章——本文件验「共鸣数值读侧」，故注入已过线章节。
+  const base = { chapter: '10', projectsDone: 50, prestige: 0,
     resonance: { enabled: true, layers: 10, focus: 'ep', phase: 1, acc: 0 } };
   assert.equal(res.resonanceMult('ep', { ...base, projectsDone: 0, prestige: 0 }), 1);
   assert.equal(res.resonanceMult('ep', { ...base, resonance: { ...base.resonance, enabled: false } }), 1);
@@ -313,7 +314,7 @@ test('D3 倍率：未解锁 / 关闭 / 0 层 / 非法键一律 1，增益与代�
 });
 
 test('D4 每 12 秒叠一层、上限 20、换相位减半；累加器静默写入不置脏', () => {
-  const mk = () => ({ tidePhase: 1, projectsDone: 50, prestige: 0,
+  const mk = () => ({ chapter: '10', tidePhase: 1, projectsDone: 50, prestige: 0,
     resonance: { enabled: true, layers: 0, focus: 'ep', phase: 1, acc: 0 } });
   const S = mk();
   let r = res.tickResonance(S, 11);
@@ -343,7 +344,7 @@ test('D5 开关与焦点入口严格校验，非法输入不写状态', () => {
   const locked = { projectsDone: 0, prestige: 0, resonance: {} };
   assert.equal(res.setResonanceEnabled(locked, true), false);
   assert.equal(locked.resonance.enabled, undefined);
-  const S = { projectsDone: 50, prestige: 0,
+  const S = { chapter: '10', projectsDone: 50, prestige: 0,
     resonance: { ...res.DEFAULT_RESONANCE, phase: 2, layers: 4 } };
   assert.equal(res.toggleResonanceEnabled(S), true);
   assert.equal(S.resonance.enabled, true);
@@ -355,7 +356,7 @@ test('D5 开关与焦点入口严格校验，非法输入不写状态', () => {
 });
 
 test('D6 面板摘要四管线与数值读侧同源', () => {
-  const S = { projectsDone: 50, prestige: 0,
+  const S = { chapter: '10', projectsDone: 50, prestige: 0,
     resonance: { enabled: true, layers: 5, focus: 'rp', phase: 0, acc: 0 } };
   const sm = res.resonanceSummary(S);
   assert.equal(sm.unlocked, true);

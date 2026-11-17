@@ -52,7 +52,8 @@ rec('V2 AI 激活仍校验全部资源解锁', ai.includes("if (!allResDiscovere
 
 // ===== ③ 宗教 =====
 rec('V3 唤醒按钮未达标带 disabled 属性（含每秒 affordability 刷新）', rel.includes('data-religion-unlock="1" ${ok && (S.ep || 0) >= religionWakeCost() ? \'\' : \'disabled\'}') && rel.includes('w.disabled = !canUnlockReligion() || (S.ep || 0) < religionWakeCost()'), '');
-rec('V3 宗教入口曾达标常显（_religionHintSeen）', main.includes('S._religionHintSeen = true') && main.includes("religionUnlocked() || canUnlockReligion() || S._religionHintSeen"), 'refreshTabVisibility');
+// v4.2.0 反馈①：宗教入口改走章节门禁，_religionHintSeen 旧标记已在 load() 一次性清除且不再重写。
+rec('V3 宗教入口走章节门禁（旧 _religionHintSeen 标记不再重写）', !main.includes('S._religionHintSeen = true') && main.includes('religionUnlocked() || canUnlockReligion()'), 'refreshTabVisibility');
 rec('V3 _religionHintSeen 入 defaultState + crossRun', state.includes('_religionHintSeen: false') && schema.includes("'_religionHintSeen'") && schema.includes('CROSS_RUN_KEYS'), '');
 
 const failed = results.filter(r => !r.ok);

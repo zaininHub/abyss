@@ -33,6 +33,7 @@ import { checkSpecialTasks, checkEasterEggs } from '../modules/progression.js';
 import { getAllGates, checkGate } from '../core/gates.js';
 import { chapterRank, chapterCode } from '../core/storylineContent.js';
 import { currentChapter } from '../modules/story.js';
+import { unlocksAtChapter } from '../data/chapterUnlocks.js'; // v4.2.0：章节推进时发「新模块解锁」公告
 import { orchestrationUnlocked, orchestrationState, effectiveModeId,
   TIDE_PHASE_NAMES, MODE_BY_ID } from '../core/orchestration.js';
 import { tickResonance } from '../core/resonance.js'; // v3.10.0：相位共鸣推进
@@ -241,6 +242,12 @@ export function registerFrameSystems(deps = {}) {
         const chName = chNow.name || `第 ${chId} 章`;
         if (toast) toast(`📖 进入${chName}：章节馈赠 +${gift} RP`);
         log(`章节推进：${chName}——时间线向前折叠，+${gift} RP 馈赠`, 'good');
+        // v4.2.0：「一章一个新模块」时刻感——本章若有登记解锁项，紧跟章节馈赠发 🔓 公告。
+        //   推进本身只发生一次（一次一章 + S.chapter 不回退），故公告天然一次性、无需额外持久化键。
+        for (const u of unlocksAtChapter(nNow)) {
+          if (toast) toast(`🔓 第 ${nNow} 章 · 新模块：${u.name}`);
+          log(`新模块解锁：${u.name}——${u.announce}`, 'good');
+        }
         ctx.dirty.top = true;
       }
     },

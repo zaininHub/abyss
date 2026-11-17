@@ -12,6 +12,8 @@ function setup(extra = {}) {
   Object.assign(S, {
     ep: 1e9, rp: 1e6, es: 0, dm: 0, faith: 0, prestige: 1, upgrades: {}, tech: {},
     expeditions: [], colonies: [], delve: { depth: 0 }, resDiscovered: { ep: true },
+    // v4.2.0：深空殖民绑第 12 章——本文件验「宠物+RP+deep_space 原门控链」，故章节放到已过线。
+    chapter: '12',
   }, extra);
 }
 
@@ -34,7 +36,7 @@ test('expedition.starColoniesUnlocked：宠物 + RP + deep_space 三级链', () 
   assert.equal(ex.starColoniesUnlocked(), false, '宠物未解锁时不可绕过星图 tab 购买殖民');
   setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1 } });
   assert.equal(ex.starColoniesUnlocked(), false, '缺 RP 锚点');
-  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1, rp_vault: 1 }, chapter: '3' });
+  setup({ tech: { deep_space: true }, upgrades: { pt_vault: 1, rp_vault: 1 }, chapter: '12' });
   assert.equal(ex.starColoniesUnlocked(), true);
 });
 

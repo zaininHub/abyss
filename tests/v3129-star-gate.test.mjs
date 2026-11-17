@@ -81,9 +81,11 @@ test('⑥ 三种 PT 完成口径（仓库 / 宠物乐园 / 持有 PT）都能推
   }
 });
 
-test('⑦ 深空殖民 / 宇宙探索与星图 tab 同源，不能由自动化绕过（第 3 章）', () => {
+// v4.2.0：深空殖民绑第 12 章——本用例验「宠物/RP 门控链」，章节放到已过线。
+//   （星图 tab 仍是第 3 章开放，两件事不冲突：入口早开、实质功能章节给。）
+test('⑦ 深空殖民 / 宇宙探索与星图 tab 同源，不能由自动化绕过（第 12 章）', () => {
   const full = { ...merge(rp, pt), tech: { deep_space: 1 }, expeditionsDone: 0,
-    expeditions: [], resDiscovered: { rp: true }, chapter: '3' };
+    expeditions: [], resDiscovered: { rp: true }, chapter: '12' };
   withState({ ...full, upgrades: { rp_vault: 1 } }, () => {
     assert.equal(starChartUnlocked(S), false);
     assert.equal(starColoniesUnlocked(), false, '宠物未开时深空殖民不可购');

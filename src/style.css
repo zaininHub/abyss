@@ -144,11 +144,7 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor;
   font-size: 0; line-height: 0; overflow: hidden;
 }
-.wage-help-mark {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%;
-  border: 1px solid var(--border); color: var(--text-2); font-size: 9px; line-height: 1;
-}
+/* v4.2.0 反馈⑥：.wage-help-mark 问号徽章已移除（状态圆圈仍保留，整块悬浮承载说明） */
 
 .stat b { color: var(--accent); }
 
@@ -408,6 +404,17 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   flex: 0 0 auto;       /* v3.12.5：剧情条收窄时标签不被压成竖排 */
   white-space: nowrap;
 }
+/* v4.2.0 反馈⑦：剧情文案完整显示（不再 ellipsis 截断）——章节名与正文分行，正文可换行 */
+.ch-bar { flex-wrap: wrap; align-items: baseline; row-gap: 2px; }
+.ch-bar #ch-name { flex: 0 0 auto; }
+.ch-bar #ch-desc {
+  flex: 1 1 100%;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: 10.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 
 /* ========== 离线预览栏 ========== */
 .off-bar {
@@ -450,6 +457,25 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   cursor: not-allowed !important;
   filter: grayscale(0.8);
 }
+
+/* v4.2.0 反馈②：政策 tab 有「可选未选」政策时挂感叹号，选定后消失（伪元素不碰 textContent） */
+#btn-policy[data-pending="1"]::after {
+  content: "!";
+  display: inline-block;
+  margin-left: 4px;
+  min-width: 13px;
+  height: 13px;
+  line-height: 13px;
+  border-radius: 50%;
+  background: var(--bad, #f85149);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  animation: policy-pending-pulse 1.8s ease-in-out infinite;
+}
+@keyframes policy-pending-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
 /* ========== 商店网格 ========== */
 /* v2.3.1 ⑥（rev18 9.4）：.bulk-bar 倍率条样式随交互整节移除 */
@@ -1463,6 +1489,8 @@ body.paused .pet-grid .pet-card {
   margin: 10px 0 6px; font-size: 11px; color: var(--accent); font-weight: 600;
 }
 .religion-sec-total { margin-left: auto; color: var(--text-2); font-weight: 400; white-space: nowrap; }
+/* v4.2.0：章节门禁未达标的区块角标（如「第 6 章解锁」） */
+.religion-gated { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--warn); white-space: nowrap; }
 .religion-sec-off { color: var(--text-3); font-weight: 400; }
 #religion-panel { line-height: 1.6; }
 
@@ -1973,13 +2001,24 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .orch-block + .orch-block { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .orch-block-title { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
 .orch-block-note { margin-left: auto; font-size: 10.5px; font-weight: 400; color: var(--text-3); white-space: nowrap; }
-.crew-card { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--panel); }
-.crew-card.more { justify-content: center; color: var(--text-3); font-size: 11px; }
+/* v4.2.0 反馈③：卡片重设计——头部(头像+名字/等级/擅长) / 产出 / 操作 三段纵向排布，
+   各段内部 flex 居中对齐，杜绝旧版头像与四行信息整块 align-items:center 的错位。 */
+.crew-card { display: flex; flex-direction: column; gap: 5px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--panel); border-left: 3px solid var(--border); }
+.crew-card.more { justify-content: center; align-items: center; color: var(--text-3); font-size: 11px; }
+.crew-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .crew-avatar { font-size: 20px; line-height: 1; flex: none; }
-.crew-info { min-width: 0; }
-.crew-name { font-size: 12px; font-weight: bold; display: flex; gap: 6px; align-items: baseline; }
+.crew-info { min-width: 0; flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; }
+.crew-name { font-size: 12px; font-weight: bold; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .crew-mood { font-size: 10px; color: var(--text-3); font-weight: normal; }
-.crew-stat { font-size: 11px; color: var(--text-2); }
+.crew-stat { font-size: 11px; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
+.crew-lv { font-family: monospace; color: var(--text-3); flex: none; }
+.crew-aff-wrap { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
+.crew-aff-wrap .crew-affinity { font-size: 12px; line-height: 1; flex: none; }
+.crew-aff-label { font-size: 10px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crew-card-out { font-size: 11.5px; color: var(--text-2); padding-left: 28px; }
+.crew-card-out b.c-out { color: var(--cyan, var(--accent)); font-size: 12.5px; }
+.crew-card-ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 28px; }
+.crew-card-ops .btn { margin-left: 0 !important; }
 .crew-stat.dim, .crew-feed-item.dim { color: var(--text-3); }
 .crew-feed { margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; max-height: 130px; overflow-y: auto; font-size: 11px; background: var(--panel); }
 .crew-feed-item { padding: 1px 0; color: var(--text-2); }

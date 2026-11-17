@@ -9,6 +9,8 @@ const researchUpgs = BALANCE.researchUpgs;
 
 test('v2.8.30 政策链：选定 Lv.1 → 推进下一级（效果切换）→ 组内锁定', () => {
   const g = POLICY_GROUPS.find(x => x.id === 'faith');
+  // v4.2.0：policyMult 对未解锁资源恒返回 1——本测试验「政策效果切换」，故先把信仰资源置为已解锁。
+  S.religion = { unlocked: true };
   S.policies = {};
   S.policies.faith = { id: 'ascetic', lv: 1 };
   assert.equal(groupPolicyId('faith'), 'ascetic');

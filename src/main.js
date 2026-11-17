@@ -24,7 +24,7 @@ import { getCurrentStoryline, loadStoryline, lockStorylineSwitch, getStorylinePa
 import { tickProjects, claimProject, spawnProject, maxProjects, normalizeProjectGoals, setProjectLogFn, rewardText } from './modules/projects.js';
 import { tickReligion, renderReligionPanel, bindReligionPanel, canUnlockReligion, setReligionLogFn, setReligionToastFn, refreshReligionAffordability } from './modules/religions.js'; // v2.8.26 ④
 import { renderPolicyPanel, bindPolicyPanel, setPolicyLogFn, setPolicyToastFn } from './modules/policies.js';
-import { policyOpenGroups, policyMult, POLICY_GROUPS } from './data/policies.js';
+import { policyOpenGroups, hasPendingPolicy, policyMult, POLICY_GROUPS } from './data/policies.js';
 import { tickDelve, renderDelvePanel, bindDelvePanel, canUnlockDelve, delveUnlocked, setDelveLogFn, setDelveToastFn } from './modules/delve.js';
 import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaarUnlocked, setBazaarLogFn, setBazaarToastFn } from './modules/bazaar.js'; // v3.0.0：深渊集市（大模块）
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
@@ -34,6 +34,7 @@ import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, 
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/reincarn/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
+import { gateOpen } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
 import { renderTech, refreshTechState, renderEternal, buyTech } from './modules/tech.js';
 import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
@@ -437,8 +438,10 @@ function registerAllPanels() {
     const eternalEl = document.getElementById('eternal-list');
     const eternalTitle = document.getElementById('eternal-title');
     if (eternalEl) {
-      if (esDiscovered()) { renderEternal(eternalEl); if (eternalTitle) eternalTitle.style.display = ''; }
-      else if (!eternalEl._esLocked) { eternalEl._esLocked = true; eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
+      // v4.2.0：永恒矩阵绑第 8 章「飞升」（超脱本局）——原 esDiscovered 条件保留，AND 章节门禁。
+      //   去掉旧 _esLocked 单次缓存：章节推进到 8 时若 ES 已发现但当时未渲染，必须能重新出现。
+      if (esDiscovered() && gateOpen('eternals', S)) { renderEternal(eternalEl); if (eternalTitle) eternalTitle.style.display = ''; }
+      else { eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
     }
     const riftTechEl = document.getElementById('rift-tech-list');
     if (riftTechEl) renderRiftLevelTech(riftTechEl);
@@ -961,9 +964,7 @@ function renderHero() {
     staffStatus.setAttribute('aria-label', detail ? `${txt}（${detail}）` : txt);
     // 刻意不写原生 title：整行已有自定义气泡，双弹窗是本项目明确避开的坑；
     //   细则还可在触屏上通过「点击整块 → 线程状态说明」弹窗查看。
-    // v3.12.3 反馈③：问号说明框只在「满薪」状态显示（其余四态由整块悬浮说明承载）
-    const wageMark = document.getElementById('wage-help-mark');
-    if (wageMark) wageMark.style.display = (txt === '满薪') ? '' : 'none';
+    // v4.2.0 反馈⑥：问号标记已从 DOM 移除（用户要求），说明完全由整块悬浮/点击承载。
     // v3.12.0 反馈⑯：说明承载从窄 span 的 title 移到整块，整行悬浮 / 点击均可触发。
     // v4.0.8 反馈②：四态说明改彩色 DOM（#wage-tip-pop）——四态行按语义色着色
     //   （满薪绿/欠薪黄/休眠橙/流失红/懒惰黄），attr(data-tip) 只能纯文本做不到。
@@ -1136,9 +1137,10 @@ function updateProjectProgress() {
 let _policyOpenHash = '';
 function policyTickRefresh() {
   const open = policyOpenGroups();
-  const h = open.map(g => g.id).sort().join(',');
+  // v4.2.0 反馈②：hash 纳入「是否有待选组」——选定政策的下一帧 hash 变化即刷新 tab，感叹号消失。
+  const h = open.map(g => g.id).sort().join(',') + '|' + (hasPendingPolicy() ? 1 : 0);
   if (h !== _policyOpenHash) {
-    const prevIds = _policyOpenHash ? _policyOpenHash.split(',') : [];
+    const prevIds = _policyOpenHash ? _policyOpenHash.split(',').map(x => x.split('|')[0]) : [];
     const fresh = open.filter(g => !prevIds.includes(g.id));
     _policyOpenHash = h;
     dirty.policy = true;
@@ -1241,10 +1243,10 @@ function refreshTabVisibility() {
   // 星图：v3.12.9 起唯一判定源 = starChartUnlocked(S)（宠物/PT 锚点 → RP 锚点 → 深空探测或远征记录）。
   //   未解锁仍是「???」锁定态；不再在此处另抄一份条件，避免顶栏 / tab / 研究分组口径分叉。
   setTabLocked(document.getElementById('btn-expedition'), !starChartUnlocked(S));
-  // v2.5.7 宗教：解锁条件（仓库≥1 且库存达标）达成才开放
-  // v2.6.2：首次达标后持久显示（_religionHintSeen，跨转生保留），面板内表达未解锁状态——避免 EP 波动/存储上限升级导致入口抖动消失
-  if (canUnlockReligion()) { S._religionHintSeen = true; }
-  setTabLocked(document.getElementById('btn-religion'), !(religionUnlocked() || canUnlockReligion() || S._religionHintSeen));
+  // v4.2.0 宗教：章节门禁（第 4 章）+ 真实解锁态。
+  //   旧实现的 _religionHintSeen 持久标记会在首章就放行 tab（用户反馈①：宗教第一章就解锁），
+  //   且 v4.2 load() 已一次性清除该标记；此处不再重写，避免脏标记复活。
+  setTabLocked(document.getElementById('btn-religion'), !(religionUnlocked() || canUnlockReligion()));
   // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才开放
   setTabLocked(document.getElementById('btn-delve'), !(delveUnlocked() || canUnlockDelve()));
   // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后开放
@@ -1256,7 +1258,14 @@ function refreshTabVisibility() {
   // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
   setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
   // v2.8.6 B2a：政策——有开放政策组才开放
-  setTabLocked(document.getElementById('btn-policy'), !(policyOpenGroups().length > 0));
+  const policyBtn = document.getElementById('btn-policy');
+  setTabLocked(policyBtn, !(policyOpenGroups().length > 0));
+  // v4.2.0 反馈②：有「开放但尚未选定」的政策组 → tab 上挂感叹号（::after 伪元素，不碰 textContent）；
+  //   全部选定后自动消失。锁定态不挂（??? 阶段无可选语义）。
+  if (policyBtn) {
+    const pending = !policyBtn.dataset.locked && hasPendingPolicy();
+    if (pending) policyBtn.setAttribute('data-pending', '1'); else policyBtn.removeAttribute('data-pending');
+  }
   // v3.12.0 反馈⑬：集市 / 轮回在首次晋升后常驻入口；未买断也可点进去看「职级点开启」卡。
   setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
   setTabLocked(document.getElementById('btn-reincarn'), !moduleVisible('reincarn'));
@@ -1604,7 +1613,7 @@ function bindEvents() {
     if (b && b.dataset && b.dataset.locked === '1') e.stopPropagation();
   }, true);
   bindPolicyPanel(document.getElementById('policy-panel'));
-  _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',');
+  _policyOpenHash = policyOpenGroups().map(g => g.id).sort().join(',') + '|' + (hasPendingPolicy() ? 1 : 0);
   renderPolicyPanel(document.getElementById('policy-panel'));
   setPolicyLogFn(log); setPolicyToastFn(toast); // v2.8.6：政策模块日志/toast 接入
   document.getElementById('btn-delve')?.addEventListener('click', () => switchTab('delve'));
@@ -1648,17 +1657,20 @@ function bindEvents() {
     }));
   }
   // v3.2.3 反馈④：跨章节搜索——命中行摘录 + 点击跳转对应章节
+  // v4.2.0 反馈⑤：搜索归一化——用户输「AI助手」应命中文案里的「AI 助手」（中英文间空格）。
+  //   去掉空白/常见分隔符后再匹配，保留原文行用于展示，不改变 wiki 数据与章节指针。
+  const wikiNorm = (s) => String(s || '').toLowerCase().replace(/[\s·・,，、_\-—]/g, '');
   function renderWikiSearch(q) {
     const body = document.getElementById('wiki-body');
     if (!body) return;
-    const needle = q.trim().toLowerCase();
+    const needle = wikiNorm(q.trim());
     let found = 0;
     let html = `<h4 class="wiki-title">搜索「${escWiki(q.trim())}」</h4>`;
     for (const s of WIKI_SECTIONS) {
       const probe = document.createElement('div');
       probe.innerHTML = s.body();
       const lines = (probe.textContent || '').split('\n').map(l => l.trim()).filter(Boolean);
-      const hits = lines.filter(l => l.toLowerCase().includes(needle)).slice(0, 4);
+      const hits = lines.filter(l => wikiNorm(l).includes(needle)).slice(0, 4);
       if (!hits.length) continue;
       found += hits.length;
       html += `<div class="wiki-hit" data-wiki-hit="${s.id}">
@@ -1805,21 +1817,15 @@ function bindEvents() {
   // v3.10.4 ④：存档管理简化为「💾 存档」下拉直接展示所有存档列表（参考 KG）。
   //   每条含 读取/覆盖/导出/删除；列表级含 保存新档/导入/清档；导入导出作为每条的功能。
   importMode = 'current'; // 复位为默认（'current' = 旧「导入覆盖当前」；'snapshot' = 导入为新快照入列）
-  // v4.0.9 反馈③：「+ 保存新档」改「+ 新建初始空档」——生成一份全新初始存档入槽（不覆盖当前进度），
-  //   供玩家从列表「读取」切换开新路线；槽满时走「覆盖最早」二级确认（v403 回归抓出
-  //   静默覆盖会丢玩家快照，与 saveSnapshot 同纪律：任何覆盖玩家数据的操作必须确认）。
+  // v4.2.0 反馈④：「+ 新建」生成全新初始存档入槽（不覆盖当前进度）；满槽时按钮已由
+  //   renderSaveList 灰显禁用，不再走「覆盖最早」二次确认弹窗。旧数据无任何路径被静默覆盖。
   document.getElementById('save-new')?.addEventListener('click', () => {
+    if (listSnapshots().length >= SNAP_MAX) return; // 兜底：满槽直接吞掉点击（按钮已 disabled）
     const r = createFreshSnapshot();
     if (r.ok) {
       renderSaveList(true);
       renderSnapshotList();
-      toast('初始空档已创建（读取即可开始新档）');
-    } else if (r.needCover) {
-      askConfirm('存档已满，覆盖最早的存档', `已保存 ${SNAP_MAX} 个存档。新初始空档将覆盖最早的「${r.needCover.name}（${fmtStamp(r.needCover.time)}）」，确定创建？`, () => {
-        const res = coverOldest(r.snap);
-        if (res.ok) { renderSaveList(true); renderSnapshotList(); toast('初始空档已创建（已覆盖最早存档）'); }
-        else toast('创建失败：本地存储不可用');
-      });
+      toast('新档已创建（读取即可开始新档）');
     } else toast(r.reason || '创建失败：本地存储不可用');
   });
   document.getElementById('clear-game')?.addEventListener('click', () => {
@@ -2269,9 +2275,16 @@ function renderSaveList(force = false) {
   saveListSig = sig;
   const cnt = document.getElementById('save-count');
   if (cnt) cnt.textContent = `${snaps.length}/${SNAP_MAX}`;
+  // v4.2.0 反馈④：满槽后「新建」按钮直接灰显——不再走「覆盖最早」二次确认弹窗（用户要的交互）。
+  //   玩家想开新档先手动删一条旧档，避免任何路径静默覆盖玩家快照。
+  const newBtn = document.getElementById('save-new');
+  if (newBtn) {
+    newBtn.disabled = snaps.length >= SNAP_MAX;
+    newBtn.title = snaps.length >= SNAP_MAX ? `存档已满（${SNAP_MAX}/${SNAP_MAX}）——请先删除一条旧档再新建` : '新建一份全新初始存档（不影响当前进度，读取即可开始新档）';
+  }
   box.innerHTML = '';
   if (!snaps.length) {
-    box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 新建初始空档」生成（最多 ${SNAP_MAX} 个）。</div>`;
+    box.innerHTML = `<div class="save-empty">暂无存档。点击「+ 新建」生成（最多 ${SNAP_MAX} 个）。</div>`;
     return;
   }
   for (const sn of snaps) {

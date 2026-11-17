@@ -12,6 +12,8 @@ function setup(extra = {}) {
   Object.assign(S, {
     prestige: 0, delve: { depth: 0 }, religion: { unlocked: false }, bazaar: { unlocked: false },
     policies: {}, policyRerolls: {}, vowPolicyBoost: false, abyssEcho: 0, devotion: 0,
+    // v4.2.0：政策绑第 7 章——本文件验「各组资产门槛原门控」，故章节放到已过线。
+    chapter: '7',
   }, extra);
 }
 

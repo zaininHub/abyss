@@ -5,6 +5,9 @@ import { PROFESSION_BY_ID, LAZY_PROFESSION_ID, LEADER_PROFESSION_ID } from './da
 import { DEFAULT_RESONANCE } from './core/resonance.js';
 import { defaultResDiscovered, mergeCrossRun, fillMissingFields, applyNestedDefaults } from './core/stateSchema.js';
 import { TIDE_ORCHESTRATION } from './core/orchestration.js';
+// v4.2.0：版本更新数据清洗（独立 _upgradeVer 标记，与 SAVE_VERSION 解耦）。
+//   chapterGates.js 不反向依赖 state.js，无循环。
+import { runUpgrades } from './core/chapterGates.js';
 
 export const SAVE_KEY = 'abyss_idle_v2';
 export const SAVE_VERSION = 6;
@@ -378,6 +381,10 @@ export function load() {
     //   旧档一次性归零，新档本就不会产生脏值。0/null/未声明一律归零（本就是「未计时」语义）。
     if (!(out.lazySince > 1e12)) out.lazySince = null;
     if (!(out.lazyLowSince > 1e12)) out.lazyLowSince = null;
+    // v4.2.0：版本更新一次性清洗——清掉旧档宗教早解锁残留标记（_religionHintSeen），
+    //   使宗教入口回到「章节门禁 + 真实解锁态」判定。独立 _upgradeVer 保证只清一次，
+    //   玩家后续自己触发的标记不会被反复误删。
+    runUpgrades(out);
     return out;
   } catch (err) {
     // v4.0.5：加载失败绝不静默丢档——先把手上的原始串备份到独立键（玩家仍可从备份导出/回滚），

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.1.2</title>
+<title>深渊效能工作台 v4.2.0</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-D-2zstnU.js"></script>
-  <link rel="stylesheet" href="./assets/index-CcCmBUjn.css">
+  <script defer src="./assets/index--xvbRgmy.js"></script>
+  <link rel="stylesheet" href="./assets/index-DbfDYLAN.css">
 </head>
 <body>
 <div id="app">
@@ -70,7 +70,7 @@
         <button class="btn" id="save-menu-btn" aria-label="存档：悬停展开存档列表" aria-haspopup="true" aria-expanded="false">💾 存档</button>
         <div class="save-menu-pop" id="save-pop">
           <div class="save-actions">
-            <button class="btn" id="save-new" title="新建一份全新初始存档入槽（不影响当前进度，读取即可开始新档；最多 3 个，已满则覆盖最早）">+ 新建初始空档</button>
+            <button class="btn" id="save-new" title="新建一份全新初始存档（不影响当前进度，读取即可开始新档；最多 3 个，满槽后需先删除旧档）">+ 新建</button>
             <button class="btn" id="import-btn2" title="导入外部存档为新快照（进入下方列表）">📥 导入</button>
             <button class="btn snap-reset" id="clear-game" title="删除当前游戏（快照保留）">🗑 清档</button>
           </div>
@@ -151,7 +151,8 @@
              attr(data-tip) 只能纯文本，故整行 data-tip 与 ::after 样式一并退役。 -->
         <div class="hero-row wage-help-zone" id="wage-help-zone">
           <span class="staff-label">线程: <b id="staff-count">0</b></span>
-          <span class="wage-help"><span id="staff-status" class="wage-badge" role="status" aria-label="满薪"></span><span class="wage-help-mark" id="wage-help-mark" aria-hidden="true">?</span></span>
+          <!-- v4.2.0 反馈⑥：绿色状态圆圈旁的「?」去掉（悬浮整行仍出气泡说明，信息不丢） -->
+          <span class="wage-help"><span id="staff-status" class="wage-badge" role="status" aria-label="满薪"></span></span>
           <!-- v4.0.4 反馈②：NEXT（下一线程 产出/消耗）挪到招募按钮左侧，价签只出现在按钮内，不再重复 -->
           <span class="next-recruit">
             <span id="staff-preview" class="nr-body" style="font-size:10.5px;color:var(--text-2)"></span>

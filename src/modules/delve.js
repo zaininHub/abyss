@@ -5,6 +5,7 @@ import { policyMult } from '../data/policies.js';
 import { fmt, fmtTime, echoLv, delveTechMult, researchMult, epStorageCap, corruptionCap, computeCps } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
 import { relicMult } from '../data/relics.js';
+import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：深潜绑第 11 章
 import {
   DELVE, levelNeed, vsPerCycle, epPerCycle, corruptPerCycle, delveUpgradeCost, milestoneVs,
 } from '../data/delve.js';
@@ -44,6 +45,8 @@ export function delveNextSettleSec() {
 // 解锁判定：ES ≥ 3 且 DM 资源点已发现 且 宗教已信奉（贯穿全流程的终点层）
 export function canUnlockDelve() {
   if (delveUnlocked()) return true;
+  // v4.2.0：深潜绑第 11 章「虚空」（穿越信号源=VS）——原资产条件保留，AND 章节门禁。
+  if (!gateOpen('delve', S)) return false;
   if ((S.es || 0) < DELVE.unlockEs) return false;
   if (!S.resDiscovered || !S.resDiscovered.dm) return false;
   return religionUnlocked();
@@ -51,6 +54,7 @@ export function canUnlockDelve() {
 
 export function unlockDelve() {
   if (delveUnlocked()) return { ok: false, reason: '已解锁' };
+  if (!gateOpen('delve', S)) return { ok: false, reason: '深潜需推进至第 11 章「虚空」' };
   if ((S.es || 0) < DELVE.unlockEs) return { ok: false, reason: `需转生 ES ≥ ${DELVE.unlockEs}` };
   if (!S.resDiscovered || !S.resDiscovered.dm) {
     // v3.0.3 第二批②：星尘金库买入即算发现 DM（与顶栏 anchorDone 同口径）
