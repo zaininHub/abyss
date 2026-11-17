@@ -158,9 +158,21 @@ const offline = await import('../src/modules/offline.js');
 test('D1 离线结算发了 EP，但 _gainRes 不涨（任务进度冻结）', () => withEcoFixture(() => {
   S.lastSeen = Date.now() - 3 * 3600 * 1000; // 离线 3 小时
   S.runTalent = null;
+  S.tech = { offline1: true }; // v4.2.4 反馈②：离线收益随「远程协作」解锁，夹具给基线 40%
   const before = (S._gainRes.ep) || 0;
   const r = offline.applyOffline();
   assert.ok(r && r.gain > 0, '夹具应产生离线收益');
   assert.equal((S._gainRes.ep) || 0, before, '离线收益不得推进「累计获得 EP」任务');
   assert.ok(S.ep > 0, '但 EP 余额本身要照常入账');
+}));
+
+test('D2 v4.2.4 反馈②：未研究「远程协作」时离线结算全为 0（EP/RP 双零，不弹离线记录）', () => withEcoFixture(() => {
+  S.lastSeen = Date.now() - 3 * 3600 * 1000;
+  S.runTalent = null;
+  S.tech = {}; // 未研究 offline1
+  const rpBefore = S.rp;
+  const r = offline.applyOffline();
+  assert.equal(r, null, 'EP/RP 双零 → 返回 null（不写离线记录/不弹日志）');
+  assert.equal(S.rp, rpBefore, 'RP 余额不动');
+  assert.equal(S.offHistory.length, 0, '不产生离线记录');
 }));

@@ -202,10 +202,13 @@ t('离线续航改由离线升级承担（v3.4.5 off_eff1~3 接力；v3.4.6 ⑧ 
   S.buildings = {}; S.upgrades = {}; S.milesDone = {}; S.tech = {}; S.offUpgrades = {}; S.runTalent = null;
   S.storyline = 'default'; S.religion = {}; S.delve = { up: {} }; S.prestigePoints = 0; S.offHistory = [];
   const base = offlineRate();
+  assert.equal(base, 0, 'v4.2.4 反馈②：未研究「远程协作」时离线效率为 0');
+  S.tech = { offline1: true }; // v4.2.4：40% 基线随科技解锁
+  assert.ok(Math.abs(offlineRate() - 0.4) < 1e-9, '「远程协作」自带 40% 基线');
   S.offUpgrades = { off_eff1: true }; const r1 = offlineRate();
   S.offUpgrades = { off_eff1: true, off_eff2: true }; const r2 = offlineRate();
   S.offUpgrades = { off_eff1: true, off_eff2: true, off_eff3: true }; const r3 = offlineRate();
-  assert.ok(r1 > base && r2 > r1 && r3 > r2, `离线效率应逐级提升：${base}→${r1}→${r2}→${r3}`);
+  assert.ok(r1 > 0.4 && r2 > r1 && r3 > r2, `离线效率应逐级提升：0.4→${r1}→${r2}→${r3}`);
   S.offUpgrades = { off_cap1: true };
   assert.equal(offlineCap(), 10 * 3600, 'v3.4.6 ⑧：离线上限硬封顶 10h（基础 8 + I 的 4 = 12 → 钳制 10）');
   S.offUpgrades = { off_cap1: true, off_cap2: true };

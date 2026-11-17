@@ -137,8 +137,17 @@ export function threadLevelFromXp(xp) {
 export function threadLevelMult(level) {
   return 1 + (Math.max(1, level) - 1) * B().levelMultPerLevel;
 }
+// v4.2.4 反馈①：班组未解锁（<10 线程且无持久标记）时线程不获取 XP——
+//   玩家在班组面板还看不见的阶段就收到「线程晋升」日志，体验割裂且等级加成凭空出现。
+//   XP 门控与 crewShown（crew.js）同口径，但不直接 import（crew → threadBinding 已存在依赖，
+//   反向 import 会成环）：读同一持久标记 S._crewUnlocked + 同一线程数阈值 BALANCE.thread.crewUnlockThreads。
+function crewGateOpen() {
+  if (S._crewUnlocked) return true;
+  return (S.cultists || []).length >= (BALANCE.thread.crewUnlockThreads || 10);
+}
 // 在岗每秒 XP 获取（合适岗位更快）—— 方向④「合适岗位增加的多」
 export function threadXpGainPerSec(c) {
+  if (!crewGateOpen()) return 0; // v4.2.4 反馈①：班组未解锁不积 XP
   if (!bindingActive(c)) return 0;
   let g = B().xpPerSec;
   if (isSuitable(c)) g *= B().xpSuitableMult;

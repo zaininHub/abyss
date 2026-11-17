@@ -368,8 +368,9 @@ export function clickMult() {
 }
 
 export function offlineRate() {
-  // v2.6.6 ①：离线收益整体下调——默认 25%（远低于在线），信号塔最高仅 100%（见 balance.js）
-  let m = 0.25;
+  // v4.2.4 反馈②：离线收益默认 0——研究「远程协作」（offline1，自带 40% 基线）后才起效，
+  //   再由离线升级（效率 I~III）逐级叠加；旧档未研究 offline1 但已购效率升级的，升级照常生效。
+  let m = 0;
   if (hasTech('offline1')) m = 0.4; // 钥匙科技自带 40% 档（PM §1.1 保留为前置）
   m = Math.max(m, fxValue('offlineRate')); // v2.1 建筑驱动：三档信号塔 60%/100%/200% 取最大不叠加
   if (S.runTalent === 'longlife') m *= 1.5;

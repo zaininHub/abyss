@@ -93,11 +93,28 @@ test('方向④：等级曲线单调、封顶；高等级加成更高', () => {
 
 test('方向④：合适岗位 XP 获取更快（匹配/领导 vs 不匹配）', () => {
   resetState();
+  // v4.2.4 反馈①：XP 门控与班组解锁对齐——夹具先给持久标记（达标语义）
+  S._crewUnlocked = true;
   const match = mkCultist({ profession: 'prospector', boundTo: 'vehicles' });
   const mismatch = mkCultist({ profession: 'prospector', boundTo: 'atrium' });
   assert.ok(threadXpGainPerSec(match) > threadXpGainPerSec(mismatch));
   const idle = mkCultist({ boundTo: null });
   assert.equal(threadXpGainPerSec(idle), 0); // 未绑定不获取 XP
+});
+
+test('v4.2.4 反馈①：班组未解锁（<10 线程）不获取 XP——面板看不见的阶段不升级', () => {
+  resetState();
+  S._crewUnlocked = false;
+  const c = mkCultist({ profession: 'prospector', boundTo: 'vehicles' });
+  S.cultists.push(c);
+  assert.equal(threadXpGainPerSec(c), 0, '未解锁班组 → XP 为 0');
+  for (let i = 0; i < 100; i++) tickThreads(10);
+  assert.equal(c.xp, 0, '跑 1000s 也不积 XP');
+  // 补满 10 条 → 达标即解锁（crewShown 语义：达标即置持久标记），开始积 XP
+  while (S.cultists.length < BALANCE.thread.crewUnlockThreads) {
+    S.cultists.push(mkCultist({ boundTo: 'hyper' }));
+  }
+  assert.ok(threadXpGainPerSec(c) > 0, '达标 10 条线程后 XP 恢复');
 });
 
 test('方向③：领导者提供全局加成，且封顶', () => {
@@ -187,6 +204,7 @@ test('经济接线：绑定不匹配线程后 自由EP产出↓、消耗↑（�
 
 test('经济接线：tickThreads 累积 XP 并刷新等级', () => {
   resetState();
+  S._crewUnlocked = true; // v4.2.4 反馈①：XP 门控与班组解锁对齐，夹具给达标标记
   const c = mkCultist({ profession: 'prospector', boundTo: 'vehicles' });
   S.cultists.push(c);
   // 跑足够长时间（匹配岗位 ×2.5 XP/s）

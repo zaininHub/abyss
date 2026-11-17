@@ -2567,9 +2567,10 @@ function updatePausePreview() {
   const cps = computeCps();
   const epPreview = Math.max(0, cps * eff * offlineEffRate()); // v3.2.4 反馈⑤：与离线结算统一口径
   const hours = eff / 3600;
-  const rpPreview = hours >= 1 ? Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1)) : 0;
+  const rpPreview = (S.tech && S.tech.offline1 && hours >= 1) ? Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1)) : 0; // v4.2.4 反馈②：与结算同口径（随「远程协作」解锁）
+  const offLocked = !(S.tech && S.tech.offline1);
   info.innerHTML = `已暂停（模拟离线）：<b class="mono">${fmtTime(dt)}</b><br>
-    预计离线收入：<b style="color:var(--green)">+${fmt(epPreview)} EP</b>${rpPreview > 0 ? ` · <b style="color:var(--cyan)">+${rpPreview} RP</b>` : ''}<br>
+    预计离线收入：${offLocked ? `<span style="color:var(--text-3)">未解锁（研究「远程协作」后生效）</span>` : `<b style="color:var(--green)">+${fmt(epPreview)} EP</b>${rpPreview > 0 ? ` · <b style="color:var(--cyan)">+${rpPreview} RP</b>` : ''}`}<br>
     <span style="font-size:11px;color:var(--text-3)">按离线效率 × 已暂停时长结算，受离线上限与 EP 存储上限约束</span>`;
 }
 
@@ -2600,7 +2601,8 @@ function settlePause() {
     }
     const hours = eff / 3600;
     let bonusRp = 0;
-    if (hours >= 1) {
+    // v4.2.4 反馈②：与 applyOffline 同口径——离线 RP 小时奖随「远程协作」一并解锁
+    if (S.tech && S.tech.offline1 && hours >= 1) {
       bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
       if (bonusRp > 0) { addRp(bonusRp); logPts.push(`+${bonusRp} RP`); } // v3.0.8：受 RP 上限约束
     }

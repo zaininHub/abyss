@@ -22,7 +22,9 @@ export function applyOffline() {
   const projDone = 0;
   const hours = eff / 3600;
   let bonusRp = 0;
-  if (hours >= 1) {
+  // v4.2.4 反馈②：离线 RP 小时奖随「远程协作」一并解锁——未研究科技时整段离线结算为 0，
+  //   与「离线收益默认 0，升级后才有」口径一致（避免 EP 没了、RP 却照发的半解锁态）。
+  if (S.tech && S.tech.offline1 && hours >= 1) {
     bonusRp = Math.floor(hours * 2 * (S.runTalent === 'fortunate' ? 2 : 1));
     if (bonusRp > 0) addRp(bonusRp); // v2.8.27 ②：RP 上限
   }
@@ -49,7 +51,7 @@ export function renderOfflinePanel(container) {
   // 改为静态口径说明，实际收益在回程离线结算时一次性落账（经 addEp，受 EP 存储上限约束）。
   let html = `<div class="off-stat"><span>当前离线效率</span><b>${Math.round(effRate * 100)}%</b></div>
     <div class="off-stat"><span>离线上限</span><b>${hours} 小时</b></div>
-    <div class="off-stat"><span>离线收益</span><b>回程按效率×上限结算（受 EP 存储上限约束）</b></div>
+    <div class="off-stat"><span>离线收益</span><b>${effRate > 0 ? '回程按效率×上限结算（受 EP 存储上限约束）' : '未解锁——研究科技「远程协作」后开始积累'}</b></div>
     <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">离线升级</div>
     <div id="offline-upg-list"></div>`;
   html += `<div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">最近离线记录</div>`;
