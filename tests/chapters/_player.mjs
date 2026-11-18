@@ -260,7 +260,8 @@ export function playerInit(cfg = {}) {
   };
 
   // ---- v4.2.6 分章节推演补充动作（全部产品真实入口）----
-  // 章节条件不只是晋升：ch3/ch10 要 techCount>=25/45（6 科技 + unlockedBuildings 数）、
+  // 章节条件不只是晋升：ch3/ch10 要 techCount>=8/38（v4.2.8：科技 + unlockedBuildings 数，
+  // ch3 = 5 科技（deep_space 需 1000 DM 属载具内容不入门槛）+ 4 栋无门槛建筑，需 m3/cps 1e4）、
   // ch5/ch9 要 expeditionsDone>=8/20、ch16/ch17 要信仰、ch18 要 end_shrine/true_end。
   // 自动玩家每决策周期（6 tick）除基础购买外，按「当前可负担」推进这些维度；
   // 所有动作都走产品入口（buyTech / buyUnlockV21+buyV21Building 的 DOM 委托等效 /
@@ -268,8 +269,44 @@ export function playerInit(cfg = {}) {
   window.__chapterTick = () => {
     const S = window.S, q = window.__qa, st = window.__stats;
     st.chapBuys = st.chapBuys || 0; st.chapTechs = st.chapTechs || [];
+    // ⓪ 入口升级：晋升重置清空 upgrades（RUN_RESET_KEYS 语义：仓库是本局投入），
+    //   anchorDone('rp') 随之回落 false → 效能建筑分区（v21）锁死，
+    //   techCount 卡在 5 科技无法过 ch3 gate（v4.2.8 校准二轮探针实锤：bld=[无] 恒 130 天）。
+    //   修复 = 经产品真实入口重购「矩阵存储库」rp_vault（RP 解锁唯一入口）。
+    //   只买 rp_vault 不买 atrium：蒸馏满仓涓流每 5s 烧 50K EP（三轮探针实锤——
+    //   低 CPS 阶段 ep 永远卡在 0~50K 区间，产出升级 60% 水位永不触发，CPS 恒 88 死锁）。
+    //   不设 cap 水位门槛：rp_vault 15 万固定价在 ep 百万级时占比极小，但它是 techCount
+    //   唯一增长路径（四轮探针实锤——60% 水位被 capCands 仓储循环压制，永不触发）。
+    try {
+      const epCap = q.epStorageCap();
+      // v4.2.8 六轮探针抓坑：upgrades.rp_vault 是 undefined（晋升重置清空后未写过），
+      //   `undefined < 1` === false —— 入口购买从未触发。必须 `|| 0` 归一后比较。
+      if (((S.upgrades && S.upgrades.rp_vault) || 0) < 1 && S.ep > epCap * 0.5) {
+        const u = q.UPGRADES.find(x => x.id === 'rp_vault');
+        const c = u && q.bulkCostCalc(u, 1);
+        if (u && Number.isFinite(c) && c <= S.ep * 0.9) {
+          const r = q.sim.buyUpgrade(u);
+          if (!(r === false || (r && r.ok === false))) st.chapBuys++;
+        }
+      }
+      // RP 满仓且 EP 低于水位时经产品入口（快捷开关 [data-qs=atrium]）关蒸馏防 EP 抽血；
+      // EP 回升过 80% 水位再开回来（研究升级还需要 RP 产出）。
+      try {
+        const qs = document.querySelector('#quick-switches [data-qs="atrium"]');
+        if (qs) {
+          const rpFull = (S.rp || 0) >= q.rpCap();
+          const epLow = S.ep < epCap * 0.6, epOk = S.ep > epCap * 0.8;
+          if (rpFull && epLow && S.atriumOn !== false) { qs.click(); st.atriumToggles = (st.atriumToggles || 0) + 1; }
+          else if (rpFull && epOk && S.atriumOn === false) { qs.click(); st.atriumToggles = (st.atriumToggles || 0) + 1; }
+        }
+      } catch (e) { if (st.errors.length < 12) st.errors.push('atriumQs:' + e.message); }
+    } catch (e) { if (st.errors.length < 12) st.errors.push('chapEntry:' + e.message); }
     // ① 钥匙科技：买得起就买（deep_space 180 RP + 5e6 EP + 1000 DM 是远征前置；
     //    offline1 顺带解锁离线；entropy_reduce/chaos_shield 补 techCount）
+    // v4.2.8 校准根因修复：自动玩家从不切 tech tab → dirty.tech 恒 false → renderTech 从未跑
+    //   → #tech-tree 恒空 → el.click() 永远找不到目标，科技一个都没买（ch2 推演全程 chapter=2，
+    //   RP 攒到 301 也无法推进 gate 8）。改走产品购买函数 q.buyTech（与 v3110 买 auto_tech 同一入口，
+    //   main.js QA 钩子原样导出玩家购买函数），并在前置检查里自行判定可负担。
     try {
       for (const t of q.getTechs()) {
         if (S.tech[t.id]) continue;
@@ -277,8 +314,12 @@ export function playerInit(cfg = {}) {
         const c = t.cost || {};
         const rp = Math.ceil((c.rp || 0) * 1), ep = c.ep || 0, dm = c.dm || 0, es = c.es || 0;
         if (S.rp >= rp && S.ep >= ep && (S.dm || 0) >= dm && (S.es || 0) >= es) {
-          const el = document.querySelector(`#tech-tree [data-tech="${t.id}"]`);
-          if (el) { el.click(); st.chapBuys++; if (!st.chapTechs.includes(t.id)) st.chapTechs.push(t.id); }
+          const before = Object.keys(S.tech).length;
+          q.buyTech(t, null); // 产品入口内部自行判定前置与可负担，未满足时无副作用
+          if (Object.keys(S.tech).length > before) {
+            st.chapBuys++;
+            if (!st.chapTechs.includes(t.id)) st.chapTechs.push(t.id);
+          }
         }
       }
     } catch (e) { if (st.errors.length < 12) st.errors.push('chapTech:' + e.message); }
@@ -319,8 +360,8 @@ export function playerInit(cfg = {}) {
       }
     } catch (e) { if (st.errors.length < 12) st.errors.push('chapExp:' + e.message); }
     // ④ 永恒矩阵：ES 闲着就是浪费——链式推演的 carry ES 必须被真实消费才能复利到 CPS
-    //    （ch2/ch3 校准实测：es=93/262 全程闲置，ch3 的 techCount>=25 需 CPS>=1e7
-    //    解锁建筑，永不达标）。优先买最便宜的永久增益项，跳过皮肤（一次性，不入战力）。
+    //    （ch2/ch3 校准实测：es=93/262 全程闲置；v4.2.8 后 techCount>=16 需 CPS>=1e6
+    //    过 m5 解锁建筑，永恒「eff」等级是爬坡主力）。优先买最便宜的永久增益项，跳过皮肤（一次性，不入战力）。
     try {
       if ((S.es || 0) > 0 && q.ETERNALS && q.buyEternal) {
         const eternal = S.eternal = S.eternal || {}; // 手造种子缺键兜底（load 语义等价）

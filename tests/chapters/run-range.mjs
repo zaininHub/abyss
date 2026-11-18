@@ -71,7 +71,8 @@ async function runChapter(page, { n, maxDays }) {
     snap.day = d;
     daily.push({ day: d, ep: snap.ep, cps: snap.cps, chapter: snap.chapter,
       prestige: snap.prestige, es: snap.es, rp: snap.rp, projectsDone: snap.projectsDone,
-      buys: snap.totalBuys, errors: snap.stats.errors.length });
+      buys: snap.totalBuys, errors: snap.stats.errors.length,
+      prestigeEsGain: snap.prestigeEsGain || 0 }); // v4.2.8：超时路径 final=daily 末项也带 ES 奖励累计（修报告口径丢失）
     // 章节推进检测：S.chapter 真实变为 N+1（帧系统 chapter 系统驱动）
     if (!advanced && parseInt(String(snap.chapter), 10) >= n + 1) {
       advanced = true;

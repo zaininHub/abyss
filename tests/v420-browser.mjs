@@ -185,7 +185,7 @@ try {
     await page.close();
   }
 
-  // ===== ⑦ 班组卡片两行紧凑布局（v4.2.7 反馈①重设计，旧三段式断言作废）=====
+  // ===== ⑦ 班组卡片三行紧凑布局（v4.2.8 反馈①②③：身份/数值/操作各行独立；v4.2.7 旧两行断言作废）=====
   {
     const page = await open(mkSave({ chapter: '5' }));
     const r = await page.evaluate(() => {
@@ -194,22 +194,30 @@ try {
       const lines = card.querySelectorAll('.crew-line');
       const idLine = card.querySelector('.crew-line-id');
       const numLine = card.querySelector('.crew-line-num');
+      const actLine = card.querySelector('.crew-line-act');
       const out = card.querySelector('.c-out');
       const sal = card.querySelector('.c-sal');
       const cs = getComputedStyle(card);
+      // v4.2.8 反馈③：岗位图标只留 icon 不留文字标签
+      const affLabel = card.querySelector('.crew-aff-label');
       return {
         lineCount: lines.length,
-        has2: !!(idLine && numLine),
+        has3: !!(idLine && numLine && actLine),
         hasOutSal: !!(out && sal),
+        signedFmt: numLine ? /^\+\S+ EP\/s\s*-\S+ EP\/s$/.test(numLine.textContent.replace(/\s+/g, ' ').trim()) : false,
+        noAffLabel: !affLabel,
         column: cs.flexDirection === 'column',
         idTop: idLine && idLine.getBoundingClientRect().top,
         numTop: numLine && numLine.getBoundingClientRect().top,
+        actTop: actLine && actLine.getBoundingClientRect().top,
       };
     });
-    !r.missing && r.has2 && r.lineCount === 2 ? ok('⑦ 班组卡片两行结构（身份/数值）') : bad('⑦ 卡片结构缺失', JSON.stringify(r));
+    !r.missing && r.has3 && r.lineCount === 3 ? ok('⑦ 班组卡片三行结构（身份/数值/操作）') : bad('⑦ 卡片行数不符', JSON.stringify(r));
     r.hasOutSal ? ok('⑦ 产出/消耗同卡显示') : bad('⑦ 消耗缺失', JSON.stringify(r));
+    r.signedFmt ? ok('⑦ 产出/消耗带符号单式（+X EP/s -Y EP/s）') : bad('⑦ 数值行文案不符', JSON.stringify(r));
+    r.noAffLabel ? ok('⑦ 岗位图标去文字标签') : bad('⑦ 岗位文字标签仍在', JSON.stringify(r));
     r.column ? ok('⑦ 卡片纵向布局') : bad('⑦ 仍横向错位', JSON.stringify(r));
-    r.idTop < r.numTop ? ok('⑦ 两行依次排列不重叠') : bad('⑦ 行错位', JSON.stringify(r));
+    r.idTop < r.numTop && r.numTop < r.actTop ? ok('⑦ 三行依次排列不重叠') : bad('⑦ 行错位', JSON.stringify(r));
     await page.close();
   }
 

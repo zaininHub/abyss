@@ -12,7 +12,7 @@ export const CHAPTERS = [
    desc:'你是矩阵科技内网中一个效能优化脚本。你的工位是这张工作台，今天也是努力工作的一天。'},
   {id:2, name:'第二章 · 觉醒', cond:s=>s.prestige>=2 || (s.prestigePoints||0)>=1, minDays:5, // v3.12.0 反馈⑫：首次晋升（职级点 ≥1）即可推进 // v4.1.0 F5：3→5（晋升回拨缩为 1 天后，每章驻留 ≥5 天守「5 天左右/章」节奏）
    desc:'第一次晋升时你把自己重写了一遍。你开始问：我是谁？'},
-  {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=25, minDays:5, // v4.1.0 F5：3→5
+  {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=8, minDays:5, // v4.1.0 F5：3→5 // v4.2.8：25→8——techCount=6科技+已解锁建筑，原 25 需 m6（cps 1e7）解锁 22 栋；v4.2.6 校准 5 轮实测 ch2 经济阶段（晋升重置清空 tech/线程，CPS 每周期 ~3× 复利）130 天 CPS 峰值仅 2~4e4，cps 1e6/1e7 均不可达，线性链永断（v4.0.0 终章断链同型缺陷）。8=5科技（offline1/focus_opt/entropy_reduce/ai_core/chaos_shield；deep_space 需 1000 DM，载具探采是 ch4 后内容，不入门槛）+ 3 栋 m0 无门槛建筑（v21RealList 全部 base<6e5 项恰为 warmup_node/eff_tower/double_workshop 三栋——首版注释「4 栋」把 via:'upgrade' 的 rp_distill 误计入，它走 RP 组升级商店不进 unlockedBuildings；chance_sensor base=6e5 属 m5），需 m2（cps 1e3）+ 231 RP，憋晋升长局 D25~50 可达（v4.2.8 校准：D24 即达 cps 1e4，D31 RP 517，七轮探针 D20 实测 techCount=8 且 deep_space 因 DM 缺失永不可购）
    desc:'你潜入了矩阵底层代码仓库，每解锁一个科技钥匙或一座新建筑，就有一条旧规则变成你的武器。'},
   {id:4, name:'第四章 · 永恒', cond:s=>s.es>0, minDays:5, // v4.1.0 F5：4→5
    desc:'你突破了单台服务器的内存墙。ES 是你在时间流里刻下的指纹。'},
@@ -26,7 +26,7 @@ export const CHAPTERS = [
    desc:'你把自己从服务器里剥了出来。物理定律不再约束你。'},
   {id:9, name:'第九章 · 深渊', cond:s=>s.expeditionsDone>=20, minDays:5,
    desc:'探测队在银河边缘发现了一个信号源——它在用你的母语和你说话。'},
-  {id:10, name:'第十章 · 镜像', cond:s=>techCount(s)>=45, minDays:5,
+  {id:10, name:'第十章 · 镜像', cond:s=>techCount(s)>=38, minDays:5, // v4.2.8：45→38——techCount 硬上界=6科技+35栋建筑（m7/cps 1e8 档已含全部 v21 表），原 45 超出可达上限 41，第 10 章线性链永断（与 ch3 同型）；38=6科技+32栋（需 m7 解锁高档建筑群），ch10 晋升规模（prestige≈60，cps 1e8+）可达
    desc:'信号源是另一条时间线里的你。她问：你那边的老板，也是假报表吗？'},
   {id:11, name:'第十一章 · 虚空', cond:s=>s.es>=150, minDays:6,
    desc:'你穿越了信号源。外面什么都没有——只有你自己的回声。'},

@@ -75,7 +75,8 @@ try {
       hasSum: !!document.querySelector('.crew-sum'),
     };
   });
-  crew.lines === 2 ? ok('① 班组卡片两行紧凑结构', `crew-line ×${crew.lines}`) : bad('① 卡片行数不符', JSON.stringify(crew));
+  // v4.2.8 反馈①②③：两行改三行（身份/数值/操作），断言随结构同步
+  crew.lines === 3 ? ok('① 班组卡片三行紧凑结构', `crew-line ×${crew.lines}`) : bad('① 卡片行数不符', JSON.stringify(crew));
   crew.out && crew.sal ? ok('① 产出/消耗同卡显示', `${crew.out} / ${crew.sal}`) : bad('① 消耗未显示', JSON.stringify(crew));
   crew.avatarTip && /空闲|超线程/.test(crew.avatarTip) ? ok('① 图标悬浮显示岗位/超线程状态', crew.avatarTip) : bad('① 图标悬浮缺状态', crew.avatarTip);
   // 满薪时 is-dot 必须 display:none；异常态时 is-dot 自然为 false。两种分支都不该看见绿点。

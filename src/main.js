@@ -12,7 +12,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
-  corruptionCap, researchMult, clampRunResourceBalances, spendRes, esCost } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径） // v4.2.6：esCost 走 economy 单参包装（闭包读 S.eternal，QA 钩子与产品读侧同源）
+  corruptionCap, researchMult, clampRunResourceBalances, spendRes, esCost, esGain } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径） // v4.2.6：esCost 走 economy 单参包装（闭包读 S.eternal，QA 钩子与产品读侧同源） // v4.2.8：esGain 供分章节推演累计晋升 ES 奖励（纯读函数）
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -651,9 +651,8 @@ function renderTop() {
   if (hPt) hPt.textContent = fmtRes(S.pt || 0) + ' / ' + fmtRes(ptCap()); // v2.8.27 ②：PT 存储上限（饵料仓库扩容）
   if (hDm) hDm.textContent = fmtRes(S.dm || 0) + ' / ' + fmtRes(dmCap()); // v2.8.27 ②：DM 存储上限（星尘金库扩容）
   if (hBuff) hBuff.innerHTML = buffTag;
-  // v2.1 P1：科技树页头常显 RP / ES
-  const tRp = document.getElementById('tech-rp');
-  if (tRp) tRp.textContent = fmt(S.rp);
+  // v2.5 ⑦：主面板离线展示（离线效率/上限/预期）整块移除——离线玩法保留在「离线」tab
+  // v4.2.8 反馈④：科技树页头「当前 N RP」文案已下线（顶栏已有同口径），tech-rp 元素与更新逻辑一并移除
   const tEs = document.getElementById('tech-es');
   if (tEs) tEs.textContent = fmt(S.es);
   // v2.5 ⑦：主面板离线展示（离线效率/上限/预期）整块移除——离线玩法保留在「离线」tab
@@ -2668,6 +2667,9 @@ function checkMiles() {
       const rpGain = Math.ceil(m.rp * (S.runTalent === 'fortunate' ? 2 : 1) * (1 + elv('mile') * 0.05));
       addRp(rpGain); // v3.0.8：受 RP 上限约束
       log(`里程碑：每秒 ${fmt(m.cps)}，+${rpGain} RP`, 'good');
+      // v4.2.8：里程碑数变化影响 v21 锁卡「需里程碑 N」门控与 RP 加成卡灰态——
+      //   不置脏则锁卡 classList 停留在旧态（真实玩家与自动玩家都点不动新解锁的建筑锁卡）
+      dirty.shop = true; dirty.rp = true;
     }
   }
 }
@@ -2987,7 +2989,7 @@ if (typeof window !== 'undefined') {
     crewOf, crewBoundTotal, crewIdle, setCrew,
     assistantCount, assistantCost, assistantBuyState, actionCounts, totalActionCount,
     stalledActions, actionAvailable, autoBuildActivable, getTechs, buyTech,
-    ETERNALS, esCost, buyEternal, // v4.2.6：分章节推演自动玩家消费 ES 的产品真实入口（esCost 为 economy 单参包装，读 S.eternal 同产品读侧）
+    ETERNALS, esCost, buyEternal, esGain, // v4.2.6：分章节推演自动玩家消费 ES 的产品真实入口（esCost 为 economy 单参包装，读 S.eternal 同产品读侧）；v4.2.8：esGain 供推演按晋升时点累计 ES 奖励（原来 QA 未导出，prestigeEsGain 恒 0，预算校验 esDelta 失真）
     CHAPTERS, // v4.2.6：分章节推演读「下一章 cond 已满足」判定憋晋升恢复点（产品真源，不复制条件）
     RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
     resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,

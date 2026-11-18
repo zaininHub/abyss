@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.2.7</title>
+<title>深渊效能工作台 v4.2.8</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-DVo1B15V.js"></script>
-  <link rel="stylesheet" href="./assets/index-CiydtFfy.css">
+  <script defer src="./assets/index-DknY29x7.js"></script>
+  <link rel="stylesheet" href="./assets/index-Iaojg2xu.css">
 </head>
 <body>
 <div id="app">
@@ -201,17 +201,20 @@
     <!-- 中列：标签页 -->
     <div class="right-col">
       <div class="tabs">
+        <!-- v4.2.8 反馈：大模块 tab 按解锁顺序从左往右排列（解锁章序 = CHAPTER_UNLOCKS / 真实门控链）：
+             商店/科技树/研究点 ch1 → 集市 首晋升常驻 → 异兽 ch2 → 星图 ch3 → 宗教 ch4 → 裂隙 ch5 →
+             政策 ch7 → 遗物 ch9 → 深潜 ch11 -->
         <button class="btn on" id="btn-shop">商店</button>
         <button class="btn" id="btn-tech">科技树</button>
         <button class="btn" id="btn-rp">研究点</button>
-        <button class="btn" id="btn-relics">遗物</button>
+        <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
         <button class="btn" id="btn-pets">异兽</button>
         <button class="btn" id="btn-expedition">星图</button>
         <button class="btn" id="btn-religion">宗教</button>
-        <button class="btn" id="btn-policy">政策</button>
-        <button class="btn" id="btn-delve">深潜</button>
         <button class="btn" id="btn-rift-tab">裂隙</button>
-        <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <button class="btn" id="btn-policy">政策</button>
+        <button class="btn" id="btn-relics">遗物</button>
+        <button class="btn" id="btn-delve">深潜</button>
         <!-- v4.2.X：轮回 tab 已移除，回响商店并入晋升面板 -->
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
              保留隐藏桩元素与 switchTab 绑定（兼容程序化切换与既有测试） -->
@@ -239,7 +242,7 @@
 
         <!-- 科技树 -->
         <div class="tab-pane" id="tab-tech">
-          <h3>科技树 · 当前 <span id="tech-rp" class="mono" style="color:var(--cyan)">0</span> RP</h3>
+          <h3>科技树</h3>
           <div id="tech-tree" class="tech-grid"></div>
           <h3 style="margin-top:12px" id="eternal-title">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES <span style="font-size:10.5px;color:var(--text-3);font-weight:400;margin-left:6px">主打 AI 能力与前期丝滑</span></h3>
           <div id="eternal-list" class="tech-grid"></div>

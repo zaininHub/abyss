@@ -2029,14 +2029,15 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .crew-mood { font-size: 10px; color: var(--text-3); font-weight: normal; }
 .crew-lv { font-family: monospace; color: var(--text-3); flex: none; font-size: 11px; }
 .crew-aff-wrap { display: inline-flex; align-items: center; gap: 2px; min-width: 0; margin-left: auto; }
-.crew-aff-wrap .crew-affinity { font-size: 11px; line-height: 1; flex: none; }
-.crew-aff-label { font-size: 10px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; }
+.crew-aff-wrap .crew-affinity { font-size: 11px; line-height: 1; flex: none; cursor: help; }
 .crew-num { font-size: 10.5px; color: var(--text-2); white-space: nowrap; }
 .crew-num b { font-size: 11.5px; font-weight: 600; font-family: monospace; }
 .crew-num b.c-out { color: var(--cyan, var(--accent)); }
 .crew-num b.c-sal { color: var(--bad); }
-.crew-line-num select[data-bind] { font-size: 10.5px; max-width: 92px; margin-left: auto; }
-.crew-line-num .btn { font-size: 10.5px; padding: 2px 6px; margin-left: 0 !important; }
+.crew-line-num { flex-wrap: nowrap; } /* v4.2.8 反馈②：+X/-Y 同式单行不换行 */
+.crew-line-act { gap: 6px; }
+.crew-line-act select[data-bind] { font-size: 10.5px; max-width: 110px; flex: 1 1 auto; min-width: 0; }
+.crew-line-act .btn { font-size: 10.5px; padding: 2px 6px; margin-left: auto !important; }
 /* v4.2.7 反馈③：班组折叠标题（与 .orch-block-title 同构，复用 rp-fold-arrow 箭头） */
 .crew-block-title { cursor: pointer; user-select: none; }
 .crew-block-title:hover { color: var(--cyan-2); }

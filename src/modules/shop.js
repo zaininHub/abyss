@@ -1713,10 +1713,17 @@ export const RESEARCH_RES_ANCHORS = Object.freeze({ faith: 'faith' });
 //   但这些玩法各自有自己的解锁链；宿主未开就摆出升级卡，玩家既买不了（或买了没处用）也看不懂。
 //   谓词只读已持久化字段（与 policies unlock 同口径），模块解锁当帧由既有门控刷新链带动重建。
 const RESEARCH_MODULE_GATES = {
-  rp_dm:         (s) => !!s._riftSeen,                                  // 载具 DM：裂隙触发（探采平台解锁）
+  // v4.2.8：星尘精炼门控收紧——裂隙触发只解锁探采平台，DM 真实入账（顶栏出现）才显示该项；
+  //   旧口径 _riftSeen 会在玩家尚未购入载具时提前摆出（用户实测：DM 未解锁即见「星尘精炼」）
+  rp_dm:         (s) => anchorDone('dm', s),                            // 载具 DM：DM 资源真实发现（顶栏首次入账）
   rp_expedition: (s) => starChartUnlocked(s),                           // 远征：星图已开启
   rp_bazaar:     (s) => !!(s.bazaar && s.bazaar.unlocked),              // 集市：职级点买断后
   rp_ai:         (s) => !!(s.tech && s.tech.ai_core),                   // AI 助手：科技树「AI 管理核心」（rp_ai_unit 已挂 requiresTech，双保险）
+  // v4.2.8：星际资源类研究——星图开启只代表「能去」，星际专属资源真实入账（首支远征返航）才算「已有」；
+  //   未派过远征时星际资源全为 0，+6% 产出的升级卡提前出现属于未解锁资源提前解锁
+  rp_starres:    (s) => (s.expeditionsDone || 0) > 0,                   // 星蕴提纯：星际专属资源（首支远征返航）
+  rp_colony2:    (s) => Object.keys(s.colonies || {}).some(k => s.colonies[k]), // 星殖民拓：已拥有殖民地
+  rp_cosmos2:    (s) => Object.keys(s.colonies || {}).some(k => s.colonies[k]), // 宇宙工程：已拥有殖民地
 };
 export function researchResourceUnlocked(u, state = S) {
   const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];

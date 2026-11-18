@@ -27,14 +27,18 @@ export const BUDGET = {
   //   esDelta 口径 = 晋升奖励累计（esGain 瞬时和），不扣永恒消费（v4.2.6 校准①）
   1: { minPrestige: 1, es: [8, 40], pp: [1, 6], rp: [1, 20], maxDays: 92,
     carry: { prestige: 0, es: 0, prestigePoints: 0 } },
-  // 第 2 章：进入时 prestige≈1（carry 链保底 2）。憋晋升冲 techCount>=25（CPS 1e7，m6），
-  //   一次大晋升 need(1)=1.2e10 → ES≈24。110 天实测 peak 2.3e4 只到 m4，憋晋升后单冲曲线待第四轮实测
+  // 第 2 章：进入时 prestige≈1（carry 链保底 2）。憋晋升冲 techCount>=8（v4.2.8：5 科技
+  //   （deep_space 需 1000 DM 属 ch4+ 载具内容不入门槛）+ 3 栋 m0 无门槛建筑（v21RealList
+  //   全部 base<6e5 项恰为 warmup_node/eff_tower/double_workshop——首版「4 栋」把 via:'upgrade'
+  //   的 rp_distill 误计入，它走 RP 组升级商店不进 unlockedBuildings）。
+  //   原 25（cps 1e7/m6）v4.2.6 校准 5 轮实测 ch2 经济阶段永不可达——晋升重置清空 tech/线程，
+  //   CPS 每晋升周期仅 ~3× 复利，130 天峰值 2~4e4。v4.2.8 校准：D24 cps 1e4（m3）、D31 RP 517 够全科技。
   2: { minPrestige: 1, es: [15, 200], pp: [1, 12], rp: [2, 80], maxDays: 130,
     carry: { prestige: 2, es: 32, prestigePoints: 2 } },
-  // 第 3 章：prestige 6→12（carry 垫底 6）。同 ch2 卡 techCount>=25（CPS 1e7），
-  //   carry ES 210 消费成永恒等级 → CPS 基数更高，爬 1e7 快于 ch2
+  // 第 3 章：prestige 6→8（carry 垫底 6）。同 ch2 卡 techCount>=8（5 科技 + 3 栋 m0 建筑），
+  //   carry ES 210 消费成永恒等级 → CPS 基数更高，过门快于 ch2；章内二升收尾
   3: { minPrestige: 2, es: [40, 400], pp: [2, 24], rp: [3, 150], maxDays: 130,
-    carry: { prestige: 6, es: 210, prestigePoints: 6 } },
+    carry: { prestige: 8, es: 320, prestigePoints: 8 } },
   // 第 4 章：prestige 12→17。need≈1.47e11..2.32e11 → 单次 ES≈92..116；
   //   第 5 章条件 expeditionsDone>=8——ch4 起自动玩家开启远征点击（expeditionsDone 随推演累计）
   4: { minPrestige: 5, es: [220, 800], pp: [3, 60], rp: [3, 180], maxDays: 16,

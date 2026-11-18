@@ -176,8 +176,9 @@ try {
   });
   if (boot.hasS && boot.hasQa) ok('游戏状态与 QA 句柄就绪', `chapter=${boot.chapter} cps=${fx(boot.cps)}`);
   else bad('启动句柄缺失', JSON.stringify(boot));
-  if (boot.techCount >= 45) ok('种子档科技+建筑计数满足第 10 章门槛', `techCount=${boot.techCount}`);
-  else bad('种子档 techCount 不足，章节链会断在第 10 章', `${boot.techCount} < 45`);
+  // v4.2.8：第 10 章门槛 45→38（45 超出 techCount 硬上界 41=6 科技+35 栋，线性链永断）
+  if (boot.techCount >= 38) ok('种子档科技+建筑计数满足第 10 章门槛', `techCount=${boot.techCount}`);
+  else bad('种子档 techCount 不足，章节链会断在第 10 章', `${boot.techCount} < 38`);
 
   // ---------- B. 逐日推进到终章 ----------
   console.log('\n[B] 章节链推进（逐帧虚拟墙钟）');

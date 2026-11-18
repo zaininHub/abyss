@@ -97,24 +97,24 @@ export function renderCrewPanel(container) {
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
-    // v4.2.7 反馈①：卡片重设计——旧版三段式（头像/名字 → 产出 → 操作）在两列窄卡里
-    //   纵向散成 4 行且头像与文字 baseline 错位。改为「一行身份 + 一行数值/操作」的紧凑栅格：
-    //   ① 身份行：⚡状态图标（悬浮显示岗位/超线程/心情详情）+ 线程名 + Lv.10 + 岗位标签；
-    //   ② 数值行：产出 X EP/s · 消耗 Y EP/s + 晋升领导按钮（按钮下沉到底线，消除错位）。
+    // v4.2.8 反馈①②③：卡片三行紧凑栅格——
+    //   ① 身份行：⚡心情图标（悬浮显示 岗位/超线程/心情/领导 完整状态）+ 线程名 + Lv + 擅长岗位图标（去文字，悬浮读名）；
+    //   ② 数值行：+X EP/s -Y EP/s（带符号同式）；
+    //   ③ 操作行：岗位下拉 + 晋升领导按钮 同排。
     //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
-    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''}`;
+    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''} · 擅长：${escAttr(affinityName)}`;
     cards += `<div class="crew-card">
       <div class="crew-line crew-line-id">
         <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
         <span class="crew-name">${c.name}</span>
         <span class="crew-lv">Lv.${lvl}</span>
-        <span class="crew-aff-wrap">${affinityIcon}<span class="crew-aff-label">${escAttr(affinityName)}</span></span>${leaderBadge}
+        <span class="crew-aff-wrap">${affinityIcon}</span>${leaderBadge}
       </div>
       <div class="crew-line crew-line-num">
-        <span class="crew-num">产出 <b class="c-out">0</b> EP/s</span>
-        <span class="crew-num">消耗 <b class="c-sal">0</b> EP/s</span>
-        ${bindCtrl}${leaderBtn}
+        <span class="crew-num">+<b class="c-out">0</b> EP/s</span>
+        <span class="crew-num">-<b class="c-sal">0</b> EP/s</span>
       </div>
+      <div class="crew-line crew-line-act">${bindCtrl}${leaderBtn}</div>
     </div>`;
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
