@@ -185,27 +185,31 @@ try {
     await page.close();
   }
 
-  // ===== ⑦ 班组卡片三段式布局（头像与文字不再错位）=====
+  // ===== ⑦ 班组卡片两行紧凑布局（v4.2.7 反馈①重设计，旧三段式断言作废）=====
   {
     const page = await open(mkSave({ chapter: '5' }));
     const r = await page.evaluate(() => {
       const card = document.querySelector('.crew-card:not(.more)');
       if (!card) return { missing: true };
-      const head = card.querySelector('.crew-card-head');
-      const out = card.querySelector('.crew-card-out');
-      const ops = card.querySelector('.crew-card-ops');
+      const lines = card.querySelectorAll('.crew-line');
+      const idLine = card.querySelector('.crew-line-id');
+      const numLine = card.querySelector('.crew-line-num');
+      const out = card.querySelector('.c-out');
+      const sal = card.querySelector('.c-sal');
       const cs = getComputedStyle(card);
       return {
-        has3: !!(head && out && ops),
+        lineCount: lines.length,
+        has2: !!(idLine && numLine),
+        hasOutSal: !!(out && sal),
         column: cs.flexDirection === 'column',
-        headTop: head.getBoundingClientRect().top,
-        outTop: out.getBoundingClientRect().top,
-        opsTop: ops.getBoundingClientRect().top,
+        idTop: idLine && idLine.getBoundingClientRect().top,
+        numTop: numLine && numLine.getBoundingClientRect().top,
       };
     });
-    !r.missing && r.has3 ? ok('⑦ 班组卡片三段式结构（头部/产出/操作）') : bad('⑦ 卡片结构缺失', JSON.stringify(r));
+    !r.missing && r.has2 && r.lineCount === 2 ? ok('⑦ 班组卡片两行结构（身份/数值）') : bad('⑦ 卡片结构缺失', JSON.stringify(r));
+    r.hasOutSal ? ok('⑦ 产出/消耗同卡显示') : bad('⑦ 消耗缺失', JSON.stringify(r));
     r.column ? ok('⑦ 卡片纵向布局') : bad('⑦ 仍横向错位', JSON.stringify(r));
-    r.headTop < r.outTop && r.outTop < r.opsTop ? ok('⑦ 三段依次排列不重叠') : bad('⑦ 段落错位', JSON.stringify(r));
+    r.idTop < r.numTop ? ok('⑦ 两行依次排列不重叠') : bad('⑦ 行错位', JSON.stringify(r));
     await page.close();
   }
 

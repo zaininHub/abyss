@@ -112,12 +112,14 @@ try {
         && document.getElementById('focus-buy').contains(document.getElementById('focus-cost'))),
     };
   });
-  hero.isDot && parseFloat(hero.fontSize) === 0
-    ? ok('满薪只留色点不显示字样', `font-size ${hero.fontSize}`)
-    : bad('满薪仍显示文字', `${hero.state} / ${hero.fontSize}`);
-  hero.color === 'rgb(63, 185, 80)' ? ok('色点为满薪绿', hero.color) : bad('色点颜色异常', hero.color);
-  hero.st.w <= 12 && hero.st.w >= 6 ? ok('色点尺寸紧凑', `${Math.round(hero.st.w)}×${Math.round(hero.st.h)}`) : bad('色点尺寸异常', JSON.stringify(hero.st));
-  /满薪/.test(hero.aria || '') ? ok('色点保留无障碍标签', hero.aria) : bad('无色点语义标签', String(hero.aria));
+  // v4.2.7 反馈②：满薪绿点整颗移除，状态色改由「线程: N」数字承载。
+  //   旧断言锁 9px 色点尺寸/字号 0 已随需求作废；新口径 = is-dot 隐藏 + 数字着色 + 无障碍标签保留。
+  const countColor = await page.evaluate(() => getComputedStyle(document.getElementById('staff-count')).color);
+  (!hero.isDot || hero.st.w === 0)
+    ? ok('满薪绿点已移除（状态色入数字）', `isDot=${hero.isDot} w=${hero.st.w}`)
+    : bad('满薪绿点仍显示', JSON.stringify(hero.st));
+  countColor === 'rgb(63, 185, 80)' ? ok('线程数字为满薪绿', countColor) : bad('数字状态色异常', countColor);
+  /满薪/.test(hero.aria || '') ? ok('状态保留无障碍标签', hero.aria) : bad('无状态语义标签', String(hero.aria));
   hero.btnChild === 2 && /^招募\|/.test(hero.btnText) ? ok('招募按钮为「招募 / 价格」两行', hero.btnText) : bad('招募按钮结构不符', hero.btnText);
   /\d/.test(hero.btnText.split('|')[1] || '') ? ok('按钮第二行显示价格', hero.btnText.split('|')[1]) : bad('按钮未显示价格', hero.btnText);
   !/需/.test(hero.prevText) && !/EP/.test(hero.prevText)

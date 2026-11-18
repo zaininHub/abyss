@@ -30,6 +30,8 @@ const PROJECTS_SRC = readFileSync(new URL('../src/modules/projects.js', import.m
 // 守当前「活跃」的 30 天推演脚本（v380 版已归入 tests/legacy/ 不再承担回归）；
 // 三条守卫分别确保：自动玩家走真实领取入口、不伪造累计完成数、逐日快照记录累计完成数。
 const DAY30_SRC = readFileSync(new URL('./v3110-30day-browser.mjs', import.meta.url), 'utf8');
+// v4.2.6：自动玩家骨架共享层（v3110 与分章节推演共用）
+const PLAYER_SRC = readFileSync(new URL('./chapters/_player.mjs', import.meta.url), 'utf8');
 
 const pending = (id) => ({ id, name: '测试任务', type: 'earn_ep', status: 'pending',
   reward: { kind: 'ep', amount: 100 }, progress: 1, goal: 1 });
@@ -114,8 +116,12 @@ test('P4 内容可达性：章节 25 / 两条政策在累计完成数达门槛�
 });
 
 test('P5 30 天推演夹具：自动玩家经产品真实入口领取，且不再伪造解锁进度', () => {
-  assert.match(DAY30_SRC, /sim\.claimProject\(p\)/, '自动玩家必须调用真实领取入口');
+  // v4.2.6：自动玩家骨架抽到共享层 tests/chapters/_player.mjs（v3110 与分章节推演共用），
+  // 断言跟随代码位置：真实领取入口 / 禁止伪造进度 / 逐日快照口径都锁在共享层源码上。
+  assert.match(PLAYER_SRC, /sim\.claimProject\(p\)/, '自动玩家必须调用真实领取入口');
   assert.match(MAIN_SRC, /sim:\s*\{[\s\S]{0,400}?claimProject/, '__qa.sim 应暴露领取入口');
-  assert.doesNotMatch(DAY30_SRC, /S\.projectsDone\s*=\s*Math\.max/, '推演中不得直接篡改进度伪造解锁');
-  assert.match(DAY30_SRC, /projectsDone:\s*S2\.projectsDone/, '逐日快照应记录累计完成数');
+  assert.doesNotMatch(PLAYER_SRC, /S\.projectsDone\s*=\s*Math\.max/, '推演中不得直接篡改进度伪造解锁');
+  assert.match(PLAYER_SRC, /projectsDone:\s*S2\.projectsDone/, '逐日快照应记录累计完成数');
+  // v3110 仍经由共享层跑（import 关系锁死，防止有人把骨架复制回 v3110 造成双份漂移）
+  assert.match(DAY30_SRC, /from '\.\/chapters\/_player\.mjs'/, 'v3110 应 import 共享自动玩家层');
 });

@@ -353,9 +353,11 @@ export function renderAtriumDistill(container) {
   const cost = owned ? atriumUpgCost(n) : Math.ceil(base); // 已购：下一级升级成本；未购：首购价
   const afford = (S.ep || 0) >= cost;
   const rpPerS = (rate * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale()); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2，与 tick/rpProdPerSec 同口径（修复「+0 RP/s」文案）
+  // v4.2.7 反馈⑤：卡面文案去掉「自动蒸馏：」前缀与「→」箭头，只留数值本体
+  //   （标题行已写「灵感工坊 · 自动蒸馏」，重复前缀是噪音；箭头换空格分隔更紧凑）。
   const desc = owned
-    ? `自动蒸馏：-${fmt(epRate * n)} EP/s → +${fmt(rpPerS)} RP/s`
-    : `自动蒸馏：-${fmt(epRate)} EP/s → +${fmt(rate)} RP/s`;
+    ? `-${fmt(epRate * n)} EP/s  +${fmt(rpPerS)} RP/s`
+    : `-${fmt(epRate)} EP/s  +${fmt(rate)} RP/s`;
   if (!el) {
     el = document.createElement('div');
     el.className = 'atrium-distill item';
@@ -1042,6 +1044,13 @@ export function renderBuildings(container) {
   const bldShown = anyBuilt || !!(S.milesDone && S.milesDone[1e4]);
   const bldTitle = document.getElementById('bld-title');
   if (bldTitle) bldTitle.style.display = bldShown ? '' : 'none';
+  // v4.2.7 反馈⑦：折叠绑定必须在提前 return 之前——旧实现绑定在函数末尾，设施尚未解锁
+  //   （!bldShown）时首次渲染直接 return，标题永远拿不到 foldable-h3/箭头，解锁后虽然
+  //   会再渲染，但若此后无 shop dirty 触发则箭头一直缺失，与其它分类标题格式不一致。
+  if (bldTitle && !bldTitle.dataset.foldBound) {
+    bldTitle.dataset.foldBound = '1';
+    bindFoldToggle(bldTitle);
+  }
   if (!bldShown) { container.innerHTML = ''; return; }
   container.innerHTML = '';
   bldItemEls.clear();
@@ -1086,11 +1095,7 @@ export function renderBuildings(container) {
       /* v2.8.2 反馈⑪：EP 不足不弹框 */
     }
   });
-  // v4.0.9 反馈⑦：「设施」静态标题接入收起（收起同时覆盖并入设施区尾部的线程强化/效能建筑卡）
-  if (bldTitle && !bldTitle.dataset.foldBound) {
-    bldTitle.dataset.foldBound = '1';
-    bindFoldToggle(bldTitle);
-  }
+  // v4.2.7 反馈⑦：折叠绑定已上移到函数开头（!bldShown 提前 return 之前），此处不再重复
 }
 
 // v3.0.8：设施卡存储文案同口径 → v3.0.9 反馈④：数据中心「EP 存储上限 +{本级增量}」，其余设施原样

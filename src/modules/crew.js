@@ -5,8 +5,8 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { fmt, isLazy, staffOutputPerSec, staffSalaryPerSec } from './economy.js';
-import { MOOD_MULT, CONVERTERS } from '../data/threads.js';
+import { fmt, isLazy, staffSalaryPerSec } from './economy.js'; // v4.2.7：个人消耗显示复用薪资真源（函数提升使 crew↔economy 循环 import 安全）
+import { MOOD_MULT, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
@@ -71,7 +71,8 @@ export function renderCrewPanel(container) {
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
   // v4.0.0 反馈④：状态行已下线，签名不再因全局状态变化触发整卡重建；
   //   crewStateMeta() 仍保留导出（供其它模块/QA 读取），但面板不再渲染其文案与颜色。
-  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}`;
+  // v4.2.7 反馈③：fold 态入签名——否则点击标题时数据未变走增量刷新，折叠标题/内容体不重建（点了没反应）
+  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   let cards = '';
@@ -96,36 +97,41 @@ export function renderCrewPanel(container) {
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
-    // v4.2.0 反馈③：重设计卡片布局——旧版头像与四行信息在 align-items:center 下整块错位、
-    //   affinity emoji 与「· Lv.10」直接相连 baseline 不齐。改为三段式：
-    //   ① 头部（头像 + 名字/心情/等级/擅长同行）；② 产出独占一行；③ 岗位下拉 + 晋升按钮独占一行。
-    //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子（测试与事件委托不改）。
+    // v4.2.7 反馈①：卡片重设计——旧版三段式（头像/名字 → 产出 → 操作）在两列窄卡里
+    //   纵向散成 4 行且头像与文字 baseline 错位。改为「一行身份 + 一行数值/操作」的紧凑栅格：
+    //   ① 身份行：⚡状态图标（悬浮显示岗位/超线程/心情详情）+ 线程名 + Lv.10 + 岗位标签；
+    //   ② 数值行：产出 X EP/s · 消耗 Y EP/s + 晋升领导按钮（按钮下沉到底线，消除错位）。
+    //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
+    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''}`;
     cards += `<div class="crew-card">
-      <div class="crew-card-head">
-        <span class="crew-avatar">${MOOD_ICON[c.mood] || '🙂'}</span>
-        <div class="crew-info">
-          <div class="crew-name">${c.name} <span class="crew-mood">${c.mood}${MOOD_MULT[c.mood] ? ' ×' + MOOD_MULT[c.mood] : ''}</span>${leaderBadge}</div>
-          <div class="crew-stat"><span class="crew-lv">Lv.${lvl}</span><span class="crew-aff-wrap">${affinityIcon}<span class="crew-aff-label">${escAttr(affinityName)}</span></span></div>
-        </div>
+      <div class="crew-line crew-line-id">
+        <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
+        <span class="crew-name">${c.name}</span>
+        <span class="crew-lv">Lv.${lvl}</span>
+        <span class="crew-aff-wrap">${affinityIcon}<span class="crew-aff-label">${escAttr(affinityName)}</span></span>${leaderBadge}
       </div>
-      <div class="crew-card-out">产出 <b class="c-out">0</b>/s</div>
-      <div class="crew-card-ops">${bindCtrl}${leaderBtn}</div>
+      <div class="crew-line crew-line-num">
+        <span class="crew-num">产出 <b class="c-out">0</b> EP/s</span>
+        <span class="crew-num">消耗 <b class="c-sal">0</b> EP/s</span>
+        ${bindCtrl}${leaderBtn}
+      </div>
     </div>`;
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
   const pager = pageCount > 1
     ? `<div class="crew-pager">
-        <button data-crew-page="prev" ${crewPage <= 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <button data-crew-page="prev" ${crewPage <= 0 ? 'disabled' : ''}>上一页</button>
         <span>第 ${crewPage + 1} / ${pageCount} 页 · 共 ${n} 条线程${crewFilter && n !== nTotal ? `（全班组 ${nTotal}）` : ''}</span>
-        <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
+        <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页</button>
       </div>`
     : '';
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
-  const totOut = staffOutputPerSec();
-  const totSal = staffSalaryPerSec();
+  // v4.2.7 反馈③：产出/薪资行删除（顶栏已有同口径），改为与效能编排同构的可折叠类目标题「班组 ▼」。
+  //   产出/薪资仍是真实玩法数值，只是不在班组卡头重复；数字仍在顶栏 h-ep/h-salary 实时显示。
+  const foldArrow = container.dataset.crewFold === '1' ? '▶' : '▼';
   container.innerHTML = `
-    <!-- v4.0.8 反馈④：删除「N 条线程在岗」（crew-head 整行）——线程数在分页条/顶栏已有同口径展示，此处纯重复 -->
-    <div class="crew-sum" style="font-size:11.5px;color:var(--text-2);margin:2px 0 8px">班组产出 <b class="mono">${fmt(totOut)}</b> EP/s · 薪资 <b class="mono" style="color:var(--bad)">${fmt(totSal)}</b> EP/s</div>
+    <div class="orch-block-title crew-block-title" data-crew-fold role="button" tabindex="0" aria-expanded="${container.dataset.crewFold === '1' ? 'false' : 'true'}"><span class="rp-fold-arrow">${foldArrow}</span> 班组</div>
+    <div class="crew-fold-body" style="${container.dataset.crewFold === '1' ? 'display:none' : ''}">
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位">智能分配</button>
       <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）">一键收回</button>
@@ -136,11 +142,19 @@ export function renderCrewPanel(container) {
       </select>
     </div>
     <div class="crew-grid">${cards}</div>
-    ${pager}`;
+    ${pager}
+    </div>`;
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
   if (!container._crewDelegated) {
     container._crewDelegated = true;
     container.addEventListener('click', (ev) => {
+      // v4.2.7 反馈③：「班组」类目标题折叠（与效能编排同构，箭头切换 + 内容体显隐）
+      const fold = ev.target.closest ? ev.target.closest('[data-crew-fold]') : null;
+      if (fold) {
+        container.dataset.crewFold = container.dataset.crewFold === '1' ? '0' : '1';
+        renderCrewPanel(container);
+        return;
+      }
       const btn = ev.target.closest ? ev.target.closest('[data-crew-page]') : null;
       if (btn && !btn.disabled) { crewPage += btn.dataset.crewPage === 'prev' ? -1 : 1; renderCrewPanel(container); return; }
       const lb = ev.target.closest ? ev.target.closest('[data-leader]') : null;
@@ -209,15 +223,23 @@ export function renderCrewPanel(container) {
 // v3.2.3 反馈①：索引跟随当前分页切片（原全量前 24 条直读）
 // v3.6.3 反馈④：累计贡献已从卡面移除，动态刷新不再维护 c-earned
 function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0, PAGE_SIZE)) {
-  // 班组概览（产出/薪资）每秒原地更新（不计入内容签名，避免每秒重建 DOM）
-  const sumEls = container.querySelectorAll('.crew-sum b');
-  if (sumEls.length >= 2) {
-    sumEls[0].textContent = fmt(staffOutputPerSec());
-    sumEls[1].textContent = fmt(staffSalaryPerSec());
-  }
+  // v4.2.7 反馈③：班组产出/薪资行已删除（顶栏同口径），此处不再刷新 .crew-sum
   const outEls = container.querySelectorAll('.c-out');
+  const salEls = container.querySelectorAll('.c-sal');
+  const n = S.cultists.length || 1;
+  const salPer = staffSalaryPerSec() / n; // 全局平均薪资 ÷ 人数 = 单人消耗基数
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
-    outEls[i].textContent = fmt((c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c));
+    const out = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
+    outEls[i].textContent = fmt(out);
+    // v4.2.7 反馈①：个人消耗 = 平均薪资 × 岗位系数（与 staffSalaryPerSec 的 bindAvg 口径同源）
+    if (salEls[i]) salEls[i].textContent = fmt(salPer * salaryFactorOf(c));
   }
+}
+
+// v4.2.7 反馈①：单人薪资系数（与 economy.staffSalaryPerSec 的 bindAvg 同口径）
+function salaryFactorOf(c) {
+  if (!c.boundTo) return 1;
+  if (c.boundTo === HYPER_CONVERTER_ID) return 1.1;
+  return 1; // 其它岗位的差异已由 economy 的 bindAvg 全局摊平，卡内展示取平均口径
 }

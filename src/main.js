@@ -12,7 +12,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
   multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
-  corruptionCap, researchMult, clampRunResourceBalances, spendRes } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径）
+  corruptionCap, researchMult, clampRunResourceBalances, spendRes, esCost } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径） // v4.2.6：esCost 走 economy 单参包装（闭包读 S.eternal，QA 钩子与产品读侧同源）
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
 // v2.5.4 ①：快照存档（最多 3 槽 / 覆盖当前本地游戏 / 二级确认）
@@ -35,7 +35,8 @@ import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, 
 // 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
 import { gateOpen, chapterAtLeast } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
-import { renderTech, refreshTechState, renderEternal, buyTech } from './modules/tech.js';
+import { renderTech, refreshTechState, renderEternal, buyTech, buyEternal } from './modules/tech.js';
+import { ETERNALS } from './data/eternals.js'; // v4.2.6：分章节推演自动玩家购买永恒矩阵（QA 钩子；esCost 走 economy 包装版）
 import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
 import { tickWages, setWageLogFn, setWageToastFn } from './modules/wages.js'; // v1.3 C
 import { renderCrewPanel, crewPush, crewShown, crewStateMeta } from './modules/crew.js'; // v3.1.0 反馈③：班组面板（线程拟人化） // v3.6.2 反馈①：≥10 线程解锁
@@ -991,6 +992,8 @@ function renderHero() {
       expStatus.textContent = '';
     }
   }
+  // v4.2.7 反馈②：线程数字（staff-count）颜色 = 四态状态色——绿点移除后由数字承载状态信号。
+  const staffCountEl = document.getElementById('staff-count');
   if (staffStatus) {
     // v1.3 C：四态徽章 + 迁移倒计时 + tooltip（替代 staffUnhappy 的「资源耗尽!」）
     // v4.0.3 反馈③：徽章只留「状态名」——原先把整句惩罚与倒计时塞在行内，把右侧 NEXT 预览挤成省略号；
@@ -1025,6 +1028,11 @@ function renderHero() {
     //   文字保留在 DOM 里但 CSS 清零字号（无障碍读 aria-label，视觉只剩色点）。
     staffStatus.classList.toggle('is-dot', txt === '满薪');
     staffStatus.setAttribute('aria-label', detail ? `${txt}（${detail}）` : txt);
+    // v4.2.7 反馈②：状态色落到线程数字上——绿点隐去后，数字即状态灯
+    if (staffCountEl && staffCountEl.dataset.stateColor !== color) {
+      staffCountEl.style.color = color;
+      staffCountEl.dataset.stateColor = color;
+    }
     // 刻意不写原生 title：整行已有自定义气泡，双弹窗是本项目明确避开的坑；
     //   细则还可在触屏上通过「点击整块 → 线程状态说明」弹窗查看。
     // v4.2.0 反馈⑥：问号标记已从 DOM 移除（用户要求），说明完全由整块悬浮/点击承载。
@@ -2315,7 +2323,7 @@ function renderSaveList(force = false) {
   const box = document.getElementById('save-list');
   if (!box) return;
   const snaps = listSnapshots();
-  const sig = snaps.map(s => `${s.id}|${s.time}|${s.name}|${(s.summary && s.summary.ep) || 0}`).join(',') || 'empty'; // v4.2.3：name 入签名（改名后需重建行内文案）
+  const sig = snaps.map(s => `${s.id}|${s.time}|${s.name}|${(s.summary && s.summary.runEarned) || 0}`).join(',') || 'empty'; // v4.2.3：name 入签名；v4.2.7：ep→runEarned（本局总量入签名）
   // 同一份数据且列表已在位：跳过重建，保证按下与松开落在同一个按钮节点上（click 才会派发）
   if (!force && sig === saveListSig && box.childElementCount > 0) return;
   saveListSig = sig;
@@ -2343,7 +2351,7 @@ function renderSaveList(force = false) {
     const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
     row.innerHTML = `<div class="snap-main">
         <div class="name"><span>${sn.slot}. <span class="snap-name" title="点击重命名" tabindex="0" role="button">${escHtml(sn.name)}</span></span><span class="count mono">${sn.timeText}</span></div>
-        <div class="snap-sub">EP ${fmt(sm.ep || 0)} · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
+        <div class="snap-sub">本局 ${fmt(sm.runEarned || 0)} EP · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
       </div>
       <div class="snap-btns">
         <button class="btn snap-use" title="用此存档覆盖当前进度">读取</button>
@@ -2711,9 +2719,9 @@ function renderAchievementPanel(container) {
     }
     if (pageCount > 1) {
       html += `<div class="crew-pager" style="margin-top:8px">
-        <button data-ach-page="prev" ${achPage <= 0 ? 'disabled' : ''}>‹ 上一页</button>
+        <button data-ach-page="prev" ${achPage <= 0 ? 'disabled' : ''}>上一页</button>
         <span>第 ${achPage + 1} / ${pageCount} 页 · 共 ${n} 项</span>
-        <button data-ach-page="next" ${achPage >= pageCount - 1 ? 'disabled' : ''}>下一页 ›</button>
+        <button data-ach-page="next" ${achPage >= pageCount - 1 ? 'disabled' : ''}>下一页</button>
       </div>`;
     }
   }
@@ -2979,6 +2987,8 @@ if (typeof window !== 'undefined') {
     crewOf, crewBoundTotal, crewIdle, setCrew,
     assistantCount, assistantCost, assistantBuyState, actionCounts, totalActionCount,
     stalledActions, actionAvailable, autoBuildActivable, getTechs, buyTech,
+    ETERNALS, esCost, buyEternal, // v4.2.6：分章节推演自动玩家消费 ES 的产品真实入口（esCost 为 economy 单参包装，读 S.eternal 同产品读侧）
+    CHAPTERS, // v4.2.6：分章节推演读「下一章 cond 已满足」判定憋晋升恢复点（产品真源，不复制条件）
     RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
     resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
     setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus,

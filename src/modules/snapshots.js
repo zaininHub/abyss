@@ -75,10 +75,13 @@ export function coverOldest(newSnap) {
 // 快照列表（含槽位号、时间与进度摘要——解析存档关键字段，供 UI 展示）
 export function listSnapshots() {
   return read().map((s, i) => {
-    let summary = { ep: 0, prestige: 0, chapter: 1, storyline: '', name: s.name };
+    let summary = { ep: 0, runEarned: 0, prestige: 0, chapter: 1, storyline: '', name: s.name };
     try {
       const d = JSON.parse(s.data || '{}');
       summary.ep = d.ep || 0;
+      // v4.2.7 反馈④：存档摘要的「EP」改显「本局总量」= runEarned（本局 EP 产出全量，晋升清零）。
+      //   保留 ep 字段（当前余额）供旧档/其它读侧兼容，UI 只展示 runEarned。
+      summary.runEarned = d.runEarned || 0;
       summary.prestige = d.prestige || 0;
       summary.chapter = d.chapter || 1;
       summary.storyline = d.storyline && d.storyline !== 'default' ? d.storyline : '';

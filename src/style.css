@@ -144,15 +144,13 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   border: 1px solid currentColor; border-radius: 99px; cursor: help;
   background: rgba(255,255,255,.05); white-space: nowrap;
 }
-/* v4.0.4 反馈②：满薪是常态，不占文字位——收成一颗同色小圆点（颜色即状态），
-   其余异常态（待招募/懒惰/欠薪/休眠/流失预警）仍保留文字角标。
-   文字清零字号而非清空 textContent：无障碍读 `aria-label`，视觉只留色点。 */
+/* v4.2.7 反馈②：满薪绿点整颗移除——状态色改由「线程: N」的数字 N 承载（main.js 同步 color）。
+   is-dot 类名保留（历史测试/悬浮无障碍读 aria-label 仍依赖），但元素不再占位、不再显形。
+   异常态（待招募/懒惰/欠薪/休眠/流失预警）仍保留文字角标——数字色 + 文字双通道，不丢信息。 */
 #staff-status.wage-badge.is-dot {
-  width: 9px; height: 9px; min-width: 9px; padding: 0; border: 0;
-  border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor;
-  font-size: 0; line-height: 0; overflow: hidden;
+  display: none;
 }
-/* v4.2.0 反馈⑥：.wage-help-mark 问号徽章已移除（状态圆圈仍保留，整块悬浮承载说明） */
+/* v4.2.0 反馈⑥：.wage-help-mark 问号徽章已移除；v4.2.7 起满薪绿点亦移除（状态色入数字） */
 
 .stat b { color: var(--accent); }
 
@@ -2019,24 +2017,29 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .orch-block + .orch-block { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
 .orch-block-title { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
 .orch-block-note { margin-left: auto; font-size: 10.5px; font-weight: 400; color: var(--text-3); white-space: nowrap; }
-/* v4.2.0 反馈③：卡片重设计——头部(头像+名字/等级/擅长) / 产出 / 操作 三段纵向排布，
-   各段内部 flex 居中对齐，杜绝旧版头像与四行信息整块 align-items:center 的错位。 */
-.crew-card { display: flex; flex-direction: column; gap: 5px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--panel); border-left: 3px solid var(--border); }
+/* v4.2.7 反馈①：卡片重设计——一行身份 + 一行数值/操作，杜绝旧三段式的纵向散乱与 baseline 错位。
+   密度匹配数据型 UI：相关信息紧贴（gap 4~6px），行间仅一道细分隔，弱化卡片边框噪音。 */
+.crew-card { display: flex; flex-direction: column; gap: 3px; border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; background: var(--panel); border-left: 2px solid var(--border); min-width: 0; }
 .crew-card.more { justify-content: center; align-items: center; color: var(--text-3); font-size: 11px; }
-.crew-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.crew-avatar { font-size: 20px; line-height: 1; flex: none; }
-.crew-info { min-width: 0; flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; }
-.crew-name { font-size: 12px; font-weight: bold; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.crew-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.crew-line-id { line-height: 1.3; }
+.crew-line-num { border-top: 1px dashed var(--border); padding-top: 4px; margin-top: 2px; flex-wrap: wrap; row-gap: 4px; }
+.crew-avatar { font-size: 14px; line-height: 1; flex: none; cursor: help; }
+.crew-name { font-size: 12px; font-weight: bold; color: var(--text); white-space: nowrap; }
 .crew-mood { font-size: 10px; color: var(--text-3); font-weight: normal; }
-.crew-stat { font-size: 11px; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
-.crew-lv { font-family: monospace; color: var(--text-3); flex: none; }
-.crew-aff-wrap { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
-.crew-aff-wrap .crew-affinity { font-size: 12px; line-height: 1; flex: none; }
-.crew-aff-label { font-size: 10px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.crew-card-out { font-size: 11.5px; color: var(--text-2); padding-left: 28px; }
-.crew-card-out b.c-out { color: var(--cyan, var(--accent)); font-size: 12.5px; }
-.crew-card-ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 28px; }
-.crew-card-ops .btn { margin-left: 0 !important; }
+.crew-lv { font-family: monospace; color: var(--text-3); flex: none; font-size: 11px; }
+.crew-aff-wrap { display: inline-flex; align-items: center; gap: 2px; min-width: 0; margin-left: auto; }
+.crew-aff-wrap .crew-affinity { font-size: 11px; line-height: 1; flex: none; }
+.crew-aff-label { font-size: 10px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; }
+.crew-num { font-size: 10.5px; color: var(--text-2); white-space: nowrap; }
+.crew-num b { font-size: 11.5px; font-weight: 600; font-family: monospace; }
+.crew-num b.c-out { color: var(--cyan, var(--accent)); }
+.crew-num b.c-sal { color: var(--bad); }
+.crew-line-num select[data-bind] { font-size: 10.5px; max-width: 92px; margin-left: auto; }
+.crew-line-num .btn { font-size: 10.5px; padding: 2px 6px; margin-left: 0 !important; }
+/* v4.2.7 反馈③：班组折叠标题（与 .orch-block-title 同构，复用 rp-fold-arrow 箭头） */
+.crew-block-title { cursor: pointer; user-select: none; }
+.crew-block-title:hover { color: var(--cyan-2); }
 .crew-stat.dim, .crew-feed-item.dim { color: var(--text-3); }
 .crew-feed { margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; max-height: 130px; overflow-y: auto; font-size: 11px; background: var(--panel); }
 .crew-feed-item { padding: 1px 0; color: var(--text-2); }

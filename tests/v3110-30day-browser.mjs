@@ -33,20 +33,18 @@
 //   node tests/v3110-30day-browser.mjs   （Chrome 路径走 tests/_chrome.mjs 单源；可用 CHROME_PATH 覆盖）
 //   DAYS=1 REPORT=/tmp/gray.json node tests/v3110-30day-browser.mjs        # 灰度
 //   LINE=line_faith DAYS=3 REPORT=/tmp/faith.json node ...
-import puppeteer from 'puppeteer-core';
+// v4.2.6 反馈②：浏览器启动 / 种子注入 / 时间虚拟化 / 自动玩家骨架抽到 tests/chapters/ 共享层，
+// 本脚本只保留断言与报告；行为零变化（DAYS=1 灰度验证）。
 import { writeFileSync, readFileSync } from 'node:fs';
-import { chromePath } from './_chrome.mjs'; // Chrome 路径单一真源（跨平台 + CHROME_PATH 显式覆盖）
+import { launchBrowser, prepPage, gotoAndSettle, TICKS_PER_DAY, sleep } from './chapters/_boot.mjs';
+import { playerInit, v3110PlayerCfg } from './chapters/_player.mjs';
 
 // v3.10.1：报告版本直接取 package.json，不再随版本 bump 手改硬编码。
-// 注意：本脚本后面有 `const URL = 'file://...'`，会遮蔽全局 URL 构造器（TDZ），此处只能用 cwd 相对路径。
 const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version;
-const CHROME = chromePath(); // 不再硬编码 Linux CI 路径，Windows / macOS 自动探测
 const DAYS = Number(process.env.DAYS || 30);
 const LINE = process.env.LINE || 'line_order';
 const REPORT = process.env.REPORT || 'tests/v3110-30day-report.json';
 const URL = 'file://' + process.cwd() + '/dist/index.html';
-const TICKS_PER_DAY = 8640; // 86400s / 10s
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let pass = 0, fail = 0;
 const ok = (m, d = '') => { pass++; console.log(`  ✓ ${m}${d ? ' — ' + d : ''}`); };
@@ -64,247 +62,11 @@ const mkSave = (storyline) => JSON.stringify({
 });
 
 async function boot(browser, storyline) {
-  const page = await browser.newPage();
-  page.setDefaultTimeout(300000);
-  await page.setViewport({ width: 1600, height: 1000 });
-  const errs = [];
-  page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
-  await page.evaluateOnNewDocument((save) => {
-    localStorage.setItem('abyss_idle_v2', save);
-    window.__rawSaveHasResonance = save.includes('"resonance"');
-    window.__vt = 0;
-    const origNow = Date.now.bind(Date);
-    Date.now = () => origNow() + window.__vt;
-    window.__timerIds = [];
-    const origSI = window.setInterval.bind(window);
-    window.setInterval = (fn, ms, ...a) => { const id = origSI(fn, ms, ...a); window.__timerIds.push(id); return id; };
-  }, mkSave(storyline));
-  await page.goto(URL, { waitUntil: 'load' });
-  await sleep(1400);
-  await page.evaluate(() => {
-    (window.__timerIds || []).forEach(id => clearInterval(id));
-    window.__simT = performance.now() + 1000;
-    window.__stats = { buys: 0, clicks: 0, buyFails: 0, capStalls: 0, errors: [],
-      orchSwitches: 0, orchChecks: [], claims: 0, scheduleEdits: 0, scheduleChecks: [],
-      resonanceEnables: 0, focusSwitches: 0, resonanceChecks: [], layerSamples: [],
-      phaseDecays: 0,
-      // v3.11.0：AI 自动化长期推演统计（全部经产品真实入口产生）
-      aiBuys: 0, aiBuyFails: 0, aiSwitchToggles: 0, aiStallTicks: 0,
-      aiBuildActivations: 0, aiTechBought: 0, aiLedgerSamples: [] };
-
-    const qa = window.__qa;
-    window.__prodCands = qa.UPGRADES.filter(u => u.cps > 0 && /^基础产出\+/.test(u.desc || ''));
-    window.__capCands = qa.UPGRADES.filter(u => ['reserve_bin', 'storage'].includes(u.id));
-    window.__tickCount = 0;
-    window.__lastPrestigeTick = -9999;
-    window.__orchSeq = ['output', 'research', 'abyss', 'balanced'];
-    window.__orchIdx = 0;
-    window.__scheduleEdits = 0;
-    window.__resFoci = ['ep', 'rp', 'pt', 'dm'];
-    window.__resFocusIdx = 0;
-    window.__lastResLayers = 0;
-    window.__lastResPhase = -1;
-
-    window.__runBatch = (ticks) => {
-      const S = window.S, q = window.__qa, sim = q.sim, st = window.__stats;
-      for (let i = 0; i < ticks; i++) {
-        window.__tickCount++;
-        window.__vt += 10000;
-        window.__simT += 10000;
-        window.__tick(window.__simT);
-        if (S.ep >= q.epStorageCap() * 0.999) st.capStalls++;
-
-        // 每 6 tick（= 1 游戏分钟）做一次玩家决策
-        if (i % 6 === 0) {
-          try { sim.doClick(); st.clicks++; } catch (e) { if (st.errors.length < 12) st.errors.push('click:' + e.message); }
-          // v3.8.0：真实玩家会领取已完成（pending）的任务；只走产品真实入口 claimProject
-          try {
-            for (const p of (S.projects || [])) {
-              if (p.status === 'pending' && sim.claimProject(p)?.ok) st.claims++;
-            }
-          } catch (e) { if (st.errors.length < 12) st.errors.push('claim:' + e.message); }
-          try {
-            const cap = q.epStorageCap();
-            let pick = null, best = Infinity;
-            if (S.ep > cap * 0.6) {
-              for (const u of window.__capCands) {
-                if ((S.upgrades[u.id] || 0) >= (u.maxLevel || Infinity)) continue;
-                const c = q.bulkCostCalc(u, 1);
-                if (Number.isFinite(c) && c <= S.ep && c < best) { best = c; pick = u; }
-              }
-            }
-            if (!pick) {
-              let bestScore = Infinity;
-              for (const u of window.__prodCands) {
-                if ((S.upgrades[u.id] || 0) >= (u.maxLevel || Infinity)) continue;
-                const c = q.bulkCostCalc(u, 1);
-                if (!Number.isFinite(c) || c > S.ep * 0.95) continue;
-                const score = c / Math.max(u.cps, 1e-9);
-                if (score < bestScore) { bestScore = score; pick = u; }
-              }
-            }
-            if (pick) {
-              const r = sim.buyUpgrade(pick);
-              if (r === false || (r && r.ok === false)) st.buyFails++; else st.buys++;
-            }
-          } catch (e) { if (st.errors.length < 12) st.errors.push('buy:' + e.message); }
-          try {
-            if (q.canPrestige() && window.__tickCount - window.__lastPrestigeTick >= 2880) {
-              sim.doPrestige(null);
-              window.__lastPrestigeTick = window.__tickCount;
-              st.prestiges = (st.prestiges || 0) + 1;
-            }
-          } catch (e) { if (st.errors.length < 12) st.errors.push('prestige:' + e.message); }
-          // v3.11.0：AI 自动化长期覆盖——五项开关常开（只在被关掉时经产品入口补开），
-          // 余额偏低且 EP 可负担时买 1 名助手；逐分钟采样台账用于守恒与可玩性评估。
-          try {
-            // v3.12.3 反馈⑦：面板取消 ON/OFF 开关，「占编 > 0」即开启——
-            // 自动玩家改走同一产品入口 setCrew 绑定 1 名助手（不再直接写开关）。
-            for (const id of q.AI_ACTION_IDS) {
-              if (q.crewOf(id) > 0 || q.crewIdle() <= 0) continue;
-              if (!q.actionAvailable(id)) continue;
-              q.setCrew(id, 1); st.aiSwitchToggles++;
-            }
-            // 进阶动作不是默认解锁：经产品真实入口激活自动购建 / 购买「自动研究」科技，
-            // 让 30 天长期推演真实覆盖到进阶自动化，而不是只跑基础三项。
-            if (q.autoBuildActivable()) {
-              const r = sim.activateAutoBuild();
-              if (r && r.ok) st.aiBuildActivations = (st.aiBuildActivations || 0) + 1;
-            }
-            if (!S.tech.auto_tech) {
-              const t = q.getTechs().find(x => x.id === 'auto_tech');
-              if (t) {
-                q.buyTech(t, null); // 产品入口内部自行判定前置与可负担，未满足时无副作用
-                if (S.tech.auto_tech) st.aiTechBought = (st.aiTechBought || 0) + 1;
-              }
-            }
-            if (q.assistantCount() < 24 && q.assistantBuyState().afford) {
-              const r = sim.buyAssistant();
-              if (r && r.ok) st.aiBuys++; else st.aiBuyFails++;
-            }
-            if (q.stalledActions().length) st.aiStallTicks++;
-            if (st.aiLedgerSamples.length < 240) {
-              st.aiLedgerSamples.push({ t: window.__tickCount, assistants: q.assistantCount(),
-                total: q.totalActionCount(q.actionCounts()),
-                bound: q.crewBoundTotal() });
-            }
-          } catch (e) { if (st.errors.length < 12) st.errors.push('ai:' + e.message); }
-        }
-
-        // 效能编排：解锁后每 6 游戏小时轮换一次策略，同步核对 CPS 与倍率严格同口径
-        if (q.orchestrationUnlocked(S) && window.__tickCount % 2160 === 0) {
-          const next = window.__orchSeq[window.__orchIdx % window.__orchSeq.length];
-          window.__orchIdx++;
-          const before = q.computeCps();
-          const oldMode = q.effectiveModeId(S);
-          q.setOrchestrationAutoTide(S, false);
-          q.setOrchestrationMode(S, next);
-          const after = q.computeCps();
-          const oldMult = q.orchestrationMult('ep', { ...S, orchestration: { mode: oldMode, autoTide: false } });
-          const newMult = q.orchestrationMult('ep', S);
-          st.orchSwitches++;
-          if (before > 0 && st.orchChecks.length < 200) {
-            st.orchChecks.push({ from: oldMode, to: next, ratio: after / before, expect: newMult / oldMult });
-          }
-        }
-        // v3.9.0「潮汐预案」：解锁后每 12 游戏小时经产品入口真实改写某一相位，
-        // 随后开启随潮汐排班，让 tide-schedule 帧系统真实驱动生效策略翻转。
-        if (q.scheduleUnlocked(S) && window.__tickCount % 4320 === 0) {
-          const phase = window.__scheduleEdits % 4;
-          const modeId = window.__orchSeq[(window.__scheduleEdits + 4) % window.__orchSeq.length];
-          const before = q.orchestrationSchedule(S).slice();
-          if (q.setOrchestrationPhaseMode(S, phase, modeId)) {
-            const after = q.orchestrationSchedule(S);
-            st.scheduleEdits++;
-            if (st.scheduleChecks.length < 60) {
-              st.scheduleChecks.push({ phase, modeId, hit: after[phase] === modeId,
-                othersKept: before.every((m, i) => i === phase || m === after[i]) });
-            }
-            window.__scheduleEdits++;
-          }
-          q.setOrchestrationAutoTide(S, true);
-        }
-        // v3.10.0「相位共鸣」：解锁后经产品真实入口开启、轮换焦点；
-        // 逐帧由 tide-schedule 系统推进叠层，记录相位切换减半与四管线倍率同口径。
-        if (q.resonanceUnlocked(S)) {
-          const rs = q.resonanceState(S);
-          if (!rs.enabled && q.toggleResonanceEnabled(S)) st.resonanceEnables++;
-          if (window.__tickCount % 2160 === 0) {
-            const want = window.__resFoci[window.__resFocusIdx % window.__resFoci.length];
-            window.__resFocusIdx++;
-            if (q.setResonanceFocus(S, want)) st.focusSwitches++;
-          }
-          const cur = q.resonanceSummary(S);
-          if (window.__lastResPhase >= 0 && rs.phase !== window.__lastResPhase
-              && cur.layers < window.__lastResLayers) st.phaseDecays++;
-          if (window.__tickCount % 720 === 0 && st.layerSamples.length < 200) {
-            st.layerSamples.push({ t: window.__tickCount, phase: rs.phase, layers: cur.layers,
-              focus: cur.focus, ep: q.resonanceMult('ep', S), side: q.resonanceMult('rp', S) });
-          }
-          if (window.__tickCount % 2160 === 0 && st.resonanceChecks.length < 100) {
-            // 对照组只关闭共鸣，不能动 projectsDone / prestige —— 否则会把编排解锁也一起关掉，
-            // orchestrationMult 回落为 1，基准倍率消失（v3.10.0 灰度实测踩过）。
-            const off = { ...S, resonance: { ...rs, enabled: false } };
-            st.resonanceChecks.push(['ep', 'rp', 'pt', 'dm'].map(k => ({
-              key: k, got: q.orchestrationMult(k, S),
-              expect: q.orchestrationMult(k, off) * q.resonanceMult(k, S),
-            })));
-          }
-          window.__lastResLayers = cur.layers;
-          window.__lastResPhase = rs.phase;
-        }
-      }
-      try { sim.render(); } catch (e) { if (st.errors.length < 12) st.errors.push('render:' + e.message); }
-      const S2 = window.S;
-      const st2 = q.flowStats();
-      return {
-        ep: S2.ep, cps: q.computeCps(), cap: q.epStorageCap(),
-        chapter: String(S2.chapter || '1'), corruption: S2.corruption || 0,
-        rp: S2.rp || 0, dm: S2.dm || 0, faith: S2.faith || 0, es: S2.es || 0,
-        totalBuys: S2.totalBuys || 0, totalClicks: S2.totalClicks || 0,
-        upgradeKinds: Object.keys(S2.upgrades || {}).length,
-        upgrades: { ...(S2.upgrades || {}) },
-        prestige: S2.prestige || 0, canPrestige: !!q.canPrestige(),
-        storyEvents: q.getStorylineEvents().length, linePets: q.getStorylinePets().length,
-        eventsSeen: S2.eventsSeen || 0,
-        projectsDone: S2.projectsDone || 0,
-        orchMode: q.effectiveModeId(S2), orchUnlocked: q.orchestrationUnlocked(S2),
-        flowErrors: Object.values(st2).reduce((n, s) => n + (s.errors || 0), 0),
-        flowCount: Object.keys(st2).length, // v3.11.2：删除 assistant:supply 后回到 8 条资源流，日志不再硬编码
-        flowTicks: st2['ep:main'] ? st2['ep:main'].ticks : 0,
-        sysStats: q.systemStats(), sysErrors: q.systemErrors().length,
-        panelErrs: q.panelErrors().length, panelCount: q.allPanels().length,
-        renderTicks: (q.systemStats().render || {}).ticks || 0,
-        scheduleUnlocked: q.scheduleUnlocked(S2), schedule: q.orchestrationSchedule(S2),
-        scheduleCustomized: q.scheduleCustomized(S2),
-        // v3.11.3：AI 助手（常驻班组，手动绑定占编）/ 动作台账逐日快照
-        ai: { assistants: q.assistantCount(), bound: q.crewBoundTotal(), idle: q.crewIdle(),
-          counts: q.actionCounts(), total: q.totalActionCount(q.actionCounts()),
-          stalled: q.stalledActions().map(a => a.id),
-          cost: q.assistantCost(),
-          switches: q.AI_ACTION_SWITCH_KEYS.filter(k => !!S2.ai[k]) },
-        resonance: (() => { const r = q.resonanceSummary(S2); return {
-          unlocked: r.unlocked, enabled: r.enabled, layers: r.layers, focus: r.focus,
-          maxLayers: r.maxLayers, rows: r.rows.map(x => ({ key: x.key, mult: x.mult })),
-        }; })(),
-        stats: { ...st, errors: st.errors.slice(), orchChecks: st.orchChecks.slice(),
-          scheduleChecks: st.scheduleChecks.slice(),
-          resonanceChecks: st.resonanceChecks.slice(), layerSamples: st.layerSamples.slice() },
-      };
-    };
-
-    // 数值准确性定点校验：单 tick 产出入账量 = computeCps() × 10s
-    window.__numericProbe = () => {
-      const S = window.S, q = window.__qa;
-      const cap = q.epStorageCap();
-      S.ep = Math.min(S.ep, cap * 0.1);
-      const earnedBefore = S.earnedFull || 0, cps = q.computeCps();
-      window.__vt += 10000; window.__simT += 10000; window.__tick(window.__simT);
-      return { earnedBefore, earnedAfter: S.earnedFull || 0, gross: (S.earnedFull || 0) - earnedBefore,
-        cps, cap, dt: 10, orchMult: q.orchestrationMult('ep', S),
-        resMult: q.resonanceMult('ep', S), resLayers: q.resonanceSummary(S).layers };
-    };
-  });
+  // 共享层：prepPage（种子 + 时间虚拟化 + setInterval 拦截）→ gotoAndSettle（加载 + 清 interval）
+  const { page, errs } = await prepPage(browser, { save: mkSave(storyline) });
+  await gotoAndSettle(page);
+  // 自动玩家骨架（__stats / 候选集 / __runBatch / __numericProbe）来自共享 _player.mjs
+  await page.evaluate(playerInit, { ...v3110PlayerCfg });
   return { page, errs };
 }
 
@@ -712,10 +474,7 @@ async function uiCheck(page) {
   });
 }
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: 'new',
-  args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--no-zygote'],
-});
+const browser = await launchBrowser(); // 共享层统一启动参数（v4.2.6 抽取）
 const report = { version: VERSION, days: DAYS, line: LINE, startedAt: new Date().toISOString(), daily: [], checks: {} };
 console.log(`\n=== v${VERSION} 浏览器 mock 推演：${DAYS} 天 / ${LINE} / ${DAYS * TICKS_PER_DAY} tick ===`);
 
