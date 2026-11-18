@@ -2,7 +2,7 @@ import { S, save } from '../state.js';
 import { RES_PROJECTS, MAX_PROJECTS, PENDING_EXPIRE, PROJECT_SPAWN_COOLDOWN } from '../data/projects.js';
 import {
   computeCps, fmt, addEp, addRp, projRewardMult, epStorageCap, clickMult, staffCost,
-  researchMult, rpProdPerSec, totalDrainPerSec, vehicleDmPerMin,
+  researchMult, rpProdPerSec, rpCap, totalDrainPerSec, vehicleDmPerMin,
 } from './economy.js';
 import { templeFaithPerSec } from '../data/religions.js'; // 信仰圣所 FP/s（data 层定义）
 import { anchorDone } from './disclosure.js'; // v3.12.13：资源未解锁不刷出对应任务（与顶栏同口径）
@@ -18,7 +18,10 @@ import { BALANCE } from '../data/balance.js';
 // 统一用紧凑格式化 `${fmt(progress)} / ${fmt(goal)}（${pct}%）`（如 12.4M / 84.9B）。
 
 // 各资源「保底目标」——当该资源无稳定连续速率（rate≈0）时回落到的小目标，保证任务可达。
-const MIN_GOAL = { ep: 100, rp: 3, pt: 3, dm: 1, es: 1, fp: 1 };
+// v4.2.9 反馈⑥：rp 保底 3→25——旧值按 RP 刚解锁（cap 2,900）时的零头设计，而首档科技
+//   就要 8 RP、研究升级 50 RP 起，「消耗 3 RP」连一次最便宜的消费都覆盖不了；25 ≈ 早期
+//   一仓 1% ，配合 spend 类改「上限 ×35~55%」口径仍是保底兜底值。
+const MIN_GOAL = { ep: 100, rp: 25, pt: 3, dm: 1, es: 1, fp: 1 };
 // 目标 = 速率 × 窗口秒 × 系数（系数 <1，保证窗口内可达）。
 const GOAL_FACTOR = 0.4;
 
@@ -42,7 +45,7 @@ let lastSpawnAt = 0;
 function resRatePerSec(key, metric) {
   if (metric === 'buy') return null;
   if (key === 'ep') return metric === 'gain' ? computeCps() : totalDrainPerSec();
-  if (key === 'rp') return rpProdPerSec();              // 获取/消耗共用（消耗以产出为近似代理）
+  if (key === 'rp') return metric === 'gain' ? rpProdPerSec() : 0; // v4.2.9 反馈⑥：spend 目标改「上限 ×35~55%」口径（消费节奏与产出速率脱钩），此处仅 gain 类用产出估计
   if (key === 'dm') return vehicleDmPerMin() / 60;        // 探采 DM/s
   if (key === 'fp') return templeFaithPerSec();           // 信仰圣所 FP/s
   return 0; // pt / es：无稳定连续速率
@@ -79,7 +82,11 @@ function rollReward(now) {
   } else if (roll < 0.8) {
     // RP 奖励（已解锁才给；未解锁资源不可能出现 RP 任务，这里仅作双保险回退 EP）
     if (anchorDone('rp', S)) {
-      reward = { kind: 'rp', amount: Math.ceil((BALANCE.projRpMin + Math.floor(Math.random() * (BALANCE.projRpMax - BALANCE.projRpMin + 1))) * projRewardMult()) };
+      // v4.2.9 反馈⑥：按 RP 上限进度缩放——2~5 RP 固定奖励在中后期（研究升级 50~4800 RP）
+      // 形同虚设；基准 2~5 ×(上限/2500)^0.6，下限 2（早期量级不变），封顶 ×40 防爆炸。
+      const sc = Math.min(40, Math.pow((rpCap() / (BALANCE.projRpScaleBase || 2500)) || 1, BALANCE.projRpScalePow ?? 0.6));
+      const base = BALANCE.projRpMin + Math.floor(Math.random() * (BALANCE.projRpMax - BALANCE.projRpMin + 1));
+      reward = { kind: 'rp', amount: Math.max(2, Math.ceil(base * sc * projRewardMult())) };
     } else {
       let amt = cps * 600 * (BALANCE.projEpRatio || 0.18);
       if (!isFinite(amt) || amt < 50) amt = 50;
@@ -124,10 +131,17 @@ export function spawnProject() {
   const durationMs = (2 + Math.random() * 28) * 60000; // v3.12.13：限时 2-30 分钟（短窗更易在单局内完成，展示也紧凑）
   const windowSec = Math.min(durationMs / 1000, 600);
 
+  // v4.2.9 反馈⑥：spend 类目标 = 产出速率代理会严重低估 RP——玩家攒一仓 RP 是为了
+  //   买几十~几千 RP 的科技/研究升级，按「产出 × 窗口 × 0.4」估目标只给 1~5 RP，
+  //   与实际消费节奏（单笔 8~180 RP）差两个数量级。改按消费能力口径：
+  //   rp.spend 目标 = RP 上限 ×(0.35~0.55 随机)——攒大半仓花出去是真实玩法；
+  //   gain 类仍按产出速率估（连续蒸馏产出稳定）。其它资源 spend 语义不变。
   const rate = resRatePerSec(pick.key, pick.metric);
   let goal;
   if (pick.metric === 'buy') {
     goal = 1 + Math.floor(Math.random() * 2); // 相关升级：1-2 次购买
+  } else if (pick.key === 'rp' && pick.metric === 'spend') {
+    goal = Math.max(MIN_GOAL.rp, Math.round(rpCap() * (0.35 + Math.random() * 0.2)));
   } else {
     const est = (rate || 0) * windowSec * GOAL_FACTOR;
     goal = Math.max(MIN_GOAL[pick.key] || 10, Math.round(est));

@@ -175,11 +175,12 @@ function shopUnlocked(u) {
 // v3.12.8 ①：资源仓库（矩阵存储库/饵料仓库/星尘金库/誓约圣龛）不靠「累计 EP」解锁，
 //   旧卡面对它们也写「累计 X EP 解锁」= 骗人（用户因此以为饵料仓库买不了是 EP 不够）。
 //   这里按各自的真实门槛给一句中性说明：只说「什么时候开放」，不写怎么玩。
+// v4.2.9 反馈⑧：资源仓库锁定卡统一改「???」——锚点文案（如「EP 溢出一次后开放」）
+//   只说了一半：锚点达成后还要「EP 上限存得下全价」（vaultCapacityReady，矩阵存储库
+//   需 150K 上限）才真正摆出可购卡。用户实测「EP 已溢出但备用粮仓还显示解锁条件文案」
+//   半真半假；渐进披露链的语义本来就是「??? = 还没轮到」，仓库卡对齐此口径，不再剧透。
 function lockedHint(u) {
-  if (u.id === 'rp_vault') return 'EP 溢出一次后开放';
-  if (u.id === 'dm_vault') return '首辆载具后开放';
-  if (u.id === 'pt_vault') return '第 2 章后开放';
-  if (u.id === 'faith_vault') return '信奉宗教后开放';
+  if (VAULT_IDS.includes(u.id)) return '？？？'; // v4.2.9 反馈⑧：锚点+容量双门槛，单独说锚点会误导；统一 ??? 不点名
   return `累计 ${fmt(u.base * 0.3)} EP 解锁`;
 }
 
@@ -666,7 +667,7 @@ export function renderThreadShop(container) {
   const split = { visible: sorted, hiddenCount: 0, chainNextIdx: sorted.length, K: sorted.length };
   // v3.4.8 反馈⑦：「消耗优化」组随 5 个条目一并删除（见 upgrades.js），线程强化只剩「产出强化」
   renderChainedGroups(container, split, [
-    { title: '产出强化', test: () => true }, // CPU 超频 / GPU 加速
+    { title: '补能间', test: () => true }, // v4.2.9 反馈④：原「产出强化」——CPU 超频 / GPU 加速（设施区尾部合并分组）
   ], makeThreadItem, (u, el) => threadItemEls.set(u.id, el), { verb: '升级' }); // v2.8.18 ③：已购终态收折叠
   applyGroupFold(container); // v4.0.9 反馈⑦：产出强化组支持收起（对齐研究点/效能建筑 rp-group-title）
   bindDelegate(container, (id) => {
@@ -1346,7 +1347,8 @@ function v21RealList() { return V21_BUILDINGS.filter(b => b.via !== 'upgrade'); 
 // 合并为三大组 + 命运誓言 + 兜底「其他」；组序 = 大组声明序。
 const V21_GROUPS = [
   // v3.12.13 反馈①：原「产出与效率」含 A/C/E/I 四轴共 23 项，严重臃肿。拆分为更聚焦的小组：
-  { title: '产出与效率', cats: ['A'] },            // 全局乘数（原 A 轴）
+  // v4.2.9 反馈⑤：「产出与效率」→「锅炉房」（用户口径：效能建筑组名用地标化名称，与「补能间」配套）
+  { title: '锅炉房', cats: ['A'] },                // 全局乘数（原 A 轴）
   { title: '成本折扣',   cats: ['C'] },            // v3.12.13 反馈①：从「产出与效率」移出（成本优化轴）
   { title: '线程与职级', cats: ['E', 'I'] },       // v3.12.13 反馈①：从「产出与效率」移出（线程与薪资 + 职级强化）
   // v3.4.5 反馈③：删除「存储与续航」组（原 D 上限扩容 + G 离线续航）——
@@ -1401,19 +1403,21 @@ const applyV21GroupFold = applyGroupFold;
 
 // v4.0.9 反馈⑦：静态 h3 分区标题（如「设施」）接入同一收起交互——
 // 标题为 index.html 静态元素，绑定一次（dataset.foldBound 防重）；折叠目标是
-// 标题的后续兄弟节点。可见的 h3 是分区边界（停止）；隐藏的分区标题（线程强化/
-// 效能建筑，v3.4.7 反馈⑥ 恒隐藏的合并分区壳）不构成视觉边界，其内容卡片仍属
-// 本分区——跳过继续收起，但不改写其 display（各分区门控自管）。
+// 标题的后续兄弟节点。可见的 h3 是分区边界（停止）。
+// v4.2.9 反馈③：隐藏的分区标题（线程强化/效能建筑，v3.4.7 反馈⑥ 恒隐藏的
+// 合并分区壳）同样作为边界停止——旧实现「跳过继续收」把 #thread-shop/
+// #v21-building-list 两个容器连带收起（用户实测：收起「设施」连「产出强化
+// （补能间）/产出与效率（锅炉房）」一起消失，且再点设施标题只恢复 building-list，
+// 隐藏 h3 转显后残留 display:none 永不可见）。改为：任何 h3（无论可见性）都
+// 构成边界，折叠只收本分区容器；隐藏 h3 自身有自己的门控（display 由
+// renderThreadShop/renderV21Buildings 管理），折叠不改写它。
 // v4.2.5 反馈①：导出 bindFoldToggle——研究点（晋升 RP 加成/族升级）、科技树（裂隙等级）、
 // 遗物（深渊商店）的纯类目 h3 统一接入同一折叠范式；带数据行的页级标题（科技树/永恒矩阵/
 // 探采平台）不接，保持页级观感。
 function foldSiblings(titleEl, hide) {
   let sib = titleEl.nextElementSibling;
   while (sib) {
-    if (sib.tagName === 'H3') {
-      if (sib.hidden || sib.style.display === 'none') { sib = sib.nextElementSibling; continue; }
-      break;
-    }
+    if (sib.tagName === 'H3') break; // v4.2.9 反馈③：隐藏 h3 也是边界（不再跳过继续收）
     sib.style.display = hide ? 'none' : '';
     sib = sib.nextElementSibling;
   }
@@ -1770,12 +1774,12 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   // 其余 5 项按语义并入既有轴（产出/资源/深渊），确保新研究项全部可购买
   // v3.7.0：新增 5 项按语义归入既有 4 组（新增研究项必须同步此处，否则玩家看不到也买不到）
   // v3.11.0：新增 12 项按语义归入既有 4 组（每组 3 项），保证「数据表 + 渲染分组」两头对齐。
-  { key: 'prod',  name: '产出强化',  ids: ['rp_entropy', 'rp_matrix'], unlock: null }, // v3.12.13 反馈①：奇点推演/离线协议移出至「深渊协议」，本组精简为开局两项（解锁链仍靠 2 项 cap 达标）
+  { key: 'prod',  name: '产能研究',  ids: ['rp_entropy', 'rp_matrix'], unlock: null }, // v3.12.13 反馈①：奇点推演/离线协议移出至「深渊协议」，本组精简为开局两项（解锁链仍靠 2 项 cap 达标）；v4.2.9 反馈⑦：「产出强化」→「产能研究」（研究点组名不再与设施区「补能间」撞名）
   // v3.12.11 反馈②：研究菜单大削（68→21）。每根数值轴只留一个锚点升级，分组同步精简：
   //   prod = 开局显现的产出/全局/离线基础项；res = 深渊协议（资源/政策/项目/班组/远征/集市）；
   //   abyss = 深渊终局两根核心轴；ai = AI 助手（效率 + 扩编）；star = 星际（研究点已解锁 + 星图已开启 双门控）。
   // v4.0.9 反馈⑨：「存储扩容」独立成类（rp_storage 自深渊协议移出）——各类存储上限提升单独归组，玩家找扩容项不用翻混在玩法协议里。
-  { key: 'store', name: '存储扩容',  ids: ['rp_storage'],                                                                                      unlock: { prev: 'prod', need: 4 } },
+  { key: 'store', name: '储备扩容',  ids: ['rp_storage'],                                                                                      unlock: { prev: 'prod', need: 4 } }, // v4.2.9 反馈⑦：「存储扩容」→「储备扩容」（研究点语境：扩的是资源储备上限而非 EP 存储仓）
   { key: 'res',   name: '深渊协议', ids: ['rp_wage', 'rp_dm', 'rp_faith', 'rp_policy', 'rp_project', 'rp_crew', 'rp_expedition', 'rp_bazaar', 'rp_singularity', 'rp_offline'], unlock: { prev: 'prod', need: 4 } }, // v3.12.13 反馈①：并入奇点推演/离线协议（自「产出强化」移出）；v4.0.9 反馈⑨：rp_storage 移出至「存储扩容」
   { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），

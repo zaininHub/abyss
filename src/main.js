@@ -1447,8 +1447,8 @@ function renderRpPanel() {
     <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
     <!-- v4.0.9 反馈②：顶部说明压到 1-2 行——当前 RP/上限/效率/蒸馏按钮收成一行，蒸馏按钮并入同行 -->
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
-      <span class="stat" style="display:inline"><b>当前 RP</b><span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></span>
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏 25% EP（效率 ${fmt(rpDistillRate())} EP→1，预计 ${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0} RP）</button>
+      <span class="stat" style="display:inline"><b>当前 RP</b> <span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></span>
+      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>
     </div>
     <!-- v3.3.1 反馈①：灵感工坊自动蒸馏开关（设施区只保留购买/升级） -->
     <div id="atrium-switch-host" style="margin-top:10px"></div>

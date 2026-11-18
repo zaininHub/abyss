@@ -8,6 +8,10 @@
 //   node tests/chapters/run-range.mjs --from 1 --to 3      # 试跑前三章（校准）
 //   node tests/chapters/run-range.mjs --from 5 --to 5      # 单章数值测试
 //   node tests/chapters/run-range.mjs --from 1 --to 18     # 全量（所有章节真实试玩）
+//   node tests/chapters/run-range.mjs --from 3 --to 3 --resume  # v4.2.9 反馈①：断点续跑——
+//     读 tests/chapters/reports/ch{N-1}-report.json 的 actual 终态快照作为本章输入种子
+//     （= 上一章真实晋升结算输出），中途挂掉/改代码后不必从第 1 章重爬。
+//     前置条件：ch{N-1} 曾完整跑完并落盘报告（每章 ~17 分钟，报告即检查点）。
 //
 // 章节测试单元语义（方案 §2.1）：
 //   输入  = 第 N 章开局的跨局资产快照（种子化：本局资源归零、chapterEnteredAt 重置）
@@ -17,7 +21,7 @@
 //   输出  = 晋升结算后的跨局快照（= 第 N+1 章开局输入）+ 差值校验报告
 //
 // 报告：tests/chapters/reports/ch{N}-report.json（gitignore，不进仓库）+ 控制台汇总表。
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { launchBrowser, prepPage, gotoAndSettle, sleep, TICKS_PER_DAY } from './_boot.mjs';
 import { playerInit } from './_player.mjs';
 import { snapshotFromState, seedFromSnapshot, compareBudget } from './_snapshot.mjs';
@@ -29,8 +33,10 @@ const argOf = (name, def) => {
   const i = args.indexOf(name);
   return i >= 0 && args[i + 1] ? Number(args[i + 1]) : def;
 };
+const hasFlag = (name) => args.includes(name);
 const FROM = argOf('--from', 1);
 const TO = argOf('--to', FROM);
+const RESUME = hasFlag('--resume'); // v4.2.9 反馈①：断点续跑（输入 = 上一章报告快照）
 
 const fx = (n, d = 2) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: d });
 const fmtN = n => !Number.isFinite(n) ? String(n)
@@ -96,6 +102,23 @@ const browser = await launchBrowser();
 let page = null, errs = [];
 try {
   let carry = null; // 上一章晋升结算快照 → 本章输入
+  // v4.2.9 反馈①：--resume 断点续跑——从 ch{FROM-1} 报告的 actual 快照恢复链式上下文，
+  //   避免中途挂掉后从第 1 章重爬（每章 ~17 分钟 × N 章的浪费）。
+  //   actual 即上一章晋升结算后的真实终态（= 本章输入），与链式跑语义完全一致。
+  if (RESUME && FROM > 1) {
+    const prevReport = `tests/chapters/reports/ch${FROM - 1}-report.json`;
+    if (!existsSync(prevReport)) {
+      console.error(`✗ --resume 找不到上一章报告：${prevReport}（先跑完 ch${FROM - 1} 再续跑）`);
+      process.exit(2);
+    }
+    const prev = JSON.parse(readFileSync(prevReport, 'utf8'));
+    carry = prev.actual && prev.actual.endSnapshot ? prev.actual.endSnapshot : prev.inputSnapshot;
+    // 兼容：v4.2.8 及以前的报告只有 inputSnapshot（本章输入），用它近似本章输入即可
+    //   ——inputSnapshot 与「上一章输出」在链式跑里同一来源（carry = actual），差异仅为
+    //   本章运行期间的跨局资产增量（ES/PP/晋升数），对种子来说宁低勿高（下界语义安全）。
+    if (!carry) { console.error(`✗ ${prevReport} 内无 endSnapshot/inputSnapshot 可恢复`); process.exit(2); }
+    console.log(`↩ 断点续跑：从 ch${FROM - 1} 报告恢复输入（prestige=${carry.prestige || 0} / es=${carry.es || 0}）`);
+  }
   for (let n = FROM; n <= TO; n++) {
     const budget = BUDGET[n];
     if (!budget) { console.log(`  ✗ 第 ${n} 章无预算条目，跳过`); continue; }
@@ -146,7 +169,8 @@ try {
       inputSnapshot,
       expectedCarry: budget.carry || null,
       expected: { minPrestige: budget.minPrestige, es: budget.es, pp: budget.pp, rp: budget.rp, maxDays: budget.maxDays },
-      actual: { ...cmp.actual, es: actual.es, rp: actual.rp, prestige: actual.prestige, runEarnedAtEnd: endState.runEarned, needAtEnd: endState.need },
+      actual: { ...cmp.actual, es: actual.es, rp: actual.rp, prestige: actual.prestige, runEarnedAtEnd: endState.runEarned, needAtEnd: endState.need,
+        endSnapshot: actual }, // v4.2.9 反馈①：完整终态快照入报告——下一章 --resume 的检查点
       daily: run.daily, advancedDay: run.advancedDay, daysUsed: run.daysUsed,
       pageErrors: errs.slice(), elapsedSec,
     };

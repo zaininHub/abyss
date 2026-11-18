@@ -165,7 +165,7 @@ t('v2.0.2 EP 容量 = (基础2000 + 缓存×8000 + 粮仓/存储级制累计 + D
   assert.equal(epStorageCap(), 37336); // 28720 × 1.3（m1+m2 里程碑 ×0.15）
   S.upgrades = {}; S.milesDone = {}; S.buildings = {};
 });
-t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
+t('任务奖励：rp 类随上限缩放（基准 2~5 ×(cap/2500)^0.6），ep 类为正数；未解锁不出 rp（v2.5 ③）', () => {
   // v2.5 ③：RP 未解锁（EP 未首次溢出）时 100 次生成不应出现 rp 奖励
   S._rpOverflowSeen = false;
   let rpSeen = 0;
@@ -177,7 +177,8 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
     else if (p.reward.kind === 'ep') assert.ok(p.reward.amount > 0);
   }
   assert.ok(rpSeen === 0, `未解锁应零 rp 任务，实际 ${rpSeen}`);
-  // RP 解锁（v3.0.9 口径：购入矩阵存储库）后 rp 奖励出现且量级 3~8
+  // RP 解锁（v3.0.9 口径：购入矩阵存储库）后 rp 奖励出现；v4.2.9 ⑥：按上限缩放——
+  // 未购 rp_vault 时 cap=2500 → 缩放系数 1 → 基准区间 2~5；购满仓库后奖励单调不降
   S.upgrades.rp_vault = 1;
   S._rpOverflowSeen = true;
   rpSeen = 0;
@@ -187,7 +188,7 @@ t('任务奖励：rp 类在 3~8 区间，ep 类为正数；未解锁不出 rp（
     const p = S.projects[S.projects.length - 1];
     if (p.reward.kind === 'rp') {
       rpSeen++;
-      assert.ok(p.reward.amount >= 2 && p.reward.amount <= 5, `RP=${p.reward.amount}`);
+      assert.ok(p.reward.amount >= 2, `RP=${p.reward.amount}`);
     } else if (p.reward.kind === 'ep') {
       assert.ok(p.reward.amount > 0);
     }

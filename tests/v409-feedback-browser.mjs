@@ -5,9 +5,9 @@
 //   F2 研究点顶部说明压 1-2 行（.stat 收成一行、蒸馏按钮并入同行）
 //   F3 「+ 新建初始空档」生成全新初始存档入槽且不触碰当前进度
 //   F4 Wiki 新增 3 章（星空与远征 / 永恒矩阵 / 许愿池与彩蛋）+ intro AI 指路 + unlock 表六组
-//   F7 商店页产出强化组 / 设施 h3 接入收起 + 字体向 rp-group-title 看齐
+//   F7 商店页补能间组（v4.2.9 前名产出强化）/ 设施 h3 接入收起 + 字体向 rp-group-title 看齐
 //   F8 自动购建激活入口迁入研究点「AI 助手」类目（二次确认 → 激活 → 卡消失）
-//   F9 存储扩容独立成组 + 「研究升级」大类标题删除
+//   F9 储备扩容（v4.2.9 前名存储扩容）独立成组 + 「研究升级」大类标题删除
 //   F10 政策待选组 NEW 角标（路线抉择组 → 选定后移交路线深化组）
 //   F11 成就一页 5 条 + 分页
 //   F12 8 个自动转化开关/能力字段显式声明（S 上可读且为默认值）
@@ -114,7 +114,7 @@ try {
   rpHead.statHasRp ? ok('当前 RP 保留在唯一 stat 行', '') : bad('当前 RP 缺失', '');
   !rpHead.hasPreview ? ok('「预计 N RP」独立 span 已并入按钮文案', '') : bad('#rp-distill-preview 仍存在', '');
   rpHead.btnInSameRow ? ok('蒸馏按钮与当前 RP 同行（flex 容器）', '') : bad('蒸馏按钮未并入同行', '');
-  /效率/.test(rpHead.btnText) ? ok('效率口径并入按钮文案', rpHead.btnText) : bad('按钮缺效率信息', rpHead.btnText);
+  /\/EP \+/.test(rpHead.btnText) ? ok('效率口径并入按钮文案（v4.2.9 紧凑格式 -X/EP +NRP）', rpHead.btnText) : bad('按钮缺效率信息', rpHead.btnText);
 
   // ============ F8 自动购建激活入口迁研究点 ============
   console.log('\n[F8] 自动购建激活入口（研究点 AI 助手类目）');
@@ -156,8 +156,9 @@ try {
   ab0.rpBefore - ab1.rpAfter >= 1000 ? ok(`RP 扣费 ${ab0.rpBefore} → ${ab1.rpAfter}`, `Δ=${ab0.rpBefore - ab1.rpAfter}`) : bad('RP 扣费异常', `${ab0.rpBefore} → ${ab1.rpAfter}`);
   ab1.cardGone ? ok('激活后卡面消失（一次性入口）', '') : bad('激活卡仍残留', '');
 
-  // ============ F9 存储扩容组 + 大类标题删除 ============
-  console.log('\n[F9] 存储扩容独立成组 + 「研究升级」标题删除');
+  // ============ F9 储备扩容组 + 大类标题删除 ============
+  // v4.2.9 反馈⑦：组名「存储扩容」→「储备扩容」；断言口径同步（data-rp-fold key 不变）
+  console.log('\n[F9] 储备扩容独立成组 + 「研究升级」标题删除');
   const f9 = await page.evaluate(() => {
     const list = document.getElementById('research-upgrade-list');
     const storeTitle = list && list.querySelector('[data-rp-fold="store"]');
@@ -173,13 +174,13 @@ try {
     };
   });
   results.f9 = f9;
-  f9.storeTitle ? ok('「存储扩容」组标题存在', f9.storeText) : bad('存储扩容组缺失', '');
-  f9.prodFirst ? ok('存储扩容位于产出强化之后（链序）', '') : bad('组序异常', '');
+  f9.storeTitle ? ok('「储备扩容」组标题存在', f9.storeText) : bad('储备扩容组缺失', '');
+  f9.prodFirst ? ok('储备扩容位于产能研究之后（链序）', '') : bad('组序异常', '');
   f9.bigH3Gone ? ok('「研究升级」大类 h3 已删除', '') : bad('大类标题残留', '');
-  f9.storageCard ? ok('rp_storage 卡归入存储扩容组', '') : bad('rp_storage 卡缺失', '');
+  f9.storageCard ? ok('rp_storage 卡归入储备扩容组', '') : bad('rp_storage 卡缺失', '');
 
   // ============ F7 商店页字体统一 + 收起 ============
-  console.log('\n[F7] 商店页：产出强化组 / 设施 h3 字体统一 + 收起');
+  console.log('\n[F7] 商店页：补能间组（原产出强化）/ 设施 h3 字体统一 + 收起');
   await page.click('#btn-shop');
   await sleep(600);
   const f7a = await page.evaluate(() => {
@@ -201,14 +202,15 @@ try {
     };
   });
   results.f7a = f7a;
-  f7a.threadTitle ? ok('产出强化组标题已渲染', '') : bad('产出强化组标题缺失', '');
-  /rp-group-title/.test(f7a.threadCls) ? ok('产出强化组复用 rp-group-title 折叠样式', f7a.threadCls) : bad('组类名不符', f7a.threadCls);
-  f7a.threadFontSize === '13px' ? ok('产出强化组字号 13px（向研究点看齐）', f7a.threadFontSize) : bad('字号不符', f7a.threadFontSize);
-  f7a.threadCursor === 'pointer' ? ok('产出强化组整行可点', '') : bad('cursor 非 pointer', f7a.threadCursor);
+  f7a.threadTitle ? ok('补能间组标题已渲染', '') : bad('补能间组标题缺失', '');
+  /rp-group-title/.test(f7a.threadCls) ? ok('补能间组复用 rp-group-title 折叠样式', f7a.threadCls) : bad('组类名不符', f7a.threadCls);
+  f7a.threadFontSize === '13px' ? ok('补能间组字号 13px（向研究点看齐）', f7a.threadFontSize) : bad('字号不符', f7a.threadFontSize);
+  f7a.threadCursor === 'pointer' ? ok('补能间组整行可点', '') : bad('cursor 非 pointer', f7a.threadCursor);
   /foldable-h3/.test(f7a.bldCls) ? ok('设施 h3 接入 foldable-h3', f7a.bldCls) : bad('设施 h3 未接入', f7a.bldCls);
   f7a.bldFontSize === '13px' ? ok('设施 h3 字号 13px（v4.2.5 与 rp-group-title 完全一致）', f7a.bldFontSize) : bad('设施 h3 字号不符', f7a.bldFontSize); // v4.2.5 反馈①：12.5px → 13px 统一口径
   f7a.bldHasArrow ? ok('设施 h3 带折叠箭头', '') : bad('设施 h3 缺箭头', '');
-  // 真实点击收起/展开：设施 h3（覆盖并入设施区尾部的线程强化/效能建筑卡）
+  // 真实点击收起/展开：设施 h3（v4.2.9 反馈③：只收本分区 building-list——
+  //   隐藏 h3（线程强化/效能建筑标题）也是边界，不再连带收 #thread-shop/#v21-building-list）
   await page.click('#bld-title');
   await sleep(300);
   const folded = await page.evaluate(() => {
@@ -225,7 +227,7 @@ try {
   });
   results.folded = folded;
   folded.grid === 'none' ? ok('点击设施标题 → 设施列表收起', '') : bad('设施列表未收起', folded.grid);
-  folded.thread === 'none' && folded.v21 === 'none' ? ok('并入设施区尾部的线程强化/效能建筑一并收起', '') : bad('尾部区未随收起', JSON.stringify(folded));
+  folded.thread !== 'none' && folded.v21 !== 'none' ? ok('尾部补能间/锅炉房区不被连带收起（v4.2.9 反馈③）', `thread=${folded.thread} v21=${folded.v21}`) : bad('尾部区被越界收起', JSON.stringify(folded));
   folded.arrow === '▶' ? ok('收起态箭头 ▶', '') : bad('箭头未翻转', folded.arrow);
   await page.click('#bld-title');
   await sleep(300);
@@ -236,7 +238,7 @@ try {
   });
   unfolded.grid !== 'none' ? ok('再点展开恢复', '') : bad('展开失败', unfolded.grid);
   unfolded.arrow === '▼' ? ok('展开态箭头 ▼', '') : bad('箭头未复原', unfolded.arrow);
-  // 产出强化组收起（#thread-shop 内 group-title）
+  // 补能间组收起（#thread-shop 内 group-title）
   const ttHandle = await page.$('#thread-shop .group-title');
   if (ttHandle) {
     await ttHandle.click();
@@ -248,7 +250,7 @@ try {
       return hidden;
     });
     results.threadFold = tg;
-    tg.every(x => x.disp === 'none') ? ok('产出强化组点击 → 组内卡全部收起', JSON.stringify(tg.map(x => x.tag))) : bad('产出强化收起不净', JSON.stringify(tg));
+    tg.every(x => x.disp === 'none') ? ok('补能间组点击 → 组内卡全部收起', JSON.stringify(tg.map(x => x.tag))) : bad('补能间收起不净', JSON.stringify(tg));
     await ttHandle.click();
     await sleep(250);
     const tg2 = await page.evaluate(() => {
@@ -257,8 +259,8 @@ try {
       while (sib) { if (getComputedStyle(sib).display !== 'none') vis++; sib = sib.nextElementSibling; }
       return vis;
     });
-    tg2 > 0 ? ok('产出强化组再点恢复', `可见兄弟 ${tg2}`) : bad('产出强化未恢复', '');
-  } else bad('产出强化组标题 handle 未取到', '');
+    tg2 > 0 ? ok('补能间组再点恢复', `可见兄弟 ${tg2}`) : bad('补能间未恢复', '');
+  } else bad('补能间组标题 handle 未取到', '');
 
   // ============ F10 政策 NEW 角标 ============
   console.log('\n[F10] 政策待选组 NEW 角标');
@@ -394,10 +396,10 @@ try {
   await sleep(300);
   const f4d = await page.evaluate(() => {
     const body = document.getElementById('wiki-body').textContent;
-    return { store: body.includes('存储扩容'), six: /分六组|产出强化/.test(body) };
+    return { store: body.includes('储备扩容'), six: /分六组|产能研究/.test(body) }; // v4.2.9 ⑦：组名改产能研究/储备扩容
   });
   results.f4d = f4d;
-  f4d.store && f4d.six ? ok('unlock 表同步六组口径（含存储扩容）', '') : bad('unlock 表未同步', JSON.stringify(f4d));
+  f4d.store && f4d.six ? ok('unlock 表同步六组口径（含储备扩容）', '') : bad('unlock 表未同步', JSON.stringify(f4d));
   await page.click('#wiki-x');
   await sleep(250);
 
