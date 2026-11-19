@@ -170,8 +170,10 @@ try {
   plSrc.includes('data-hatch-upg') && plSrc.includes('data-pt-distill-toggle')
     ? ok('自动玩家补 hatch PT 入口 + 满仓暂停解锁（EP 扩容不再死锁）') : bad('自动玩家 PT 入口缺失');
   const budgetSrc = src('../tests/chapters/budget.mjs');
-  /4: \{ minPrestige: 5,[\s\S]*?carry: \{ prestige: 12, es: 550/.test(budgetSrc)
-    ? ok('ch4 预算表保持 v426 C1 链一致性（整体重标定留独立批次）') : bad('ch4 预算链被破坏');
+  // v4.3.4 反转：旧断言锁「未重标定占位值」；CH4 已独立批次重标定（minPrestige 5→2、
+  //   carry 12→10、maxDays 16→120），断言改为锁新校准值——防后续批次静默改回。
+  /4: \{ minPrestige: 2,[\s\S]*?maxDays: 120,[\s\S]*?carry: \{ prestige: 10, es: 120/.test(budgetSrc)
+    ? ok('ch4 预算表已重标定（v4.3.4：minPrestige 2 / carry 10 / maxDays 120）') : bad('ch4 预算链被破坏');
 
   // ============ ⑨ 0 pageerror ============
   console.log('\n[⑨ pageerror]');

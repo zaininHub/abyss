@@ -39,15 +39,22 @@ export const BUDGET = {
   //   carry ES 210 消费成永恒等级 → CPS 基数更高，过门快于 ch2；章内二升收尾
   3: { minPrestige: 2, es: [40, 400], pp: [2, 24], rp: [3, 150], maxDays: 130,
     carry: { prestige: 8, es: 320, prestigePoints: 8 } },
-  // 第 4 章：prestige 12→17。need≈1.47e11..2.32e11 → 单次 ES≈92..116；
-  //   第 5 章条件 expeditionsDone>=8——ch4 起自动玩家开启远征点击（expeditionsDone 随推演累计）
-  // v4.3.3 注：CH4 链路已打通（moon 远征 RP/PT 门槛降至 500 + 自动玩家补 hatch PT 入口 + 满仓暂停
-  //   解锁 EP 扩容死锁 + deep_space 50 DM），分段实测 expDone>0 / CPS 从 460 爬到 2.5e4。
-  //   预算表本身（carry prestige 12 / minPrestige 5 / maxDays 16）仍与真实经济失配——
-  //   need(12)=1.4e11 在 16 天窗口不可达；预算表联动改动会破坏 v426 C1 预算链一致性断言，
-  //   留作独立批次整体重标定（非本批代码修复范围）。
-  4: { minPrestige: 5, es: [220, 800], pp: [3, 60], rp: [3, 180], maxDays: 16,
-    carry: { prestige: 12, es: 550, prestigePoints: 12 } },
+  // 第 4 章：prestige 10→12（minPrestige 2）。第 5 章条件 expeditionsDone>=8——ch4 起自动玩家
+  //   开启远征点击（expeditionsDone 随推演累计）。
+  // v4.3.4 整章重标定（基于 v4.3.3 链路修复后的真实曲线）：
+  //   - 真实 CPS 轨迹：D1 460（晋升重置起点）→ D10 1.4e3 → D28 2.5e4 → D40 2.9e4 趋平；
+  //     平台期产速 ≈ 2.5e9 runEarned/天。runEarned@D40 = 3.5e10。
+  //   - 晋升周期模型：每周期 ≈ 爬升 22~28 天（跨局永恒复利加速）+ 平台攒 need 6~32 天；
+  //     120 天窗口稳完成 2~3 次晋升 → minPrestige 5→2（原 5 需 ~140 天不可达）。
+  //   - 输入 carry prestige 12→10（对齐 v426 C1 保底链：ch1..3 minPrestige 累计 4 +
+  //     carryChainIntegrity 下界 9；need(10)=1.09e11 与真实链 ch3 输出 ~8~9 量级一致）。
+  //   - es [220,800]→[80,260]：esAt(need(8..10))=63..73，hold 5 天攒量 ×1.3~2 → 单次 63~95，
+  //     章内 2 次 ≈ 130~180，区间 [80,260] 覆盖。
+  //   - 缺口承接：minPrestige 5→2 的 -3 由 ch8 9→12 承接（ch8 是远征门槛章、晋升纯预算语义，
+  //     ch9 无晋升类门槛），下游 carry 链按保底链下界重排（ch9~18 +2~+10，属未校准章的
+  //     手工估计值，后续批次逐章校准时按实测重写）。
+  4: { minPrestige: 2, es: [80, 260], pp: [2, 20], rp: [3, 180], maxDays: 120,
+    carry: { prestige: 10, es: 120, prestigePoints: 10 } },
   // 第 5 章：prestige 17→22。need≈2.32e11..3.28e11 → 单次 ES≈116..138
   5: { minPrestige: 5, es: [260, 900], pp: [3, 70], rp: [3, 200], maxDays: 16,
     carry: { prestige: 17, es: 900, prestigePoints: 17 } },
@@ -58,46 +65,48 @@ export const BUDGET = {
   // 第 7 章：prestige 26→41（第 8 章条件 prestige>=40）。need≈3.90e11..6.75e11 → 单次 ES≈140..184
   7: { minPrestige: 15, es: [900, 2600], pp: [8, 200], rp: [5, 400], maxDays: 20,
     carry: { prestige: 26, es: 1800, prestigePoints: 26 } },
-  // 第 8 章：prestige 41→50（第 9 章条件 expeditionsDone>=20 随远征累计）。
-  //   need≈6.75e11..8.47e11 → 单次 ES≈184..206
-  8: { minPrestige: 9, es: [1100, 3200], pp: [10, 250], rp: [6, 450], maxDays: 20,
+  // 第 8 章：prestige 41→53（第 9 章条件 expeditionsDone>=20 随远征累计；无晋升类门槛，
+  //   minPrestige 纯预算语义）。v4.3.4：9→12 承接 ch4 5→2 的 C1 保底链缺口（-3）。
+  //   need≈6.75e11..1.02e12 → 单次 ES≈184..226
+  8: { minPrestige: 12, es: [1100, 3200], pp: [10, 250], rp: [6, 450], maxDays: 20,
     carry: { prestige: 41, es: 3200, prestigePoints: 41 } },
-  // 第 9 章：prestige 50→56。need≈8.47e11..1.02e12 → 单次 ES≈206..226
+  // 第 9 章：prestige 53→59。need≈1.02e12..1.22e12 → 单次 ES≈226..247
+  // v4.3.4：carry 50→52 起按 ch8 minPrestige+3 重排的保底链下界（未校准章，后续按实测重写）
   9: { minPrestige: 6, es: [800, 3400], pp: [8, 260], rp: [6, 480], maxDays: 20,
-    carry: { prestige: 50, es: 4600, prestigePoints: 50 } },
-  // 第 10 章：prestige 56→62（第 11 章条件 es>=150 此后恒满足）。need≈1.02e12..1.22e12
+    carry: { prestige: 52, es: 4600, prestigePoints: 52 } },
+  // 第 10 章：prestige 58→64（第 11 章条件 es>=150 此后恒满足）。need≈1.22e12..1.42e12
   10: { minPrestige: 6, es: [800, 3600], pp: [8, 280], rp: [6, 500], maxDays: 20,
-    carry: { prestige: 56, es: 5700, prestigePoints: 56 } },
-  // 第 11 章：prestige 62→68（es>=150 门槛输入已满足）。need≈1.22e12..1.42e12
+    carry: { prestige: 58, es: 5700, prestigePoints: 58 } },
+  // 第 11 章：prestige 64→70（es>=150 门槛输入已满足）。need≈1.42e12..1.63e12
   11: { minPrestige: 6, es: [800, 3800], pp: [8, 300], rp: [6, 520], maxDays: 20,
-    carry: { prestige: 62, es: 6900, prestigePoints: 62 } },
-  // 第 12 章：prestige 68→74（es>=800 门槛输入已满足）。need≈1.42e12..1.63e12
+    carry: { prestige: 64, es: 6900, prestigePoints: 64 } },
+  // 第 12 章：prestige 70→76（es>=800 门槛输入已满足）。need≈1.63e12..1.85e12
   12: { minPrestige: 6, es: [800, 4000], pp: [8, 320], rp: [6, 540], maxDays: 20,
-    carry: { prestige: 68, es: 8100, prestigePoints: 68 } },
-  // 第 13 章：prestige 74→92（进入时累计 74；v4.2.6 校准④：ch2/ch3 minPrestige 改小后
+    carry: { prestige: 70, es: 8100, prestigePoints: 70 } },
+  // 第 13 章：prestige 76→94（进入时累计 76；v4.2.6 校准④：ch2/ch3 minPrestige 改小后
   //   保底链缺口前移到这里补——累计需 ≥70 门槛 + ch14 的 130 门槛缺口 84+46=130 恰好贴线）。
-  //   need≈1.63e12..2.75e12 → 单次 ES≈286..371
+  //   need≈1.85e12..3.0e12 → 单次 ES≈304..387
   13: { minPrestige: 18, es: [1300, 5200], pp: [12, 480], rp: [6, 600], maxDays: 24,
-    carry: { prestige: 74, es: 9500, prestigePoints: 74 } },
-  // 第 14 章：prestige 86→130（第 15 章条件 prestige>=260 → 第 15 章完成 130 次）。
-  //   need(85..129)≈2.39e12..4.67e12 → 单次 ES≈346..483，45 次 ≈1.85e4
+    carry: { prestige: 76, es: 9500, prestigePoints: 76 } },
+  // 第 14 章：prestige 94→140（第 15 章条件 prestige>=260 → 第 15 章完成 140 次）。
+  //   need(94..139)≈2.9e12..5.1e12 → 单次 ES≈380..505，46 次 ≈2.0e4
   14: { minPrestige: 46, es: [8000, 42000], pp: [30, 1300], rp: [8, 1500], maxDays: 28,
-    carry: { prestige: 85, es: 11500, prestigePoints: 85 } },
-  // 第 15 章：prestige 130→260（130 次晋升）。need(130..259)≈4.67e12..1.25e13 →
-  //   单次 ES≈483..790，合计 ≈8.2e4
+    carry: { prestige: 94, es: 11500, prestigePoints: 94 } },
+  // 第 15 章：prestige 140→270（130 次晋升）。need(140..269)≈5.1e12..1.31e13 →
+  //   单次 ES≈505..810，合计 ≈8.5e4
   15: { minPrestige: 130, es: [30000, 200000], pp: [100, 6500], rp: [30, 9000], maxDays: 40,
-    carry: { prestige: 130, es: 20000, prestigePoints: 130 } },
+    carry: { prestige: 140, es: 20000, prestigePoints: 140 } },
   // 第 16 章：第 17 章条件 faith>=90——信仰线由自动玩家经产品入口推进，不入 ES 预算；
-  //   晋升按 canPrestige 即升（261~280 次）
+  //   晋升按 canPrestige 即升（271~290 次）
   16: { minPrestige: 20, es: [1500, 12000], pp: [20, 900], rp: [10, 900], maxDays: 28,
-    carry: { prestige: 260, es: 100000, prestigePoints: 260 } },
+    carry: { prestige: 270, es: 100000, prestigePoints: 270 } },
   // 第 17 章：第 18 章条件 end_shrine 建筑或 true_end 科技——由自动玩家购买满足；
-  //   晋升按 canPrestige 即升（281~300 次）
+  //   晋升按 canPrestige 即升（291~310 次）
   17: { minPrestige: 20, es: [1500, 12000], pp: [20, 900], rp: [10, 900], maxDays: 28,
-    carry: { prestige: 280, es: 112000, prestigePoints: 280 } },
+    carry: { prestige: 290, es: 112000, prestigePoints: 290 } },
   // 第 18 章：终章后收尾（章内晋升链继续滚动验证；riftsSealed 番外门槛不入预算）
   18: { minPrestige: 5, es: [800, 14000], pp: [10, 600], rp: [8, 800], maxDays: 24,
-    carry: { prestige: 300, es: 124000, prestigePoints: 300 } },
+    carry: { prestige: 310, es: 124000, prestigePoints: 310 } },
 };
 
 /** 主线章节数（1~18），番外不入体系。 */

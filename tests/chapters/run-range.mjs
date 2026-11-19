@@ -141,6 +141,12 @@ async function runChapter(page, { n, maxDays, dayStart = 1, dayEnd = 0, checkpoi
       writeCheckpoint(await captureFullState(page, n, d, daily, advanced, advancedDay, prestigesAtEntry));
     }
   }
+  // v4.3.4 修复：segPer 模式段末若 day 不在 segPer 整除点上（如 --seg-per 15 跑到 D55），
+  //   循环内不落盘 → 段落进度随进程退出丢失，--resume-chapter 回退到上一个整除点重跑。
+  //   段落正常结束（segmentEnd）时强制补落盘最终态，保证「段末即续跑点」。
+  if (segPer > 0 && dayEnd > 0 && endDay < maxDays) {
+    writeCheckpoint(await captureFullState(page, n, endDay, daily, advanced, advancedDay, prestigesAtEntry));
+  }
   return { done: false, daily, advancedDay, daysUsed: endDay, final: daily[daily.length - 1] || null,
     segmentEnd: dayEnd > 0 && endDay < maxDays }; // 段落结束（非整章超时）——主流程据此写段报告不判 FAIL
 }
