@@ -343,8 +343,20 @@ export function playerInit(cfg = {}) {
     } catch (e) { if (st.errors.length < 12) st.errors.push('chapBld:' + e.message); }
     // ③ 星图远征：切到星图 tab 点最便宜可负担目的地（真实 DOM click，与玩家路径一致）；
     //    探索返回由产品 tick 结算（expeditionsDone++ 在 expedition.js 内）
+    // v4.3.1 ch4 校准：星图三前置 = PT 锚点 ∧ RP 锚点 ∧ deep_space 科技（disclosure.starChartUnlocked）。
+    //   ch1~ch3 晋升链只攒 ES/RP，PT 锚点未解 → 星图 tab 锁定 → expeditionsDone 恒 0 → ch5 条件永不可达。
+    //   真玩家在 ch4（cps ~1e4）会买「饵料仓库」解 PT 锚点——补上这个产品真实入口（30 万 EP，占比极小）。
+    //   deep_space 还需 1000 DM；ch4 种子 dm=0 → 经产品真实入口封裂拿 DM（裂隙门槛 8 线程，v4.3.0 后首裂 10 分钟）。
     try {
       const wantExps = [4, 8].includes(parseInt(String(S.chapter), 10) + 1) || (S.expeditionsDone || 0) < 24;
+      if (wantExps && !(S.resDiscovered && S.resDiscovered.pt) && ((S.upgrades && S.upgrades.pt_vault) || 0) < 1) {
+        const u = q.UPGRADES.find(x => x.id === 'pt_vault');
+        const c = u && q.bulkCostCalc(u, 1);
+        if (u && Number.isFinite(c) && c <= S.ep) { q.sim.buyUpgrade(u); st.chapBuys++; }
+      }
+      // v4.3.1 收口说明：ch4 深空探测需 1000 DM，而 carry 种子 dm=0；裂隙封印成本=EP上限×30~50%，
+      //   低 CPS 阶段封印成功率极低（实测 12 天 2501 次点击仅 +76 DM）——需在独立批次重标定
+      //   ch4 的 DM 来源（种子带 DM / 调整 deep_space 成本 / 裂隙早期奖励），本批不塞无效点击。
       if (wantExps && (S.expeditions || []).length < 2 && (S.starCps || 0) >= 0) {
         q.sim.switchTab('expedition');
         q.sim.render();

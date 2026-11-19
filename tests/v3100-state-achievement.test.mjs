@@ -45,8 +45,8 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.equal(state.SAVE_VERSION, 6, 'SAVE_VERSION 不 bump，旧档无迁移成本');
   assert.equal(d._version, 6);
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
-  // v4.2.X：v2.2 即废弃的 _forkTriggered 已删除（141→140）；其余字段不变。
-  assert.equal(keys.length, 140, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 三键 + v4.0.9 ⑫ 的自动转化开关七键（atriumOn/_probeEnabled/ptDistillOn/ptAutoHatch/ptHatchLv/riftAuto/autoPurify）');
+  // v4.2.X：v2.2 即废弃的 _forkTriggered 已删除（141→140）；v4.3.1 ⑥ 新增 keepAwake（140→141）。
+  assert.equal(keys.length, 141, 'v3.10.2 的 129 + v3.12.0 ⑬ 的 moduleUnlocks + v3.12.6 ⑤ 的 _purifierSeen + v3.12.13 的 _gainRes/_spentRes/_buyRes 三键 + v4.0.9 ⑫ 的自动转化开关七键 + v4.3.1 ⑥ 的 keepAwake（删 _forkTriggered 后净 141）');
   // v4.2.X：轮回移除，大模块买断只剩集市一项。
   assert.deepEqual(d.moduleUnlocks, { bazaar: false }, '新档集市未开启（轮回已移除）');
 });

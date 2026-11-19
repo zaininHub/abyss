@@ -7,7 +7,7 @@
 //   ④ 科技树页头「· 当前 N RP」删除（顶栏同口径）
 //   ⑤ 研究点：DM 锚点未完成时星尘精炼不渲染（载具购入后出现）——浏览器行为验证
 //   ⑥ 大模块 tab 按解锁顺序从左往右排列（解锁章序：shop/tech/rp ch1 → bazaar 首晋升 →
-//      pets ch2 → expedition ch3 → religion ch4 → rift ch5 → policy ch7 → relics ch9 → delve ch11）
+//      pets ch2 → expedition ch3 → religion ch4 → rift ch5 → policy ch7 → relics ch3[v4.3.1 提前] → delve ch11）
 import puppeteer from 'puppeteer-core';
 import { chromePath } from './_chrome.mjs';
 import { fileURLToPath } from 'node:url';
@@ -90,14 +90,16 @@ try {
     crew.rowOrder ? ok('② 数值行在操作行之上') : bad('② 行序错乱', String(crew.rowOrder));
   }
 
-  // ---- ④ 科技树页头 ----
+  // ---- ④ 科技树页头（v4.3.1 反馈④反转：旧断言锁「页头仅科技树」，现要求整段重复标题删除）----
   await page.evaluate(() => { window.__qa.sim.switchTab('tech'); });
   await sleep(400);
   const techH = await page.evaluate(() => {
-    const h3 = document.querySelector('#tab-tech h3');
-    return { text: h3 ? h3.textContent.trim() : '', hasTechRp: !!document.getElementById('tech-rp') };
+    const hs = [...document.querySelectorAll('#tab-tech h3')].map(h => h.textContent.trim());
+    return { hs, hasTechRp: !!document.getElementById('tech-rp') };
   });
-  techH.text === '科技树' && !techH.hasTechRp ? ok('④ 科技树页头仅「科技树」（N RP 文案已删）', techH.text) : bad('④ 页头文案不符', JSON.stringify(techH));
+  !techH.hs.some(t => t === '科技树') && !techH.hasTechRp
+    ? ok('④ 科技树页内无重复「科技树」标题（tab 名已标识，N RP 文案已删）', JSON.stringify(techH.hs))
+    : bad('④ 页头文案不符', JSON.stringify(techH));
 
   // ---- ⑥ 大模块 tab 解锁顺序排列 ----
   const tabOrder = await page.evaluate(() =>

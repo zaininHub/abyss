@@ -125,7 +125,7 @@ try {
     S.upgrades = Object.assign({}, S.upgrades, { scooter: 1 }); // DM 锚点（首辆载具）
     S.resDiscovered = Object.assign({}, S.resDiscovered, { dm: true });
     S._riftSeen = true; S.riftsSealed = Math.max(S.riftsSealed || 0, 1); // 裂隙触发
-    S.chapter = '9'; // 遗物章节门禁（CHAPTER_GATES.relics = 9）
+    S.chapter = '3'; // 遗物章节门禁（v4.3.1 从 9 提前到 3——深渊提前第二波）
     S.ep = Math.max(S.ep || 0, 1e6); S.dm = Math.max(S.dm || 0, 5000);
   });
   // 等帧系统 refreshTabVisibility（1s 周期）解除锁定，否则 .tabs 捕获阶段拦截点击（v3.3.3 反馈④）

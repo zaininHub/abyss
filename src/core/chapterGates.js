@@ -21,12 +21,16 @@ export function chapterAtLeast(n, state) {
 // 门禁 id → 所需章节。所有模块门禁统一读这里，避免散落硬编码。
 // v2 修订：宗教=4（EP 出口保住）、超验/隐密圣学=6、政策=7、永恒矩阵=8、
 //         遗物=9、共鸣=10、深潜=11、殖民=12。
+// v4.3.1 反馈⑨第二波：遗物 9→3——深渊核心长线玩法不再被章节卡在大后期。
+//   第一次裂隙（8 线程 + 10 分钟）在第 1~2 章已出现，DM 首封即可得；
+//   relicsUnlocked() 仍要求「裂隙已触发 ∧ DM 已发现」双资产条件，第 3 章（minDays 5 天）后自然满足。
+//   深潜保持 11（涉及 ES≥3 + 宗教长链 + 30 天推演重校准，用户明确本批不动）。
 export const CHAPTER_GATES = Object.freeze({
   religion: 4,
   transcend: 6,
   policy: 7,
   eternals: 8,
-  relics: 9,
+  relics: 3,  // v4.3.1：原 9——遗物提前到第 3 章（资产门控仍在）
   resonance: 10,
   delve: 11,
   expedition: 12,

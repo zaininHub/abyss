@@ -237,6 +237,13 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 /* v3.3.3 反馈②：成就常驻第一列（原 .side-col 规则同步） */
 .first-col .panel { margin: 0; }
 .first-col #tab-achievement { display: block; }
+/* v4.3.1 反馈⑧：成就面板固定高度 + 列表内滚 + 分页吸底——
+   旧实现面板由内容撑开（flex:0 0 auto），解锁条目增多时整列被撑长、底边与其它列不齐；
+   现在面板定高（clamp 随视口），列表区独立滚动，分页 sticky 吸在面板底部。
+   注意特异性须与上一行 .first-col #tab-achievement 同级且后置，否则 display:flex 被 block 覆盖。 */
+.first-col #tab-achievement { display: flex; flex-direction: column; height: clamp(232px, 30vh, 352px); min-height: 0; overflow: hidden; }
+.first-col #tab-achievement > #achievement-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.first-col #tab-achievement .crew-pager { position: sticky; bottom: 0; z-index: 2; background: var(--panel, var(--bg-2, #141821)); margin-bottom: 0; padding: 6px 0 2px; }
 
 /* v3.3.3 反馈⑨：未开放大模块 tab 的「??？」锁定态 */
 .tab-locked {
@@ -1170,6 +1177,10 @@ body.log-resizing, body.log-resizing * { cursor: ns-resize !important; user-sele
 
 /* v4.1.0 反馈②：暂停按钮字体加色（--warn 琥珀，浅色主题自动切换深色变体）+ 移至按钮组最右。
    边框/光晕用固定 rgba(210,153,34,…)（--warn 暗色基色）——不引入 color-mix 新依赖；浅色主题下 --warn 本身换深色变体，字色可读性由变量层保证。 */
+/* v4.3.1 反馈⑥：浏览器保活开关（开=绿底/关=常态/不支持=灰显）——与 pause-btn 同为警示/状态色语义 */
+.keep-awake-btn { border-color: rgba(63, 185, 80, .3); }
+.keep-awake-btn.on { color: var(--green, #3fb950); border-color: var(--green, #3fb950); background: rgba(63, 185, 80, .12); }
+.keep-awake-btn.unsupported { opacity: .45; cursor: not-allowed; }
 .pause-btn {
   color: var(--warn);
   border-color: rgba(210, 153, 34, .45);
@@ -1702,6 +1713,8 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 #storyline-h3:hover { color: var(--accent); }
 /* v3.3.1 反馈⑨：成就面板同样可收起 */
 #tab-achievement.sl-collapsed #achievement-panel { display: none; }
+/* v4.3.1 反馈⑧：收起时面板高度随标题收缩（否则固定高度留空壳） */
+.first-col #tab-achievement.sl-collapsed { height: auto; overflow: visible; }
 #achievement-h3:hover { color: var(--accent); }
 .codex-ch.on { border-left-color: var(--green, #3fb950); }
 .codex-ch.locked { border-left-color: var(--red, #f85149); opacity: .55; }

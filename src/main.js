@@ -1437,6 +1437,68 @@ function bindQuickSwitches() {
   });
 }
 
+// ---- v4.3.1 反馈⑥：浏览器保活（Web Wake Lock）----
+// 用户诉求：电脑休眠/息屏导致浏览器挂起时游戏不产出。主循环 dt 钳到 10s、挂起时长只记账给裂隙，
+// 全局产出确实丢失；Wake Lock 让屏幕保持唤醒，从源头避免休眠。仅阻止系统休眠，切后台仍由浏览器节流——
+// 这是 Web 平台限制，不伪造产出（伪造会破坏经济平衡）。不支持 Wake Lock 时按钮降级为提示，不假装已生效。
+let wakeLockSentinel = null;
+const WAKE_LOCK_SUPPORTED = typeof navigator !== 'undefined' && !!navigator.wakeLock && typeof navigator.wakeLock.request === 'function';
+async function requestWakeLock() {
+  if (!WAKE_LOCK_SUPPORTED || wakeLockSentinel) return !!wakeLockSentinel;
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    // 浏览器可能在系统休眠/切标签时主动释放——监听 release 后按开关意图重请求
+    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; if (S.keepAwake) tryRequestWakeLock(); }, { once: true });
+    return true;
+  } catch { wakeLockSentinel = null; return false; }
+}
+function tryRequestWakeLock() { return requestWakeLock(); } // 宿主可能未授予，静默重试不打扰
+async function releaseWakeLock() {
+  if (!wakeLockSentinel) return;
+  const s = wakeLockSentinel; wakeLockSentinel = null;
+  try { await s.release(); } catch { /* 已释放/页面隐藏：忽略 */ }
+}
+function syncKeepAwakeUI() {
+  const btn = document.getElementById('keep-awake-btn');
+  if (!btn) return;
+  const on = !!S.keepAwake;
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.classList.toggle('on', on);
+  btn.classList.toggle('unsupported', !WAKE_LOCK_SUPPORTED);
+  btn.title = !WAKE_LOCK_SUPPORTED
+    ? '当前浏览器不支持屏幕保活（Wake Lock），开关不可用'
+    : on ? '已开启保活：屏幕保持唤醒，防止休眠中断挂机产出（点击关闭）'
+         : '保持屏幕唤醒：防止休眠/息屏导致浏览器挂起、挂机产出中断（点击开启）';
+}
+function bindKeepAwake() {
+  const btn = document.getElementById('keep-awake-btn');
+  if (!btn) return;
+  syncKeepAwakeUI();
+  btn.addEventListener('click', async () => {
+    if (!WAKE_LOCK_SUPPORTED) {
+      toast('此浏览器不支持屏幕保活（Wake Lock）');
+      return;
+    }
+    S.keepAwake = !S.keepAwake;
+    save(S);
+    if (S.keepAwake) {
+      const ok = await requestWakeLock();
+      if (!ok) { S.keepAwake = false; save(S); toast('保活请求被浏览器拒绝，未开启'); }
+      else log('浏览器保活已开启：屏幕保持唤醒，挂机产出不再因休眠中断', 'good');
+    } else {
+      await releaseWakeLock();
+      log('浏览器保活已关闭', 'bad');
+    }
+    syncKeepAwakeUI();
+  });
+  // 切回前台时浏览器可能已释放锁——仅在开关仍打开时重请求（开关意图为单一真源）
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && S.keepAwake && !wakeLockSentinel) tryRequestWakeLock();
+  });
+  // 启动即按存档偏好请求（多数浏览器要求用户手势，首次可能被拒——下次点击/切前台会重试）
+  if (S.keepAwake) tryRequestWakeLock();
+}
+
 // v2.5 ④：研究点（RP）独立栏目——v3.0.9 反馈②：解锁唯一入口 = 购入「矩阵存储库」；
 // tab 未解锁时入口整体隐藏，原「EP 已溢出存储上限…」引导文案随 v3.0.9 反馈① 移除
 function renderRpPanel() {
@@ -1444,9 +1506,9 @@ function renderRpPanel() {
   if (!panel) return;
   if (!anchorDone('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
   panel.innerHTML = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0">🔬 研究点（RP） <span id="rp-info-i" title="RP 获取：灵感蒸馏塔主动转化（消耗 25% 当前 EP）、灵感工坊自动蒸馏、任务奖励。RP 用途：科技树、研究升级、RP 加成、离线升级与族升级。" style="cursor:pointer;font-size:11px;color:var(--text-3)">ⓘ</span></h3>
+    <!-- v4.3.1 反馈⑤：去「研究点（RP）」页内标题与 ⓘ 悬浮窗（tab 名已标识；说明文案由 wiki 承担） -->
     <!-- v4.0.9 反馈②：顶部说明压到 1-2 行——当前 RP/上限/效率/蒸馏按钮收成一行，蒸馏按钮并入同行 -->
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span class="stat" style="display:inline"><b>当前 RP</b> <span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></span>
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>
     </div>
@@ -1454,11 +1516,6 @@ function renderRpPanel() {
     <div id="atrium-switch-host" style="margin-top:10px"></div>
   </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行
   renderAtriumSwitch(document.getElementById('atrium-switch-host'));
-  // v2.8.28 修复：ⓘ 点击弹窗说明（与线程状态说明同款交互——原生 title 悬停在部分环境无响应）
-  panel.querySelector('#rp-info-i')?.addEventListener('click', () => {
-    askConfirm('研究点（RP）说明',
-      '获取方式：\n· 灵感蒸馏塔：消耗当前 EP 的 25%，按蒸馏效率转化为 RP（默认 30000 EP → 1 RP）\n· 灵感工坊：自动蒸馏（每秒消耗 EP 转化 RP）\n· 任务奖励：RP 解锁后任务可能奖励 RP\n\n用途：\n· 科技树：开辟新玩法\n· 研究升级 / RP 加成 / 离线升级 / 族升级：强化已有内容\n\n上限：基础 2,500 + 矩阵存储库逐级扩容（首级 +400、之后每级 +15%）+ 产出基座（+当前 EP 上限的 25%，需星图远征开启后研究「星图同调」解锁）。未购星图同调前，上限只靠仓库线性增长；晋升后本局扩容与产出基座一起归零，回到 2,500 再逐次扩容。达到上限后停止积累。', () => {});
-  });
 }
 
 // v3.7.3 反馈⑤：晋升模块显隐的唯一判定源——与 btn-prestige 的 P3 阶段门控同源。
@@ -1594,6 +1651,7 @@ function bindEvents() {
   bindFlowTipPop(); // v4.1.2：顶栏产出/消耗悬浮改真实 DOM 气泡（分组换行 + 净流说明）
   bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
+  bindKeepAwake(); // v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
   document.getElementById('focus-buy')?.addEventListener('click', buyFocus);
 
@@ -2994,6 +3052,8 @@ if (typeof window !== 'undefined') {
     RESONANCE_FOCI, RESONANCE_TUNING, RESONANCE_UNLOCK, DEFAULT_RESONANCE,
     resonanceUnlocked, resonanceState, resonanceSummary, resonanceMult,
     setResonanceEnabled, toggleResonanceEnabled, setResonanceFocus,
+    // v4.3.1 反馈⑥：浏览器保活开关状态 QA 钩子（只读，行为走按钮真实点击）
+    WAKE_LOCK_SUPPORTED, keepAwakeActive: () => !!wakeLockSentinel,
     // v3.7.0 30 天 mock 推演：自动玩家只调用产品真实入口，禁止直接写 S 伪造进度
     sim: { doClick, buyUpgrade, switchTab, render, clickMult, addEp, canPrestige, doPrestige,
       claimProject,

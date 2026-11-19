@@ -13,6 +13,7 @@ import { delveDepth } from '../modules/delve.js';
 import { getRegisteredStorylines, getStorylinePackage } from '../core/storylineManager.js'; // v3.7.0：故事线特色章节
 import { LINE_RULE_LABELS } from '../core/lineRules.js';
 import { GALAXIES } from '../modules/expedition.js'; // v4.0.9 反馈④：星空与远征专章
+import { CHAPTER_GATES } from '../core/chapterGates.js'; // v4.3.1 反馈⑨：遗物解锁章数读门禁真源（自动跟随下调）
 
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -216,14 +217,14 @@ export const WIKI_SECTIONS = [
     <h4>系统/功能解锁条件总表（研发手册口径，与代码同步）</h4>
     <table class="wiki-tbl"><tr><th>内容</th><th>解锁条件</th><th>说明</th></tr>
       <tr><td>科技树</td><td>第 1 章 ∧ 购入「矩阵存储库」（RP 锚点）</td><td>RP 消耗，开辟玩法</td></tr>
-      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>共 ${D.researchUpgs.length} 项、分六组：产能研究（开局显现）→ 储备扩容（累计 4 级）→ 深渊协议（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（三者并列，再累计 4 级；星际另需星图开启）；未达条件的组不占版面</td></tr>
+      <tr><td>研究升级</td><td>同科技树（研究点 tab）</td><td>共 ${D.researchUpgs.length} 项、分六组：产能研究（开局显现）→ 储备扩容（累计 4 级）→ 深渊协议（累计 4 级）→ 深渊扩展 / AI 助手 / 星际（三者并列，再累计 4 级；AI 助手另需科技树「AI 管理核心」，星际另需星图开启）；未达条件的组不占版面</td></tr>
       <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点 tab「晋升 RP 加成」分区</td></tr>
       <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点 tab 底部，RP + 里程碑双门控，逐档线性</td></tr>
       <tr><td>异兽（PT/宠物）</td><td>PT 锚点完成：购入「饵料仓库」/「PT 金库」或首次持有 PT（本局制）</td><td>与顶栏 PT 同口径，PT 未解锁时异兽模块不会开放；自动孵化需首次购买「孵化升级」解锁；出战异兽维持消耗 PT（不足自动休战）。星图排在它之后：远征要花 PT、还靠出战异兽加成，宠物没开时星图不会开放</td></tr>
       <tr><td>灵感工坊（自动蒸馏）</td><td>EP 或累计产出 ≥ 15,000（首价 50K 的 30%）后，商店「设施 · 灵感工坊」区摆出首购卡</td><td>EP 直购 50K；每级消耗 150 EP/s 转化 +0.15 RP/s，升级按钮在卡上（EP 指数消耗）；购入后任务版上方出现「蒸馏」快捷开关</td></tr>
       <tr><td>探采平台 / 深渊商店</td><td>首次触发深渊裂隙</td><td>载具只消耗 EP 换取 DM、不提供 EP 产出；EP→DM 汇率随总载具数逐辆 ×${D.vehicles.epPerDmGrowth} 递增，载具协议使 DM 采集速率 ×${D.vehicles.protocolMult}</td></tr>
       <tr><td>自动转化快捷开关</td><td>各系统解锁后出现（任务版上方）：蒸馏=灵感工坊购入 / 探采=拥有载具 / 孵化=自动孵化解锁</td><td>与原位置开关功能一致（同一状态）；EP 不足时自动暂停消耗，回升后自动恢复——开关只由玩家手动控制</td></tr>
-      <tr><td>深渊遗物</td><td>第 9 章 ∧ 裂隙已触发 ∧ DM 已发现</td><td>遗物 tab</td></tr>
+      <tr><td>深渊遗物</td><td>第 ${CHAPTER_GATES.relics} 章 ∧ 裂隙已触发 ∧ DM 已发现</td><td>遗物 tab</td></tr>
       <tr><td>裂隙 tab</td><td>首次触发深渊裂隙</td><td>余烬升级树、深入探索</td></tr>
       <tr><td>宗教</td><td>第 4 章 ∧ 备用粮仓 ≥3 ∧ RP 觉醒，面板「唤醒信仰」</td><td>宗教 tab，选一锁定</td></tr>
       <tr><td>政策</td><td>第 7 章 ∧ 开放任一政策组</td><td>政策 tab，每轮重选；有可选项时 tab 挂感叹号</td></tr>

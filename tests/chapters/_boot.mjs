@@ -56,22 +56,24 @@ export function baseSeed(overrides = {}) {
  * 页面准备（goto 之前）：种子注入 + 时间虚拟化 + setInterval 拦截。
  * 返回 { page, errs }；之后仍可继续注册 evaluateOnNewDocument，最后调 gotoAndSettle()。
  */
-export async function prepPage(browser, { save }) {
+export async function prepPage(browser, { save, vt = 0 }) {
   const page = await browser.newPage();
   page.setDefaultTimeout(300000);
   await page.setViewport({ width: 1600, height: 1000 });
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
-  await page.evaluateOnNewDocument((raw) => {
+  // v4.3.1 反馈①：vt 可选——章内分段续跑时恢复虚拟时间偏移（Date.now 虚拟化须与落盘点连续，
+  //   否则 chapterEnteredAt/裂隙计时等绝对时间戳错位）。默认 0 与旧调用逐字一致。
+  await page.evaluateOnNewDocument(({ raw, vt: vt0 }) => {
     localStorage.setItem('abyss_idle_v2', raw);
     window.__rawSaveHasResonance = raw.includes('"resonance"');
-    window.__vt = 0;
+    window.__vt = vt0;
     const origNow = Date.now.bind(Date);
     Date.now = () => origNow() + window.__vt;
     window.__timerIds = [];
     const origSI = window.setInterval.bind(window);
     window.setInterval = (fn, ms, ...a) => { const id = origSI(fn, ms, ...a); window.__timerIds.push(id); return id; };
-  }, save);
+  }, { raw: save, vt });
   return { page, errs };
 }
 

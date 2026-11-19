@@ -59,6 +59,40 @@ test('方向①：绑定非擅长岗位 → 自由 EP 产出↓、消耗↑；�
   assert.equal(threadBindSalaryFactor(c), 1);
 });
 
+// v4.3.1 反馈⑦：用户口径「关闭自动转化 → 班组加成不生效、绑定不变」。
+// 现有实现 bindingActive() 读开关但不写 boundTo——关工坊只让在岗判定/加成失效，岗位分配保留；
+// 重开后加成自动恢复。此测试锁住这个三态语义，防止未来误改成「关闭即清空绑定」。
+test('v4.3.1⑦：关灵感工坊只让加成失效、岗位绑定保留，重开自动恢复', () => {
+  resetState();
+  const c = mkCultist({ profession: 'distiller', boundTo: 'atrium', level: 5, xp: xpThreshold(5) }); // 蒸馏师擅长灵感工坊
+  S.cultists.push(c); // converterThreadBoost 遍历 S.cultists（非单参），须在册
+  S._crewUnlocked = true; // XP 门控：班组已解锁
+  assert.equal(affinityMatches(c, 'atrium'), true);
+  assert.equal(bindingActive(c), true);
+  const boostOn = converterThreadBoost('atrium');
+  assert.ok(boostOn > 1, '在岗时转化加成 >1');
+  const xpOn = threadXpGainPerSec(c);
+  assert.ok(xpOn > 0, '在岗时积 XP');
+
+  // 关工坊（走产品真入口 setConverterEnabled 的等价写入）
+  S.converterOn.atrium = false;
+  S.atriumOn = false;
+  assert.equal(c.boundTo, 'atrium', '关闭只停加成，不清空 boundTo（绑定不变）');
+  assert.equal(bindingActive(c), false);
+  assert.equal(threadBindOutputFactor(c), 1);
+  assert.equal(threadBindSalaryFactor(c), 1);
+  assert.equal(converterThreadBoost('atrium'), 1, '关闭后转化加成效验为 1');
+  assert.equal(threadXpGainPerSec(c), 0, '关闭后不积 XP');
+
+  // 重开工坊 → 加成与 XP 自动恢复（无需重新分配岗位）
+  S.converterOn.atrium = true;
+  S.atriumOn = true;
+  assert.equal(c.boundTo, 'atrium');
+  assert.equal(bindingActive(c), true);
+  assert.equal(converterThreadBoost('atrium'), boostOn, '重开后加成恢复到关闭前水平');
+  assert.equal(threadXpGainPerSec(c), xpOn);
+});
+
 test('方向②：匹配岗位绑定 → 无 EP/消耗惩罚（因子均为 1）', () => {
   resetState();
   const c = mkCultist({ profession: 'prospector', boundTo: 'vehicles' }); // 勘探员绑探采（匹配）

@@ -218,19 +218,19 @@ export function renderShop(container) {
     ids: new Set(split.visible.map(u => u.id)),
     split,
     groups: [
-      { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
+      { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat }, // v4.3.1 反馈③：原「基础产出」→ 工位（贴合工作台核心设定）
       { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②
-      { title: '存储与资源建筑', test: u => u.cat !== 'purifier' },
+      { title: '仓储区', test: u => u.cat !== 'purifier' }, // v4.3.1 反馈③：原「存储与资源建筑」→ 仓储区
     ], // v2.8.22 ⑥
   };
-  // v2.3.1 ⑤（rev18 9.3 分组表）：基础产出在前、存储与资源建筑在后；分组纯显示不拆链
+  // v2.3.1 ⑤（rev18 9.3 分组表）：工位在前、仓储区在后；分组纯显示不拆链
   // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
   renderChainedGroups(container, split, [
-    { title: '基础产出', test: u => u.cps > 0 && !u.produces && !u.cat },
+    { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat },
     { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
-    { title: '存储与资源建筑', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
+    { title: '仓储区', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });
-  // v4.2.3 反馈④：三个分类标题（基础产出 / 集市 / 存储与资源建筑）此前是纯文本小标题，
+  // v4.2.3 反馈④：三个分类标题（工位 / 集市 / 仓储区）此前是纯文本小标题，
   //   与线程区「产出强化」的 ▸ 折叠标题风格不一致。统一接入 applyGroupFold——
   //   同款箭头 + 可收起 + 会话级折叠态，商店内所有分类块观感一致。
   applyGroupFold(container);
@@ -412,10 +412,11 @@ export function renderAtriumSwitch(host) {
   const on = converterEnabled('atrium');
   const epS = (BALANCE.atrium.epRate || 150) * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale(); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2 同口径
+  // v4.3.1 反馈⑤：速率文案改「总计 -X EP/s +Y RP/s」（与灵感工坊升级卡同款），去「EP 不足自动暂停，回升继续」括注
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
     <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>
-    <span style="font-size:11px;color:var(--text-3)">每秒 -${fmt(epS)} EP → +${fmt(rpS)} RP（EP 不足自动暂停，回升继续）</span>
+    <span style="font-size:11px;color:var(--text-3)">总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s</span>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {
@@ -1784,8 +1785,10 @@ export const RP_GROUPS = [ // v3.6.0：导出供单测校验「研究项全部�
   { key: 'abyss', name: '深渊扩展',  ids: ['rp_delve', 'rp_rift'],                                                                                              unlock: { prev: 'res', need: 4 } },
   // v3.12.12 反馈⑧：AI 助手单独成组——拟我协议（效率）+ 助手扩编协议（购买/扩编，需 ai_core），
   // 「自动能力」与「购买」同处一个研究点类目，解锁仍留在升级商店科技树。
-  //   拟我协议不挂 ai_core：前瞻研究可提前买入，扩编协议必须先解锁核心（组内其余项保底可显示）。
-  { key: 'ai',    name: 'AI 助手',   ids: ['rp_ai', 'rp_ai_unit'],                                                                                             unlock: { prev: 'res', need: 4 } },
+  // v4.3.1 反馈②：原设计「rp_ai 不挂 ai_core 可提前买入」导致未研究核心时整组空壳（组内两项
+  //   分别被 requiresTech 过滤后只剩标题、0 可购买项）。改为整组 requireTech:'ai_core'——
+  //   AI 助手组与科技树 ai_core 同步出现，研究核心后 buyTech 置 dirty.rp 即时刷新。
+  { key: 'ai',    name: 'AI 助手',   requireTech: 'ai_core', ids: ['rp_ai', 'rp_ai_unit'],                                                                    unlock: { prev: 'res', need: 4 } },
   // v3.12.0 反馈⑤：本组需要「研究点已解锁 + 星图已开启」双门控，过去只看前组累计 4 级，
   //   导致星图还没开，研究点里就冒出「星际」一整组。
   // v3.12.12 ⑧：拟我移入独立 AI 组后，本组更名「星际」（v3.6.0 时旧名「星际与拟我」）。
@@ -1804,6 +1807,7 @@ function rpGroupShown(g) {
   // 资源锚点用 anchorDone（即时、本局制），不用含跨转生持久标记的 anchorShown，避免误放行。
   if (g.anchor && !anchorDone(g.anchor, S)) return false;
   if (g.requireStar && !starChartUnlocked(S)) return false;
+  if (g.requireTech && !hasTech(g.requireTech)) return false; // v4.3.1 反馈②：AI 组等科技前置
   if (!g.unlock) return true;
   return rpGroupLv(g.unlock.prev) >= g.unlock.need;
 }

@@ -3,7 +3,7 @@
 // 跨转生保留（relics 入 crossRun）；消耗深渊物质 DM（后期过剩资源，新增长线消费）。
 // 全流程：裂隙触发后开放入口 → 中期 RP/DM 解锁更多遗物 → 后期 ES 解锁深潜向遗物 → 终局持续深耕。
 import { S } from '../state.js';
-import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：遗物绑第 9 章
+import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：遗物绑章节门禁；v4.3.1：门禁 9→3（深渊提前第二波）
 
 // 遗物定义（费用 DM ×1.85^级；gate 按游戏进度解锁）
 // v3.4.1 反馈⑦：继续涨价——基础价 ×3（古卷 50 → 150 DM），增速 1.8 → 1.85；
@@ -33,7 +33,7 @@ export function relicMult(id) {
   if (!r) return 1;
   return 1 + r.effect * relicLevel(id);
 }
-// 遗物入口解锁：第 9 章「深渊」∧ 裂隙已触发 ∧ DM 已发现（原资产条件保留，AND 章节门禁）。
+// 遗物入口解锁：第 3 章起（v4.3.1 从 ch9 提前）∧ 裂隙已触发 ∧ DM 已发现（资产双条件保留）。
 export function relicsUnlocked() {
   if (!gateOpen('relics', S)) return false;
   if (!(S.resDiscovered && S.resDiscovered.dm)) return false;

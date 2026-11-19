@@ -308,13 +308,13 @@ test('D5 接线：晋升注入 clamp，startApp 有旧档兜底', () => {
 
 console.log('[E] 文案与注释口径');
 
-test('E1 Wiki / RP 说明弹框写出产出基座与转生回落，过期注释已修正', () => {
+test('E1 Wiki / RP 说明写出产出基座与晋升回落，过期注释已修正', () => {
   assert.ok(WIKI.includes('产出基座「当前 EP 上限 ×25%」'));
   // v4.2.X：轮回移除，wiki 口径统一为晋升。
   assert.ok(WIKI.includes('晋升后，本局扩容与产出基座一起归零'));
-  assert.ok(MAIN.includes('上限：基础 2,500 + 矩阵存储库逐级扩容'));
-  // v3.12.0 项⑪：RP 本局制后新档上限为 2,500（不再含 500 产出基座），旧文案 3,000 已修正。
-  assert.ok(MAIN.includes('回到 2,500 再逐次扩容'));
+  // v4.3.1 反馈⑤：研究点页「研究点（RP）」标题与 ⓘ 说明弹框已删——RP 说明只留 wiki 承载。
+  assert.doesNotMatch(MAIN, /rp-info-i|研究点（RP）说明/, 'RP 页内说明弹框已移除（改由 wiki 承载）');
+  assert.ok(WIKI.includes('2,500 + 矩阵存储库逐级扩容'), 'RP 上限口径（新档 2,500）保留在 wiki');
   const ecoSrc = readSrc(join('modules', 'economy.js'));
   assert.doesNotMatch(ecoSrc.slice(ecoSrc.indexOf('反馈⑥'), ecoSrc.indexOf('function prodCapFloor')),
     /取「仓库值」与「EP 上限 × 比例」中的较大者/);

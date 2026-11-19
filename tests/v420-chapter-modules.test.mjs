@@ -21,9 +21,9 @@ test('A1 chapterNumOf 读 S.chapter 数字部分；变体章取数字', () => {
   assert.equal(chapterNumOf({ chapter: '6A' }), 6);
   assert.equal(chapterNumOf({}), 1);
 });
-test('A2 八处章节门禁映射（v2 修订：宗教4/超验6/政策7/矩阵8/遗物9/共鸣10/深潜11/殖民12）', () => {
+test('A2 八处章节门禁映射（v2 修订：宗教4/超验6/政策7/矩阵8/遗物3[v4.3.1 提前]/共鸣10/深潜11/殖民12）', () => {
   assert.deepEqual({ ...CHAPTER_GATES }, {
-    religion: 4, transcend: 6, policy: 7, eternals: 8, relics: 9, resonance: 10, delve: 11, expedition: 12,
+    religion: 4, transcend: 6, policy: 7, eternals: 8, relics: 3, resonance: 10, delve: 11, expedition: 12,
   });
 });
 test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒放行', () => {

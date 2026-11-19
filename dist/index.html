@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.3.0</title>
+<title>深渊效能工作台 v4.3.1</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-B65nRWD2.js"></script>
-  <link rel="stylesheet" href="./assets/index-Iaojg2xu.css">
+  <script defer src="./assets/index-BJUEKqBM.js"></script>
+  <link rel="stylesheet" href="./assets/index-1XhCPfUq.css">
 </head>
 <body>
 <div id="app">
@@ -82,6 +82,8 @@
           <input type="file" id="import-file" accept=".json,application/json" style="display:none">
         </div>
       </div>
+      <!-- v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）——防止休眠/息屏导致挂机产出中断；不支持时按钮灰显并提示 -->
+      <button class="btn keep-awake-btn" id="keep-awake-btn" aria-pressed="false" title="保持屏幕唤醒：防止休眠/息屏导致浏览器挂起、挂机产出中断">☀ 保活</button>
       <!-- v4.1.0 反馈②：暂停按钮移到系统按钮组最右并加警示色（字体用 --warn，浅色主题自动用深色变体） -->
       <button class="btn pause-btn" id="pauseBtn">暂停</button>
     </div>
@@ -242,7 +244,7 @@
 
         <!-- 科技树 -->
         <div class="tab-pane" id="tab-tech">
-          <h3>科技树</h3>
+          <!-- v4.3.1 反馈④：页内「科技树」标题与 tab 名重复，已删；永恒矩阵/裂隙等级标题保留（各自独立区块） -->
           <div id="tech-tree" class="tech-grid"></div>
           <h3 style="margin-top:12px" id="eternal-title">永恒矩阵（ES 购买）· 当前 <span id="tech-es" class="mono" style="color:var(--warn)">0</span> ES <span style="font-size:10.5px;color:var(--text-3);font-weight:400;margin-left:6px">主打 AI 能力与前期丝滑</span></h3>
           <div id="eternal-list" class="tech-grid"></div>

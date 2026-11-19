@@ -142,6 +142,8 @@ export function defaultState() {
     abyssGazeCount: 0,             // 深渊凝视次数
     chaosIntuitionEnabled: false,  // 混沌直觉开关
     chaosLogEnabled: true,         // 混沌日志开关
+    // v4.3.1 反馈⑥：浏览器保活（Wake Lock）——防止休眠/息屏导致挂机产出中断；跨局保留的玩家偏好
+    keepAwake: false,
     // v2.0 线C 信仰传播者
     faithTemples: 0,               // 圣殿数量
     miraclesTriggered: [],         // 已触发的神迹阈值

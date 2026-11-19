@@ -115,6 +115,7 @@ export function buyTech(t, el) {
   checkEasterEggs('tech_sequence', S);
   refreshTechState();
   if (t.id === 'auto_tech') dirty.ai = true; // v2.8.20 ⑥：购买「自动研究」后 AI 面板即时重渲染（此前需刷新页面才出现开关）
+  if (t.id === 'ai_core') dirty.rp = true; // v4.3.1 反馈②：购入「AI 管理核心」后研究点 AI 组即时显现（requireTech 门控），无需等下次重绘
   // v1.3 E：一次性项购后 1s 移入「已研究」折叠区
   const target = el || techEls.get(t.id);
   if (target && techSection) {
