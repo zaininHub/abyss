@@ -56,6 +56,20 @@ export function playerInit(cfg = {}) {
       window.__vt += 10000;
       window.__simT += 10000;
       window.__tick(window.__simT);
+      // v4.3.5 rush 驻留臂：晋升门槛刚冲线的第一个 tick 武器化 5 天驻留期（43200 tick）——
+      //   此期间 rushHoldForResidency 生效，自动玩家停晋升让 chapterEnteredAt 驻留计时
+      //   走完 minDays 5 天，章节推进后 run-range 的完成判据（章内再晋升 1 次）由恢复的
+      //   rush 快升在 8h gap 内完成。臂只在首次跨过门槛时装填一次（防反复重置）。
+      if (window.__playerCfg.rushCfg && window.__residencyUntilTick == null) {
+        const pr = S.prestige || 0;
+        const goal = Number(window.__playerCfg.goalChapter) || 0;
+        // 下一章晋升类门槛（与 chapters.js 同源的最小内联：7→40 / 13→130 / 14→260 顺延链）
+        const RUSH_GATES = { 8: 40, 14: 130, 15: 260 };
+        const gate = RUSH_GATES[goal];
+        if (gate != null && pr >= gate) {
+          window.__residencyUntilTick = window.__tickCount + 43200 + 2880; // 5 天驻留 + 8h 缓冲
+        }
+      }
       if (S.ep >= q.epStorageCap() * 0.999) st.capStalls++;
 
       // 每 6 tick（= 1 游戏分钟）做一次玩家决策
@@ -106,7 +120,14 @@ export function playerInit(cfg = {}) {
           //   跨局保留加快，快速攒 need 冲线后由后续章恢复正常 gap。
           const gap = window.__playerCfg.rushCfg ? PRESTIGE_GAP
             : window.__playerCfg.holdPrestigeUntilAdvanced ? 43200 : PRESTIGE_GAP;
-          if (q.canPrestige() && window.__tickCount - window.__lastPrestigeTick >= gap) {
+          // v4.3.5 驻留死锁修复：晋升回拨 chapterEnteredAt=now-1d（prestige.js:86），
+          // rush gap 8h 下每天晋升 3 次 → daysIn 恒 ~1.3 < minDays 5 → 章节永不推进
+          // （ch7 实测 D46 pr149 远超门槛 40 仍卡 chapter=7）。修复：rush 模式下
+          // 「本局已推进到目标章（条件已过）」后停 5 天晋升让驻留走完，再恢复快升收尾。
+          const rushHoldForResidency = window.__playerCfg.rushCfg
+            && window.__residencyUntilTick != null
+            && window.__tickCount < window.__residencyUntilTick;
+          if (q.canPrestige() && !rushHoldForResidency && window.__tickCount - window.__lastPrestigeTick >= gap) {
             const esBefore = q.esGain ? q.esGain() : 0; // 本章该次晋升的 ES 奖励（esGain 为纯读函数）
             sim.doPrestige(null);
             window.__lastPrestigeTick = window.__tickCount;
