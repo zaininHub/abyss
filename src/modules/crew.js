@@ -119,11 +119,7 @@ export function renderCrewPanel(container) {
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
   const pager = pageCount > 1
-    ? `<div class="crew-pager">
-        <button data-crew-page="prev" ${crewPage <= 0 ? 'disabled' : ''}>上一页</button>
-        <span>第 ${crewPage + 1} / ${pageCount} 页 · 共 ${n} 条线程${crewFilter && n !== nTotal ? `（全班组 ${nTotal}）` : ''}</span>
-        <button data-crew-page="next" ${crewPage >= pageCount - 1 ? 'disabled' : ''}>下一页</button>
-      </div>`
+    ? `<div class="crew-pager"><span>已展示 ${Math.min((crewPage + 1) * PAGE_SIZE, n)} / ${n} 条线程 · 下滑加载更多${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>`
     : '';
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
   // v4.2.7 反馈③：产出/薪资行删除（顶栏已有同口径），改为与效能编排同构的可折叠类目标题「班组 ▼」。
@@ -155,8 +151,8 @@ export function renderCrewPanel(container) {
         renderCrewPanel(container);
         return;
       }
-      const btn = ev.target.closest ? ev.target.closest('[data-crew-page]') : null;
-      if (btn && !btn.disabled) { crewPage += btn.dataset.crewPage === 'prev' ? -1 : 1; renderCrewPanel(container); return; }
+      // v4.3.5 反馈③：移除 data-crew-page 按钮点击委托——按钮已删，滚动是唯一翻页入口
+      //   （自动化脚本兼容：列表 scrollTop = scrollHeight 触发滚动翻页）
       const lb = ev.target.closest ? ev.target.closest('[data-leader]') : null;
       if (lb) {
         const c = S.cultists.find(x => String(x.id) === String(lb.dataset.leader));

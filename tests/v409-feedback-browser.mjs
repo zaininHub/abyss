@@ -110,10 +110,9 @@ try {
   });
   results.rpHead = rpHead;
   rpHead.exists ? ok('RP 面板已渲染', '') : bad('RP 面板未渲染', '');
-  rpHead.statCount === 1 ? ok('顶部 .stat 收成一行（原 2 行）', `count=${rpHead.statCount}`) : bad('.stat 行数不符', `count=${rpHead.statCount}`);
-  rpHead.statHasRp ? ok('当前 RP 保留在唯一 stat 行', '') : bad('当前 RP 缺失', '');
+  // v4.3.5 反馈⑤：「当前 RP X / Y」行删除（顶栏 🔬RP 已有同口径当前值）——断言反转为「不存在」
+  rpHead.statCount === 0 ? ok('「当前 RP」行已删（顶栏承载）', `count=${rpHead.statCount}`) : bad('.stat 行仍在', `count=${rpHead.statCount}`);
   !rpHead.hasPreview ? ok('「预计 N RP」独立 span 已并入按钮文案', '') : bad('#rp-distill-preview 仍存在', '');
-  rpHead.btnInSameRow ? ok('蒸馏按钮与当前 RP 同行（flex 容器）', '') : bad('蒸馏按钮未并入同行', '');
   /\/EP \+/.test(rpHead.btnText) ? ok('效率口径并入按钮文案（v4.2.9 紧凑格式 -X/EP +NRP）', rpHead.btnText) : bad('按钮缺效率信息', rpHead.btnText);
 
   // ============ F8 自动购建激活入口迁研究点 ============
@@ -313,20 +312,27 @@ try {
   f11a.exists ? ok('成就面板渲染', '') : bad('成就面板缺失', '');
   f11a.cards === 5 ? ok('一页只显示 5 条成就', `cards=${f11a.cards}`) : bad('页内条数不符', `cards=${f11a.cards}`);
   // 运行期 checkAch 可能继续解锁新成就（种子 7 条 → 页面上限仍为 5 条/页），断言只锁PageSize口径
-  /共 \d+ 项/.test(f11a.pagerText) && /第 1 \/ \d+ 页/.test(f11a.pagerText) ? ok('分页器「第 1/N 页 · 共 N 项」口径', f11a.pagerText) : bad('分页器文本不符', f11a.pagerText);
-  const f11total = Math.max(7, parseInt((/共 (\d+) 项/.exec(f11a.pagerText) || [0, 7])[1], 10));
+  // v4.3.5 反馈③：翻页按钮移除 → 进度文案「已展示 N / M 项 · 下滑加载更多」；翻页改纯滚动。
+  /已展示 5 \/ \d+ 项/.test(f11a.pagerText) ? ok('分页器进度文案「已展示 5/N 项」（无按钮）', f11a.pagerText) : bad('分页器文本不符', f11a.pagerText);
+  const f11total = Math.max(7, parseInt((/已展示 5 \/ (\d+) 项/.exec(f11a.pagerText) || [0, 7])[1], 10));
   const f11pages = Math.ceil(f11total / 5);
-  const nextPage = await page.$('[data-ach-page="next"]');
-  await nextPage.click();
-  await sleep(350);
-  const f11b = await page.evaluate(() => ({
-    cards: document.querySelectorAll('#achievement-panel .ach-card').length,
-    pager: document.querySelector('#achievement-panel .crew-pager').textContent.replace(/\s+/g, ' ').trim(),
-  }));
+  // v4.3.5 反馈③：按钮已删——翻页走滚动（列表滚到底触发下一页）
+  const f11b = await page.evaluate(async () => {
+    const list = document.getElementById('achievement-panel');
+    list.style.maxHeight = '120px';
+    list.scrollTop = list.scrollHeight;
+    list.dispatchEvent(new Event('scroll'));
+    await new Promise(r => setTimeout(r, 300));
+    return {
+      cards: document.querySelectorAll('#achievement-panel .ach-card').length,
+      pager: document.querySelector('#achievement-panel .crew-pager').textContent.replace(/\s+/g, ' ').trim(),
+    };
+  });
   results.f11b = f11b;
   f11b.cards >= 1 && f11b.cards <= 5 ? ok(`翻页后仍 ≤5 条（实际 ${f11b.cards}）`, `cards=${f11b.cards}`) : bad('第二页条数异常', `cards=${f11b.cards}`);
   f11pages >= 2 ? ok(`多页成就（${f11total} 项 → ${f11pages} 页）`, '') : bad('种子成就不足以分页', '');
-  f11b.cards < 5 || /第 2 \/ \d+ 页/.test(f11b.pager) ? ok('第二页显示（尾页短于 5 或页码 2/N）', `pager=${f11b.pager}`) : bad('页码未推进', `cards=${f11b.cards} pager=${f11b.pager}`);
+  // v4.3.5 反馈③：进度文案推进到「已展示 10/N」（滚动翻页生效）
+  /已展示 10 \/ \d+ 项/.test(f11b.pager) ? ok('滚动后进度推进（已展示 10/N）', `pager=${f11b.pager}`) : bad('进度未推进', `cards=${f11b.cards} pager=${f11b.pager}`);
 
   // ============ F3 新建初始空档 ============
   console.log('\n[F3] + 新建初始空档');

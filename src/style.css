@@ -425,16 +425,22 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 }
 /* v4.2.0 反馈⑦：剧情文案完整显示（不再 ellipsis 截断）——章节名与正文分行，正文可换行 */
 /* v4.3.3 反馈④：角标+章节名强制同行，作为不可拆的 inline-flex 组 */
+/* v4.3.5 反馈①：三段全部同行——原 #ch-desc flex:1 1 100% 强制正文独占第二行（即使很短也换行），
+   用户「同行仍有换行」。改为正文同行排布：角标+章节名不缩，正文占满剩余宽度，
+   超长时单行 ellipsis 截断 + title 悬浮完整文本（renderStoryBar 写入）；窄屏（<900px）整条独占一行时恢复换行。 */
 .ch-head { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: 0 0 auto; }
-.ch-bar { flex-wrap: wrap; align-items: baseline; row-gap: 2px; }
+.ch-bar { align-items: baseline; }
 .ch-bar #ch-name { flex: 0 0 auto; }
 .ch-bar #ch-desc {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--text-3);
   font-size: 10.5px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
 }
 
 /* ========== 离线预览栏 ========== */
@@ -1198,6 +1204,9 @@ body.log-resizing, body.log-resizing * { cursor: ns-resize !important; user-sele
 @media (max-width: 899px) {
   .chapter-row { flex-wrap: wrap; gap: 6px; }
   .chapter-row .ch-bar { flex: 1 1 100%; }
+  /* v4.3.5 反馈①：窄屏剧情条独占整行，正文恢复可换行完整显示（同行截断只用于宽屏） */
+  .ch-bar { flex-wrap: wrap; }
+  .ch-bar #ch-desc { flex: 1 1 100%; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
   .sys-btns { flex: 1 1 100%; gap: 4px; }
   .sys-btns .btn { font-size: 10px; padding: 3px 7px; }
   .save-menu-pop { max-width: calc(100vw - 16px); }
@@ -2084,7 +2093,9 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
    复用 .save-menu 的 hover 范式；内层 .save-menu/.skin-menu 仍是选项菜单的子元素，
    hover 链从 #sys-menu 贯穿到内层按钮，内层子 pop 可继续展开（三层嵌套）。 */
 .sys-menu { position: relative; display: inline-block; }
-.sys-menu-pop { min-width: 156px; max-height: 78vh; }
+/* v4.3.5 反馈⑬：外壳不再限高（内容自适应 + overflow:visible，见 #sys-pop 下方说明），
+   min-width 从 156px 加宽到 200px——「存快照/新建/导入/清档」2×2 与「☀ 保活」按钮不局促。 */
+.sys-menu-pop { min-width: 200px; }
 .sys-menu::after {
   content: ''; position: absolute; right: 0; top: 100%;
   width: 200px; max-width: calc(100vw - 16px); height: 8px; pointer-events: none;
@@ -2134,6 +2145,14 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 
 /* v3.10.4 ④：下拉存档管理器（参考 KG）——直接展示所有存档列表，每条含 读取/覆盖/导出/删除 */
 .save-menu-pop { min-width: 280px; max-height: 72vh; overflow-y: auto; }
+/* v4.3.5 反馈⑬：选项外壳不裁剪内层子菜单——skin-pop / save-pop 是 sys-pop 的后代
+   （position:absolute 但仍在 sys-pop 的 overflow 上下文内），外壳 overflow-y:auto
+   会把向下展开的内层下拉裁掉，观感是「皮肤/存档展示不全」。
+   外壳改 overflow:visible 由内容自适应高度（上限仍 78vh + 顶部对齐不变），
+   内层子菜单自带 min/max 高度与滚动，超长存档列表在内层滚动。 */
+#sys-pop { overflow: visible; }
+#sys-pop > .skin-menu .save-menu-pop,
+#sys-pop > .save-menu .save-menu-pop { max-height: 60vh; }
 /* v3.12.12 ⑥：皮肤下拉收窄到内容宽度 */
 #skin-pop { min-width: 160px; max-height: none; }
 /* v4.0.1 反馈④：自动转化「⚡ 转化」悬浮按钮（皮肤左侧）——复用 .save-menu/.skin-menu 的悬停 + 键盘展开范式。
@@ -2144,7 +2163,9 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 #quick-switches.qs-list { display: flex; flex-direction: column; gap: 4px; }
 #quick-switches .qs-opt { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; font-size: 12px; }
 #quick-switches .qs-opt.on { border-color: var(--good, #3fb950); color: var(--good, #3fb950); }
-#quick-switches .qs-opt:not(.on) { color: var(--text-3, #6e7681); }
+/* v4.3.5 反馈⑫：未开启态从 --text-3（暗 #6e7681）提到 --text-2（#8b949e）——
+   用户反馈「字体颜色太模糊」，深浅主题下 var(--text-2) 都比 --text-3 高约一档对比度。 */
+#quick-switches .qs-opt:not(.on) { color: var(--text-2, #8b949e); }
 #quick-switches .qs-opt:hover { border-color: var(--accent); }
 #quick-switches .qs-state { font-size: 10.5px; opacity: .85; }
 /* 透明桥接伪元素：盖住「按钮 → 下拉」6px 断档，鼠标下移平滑进入弹层（与 .save-menu::after 同款思路） */

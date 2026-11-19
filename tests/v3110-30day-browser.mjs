@@ -116,16 +116,20 @@ async function uiCheck(page) {
     const orchLabelOrphans = orchLabel ? 1 : 0;
     const orchLabelSameRow = !orchLabel;
     // 成就面板为「已解锁分页」制，v4.3.2 ②起按解锁时间倒序（最新在前，新增项落在首页而非末页）。
-    // 顺序变化不影响「全量收集后按名字比对」，故仍逐页点击「下一页」收集全量文本再与读侧比对。
+    // 顺序变化不影响「全量收集后按名字比对」。
+    // v4.3.5 ③：翻页按钮已删，改纯滚动翻页（滚动到底触发下一页渲染）——收集循环改滚列表。
     const achPanel = document.getElementById('achievement-panel');
     let achText = '', achPages = 0;
     if (achPanel) {
+      const achList = achPanel.querySelector('.ach-list') || achPanel;
       for (let guard = 0; guard < 30; guard++) {
         achText += '\n' + (achPanel.innerText || '');
         achPages++;
-        const next = achPanel.querySelector('[data-ach-page="next"]');
-        if (!next || next.disabled) break;
-        next.click(); // 容器级事件委托，同步重渲染本页
+        const before = achPanel.innerText || '';
+        achList.scrollTop = achList.scrollHeight; // 滚到底：触发「下滑加载更多」翻页
+        achList.dispatchEvent(new Event('scroll', { bubbles: true }));
+        const after = achPanel.innerText || '';
+        if (after === before) break; // 文本不再增长 = 已到末页
       }
     }
     // v3.9.0：控制流层台账 + 潮汐预案排班表 DOM 准确性 + 真实点击链路

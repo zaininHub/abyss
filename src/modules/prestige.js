@@ -125,7 +125,7 @@ export function renderPrestige(container) {
   // 不再整面板 innerHTML 重建（原每 2s 重建使按钮在慢速点击窗口被替换 → click 丢失）
   if (!container._prgBuilt) {
     container._prgBuilt = true;
-    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">循环体系：<b style="color:var(--accent)">晋升</b>是唯一循环——清空本局，结算职级点 / RP / ES / 深渊回响，并按本局最强维度传承深渊遗存。所有收益跨晋升保留。</div>
+    container.innerHTML = `<div style="font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.7">清空本局，结算职级点 / RP / ES / 深渊回响，并按本局最强维度传承深渊遗存。所有收益跨晋升保留。</div>
       <div class="off-stat"><span>本局累计</span><b id="prg-run">0</b></div>
       <div class="off-stat"><span>晋升需求</span><b id="prg-need">0</b></div>
       <div class="off-stat"><span>可获得职级点</span><b id="prg-gain">0/1 PP</b></div>
@@ -168,7 +168,9 @@ export function renderPrestige(container) {
     btn.title = abyssLock ? '深渊已锁定你——转生不可脱离深渊吞噬' : (ready ? '晋升：本局产出清零，保留跨转生资产' : `晋升需求未达标：还差 ${fmt(lack)} EP 本局累计（1 PP 起步）`);
   }
   const note = container.querySelector('#prg-note');
-  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `清空所有资源，下局开局获得 ${reward}` : `晋升条件：本局累计 ≥ ${fmt(need)} EP 换 1 PP。`)
+  // v4.3.5 反馈⑦：去「晋升条件：本局累计 ≥ X EP 换 1 PP。」——「晋升需求」行与进度条已表达同口径，
+  //   重复文案（用户点名删除）；未达标态只保留差额提示。
+  if (note) note.textContent = abyssLock ? '深渊吞噬倒计时/崩溃期间，晋升被深渊锁定。主动净化（消耗 EP）压至满额以下可自救；否则直面终结时的抉择。' : (ready ? `清空所有资源，下局开局获得 ${reward}` : `还差 ${fmt(lack)} EP 本局累计`)
   const td = container.querySelector('#talent-display');
   if (td) {
     // v3.12.3 反馈⑩：本局天赋同时展示名称与效果（原只有名字，玩家看不到自己这一局拿到了什么）

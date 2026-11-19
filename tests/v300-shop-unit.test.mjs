@@ -77,12 +77,21 @@ test('shop.buyDmUpgrade：DM 消耗升级成功（dmsight）', () => {
 });
 
 test('shop.buyOfflineUpgrade：EP+RP 双消耗升级成功（合成 o）', () => {
-  baseState();
+  // v4.3.5 反馈⑩：buyOfflineUpgrade 加 offline1（远程协作）科技门禁——种子补 tech.offline1
+  baseState({ tech: { offline1: true } });
   const ep0 = S.ep, rp0 = S.rp;
   const r = shop.buyOfflineUpgrade({ id: '_off', epCost: 0, cost: 100, req: null });
   assert.equal(r, true, `离线升级应成功，实际 ${r}`);
   assert.equal(S.offUpgrades && S.offUpgrades._off, true);
   assert.equal(S.rp, rp0 - 100, '应扣 100 RP');
+});
+
+test('shop.buyOfflineUpgrade：远程协作（offline1）未研究时拒绝购买（v4.3.5 反馈⑩）', () => {
+  baseState({ tech: {} });
+  S.offUpgrades = {}; // 清掉上一用例可能写入的标记
+  const r = shop.buyOfflineUpgrade({ id: '_off', epCost: 0, cost: 0, req: null });
+  assert.equal(r, false, '未研究远程协作应拒绝，实际 ' + r);
+  assert.equal(S.offUpgrades && S.offUpgrades._off, undefined, '不应写入 offUpgrades');
 });
 
 test('shop.buyUpgrade：EP 不足时购买失败且不改变状态', () => {

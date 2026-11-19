@@ -41,6 +41,10 @@ function legacyHtml() {
 // 回响商店（晋升面板内嵌区块）——内容签名去重，避免 hover 期间节点被重建。
 export function renderEchoShop(container) {
   if (!container) return;
+  // v4.3.5 反馈⑭：回响是晋升结算资源，ch1 从未晋升时本块（回响账目/遗存/回响商店）整体不渲染——
+  //   「0 回响 + 满列表价格」提前出现属未解锁资源提前展示（用户反馈「第二章才解锁」口径）。
+  //   首次晋升结算 abyssEcho>0（或旧档 prestige≥1）后常显。
+  if ((S.abyssEcho || 0) <= 0 && (S.prestige || 0) < 1) { container.innerHTML = ''; container._lastHtml = ''; return; }
   let html = `<div class="echo-shop-block" style="margin-top:14px;border-top:1px dashed var(--border);padding-top:10px">
     <div style="font-size:11px;color:var(--text-2);margin-bottom:4px">深渊回响 <b style="color:var(--accent)">${S.abyssEcho || 0}</b> · 每点全局 +${(BALANCE.reincarn.echoPerPoint * 100).toFixed(0)}%（晋升时结算，跨晋升保留）</div>
     <div style="font-size:11px;color:var(--text-2)">深渊遗存（晋升时按本局最强维度传承 +1 座）</div>

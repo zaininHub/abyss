@@ -63,11 +63,13 @@ try {
     list.scrollTop = list.scrollHeight;
     list.dispatchEvent(new Event('scroll'));
     await new Promise(r => setTimeout(r, 250));
-    return { before, afterCards: list.querySelectorAll('.ach-card').length,
+    return { before, noPagerBtn: !list.querySelector('[data-ach-page]'), afterCards: list.querySelectorAll('.ach-card').length,
       afterPager: (list.querySelector('.crew-pager')?.textContent || '').replace(/\s+/g, ' ').trim() };
   });
-  /第 1 \/ \d+ 页/.test(d2.before.pager) ? ok('初始第 1 页', d2.before.pager) : bad('初始页码异常', d2.before.pager);
-  /第 2 \/ \d+ 页/.test(d2.afterPager) ? ok('滚动触底自动翻到第 2 页（无需点按钮）', d2.afterPager)
+  // v4.3.5 反馈③：翻页按钮移除 → 进度文案改「已展示 N / M 项 · 下滑加载更多」；
+  //   滚动触底自动翻页保留（afterPager 从 5/12 推进到 10/12 证明翻页仍生效）。
+  /已展示 5 \/ \d+ 项/.test(d2.before.pager) ? ok('初始第 1 页（已展示 5/12 进度文案，无按钮）', d2.before.pager) : bad('初始进度文案异常', d2.before.pager);
+  d2.noPagerBtn && /已展示 10 \/ \d+ 项/.test(d2.afterPager) ? ok('滚动触底自动翻页（无按钮，纯滚动）', d2.afterPager)
     : bad('滚动未自动翻页', JSON.stringify(d2));
 
   // ============ ③ 保活/存档/皮肤收进「选项」 ============

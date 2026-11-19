@@ -112,13 +112,16 @@ try {
   snapSub && /本局 123\.46M EP/.test(snapSub) && !/[^本局]EP 777/.test(snapSub)
     ? ok('④ 存档摘要显示本局总量', snapSub) : bad('④ 存档 EP 口径错误', snapSub);
 
-  // ⑤ 自动蒸馏文案
+  // ⑤ 自动蒸馏文案（v4.3.5 ⑤口径修正：满仓走涓流，连续速率文案仅在非满仓出现）
   const atrium = await page.evaluate(() => {
     const el = document.querySelector('.atrium-distill');
     return el && el.textContent.replace(/\s+/g, ' ').trim();
   });
-  atrium && /-150 EP\/s\s+\+\d/.test(atrium) && !/自动蒸馏：|→/.test(atrium)
-    ? ok('⑤ 自动蒸馏文案去掉前缀/箭头', atrium) : bad('⑤ 蒸馏文案不符', atrium);
+  atrium && (
+    (/RP 已满仓.*涓流/.test(atrium) && !/自动蒸馏：|→/.test(atrium)) ||
+    (/-\d[\d.]*[KM]? EP\/s\s+\+\d/.test(atrium) && !/自动蒸馏：|→/.test(atrium))
+  )
+    ? ok('⑤ 蒸馏文案口径正确（满仓涓流/非满仓速率，无前缀箭头）', atrium) : bad('⑤ 蒸馏文案不符', atrium);
 
   // ⑥ 翻页文字（成就面板）
   await page.click('#btn-achievement').catch(() => {});

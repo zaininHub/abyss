@@ -203,8 +203,12 @@ try {
     const { page: p, errs: e2 } = await prepPage(browser, { save: seed, vt });
     page = p; errs = errs.concat(e2);
     await gotoAndSettle(page);
+    // v4.3.5：rush 章（晋升门槛章：ch7/13/14 冲 prestige 40/130/260）传 rushCfg=true，
+    //   自动玩家保持 gap 2880（8 游戏小时）快速晋升——hold 策略的 5 游戏天 gap 会让
+    //   130/260 级门槛数学不可达（重建随 unlockedBuildings 跨局保留加快，快节奏攒 need 才能冲线）。
+    const rush = !!budget.rush;
     await page.evaluate(playerInit, { prestigeGapTicks: 2880, goalChapter: n + 1, maxDays: budget.maxDays,
-      holdPrestigeUntilAdvanced: true, label: 'ch' + n }); // v4.2.6 校准③：未推进前憋晋升（真人冲章节策略）
+      holdPrestigeUntilAdvanced: true, rushCfg: rush, label: 'ch' + n }); // v4.2.6 校准③：未推进前憋晋升（真人冲章节策略）
     if (cp) {
       // 恢复玩家游标 / 统计器 / 配置——否则续跑后决策节拍重置，预算失真
       await page.evaluate(({ cursors, stats, playerCfg }) => {

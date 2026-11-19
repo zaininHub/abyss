@@ -177,6 +177,14 @@ function renderOrchestrationPanel() {
     <div class="orch-mult-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
       ${res.rows.map(r => `<div style="white-space:nowrap"><span aria-hidden="true" style="${r.focused ? 'color:var(--accent)' : 'opacity:.35'}">${RES_FOCUS_ICONS[r.key] || r.icon}</span> ${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
     </div></section>`;
+  } else if (visible) {
+    // v4.3.5 反馈④：共鸣未解锁时不再整块消失——番外章节树（33~37 共鸣章）与成就文案提前提到共鸣，
+    //   玩家在编排卡找不到对应区即「显示被遮挡」。加一行解锁预告（不暴露内部数值条件，与 ??? 范式一致），
+    //   解锁后本行被共鸣块替换（sig 含 res.unlocked，切换会触发重建）。
+    html += `<section class="orch-block" data-orch-block="resonance">
+      <div class="orch-block-title"><span aria-hidden="true">▲</span> 相位共鸣<span class="orch-block-note">尚未解锁</span></div>
+      <div style="font-size:10.5px;color:var(--text-3);margin:6px 0 6px">推进主线至「镜像」之后，编排卡在此处亮出共鸣开关与焦点。</div>
+    </section>`;
   }
   el.innerHTML = html;
   placeTideSchedPop(); // v4.0.0 ⑤：fixed 浮层按触发按钮视口坐标重定位
@@ -1540,14 +1548,15 @@ function renderRpPanel() {
   if (!anchorDone('rp', S)) { panel.innerHTML = ''; return; } // 兜底：入口已隐藏，正常不会走到这里
   panel.innerHTML = `<div class="panel" style="padding:14px">
     <!-- v4.3.1 反馈⑤：去「研究点（RP）」页内标题与 ⓘ 悬浮窗（tab 名已标识；说明文案由 wiki 承担） -->
-    <!-- v4.0.9 反馈②：顶部说明压到 1-2 行——当前 RP/上限/效率/蒸馏按钮收成一行，蒸馏按钮并入同行 -->
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span class="stat" style="display:inline"><b>当前 RP</b> <span class="mono" style="color:var(--cyan)">${fmt(S.rp)} / ${fmt(rpCap())}</span></span>
+    <!-- v4.0.9 反馈②：顶部说明压到 1-2 行 -->
+    <!-- v4.3.5 反馈⑤：去「当前 RP 2.90K / 2.90K」行——顶栏 🔬RP 已有同口径当前值，
+         面板内重复数字且与上限同显时「2.90K / 2.90K」观感冗余。
+         自动蒸馏开关上移为面板主体；手动蒸馏按钮下移到开关之后（高频操作排前，低频排后）。 -->
+    <div id="atrium-switch-host"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
       <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>
     </div>
-    <!-- v3.3.1 反馈①：灵感工坊自动蒸馏开关（设施区只保留购买/升级） -->
-    <div id="atrium-switch-host" style="margin-top:10px"></div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行 // v4.3.5 反馈⑤：蒸馏下移
   renderAtriumSwitch(document.getElementById('atrium-switch-host'));
 }
 
@@ -2822,26 +2831,20 @@ function renderAchievementPanel(container) {
       </div>`;
     }
     if (pageCount > 1) {
-      html += `<div class="crew-pager" style="margin-top:8px">
-        <button data-ach-page="prev" ${achPage <= 0 ? 'disabled' : ''}>上一页</button>
-        <span>第 ${achPage + 1} / ${pageCount} 页 · 共 ${n} 项</span>
-        <button data-ach-page="next" ${achPage >= pageCount - 1 ? 'disabled' : ''}>下一页</button>
-      </div>`;
+      // v4.3.5 反馈③：去除「上一页/下一页」按钮与页码文字——滚动触底自动翻页已是唯一交互
+      //   （v4.3.3 反馈②引入），按钮组是历史自动化脚本兜底，实际玩家点击路径反而与滚动翻页打架
+      //   （点按钮翻页后 scrollTop 归零，观感是「列表跳回顶部」）。翻页状态由列表滚动承载。
+      html += `<div class="crew-pager" style="margin-top:8px"><span>已展示 ${Math.min(start + ACH_PAGE_SIZE, n)} / ${n} 项 · 下滑加载更多</span></div>`;
     }
   }
   container.innerHTML = html;
   container._achTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（渲染态，不入存档）
-  // v3.3.3 反馈⑩：分页按钮事件委托（容器级，重建不丢）——保留兼容历史脚本逐页点击收集全量成就
-  // v4.3.3 反馈②：新增「滚动触底自动翻页」为主交互；按钮仍可点（自动化/无滚动条场景兜底）
+  // v3.3.3 反馈⑩：分页事件委托（容器级，重建不丢）
+  // v4.3.3 反馈②：滚动触底自动翻页为主交互
+  // v4.3.5 反馈③：移除 data-ach-page 按钮点击委托——按钮已删，滚动是唯一翻页入口；
+  //   自动化脚本兼容：直接操纵列表滚动（scrollTop = scrollHeight）即可触发翻页。
   if (!container._achDelegated) {
     container._achDelegated = true;
-    container.addEventListener('click', (ev) => {
-      const btn = ev.target.closest ? ev.target.closest('[data-ach-page]') : null;
-      if (btn && !btn.disabled) {
-        achPage += btn.dataset.achPage === 'prev' ? -1 : 1;
-        renderAchievementPanel(container);
-      }
-    });
     container.addEventListener('scroll', () => {
       if (container._achScrollLock) return;
       const pc = Math.max(1, Math.ceil((container._achTotal || 0) / ACH_PAGE_SIZE));

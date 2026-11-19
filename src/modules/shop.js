@@ -6,7 +6,7 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale, spendRes, buyRes } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解 // v3.12.13：资源增减/升级统计（任务进度口径）
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale, prestigeBoost, spendRes, buyRes } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解 // v3.12.13：资源增减/升级统计（任务进度口径） // v4.3.5 反馈⑤：prestigeBoost 工坊总计口径
 import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
@@ -118,6 +118,10 @@ export function buyDmUpgrade(u) {
 
 export function buyOfflineUpgrade(o) {
   // v2.7.5 ⑥：离线升级改为 EP + RP 双消耗（EP 门槛随级提高，RP 主消耗不变）
+  // v4.3.5 反馈⑩：加 offline1（远程协作）科技门禁——此前只查链内 req，
+  //   未研究「远程协作」时离线升级仍可购买（用户反馈），渲染与购买双兜底。
+  //   （economy.hasTech 单参闭包读 S，勿传双参）
+  if (!hasTech('offline1')) return false;
   const epCost = o.epCost || 0;
   if (S.ep < epCost) return false;
   if (S.rp < o.cost) return false;
@@ -353,12 +357,16 @@ export function renderAtriumDistill(container) {
   const epRate = BALANCE.atrium.epRate || 150, rate = BALANCE.atrium.rate || 0.15;
   const cost = owned ? atriumUpgCost(n) : Math.ceil(base); // 已购：下一级升级成本；未购：首购价
   const afford = (S.ep || 0) >= cost;
-  const rpPerS = (rate * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale()); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2，与 tick/rpProdPerSec 同口径（修复「+0 RP/s」文案）
+  // v4.3.5 反馈⑤：卡面速率对齐真实结算——EP 侧 epRate×n²（与 atriumDrainPerSec 同式），
+  //   RP 侧 rate×n×绑定(≤2)×职级（与 rpProdPerSec 同式，rpEffScale 是蒸馏换汇价不是产出折减）。
+  //   未购时按 n=1 展示基准值。
+  const atFullOwned = owned && (S.rp || 0) >= rpCap();
+  const rpPerS = (rate * n * Math.min(converterThreadBoost('atrium'), 2) * prestigeBoost()); // v3.4.6 反馈⑤：绑定加成封顶 ×2，与 tick/rpProdPerSec 同口径（修复「+0 RP/s」文案） // v4.3.5 反馈⑤：去 rpEffScale 误除
   // v4.2.7 反馈⑤：卡面文案去掉「自动蒸馏：」前缀与「→」箭头，只留数值本体
   //   （标题行已写「灵感工坊 · 自动蒸馏」，重复前缀是噪音；箭头换空格分隔更紧凑）。
-  const desc = owned
-    ? `-${fmt(epRate * n)} EP/s  +${fmt(rpPerS)} RP/s`
-    : `-${fmt(epRate)} EP/s  +${fmt(rate)} RP/s`;
+  const desc = atFullOwned
+    ? `RP 已满仓：每 5s 涓流 -5万 EP  +${fmt(rpPerS)} RP/s`
+    : `-${fmt(owned ? epRate * n * n : epRate)} EP/s  +${fmt(owned ? rpPerS : rate)} RP/s`;
   if (!el) {
     el = document.createElement('div');
     el.className = 'atrium-distill item';
@@ -410,13 +418,20 @@ export function renderAtriumSwitch(host) {
   if (n < 1) { host.innerHTML = ''; host.style.display = 'none'; return; }
   host.style.display = '';
   const on = converterEnabled('atrium');
-  const epS = (BALANCE.atrium.epRate || 150) * n;
-  const rpS = (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale(); // v3.3.3 反馈③：实际产出含效率递增折减 // v3.4.6 反馈⑤：绑定加成封顶 ×2 同口径
+  // v4.3.5 反馈⑤：总计口径对齐真实结算——
+  //   EP 侧 atriumDrainPerSec 是 epRate×n²（v3.12.13 反馈⑫ 平方增长），原卡面 epRate×n 线性，
+  //   3 级工坊显示 -450/s 实扣 -1350/s，即用户反馈「总计值不对」的根因；
+  //   RP 侧 rpProdPerSec = rate×n×绑定加成(≤2)×职级加成，rpEffScale 是蒸馏换汇价（EP/RP 变贵）
+  //   不是产出折减，原卡面误除导致产出显示偏小。已满仓时真实结算走满仓涓流（非连续速率），
+  //   消耗显示 0 并标注，与顶栏连续消耗口径一致。
+  const atFull = (S.rp || 0) >= rpCap();
+  const epS = atFull ? 0 : (BALANCE.atrium.epRate || 150) * n * n;
+  const rpS = (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) * prestigeBoost(); // v3.4.6 反馈⑤：绑定加成封顶 ×2 // v3.12.0 反馈⑫：职级加成
   // v4.3.1 反馈⑤：速率文案改「总计 -X EP/s +Y RP/s」（与灵感工坊升级卡同款），去「EP 不足自动暂停，回升继续」括注
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
     <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>
-    <span style="font-size:11px;color:var(--text-3)">总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s</span>
+    <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {
@@ -877,16 +892,20 @@ function makeVehicleItem(u) {
   // v2.3.2 反馈②：载具命名彩蛋输入框按缺陷口径移除（用户反馈「外勤摩托队旁异常输入框」），
   // 命名 input / change 事件 / name_vehicle 彩蛋触发零残留；外勤区域不再渲染任何 input 元素。
   // v2.8.30：探采卡文案精简为两行（消耗负红 / 产出正绿），障碍信息移除
+  // v4.3.5 反馈⑥：未购卡不再显示「−X EP/s」消耗行——探采未启用前这些速率都不真实发生，
+  //   用户反馈「载具未解锁但消耗含载具」（卡面速率被误读为当前消耗）；已购卡维持显示。
   const dmIdx = BALANCE.vehicles.ids.indexOf(u.id);
   const dmRate = dmIdx >= 0 ? BALANCE.vehicles.dmRates[dmIdx] : 0;
   // v3.3.6 反馈①：卡片单价与页头同口径——含「载具汇率 ×1.15^总载具数」与「班组/研究/鱼缸/集市乘区」；
   // 原卡片只显示基础单价（12.5 EP/s），页头却按 6600× 乘区显示 179.58M/s，两者差 6 个数量级
   const vehMult = vehicleRateMult();
   const probeEp = dmRate > 0 ? (dmRate * vehicleEpPerDm() * vehMult / 60) : 0;
-  if (probeEp > 0) {
+  if (probeEp > 0 && owned) {
     div.title = `基础单价 ${Number((dmRate * BALANCE.vehicles.epPerDm / 60).toFixed(2))} EP/s × 汇率 ${fmt(vehicleEpPerDm() / BALANCE.vehicles.epPerDm)} × 加成 ${vehMult.toFixed(2)}× = ${fmt(probeEp)} EP/s（单辆；DM 满仓时按剩余容量结算，可能低于名义值）`;
   }
-  const lines = `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`;
+  const lines = owned
+    ? `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`
+    : `<div class="veh-line" style="color:var(--text-3)">购入后按 ${fmt(probeEp)} EP/s 换 ${fmtDmPerSec(dmRate * vehMult / 60)} DM/s 持续采集</div>`;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
     <div class="desc">${lines}</div>
     <div class="cost mono">${fmt(cost)}</div>`;
@@ -975,6 +994,13 @@ export function renderOfflineUpgrades(container) {
   if (!container) return;
   container.innerHTML = '';
   offSection = buildOwnedSection('off-upg', container, '解锁');
+  // v4.3.5 反馈⑩：远程协作（offline1）未研究时整链隐藏——离线收益本体都未解锁，
+  //   升级项先出现是本末倒置（用户反馈「远程协作未解锁但能升级离线效率」）。
+  if (!hasTech('offline1')) {
+    offSection.box.insertAdjacentHTML('beforeend', `<div class="off-upg" style="opacity:.55;cursor:default"><span style="color:var(--text-3)">研究科技「远程协作」后，这里开始提供离线效率与上限升级</span></div>`);
+    offSection.updateCount(0);
+    return;
+  }
   const owned = OFF_UPGRADES.filter(o => S.offUpgrades[o.id]);
   // v2.3 渐进披露链：链序 = 定义序（与既有 req 链同构）；仅首屏窗口（first 3 ≥ n-1，
   // hiddenCount 恒 ≤1），不提供展开按钮；既有 req 置灰语义原样保留
@@ -1729,6 +1755,12 @@ const RESEARCH_MODULE_GATES = {
   rp_starres:    (s) => (s.expeditionsDone || 0) > 0,                   // 星蕴提纯：星际专属资源（首支远征返航）
   rp_colony2:    (s) => Object.keys(s.colonies || {}).some(k => s.colonies[k]), // 星殖民拓：已拥有殖民地
   rp_cosmos2:    (s) => Object.keys(s.colonies || {}).some(k => s.colonies[k]), // 宇宙工程：已拥有殖民地
+  // v4.3.5 反馈②：未解锁资源的同源研究项补门控——离线协议挂「远程协作」（与 ⑩ 离线升级同病根：
+  //   远程协作未研究时离线收益本体都未解锁，+12%/级 提前摆出）；深渊观测挂深潜解锁、
+  //   裂隙数学挂裂隙已触发（深渊两轴的消费主体未出现时升级卡不提前）。
+  rp_offline:    (s) => !!(s.tech && s.tech.offline1),                  // 离线协议：科技树「远程协作」
+  rp_delve:      (s) => !!(s.delve && s.delve.unlocked),                // 深渊观测：深潜已解锁
+  rp_rift:       (s) => riftShown(s),                                   // 裂隙数学：裂隙已触发（_riftSeen 粘性）
 };
 export function researchResourceUnlocked(u, state = S) {
   const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];

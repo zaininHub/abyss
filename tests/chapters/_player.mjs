@@ -26,6 +26,8 @@ export function playerInit(cfg = {}) {
     // v4.2.6 校准③：分章节推演传 true = 未推进到目标章前憋晋升（真人冲章节策略）；
     // v3110 不传（falsy）= canPrestige 即升，行为不变。
     holdPrestigeUntilAdvanced: !!cfg.holdPrestigeUntilAdvanced,
+    // v4.3.5：rush 章（晋升门槛章）保持 8 游戏小时 gap 快速晋升（见 __runBatch 晋升段注释）
+    rushCfg: !!cfg.rushCfg,
   };
   const S = window.S, q = window.__qa;
   window.__prodCands = q.UPGRADES.filter(u => u.cps > 0 && /^基础产出\+/.test(u.desc || ''));
@@ -99,7 +101,11 @@ export function playerInit(cfg = {}) {
           // 重置损失 > 收益（CPS 从百级重爬）；拉到 5 游戏天让 runEarned 攒到 need 的数倍
           // 再升，单次 ES 按 sqrt 曲线提升且不打断 CPS 里程碑冲刺（真人「攒一波再升」策略）。
           // holdPrestigeUntilAdvanced 语义随之修正为「间隔拉大开关」，v3110 不传=2880 行为不变。
-          const gap = window.__playerCfg.holdPrestigeUntilAdvanced ? 43200 : PRESTIGE_GAP;
+          // v4.3.5：rushCfg=true（晋升门槛章 ch7/13/14 冲 prestige 40/130/260）时保持 2880
+          //   快速晋升——5 游戏天 gap 下 130/260 级门槛数学不可达；重建随 unlockedBuildings
+          //   跨局保留加快，快速攒 need 冲线后由后续章恢复正常 gap。
+          const gap = window.__playerCfg.rushCfg ? PRESTIGE_GAP
+            : window.__playerCfg.holdPrestigeUntilAdvanced ? 43200 : PRESTIGE_GAP;
           if (q.canPrestige() && window.__tickCount - window.__lastPrestigeTick >= gap) {
             const esBefore = q.esGain ? q.esGain() : 0; // 本章该次晋升的 ES 奖励（esGain 为纯读函数）
             sim.doPrestige(null);
@@ -407,6 +413,38 @@ export function playerInit(cfg = {}) {
         q.sim.switchTab('shop');
       }
     } catch (e) { if (st.errors.length < 12) st.errors.push('chapExp:' + e.message); }
+    // ④′ 宗教线（v4.3.5）：ch6 门槛 faith>=5 || 宗教已立、ch16/17 门槛 faith 60/90——
+    //   自动玩家此前无任何宗教动作（faith 只来自晋升 10%/深空 15% 随机），链式到 ch6 必卡死。
+    //   补产品真实入口最小动作集：唤醒（religionWakeCost 固定 20 万 EP）→ 信奉第一可见分支
+    //   → 圣所升级（EP>cap·50% 水位才买，防抽干远征探采资金；EP 不足停产由产品自动恢复）。
+    //   赞颂/超验/神谕塔消耗 faith 不补——ch16/17 要 faith 余额，清仓动作与门槛互逆。
+    try {
+      if (!S.religion || !S.religion.unlocked) {
+        // 唤醒前置 = canUnlockReligion：粮仓/仓储 ≥3 ∧ RP 已发现 ∧ 章节门禁（ch4 起）
+        const granaryOk = ((S.upgrades && S.upgrades.reserve_bin) || 0) >= 3
+          || ((S.upgrades && S.upgrades.storage) || 0) >= 3;
+        const rpOk = !!(S.resDiscovered && S.resDiscovered.rp);
+        if (granaryOk && rpOk && (S.ep || 0) >= 200000) {
+          q.sim.switchTab('religion'); q.sim.render();
+          const w = document.querySelector('[data-religion-unlock]');
+          if (w && !w.disabled && !w.classList.contains('disabled')) { w.click(); st.chapBuys++; st.religionWake = true; }
+          q.sim.switchTab('shop');
+        }
+      } else if (!S.religion.branch) {
+        // 信奉：选面板第一可见分支（sun 恒可见；改宗锁死不影响首次选择）
+        q.sim.switchTab('religion'); q.sim.render();
+        const b = document.querySelector('#religion-panel [data-religion-branch]:not(.disabled)');
+        if (b) { b.click(); st.chapBuys++; st.religionBranch = b.dataset.religionBranch; }
+        q.sim.switchTab('shop');
+      } else if ((S.religion.temple || 0) < 8 && S.ep > q.epStorageCap() * 0.5) {
+        // 圣所升级（信仰唯一稳定产能 0.01/lv/s × 乘区）：目标 8 级（faith 60/90 需要稳定流；
+        // 首级 5e5 EP ×1.7/级，EP 水位守卫与 rp_vault 同口径）
+        q.sim.switchTab('religion'); q.sim.render();
+        const t = document.querySelector('[data-religion-temple]');
+        if (t && !t.disabled && !t.classList.contains('disabled')) { t.click(); st.chapBuys++; st.templeBuys = (st.templeBuys || 0) + 1; }
+        q.sim.switchTab('shop');
+      }
+    } catch (e) { if (st.errors.length < 12) st.errors.push('chapReligion:' + e.message); }
     // ④ 永恒矩阵：ES 闲着就是浪费——链式推演的 carry ES 必须被真实消费才能复利到 CPS
     //    （ch2/ch3 校准实测：es=93/262 全程闲置；v4.2.8 后 techCount>=16 需 CPS>=1e6
     //    过 m5 解锁建筑，永恒「eff」等级是爬坡主力）。优先买最便宜的永久增益项，跳过皮肤（一次性，不入战力）。

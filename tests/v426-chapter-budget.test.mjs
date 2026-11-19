@@ -53,27 +53,40 @@ test('B2. 各章「单次晋升 ES 增量」随章号单调不减（幂律 prest
   }
 });
 
-test('C1. 预算链：上一章预算的 minPrestige 累计满足晋升类章节门槛', () => {
+test('C1. 预算链：carry 锚点 + rush 推导满足晋升类章节门槛（v4.3.5 口径反转）', () => {
   // 晋升类门槛：第 2(>=2)/7(>=15)/8(>=40)/13(>=70)/14(>=130)/15(>=260) 章
+  // v4.3.5 反转：口径从「minPrestige 累计下界」改为「carry 锚点 + rush 推导」——
+  //   实测（ch5 D12 / ch4 D75）晋升周期在 carry ES 复利下 ≈3~25 天，rush 章门槛若当章
+  //   不可达会顺延下一章（门槛堆积），预算按「reach=门槛即成功」标定：
+  //   断言改为「本章输出锚点 carry.prestige + 顺延余量（下一章冲刺 Δ8）≥ 门槛」，
+  //   只拦「链条整体永不可达」的断链（ch8 承接 ch7 顺延、ch14/15 同理）。
   const gates = { 2: 2, 7: 15, 8: 40, 13: 70, 14: 130, 15: 260 };
-  // 进入第 N 章前的晋升下限 = 前 N-1 章 minPrestige 之和
-  let acc = 0;
-  for (let n = 1; n <= MAIN_CHAPTERS; n++) {
-    if (gates[n] != null) {
-      assert.ok(acc >= gates[n] - BUDGET[n].minPrestige,
-        `进入 ch${n} 前（累计 ${acc} 次晋升）+ 本章 minPrestige(${BUDGET[n].minPrestige}) 必须跨过门槛 ${gates[n]}`);
-    }
-    acc += BUDGET[n].minPrestige;
+  // 门槛 N 可达 = 三章窗口内任一输出锚点 ≥ 门槛（N-1 章末提前跨越 / N 章内冲线 / 顺延 N+1 章）。
+  //   carry.prestige 是下界锚点（链式只垫底不封顶），rush 形态下真实值远高于锚点。
+  for (const [gateStr, threshold] of Object.entries(gates)) {
+    const N = Number(gateStr);
+    const anchors = [BUDGET[N - 1], BUDGET[N], BUDGET[N + 1]]
+      .filter(Boolean).map(b => b.carry.prestige);
+    const best = Math.max(...anchors);
+    assert.ok(best >= threshold,
+      `ch${N} 门槛 prestige>=${threshold}：三章窗口锚点 [${anchors.join(', ')}] 最高 ${best} 应可达`);
   }
-  // 全链累计应覆盖第 15 章后 260+ 门槛
-  assert.ok(acc >= 260 + 20, `全链累计晋升 ${acc} 应≥ 15 章门槛 260 + 终章余量`);
+  // 终局锚点兜底：ch16 输出 ≥ ch15 门槛（260 由 ch15~16 连续冲刺跨越）
+  assert.ok(BUDGET[16].carry.prestige >= 260,
+    `ch16 输出锚点 carry.prestige(${BUDGET[16].carry.prestige}) 应兜底覆盖 ch15 门槛 260`);
 });
 
 test('C2. ES 类门槛（11 章 >=150 / 12 章 >=800）在预算下界累计后可达', () => {
+  // v4.3.5 口径修正：ch11/12 门槛是 ES 余额（S.es），而 es 预算区间是「晋升奖励累计
+  //   （prestigeEsGain）」——自动玩家留 10% 底仓 + 永恒成本超线性增长（1.6^lv）后，
+  //   后期单次 esGain 大于永恒消费，余额开始净累积。余额下界 = esGain 累计下界 × 净存率。
+  //   净存率按 ch4 实测保守取 30%（D75 余额 12 / esGain 92，早期全消费；ch9+ 永恒
+  //   eff/cost 等级抬高后成本远超单次 esGain 的窗口已过，净存率回升）。
+  //   150/800 是产品 chapters.js cond 的字面值，预算只锁「下界累计 × 0.3 可达」。
   let es = 0;
   for (let n = 1; n <= MAIN_CHAPTERS; n++) {
-    if (n === 11) assert.ok(es >= 150, `进入 ch11 前预算下界 ES 累计 ${es} 应≥150`);
-    if (n === 12) assert.ok(es >= 800, `进入 ch12 前预算下界 ES 累计 ${es} 应≥800`);
+    if (n === 11) assert.ok(es * 0.3 >= 150, `进入 ch11 前 esGain 下界累计 ${es}×0.3 应≥150`);
+    if (n === 12) assert.ok(es * 0.3 >= 800, `进入 ch12 前 esGain 下界累计 ${es}×0.3 应≥800`);
     es += BUDGET[n].es[0];
   }
 });
