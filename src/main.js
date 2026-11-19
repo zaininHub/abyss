@@ -626,9 +626,11 @@ function renderTop() {
   const hDrainWarn = document.getElementById('h-drain-warn');
   if (hDrainWarn) {
     hDrainWarn.style.display = drainWarn ? '' : 'none';
-    // v3.12.3 反馈⑧：感叹号自己带气泡（挂在元素上而不是父项），悬浮只讲「还剩多久耗尽」
+    // v4.3.3 反馈⑦：删感叹号自身的 data-tip 气泡——它挂在 #h-drain-stat 子元素上，
+    //   悬浮冒泡同时触发 v4.1.2 的 #flow-tip-pop（来源明细含耗尽预估），形成双弹。
+    //   保留 aria-label 声明语义，有效气泡只保留 flow-tip-pop 一个。
     const warnTip = drainWarn ? `净流为负：按当前产出/消耗，EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽` : '';
-    if (warnTip) hDrainWarn.dataset.tip = warnTip; else hDrainWarn.removeAttribute('data-tip');
+    hDrainWarn.removeAttribute('data-tip');
     hDrainWarn.setAttribute('aria-label', warnTip);
   }
   if (hSalary) hSalary.textContent = fmt(drain) + '/s';
@@ -1422,10 +1424,8 @@ function renderQuickSwitches() {
   if (converterUnlocked('temple')) {
     items.push(qsOption('temple', '圣所', converterEnabled('temple'), '信仰圣所：EP → FP（与「宗教」页开关同步）'));
   }
-  // v3.4.9 反馈①：无限深入开关从裂隙科技树移到此处（与其余自动转化开关同一入口）
-  if (riftUpgradeLevel('auto_descent') >= 1) {
-    items.push(qsOption('descent', '深入', S.riftAuto === 'auto_descent', '无限深入：裂隙出现时自动深入探索（消耗 EP，腐化超阈值会损失）与「自动封印/自动拥抱」互斥'));
-  }
+  // v4.3.3 反馈⑧：无限深入开关 unified 到裂隙科技树（与自动封印/自动拥抱三项互斥同源），
+  //   此处不再重复——避免两个入口的开关状态不同步。
   // v3.4.9 反馈②：自动净化（腐化每涨 5% 自动净化 5%，消耗 EP；需先买「无限深入」）
   if (riftUpgradeLevel('auto_purify') >= 1) {
     items.push(qsOption('purify', '净化', !!S.autoPurify, '自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）'));
@@ -2830,7 +2830,9 @@ function renderAchievementPanel(container) {
     }
   }
   container.innerHTML = html;
-  // v3.3.3 反馈⑩：分页按钮事件委托（容器级，重建不丢）
+  container._achTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（渲染态，不入存档）
+  // v3.3.3 反馈⑩：分页按钮事件委托（容器级，重建不丢）——保留兼容历史脚本逐页点击收集全量成就
+  // v4.3.3 反馈②：新增「滚动触底自动翻页」为主交互；按钮仍可点（自动化/无滚动条场景兜底）
   if (!container._achDelegated) {
     container._achDelegated = true;
     container.addEventListener('click', (ev) => {
@@ -2840,6 +2842,17 @@ function renderAchievementPanel(container) {
         renderAchievementPanel(container);
       }
     });
+    container.addEventListener('scroll', () => {
+      if (container._achScrollLock) return;
+      const pc = Math.max(1, Math.ceil((container._achTotal || 0) / ACH_PAGE_SIZE));
+      if (achPage >= pc - 1) return;
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20) {
+        container._achScrollLock = true;
+        achPage++;
+        renderAchievementPanel(container); // innerHTML 重建 → scrollTop 归零，从新页顶部开始
+        requestAnimationFrame(() => { container._achScrollLock = false; });
+      }
+    }, { passive: true });
   }
 }
 

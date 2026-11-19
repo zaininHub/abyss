@@ -330,6 +330,7 @@ try {
 
   // ============ F3 新建初始空档 ============
   console.log('\n[F3] + 新建初始空档');
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(350);
   const f3label = await page.$eval('#save-new', b => b.textContent.trim());
@@ -426,6 +427,7 @@ try {
 
   // ============ F1b 浅色皮肤下 select 跟随主题 ============
   console.log('\n[F1b] 浅色皮肤（light）下 select 跟随主题');
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#skin-menu-btn');
   await sleep(350);
   await page.click('[data-skin="light"]');
@@ -448,6 +450,7 @@ try {
   const optLum = lum(f1b.optBg);
   optLum > 200 ? ok('option 底色同步浅色（下拉展开不黑块）', `${f1b.optBg}（亮度 ${optLum}）`) : bad('option 底色未跟随', f1b.optBg);
   // 切回 abyss 复原（后续截图/报告干净）
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#skin-menu-btn');
   await sleep(300);
   await page.click('[data-skin="abyss"]');

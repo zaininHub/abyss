@@ -250,11 +250,11 @@ async function uiCheck(page) {
         forced = {
           ok: drain1 > cps1, cps: cps1, drain: drain1, eta,
           warnShown: !!warn && warn.style.display !== 'none',
-          // v3.12.3 反馈⑧：ETA 不再写进产出/消耗气泡，改由消耗侧 ❗ 自己的 data-tip 承载。
-          //   v3.12.7 ④：tipText() 已纳入 warn 自身气泡，此处「生产/消耗两个 stat 气泡不含 ETA」
-          //   的判定必须排除 warn，否则自相矛盾恒 false。
-          etaOk: (warn?.dataset?.tip || '').includes('EP 预计') && (warn?.dataset?.tip || '').includes(eta)
-            && (warn?.dataset?.tip || '').includes('后耗尽')
+          // v4.3.3 反馈⑦：❗ 的 data-tip 气泡删除（与 #flow-tip-pop 双弹）——
+          //   ETA 保留在 ❗ 的 aria-label（无障碍语义）+ hover 时 #flow-tip-pop 的来源明细里。
+          //   断言：❗ 无 data-tip、aria-label 含 ETA、产出/消耗 stat 不含 ETA。
+          etaOk: !warn?.hasAttribute('data-tip')
+            && (warn?.getAttribute('aria-label') || '').includes(eta)
             && ![stats[0], stats[1]].map(el => (el && el.dataset ? el.dataset.tip : '') || '').join('|').includes('EP 预计'),
           ariaOk: !!warn && (warn.getAttribute('aria-label') || '').includes(eta),
         };

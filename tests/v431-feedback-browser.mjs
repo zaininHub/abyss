@@ -130,6 +130,9 @@ try {
   });
   d6a.exists ? ok('#keep-awake-btn 按钮存在', `pressed=${d6a.pressed} supported=${d6a.supported}`) : bad('保活按钮缺失');
   // 点击切换（headless Chromium 通常支持 Wake Lock；不支持时按钮提示但不改状态——两种结果都可接受）
+  // v4.3.3 反馈③：保活按钮已收进「⚙ 选项」下拉，先展开再点
+  await page.hover('#sys-menu-btn');
+  await sleep(150);
   await page.click('#keep-awake-btn');
   await sleep(500);
   const d6b = await page.evaluate(() => ({
@@ -138,25 +141,29 @@ try {
   d6b.kept === (d6b.pressed === 'true') ? ok('S.keepAwake 与按钮 aria-pressed 同步', JSON.stringify(d6b))
     : bad('保活状态不同步', JSON.stringify(d6b));
 
-  // ---- ⑧ 成就页固定高度 / 内滚 / 分页吸底 ----
+  // ---- ⑧ 成就页布局（v4.3.3 反馈①反转 v4.3.1 的 clamp 定高）----
+  // v4.3.1 锁死面板高度 232~352px，但列高被视口裁剪 → 底部圆角被切、看起来像折叠。
+  // v4.3.3 改为：底部面板 flex:1 1 auto 吃列内剩余空间，三列等高、圆角完整，滚动下沉到列表内部。
   console.log('\n[⑧ 成就页布局]');
   const d8 = await page.evaluate(() => {
     const pane = document.getElementById('tab-achievement');
     const list = document.getElementById('achievement-panel');
-    const pager = list?.querySelector('.crew-pager');
+    const col = document.querySelector('.first-col');
     if (!pane || !list) return { exists: false };
     const cs = getComputedStyle(list);
-    const pr = pane.getBoundingClientRect();
-    const gr = pager ? pager.getBoundingClientRect() : null;
-    return { exists: true, paneH: pr.height, listOverflow: cs.overflowY,
-      scrollable: list.scrollHeight > list.clientHeight,
-      pagerBottomGap: gr ? Math.round(pr.bottom - gr.bottom) : null };
+    const ps = getComputedStyle(pane);
+    const pr = pane.getBoundingClientRect(), cr = col.getBoundingClientRect();
+    return { exists: true, paneH: Math.round(pr.height), colH: Math.round(cr.height),
+      flex: ps.flexGrow, radius: ps.borderTopLeftRadius,
+      listOverflow: cs.overflowY, scrollable: list.scrollHeight > list.clientHeight,
+      colOverflow: getComputedStyle(col).overflowY };
   });
-  d8.exists && d8.paneH >= 200 && d8.paneH <= 400 ? ok('成就面板固定高度（clamp 范围内）', `h=${d8.paneH}px`)
-    : bad('成就面板未定高', JSON.stringify(d8));
+  // 面板吃列高（flex-grow=1）、高度不再锁死 clamp，与列同高、圆角保留、列自身不滚
+  d8.exists && Number(d8.flex) >= 1 && d8.paneH >= 180 ? ok('成就面板吃列内剩余空间（flex-grow≥1，不再 clamp 定高）', JSON.stringify(d8))
+    : bad('成就面板未弹性撑高', JSON.stringify(d8));
   d8.listOverflow === 'auto' ? ok('列表区 overflow-y:auto（内部滚动）') : bad('列表区不可滚', d8.listOverflow);
-  d8.pagerBottomGap !== null && Math.abs(d8.pagerBottomGap) <= 18 ? ok('分页吸底（与面板底部差 ≤18px，含 panel padding）', `gap=${d8.pagerBottomGap}px`)
-    : bad('分页未吸底', JSON.stringify(d8));
+  d8.radius && d8.radius !== '0px' && d8.colOverflow === 'hidden' ? ok('底部圆角保留 + 列不再裁剪（圆角未被切）', `radius=${d8.radius} colOverflow=${d8.colOverflow}`)
+    : bad('底部圆角/列裁剪未修', JSON.stringify(d8));
 
   // ---- ⑨ 遗物章节门禁 = 3（Node 侧读源码，dist 无模块导出）----
   console.log('\n[⑨ 遗物提前]');

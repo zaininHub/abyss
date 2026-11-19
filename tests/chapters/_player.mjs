@@ -354,6 +354,31 @@ export function playerInit(cfg = {}) {
         const c = u && q.bulkCostCalc(u, 1);
         if (u && Number.isFinite(c) && c <= S.ep) { q.sim.buyUpgrade(u); st.chapBuys++; }
       }
+      // v4.3.3 反馈⑧（CH4 修复）：PT 锚点解了但 pt=0 时 moon 远征仍派不出（rp/pt 门槛）。
+      //   PT 唯一稳定来源是「异兽孵化工坊」（[data-hatch-upg]，2 万 EP 首购即解锁 ptAutoHatch），
+      //   自动玩家此前从未点它 → PT 恒 0 → 远征恒 0。补真实 DOM 入口：解锁后开箱（ptDistillOn 默认 true）。
+      if (wantExps && !S.ptAutoHatch && (S.resDiscovered && S.resDiscovered.pt || (S.pt || 0) > 0 || ((S.upgrades && S.upgrades.pt_vault) || 0) >= 1)) {
+        q.sim.switchTab('shop'); q.sim.render();
+        const hatch = document.querySelector('[data-hatch-upg]');
+        if (hatch && !hatch.classList.contains('disabled') && (S.ep || 0) >= 20000) { hatch.click(); st.chapBuys++; st.hatchBought = true; }
+      }
+      // v4.3.3 CH4：PT 满仓后孵化走「满仓涓流」每 5s 烧 5 万 EP，把 EP 压在 cap 60% 以下，
+      //   扩容决策（__capCands，需 ep>cap*0.6）永不触发 → storage 卡 2 级 → EP cap 65568 < moon 1e6，
+      //   远征死锁（与 v4.2.8 atrium 蒸馏满仓涓流同款）。真玩家会先关孵化让 EP 回涨买扩容：
+      //   经产品真实入口 [data-pt-distill-toggle] 关/开（只在满仓且 EP 低时关，回升后开回）。
+      if (wantExps && S.ptAutoHatch && q.ptCap && (S.pt || 0) >= q.ptCap() * 0.999) {
+        if (S.ptDistillOn !== false) {
+          q.sim.switchTab('pets'); q.sim.render();
+          const tog = document.querySelector('[data-pt-distill-toggle]');
+          if (tog) { tog.click(); st.hatchPauses = (st.hatchPauses || 0) + 1; }
+          q.sim.switchTab('shop');
+        }
+      } else if (wantExps && S.ptAutoHatch && S.ptDistillOn === false && (S.pt || 0) < (q.ptCap ? q.ptCap() : 1e9) * 0.9) {
+        q.sim.switchTab('pets'); q.sim.render();
+        const tog = document.querySelector('[data-pt-distill-toggle]');
+        if (tog) tog.click();
+        q.sim.switchTab('shop');
+      }
       // v4.3.2 反馈④：deep_space DM 1000→50 后 ch4 只需少量 DM——经真实裂隙封印获取。
       //   纪律修正（v4.3.1 曾塞 2501 次无效点击）：只在「裂隙在场 ∧ EP 足够付 sealCost」时才点封印，
       //   避免 EP 不足时 sealRift() 静默失败但计数已加。裂隙需 8 线程门槛，故先经 hire-btn 招募。

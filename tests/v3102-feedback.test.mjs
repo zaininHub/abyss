@@ -171,9 +171,11 @@ test('B3 接线：renderTop 用同一组展示值算净流，ETA 由消耗侧感
   assert.ok(MAIN.includes('hSalary.textContent = fmt(drain) + \'/s\''), '消耗显示与告警同口径');
   assert.ok(MAIN.includes("hDrainWarn.style.display = drainWarn ? '' : 'none'"));
   // v3.12.3 反馈⑧：耗尽预估不再写进产出/消耗两项气泡，改由 ❗ 自己的 data-tip 承载
+  // v4.3.3 反馈⑦：❗ 的 data-tip 气泡删除（与 #flow-tip-pop 双弹）——耗尽预估由 flowTipHtml 统一承载，
+  //   感叹号只保留 aria-label 语义，不再有独立悬浮气泡。
   assert.equal((MAIN.match(/\$\{etaTip\}/g) || []).length, 0, '两项气泡不再追加耗尽预估');
   assert.ok(MAIN.includes('EP 预计 ${fmtDepletionEta(etaSec)} 后耗尽'));
-  assert.ok(MAIN.includes('hDrainWarn.dataset.tip = warnTip'), '感叹号自带悬浮气泡');
+  assert.ok(!MAIN.includes('hDrainWarn.dataset.tip = warnTip'), '感叹号不再自带悬浮气泡（避免双弹）');
   assert.ok(MAIN.includes("setAttribute('aria-label'"), '警告标志有无障碍说明');
 });
 

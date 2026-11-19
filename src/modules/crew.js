@@ -215,7 +215,20 @@ export function renderCrewPanel(container) {
       } else { unbindThread(c); crewPush(`【${c.name}】从岗位撤离（消耗恢复）`, ''); }
       renderCrewPanel(container);
     });
+    // v4.3.3 反馈②：滚动触底自动翻页（按钮保留兼容历史脚本）。判定用当前筛选后的总条数。
+    container.addEventListener('scroll', () => {
+      if (container._crewScrollLock || container.dataset.crewFold === '1') return;
+      const pc = Math.max(1, Math.ceil((container._crewTotal || 0) / PAGE_SIZE));
+      if (crewPage >= pc - 1) return;
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20) {
+        container._crewScrollLock = true;
+        crewPage++;
+        renderCrewPanel(container);
+        requestAnimationFrame(() => { container._crewScrollLock = false; });
+      }
+    }, { passive: true });
   }
+  container._crewTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（筛选后）
   refreshCrewDyn(container, start, pageCultists);
 }
 

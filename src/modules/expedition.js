@@ -16,7 +16,10 @@ export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改�
 //   按星球区分探索，每个星系归属一个星系群（BALANCE.starRes.groups），返回该群专属星际资源
 //   （stardust/voidmite/dmite/plasma/exo），researchMult('starres') 提升专属资源产出。
 export const GALAXIES = [
-  { id: 'moon',      name: '月球基地',   icon: '🌙', group: 'g6', durDays: 1,  cpsReq: 0,    cost: { ep: 1e6,  rp: 1e5,  pt: 8e4 },   cps: 2,    res: ['stardust', 'exo'],     resBase: 20,   colonyCps: 200,   colonyRp: 0.1,  desc: '近地深空前哨' },
+  // v4.3.3 反馈⑧（CH4 修复）：moon 的 RP/PT 门槛按 ch4 经济重标定（RP 峰值 ~650、PT 上限 ~1.2e3）——
+  //   原 rp:1e5/pt:8e4 与 ch4 差两个数量级，星图解锁后仍无法派出任何远征 → ch5 条件 expeditionsDone>=8 永不可达。
+  //   EP 1e6 不动（数量级链 1e6→1e11 保持，v360 单测零改）；后续星系成本不变，仅首站门槛对齐。
+  { id: 'moon',      name: '月球基地',   icon: '🌙', group: 'g6', durDays: 1,  cpsReq: 0,    cost: { ep: 1e6,  rp: 500,  pt: 500 },   cps: 2,    res: ['stardust', 'exo'],     resBase: 20,   colonyCps: 200,   colonyRp: 0.1,  desc: '近地深空前哨' },
   { id: 'mars',      name: '火星前哨',   icon: '🔴', group: 'g1', durDays: 2,  cpsReq: 100,  cost: { ep: 1e7,  rp: 1e6,  pt: 8e5 },   cps: 10,   res: ['stardust', 'voidmite'], resBase: 60, colonyCps: 1500,  colonyRp: 0.5,  desc: '红色行星采样' },
   { id: 'jupiter',   name: '木星轨道',   icon: '🪐', group: 'g4', durDays: 4,  cpsReq: 1e3,  cost: { ep: 1e8,  rp: 1e7,  pt: 8e6 },   cps: 40,   res: ['voidmite', 'dmite'],  resBase: 200, colonyCps: 1.2e4, colonyRp: 2,    desc: '气态巨行星勘探' },
   { id: 'centauri',  name: '半人马座',   icon: '⭐', group: 'g2', durDays: 7,  cpsReq: 1e5,  cost: { ep: 1e9,  rp: 1e8,  pt: 8e7 },   cps: 200,  res: ['dmite', 'plasma'],   resBase: 600, colonyCps: 1e5,   colonyRp: 10,   desc: '恒星际远航' },

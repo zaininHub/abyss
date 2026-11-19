@@ -349,7 +349,7 @@ export const BALANCE = {
     // v4.3.0 深渊提前：threadUnlock 15→8（约 700 EP 累计，第一章末~第二章初可达），
     //   首现不再等 1 小时——firstSpawnSec 600s 必出，让「深渊是核心玩法」在第 1 章就给出第一口。
     //   后续节奏不变（1 小时一遇），只压首次等待；首现判定读 !S._riftSeen（首封/首抱后即回常规间隔）。
-    spawnSec: 3600,                 // 基础出现间隔 1 小时（哨站升级逐级 -25%，下限 240s）
+    spawnSec: 3600,                 // 基础出现间隔 1 小时（哨站升级逐级 -25%，下限 600s / 10 分钟，v4.3.3 反馈⑨）
     firstSpawnSec: 600,             // v4.3.0：首次裂隙 10 分钟必出（_riftSeen 前生效，此后回 spawnSec）
     staySec: 600,                   // 裂隙在场停留时长（未操作 10 分钟后自行闭合）
     threadUnlock: 8,                // v4.3.0：解锁门槛降为 ≥8 条线程（原 15——深渊提前开放第一波）
@@ -383,16 +383,18 @@ export const BALANCE = {
     // 裂隙等级 = cps 潜力级（1~5）+ 科技等级（无限），每级提升奖励（DM/RP/余烬）
     levelTech: { baseEp: 2e5, epGrowth: 1.9, baseDm: 10, dmGrowth: 1.7 },
     upgrades: {
-      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔 -25%/级（下限 4 分钟）' }, // v3.3.4 反馈⑤：文案与 riftSpawnSec 同口径
+      sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔逐级缩短（下限 10 分钟）' }, // v4.3.3 反馈⑨：下限 4→10 分钟，去「每级 -25%」文案
       lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）
       auto_seal:    { name: '自动封印仪',   cap: 1, desc: '裂隙出现时自动封印' },
-      auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱（-20% EP 换爆发）' },
-      auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索（消耗 EP/DM）· 开关在左侧「自动转化」' },
+      // v4.3.3 反馈⑧：去「（-20% EP 换爆发）」「（消耗 EP/DM）· 开关在左侧自动转化」文案——
+      //   三项统一在裂隙树内做互斥开关，细节只留 wiki。
+      auto_embrace: { name: '自动拥抱协议', cap: 1, desc: '裂隙出现时自动拥抱' },
+      auto_descent: { name: '无限深入',     cap: 1, desc: '裂隙出现时自动深入探索' },
       // v3.4.9 反馈②：昂贵的余烬升级——腐化每涨 5% 自动净化 5%（EP 充足时），需先买「无限深入」
-      auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 +5% 自动净化 -5%（消耗 EP）· 开关在左侧「自动转化」' },
+      auto_purify:  { name: '自动净化仪',   cap: 1, emberBase: 1200, desc: '腐化每涨 +5% 自动净化 -5%' },
       // v3.4.5 反馈②：语音文案改为「???」，动画改为屏幕底部中央一只左右打量你的眼睛（见 modules/abyssGaze.js）
       gaze: { name: '深渊凝视', cap: 1, desc: '???', egg: true },
       // v3.6.0 方向④：裂隙余烬升级树扩充

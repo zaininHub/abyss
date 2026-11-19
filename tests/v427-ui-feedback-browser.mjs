@@ -102,6 +102,7 @@ try {
   await sleep(120);
 
   // ④ 存档摘要本局总量
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
   const snapSub = await page.evaluate(() => {

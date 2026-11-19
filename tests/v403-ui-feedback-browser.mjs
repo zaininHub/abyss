@@ -111,6 +111,7 @@ try {
     fileEl.click = () => { window.__fileOpened++; };
     void oc;
   });
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(400);
   const listInfo = await page.evaluate(() => ({
@@ -144,6 +145,7 @@ try {
   afterDel.rows === 2 && afterDel.label === '2/3' ? ok('列表与容量角标同步刷新', afterDel.label) : bad('列表未同步', `rows=${afterDel.rows} label=${afterDel.label}`);
 
   // 覆盖（同一处 click 派发路径的另一个动作；不刷新页面，便于断言）
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
   const ovBox = await page.evaluate(() => {
@@ -169,6 +171,7 @@ try {
     : bad('覆盖未生效', JSON.stringify({ ovBefore, ovAfter }));
 
   // 导出
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
   const expBox = await page.evaluate(() => {

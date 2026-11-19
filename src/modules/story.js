@@ -18,8 +18,9 @@ export function renderStoryBar(container) {
   const ch = currentChapter(S);
   // v4.2.0 反馈⑦：剧情文案不再省略号截断——旧版 max-width:280px + nowrap + ellipsis
   //   让「你的岗位是这张工…」看不到后半句。改为完整换行显示，章节名/正文各归其位。
-  container.innerHTML = `<span class="ch-label">剧情</span>
-    <span id="ch-name" style="color:var(--purple);font-weight:600">${ch.name}</span>
+  // v4.3.3 反馈④：「剧情」角标与章节名强制同行（inline-flex 组不被 flex-wrap 拆开），角标字号加大。
+  container.innerHTML = `<span class="ch-head"><span class="ch-label">剧情</span>
+    <span id="ch-name" style="color:var(--purple);font-weight:600">${ch.name}</span></span>
     <span id="ch-desc">${ch.desc}</span>`;
 }
 

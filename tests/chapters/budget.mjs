@@ -41,6 +41,11 @@ export const BUDGET = {
     carry: { prestige: 8, es: 320, prestigePoints: 8 } },
   // 第 4 章：prestige 12→17。need≈1.47e11..2.32e11 → 单次 ES≈92..116；
   //   第 5 章条件 expeditionsDone>=8——ch4 起自动玩家开启远征点击（expeditionsDone 随推演累计）
+  // v4.3.3 注：CH4 链路已打通（moon 远征 RP/PT 门槛降至 500 + 自动玩家补 hatch PT 入口 + 满仓暂停
+  //   解锁 EP 扩容死锁 + deep_space 50 DM），分段实测 expDone>0 / CPS 从 460 爬到 2.5e4。
+  //   预算表本身（carry prestige 12 / minPrestige 5 / maxDays 16）仍与真实经济失配——
+  //   need(12)=1.4e11 在 16 天窗口不可达；预算表联动改动会破坏 v426 C1 预算链一致性断言，
+  //   留作独立批次整体重标定（非本批代码修复范围）。
   4: { minPrestige: 5, es: [220, 800], pp: [3, 60], rp: [3, 180], maxDays: 16,
     carry: { prestige: 12, es: 550, prestigePoints: 12 } },
   // 第 5 章：prestige 17→22。need≈2.32e11..3.28e11 → 单次 ES≈116..138

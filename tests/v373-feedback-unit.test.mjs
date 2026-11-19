@@ -75,12 +75,14 @@ test('B1 灰显占位按钮与锁定样式已移除', () => {
   assert.ok(!MAIN.includes('未解锁：在'), '不再有未解锁 title');
 });
 
-test('B2 六枚开关各自按解锁判定 push，全未解锁时整块面板隐藏', () => {
+test('B2 开关各自按解锁判定 push，全未解锁时整块面板隐藏', () => {
   assert.match(MAIN, /fab\.style\.display = items\.length \? '' : 'none'/, '空列表隐藏「⚡ 转化」悬浮按钮（含其弹层）');
   const pushCount = (MAIN.match(/items\.push\(/g) || []).length;
-  assert.equal(pushCount, 6, '蒸馏/探采/孵化/圣所/深入/净化共 6 枚');
+  // v4.3.3 反馈⑧：无限深入开关 unified 到裂隙科技树，左侧「自动转化」只剩 5 枚（原 6 枚）
+  assert.equal(pushCount, 5, '蒸馏/探采/孵化/圣所/净化共 5 枚（深入已移至裂隙树）');
   assert.match(MAIN, /if \(converterUnlocked\('vehicles'\)\)/, '探采按唯一解锁源判定');
   assert.match(MAIN, /if \(riftUpgradeLevel\('auto_purify'\) >= 1\)/, '净化按科技等级判定');
+  assert.ok(!/qsOption\('descent'/.test(MAIN), '左侧不再有深入开关（与裂隙树互斥同源）');
 });
 
 test('B3 Wiki 仍与实现同源（各系统解锁后出现）', () => {

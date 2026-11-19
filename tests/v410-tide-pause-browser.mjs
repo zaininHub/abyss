@@ -104,6 +104,7 @@ try {
   }, mkSave());
   await page.goto(URL, { waitUntil: 'load' });
   await sleep(1200);
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#skin-menu-btn');
   await sleep(350);
   await page.click('[data-skin="light"]');

@@ -72,6 +72,10 @@ body {
 /* v3.10.4 ③：统一悬浮气泡——.stat / .item / .btn 共用同一套 [data-tip] 样式，
    政策等面板改用 data-tip 后与其它面板一致（不再用原生 title 或零散内联提示）。 */
 .item[data-tip], .btn[data-tip], .ai-assistant-head[data-tip] { position: relative; }
+/* v4.3.3 反馈⑦：所有「带悬浮说明」的触发元素统一 help 光标（问号），非特殊说明一律适用。
+   例外：本身是操作按钮/可点击项的保留 pointer（特异性 0,2,0 > 下方 [data-tip] 的 0,1,0）。 */
+[data-tip], [data-ai-head], .wage-help-zone, .tide-stat, #h-output-stat, #h-drain-stat, .drain-warn { cursor: help; }
+.btn[data-tip], button[data-tip], .item[data-tip], .qs-opt[data-tip] { cursor: pointer; }
 .stat[data-tip]:hover::after,
 .item[data-tip]:hover::after,
 .btn[data-tip]:hover::after,
@@ -170,16 +174,9 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   white-space: normal;
   line-height: 1.6;
 }
-.drain-warn[data-tip] { position: relative; }
-.drain-warn[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute; top: 100%; right: 0; z-index: 999;
-  background: var(--tip-bg); border: 1px solid var(--border); border-radius: 4px;
-  padding: 6px 8px; font-size: 11px; color: var(--tip-fg);
-  white-space: normal; width: max-content; max-width: min(280px, 84vw); line-height: 1.6;
-  pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.4);
-}
-.stat[data-tip]:has(.drain-warn[data-tip]:hover)::after { content: none; }
+/* v4.3.3 反馈⑦：感叹号自身气泡已删（双弹），只由 #flow-tip-pop 统一呈现来源明细。
+   耗尽预估仍在 flowTipHtml() 内，信息不丢。 */
+.drain-warn { position: relative; }
 
 .buff-tag {
   padding: 2px 8px;
@@ -237,13 +234,22 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 /* v3.3.3 反馈②：成就常驻第一列（原 .side-col 规则同步） */
 .first-col .panel { margin: 0; }
 .first-col #tab-achievement { display: block; }
-/* v4.3.1 反馈⑧：成就面板固定高度 + 列表内滚 + 分页吸底——
-   旧实现面板由内容撑开（flex:0 0 auto），解锁条目增多时整列被撑长、底边与其它列不齐；
-   现在面板定高（clamp 随视口），列表区独立滚动，分页 sticky 吸在面板底部。
-   注意特异性须与上一行 .first-col #tab-achievement 同级且后置，否则 display:flex 被 block 覆盖。 */
-.first-col #tab-achievement { display: flex; flex-direction: column; height: clamp(232px, 30vh, 352px); min-height: 0; overflow: hidden; }
+/* v4.3.3 反馈①（修正 v4.3.1）：大列高度统一不变 + 底部圆角保留 + 列表内部滚动。
+   v4.3.1 用 height:clamp 把成就面板定死高度，仍保留 flex:0 0 auto 面板自然高度语义，
+   总高超出列时被列的 overflow-y:auto 裁剪 → 底部圆角被切、看起来像被折叠。
+   现在：底部面板吃列内剩余空间（flex:1 1 auto，列本身不再滚动），滚动下沉到列表容器内部；
+   三列由 grid align-items:stretch 天然等高，圆角完整。 */
+.first-col #tab-achievement { display: flex; flex-direction: column; flex: 1 1 auto; height: auto; min-height: 180px; overflow: hidden; }
 .first-col #tab-achievement > #achievement-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 .first-col #tab-achievement .crew-pager { position: sticky; bottom: 0; z-index: 2; background: var(--panel, var(--bg-2, #141821)); margin-bottom: 0; padding: 6px 0 2px; }
+/* 第一列自身不再滚动（成就面板内滚）；其余列保留列滚动兜底。
+   v4.3.3：@media(min-width:900px) 里 .first-col{overflow-y:auto} 后置覆盖本规则，
+   故必须 !important（v4.0.8 耐久纪律：同特异性源顺序定胜负）。 */
+.first-col { overflow: hidden !important; }
+/* 第二列班组：底部编排卡吃剩余空间，班组列表内滚，与其它列等高且圆角完整 */
+.left-col #orchestration-card { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.left-col { overflow: hidden !important; } /* 同 first-col：班组列表内滚，列不裁剪 */
+.left-col #crew-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
 
 /* v3.3.3 反馈⑨：未开放大模块 tab 的「??？」锁定态 */
 .tab-locked {
@@ -410,14 +416,16 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 .ch-label {
   background: var(--purple);
   color: #fff;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: 12px;      /* v4.3.3 反馈④：10px→12px，剧情角标更易读 */
   text-transform: uppercase;
   flex: 0 0 auto;       /* v3.12.5：剧情条收窄时标签不被压成竖排 */
   white-space: nowrap;
 }
 /* v4.2.0 反馈⑦：剧情文案完整显示（不再 ellipsis 截断）——章节名与正文分行，正文可换行 */
+/* v4.3.3 反馈④：角标+章节名强制同行，作为不可拆的 inline-flex 组 */
+.ch-head { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: 0 0 auto; }
 .ch-bar { flex-wrap: wrap; align-items: baseline; row-gap: 2px; }
 .ch-bar #ch-name { flex: 0 0 auto; }
 .ch-bar #ch-desc {
@@ -1624,6 +1632,11 @@ body {
    研究点（晋升 RP 加成/族升级）、科技树（裂隙等级）、遗物（深渊商店）同期接入同一范式，
    全 tab 纯类目标题字号/颜色/箭头/可点性四要素一致。 */
 h3.foldable-h3 {
+  /* v4.3.3 反馈⑤：与 .rp-group-title 同构 flex+gap:6px——
+     旧实现箭头后无 gap，而仓储区组标题箭头后有 6px，两组「▼ 文案」间距差 6px 不对齐。 */
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--cyan);
   font-size: 13px;
   letter-spacing: 0.5px;
@@ -2067,6 +2080,19 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 /* v3.2.3 反馈⑤：菜单改为向下展开——.sys-btns 固定在屏幕右上角（top:12px），原向上展开会超出视口顶外不可点 */
 /* v3.12.12 ⑥：皮肤菜单复用同一交互范式，独立 .skin-menu 类（不占用 .save-menu 首位匹配） */
 .save-menu, .skin-menu { position: relative; display: inline-block; }
+/* v4.3.3 反馈③：「⚙ 选项」外壳——保活/存档/皮肤三项收进同一个下拉。
+   复用 .save-menu 的 hover 范式；内层 .save-menu/.skin-menu 仍是选项菜单的子元素，
+   hover 链从 #sys-menu 贯穿到内层按钮，内层子 pop 可继续展开（三层嵌套）。 */
+.sys-menu { position: relative; display: inline-block; }
+.sys-menu-pop { min-width: 156px; max-height: 78vh; }
+.sys-menu::after {
+  content: ''; position: absolute; right: 0; top: 100%;
+  width: 200px; max-width: calc(100vw - 16px); height: 8px; pointer-events: none;
+}
+.sys-menu:hover::after { pointer-events: auto; }
+.sys-menu:hover > .sys-menu-pop,
+.sys-menu.kbd-open > .sys-menu-pop,
+.sys-menu:focus-within > .sys-menu-pop { display: flex; } /* 键盘 Tab 进入内层按钮时展开（内核在菜单内，不会被踢出） */
 .save-menu-pop {
   display: none;
   position: absolute;

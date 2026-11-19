@@ -198,7 +198,8 @@ export function riftUpgradeCost(id) {
   return Math.round(base * Math.pow(BALANCE.rift.upgGrowth, riftUpgradeLevel(id)));
 }
 export function riftSpawnSecAt(lv) {
-  return Math.max(240, BALANCE.rift.spawnSec * Math.pow(0.75, lv)); // v3.3.3 反馈⑤：下限 240s（原 600s）
+  // v4.3.3 反馈⑨：哨站下限 240s(4min)→600s(10min)——避免高频裂隙冲掉节奏；首裂仍走 firstSpawnSec 不受影响
+  return Math.max(600, BALANCE.rift.spawnSec * Math.pow(0.75, lv));
 }
 export function riftSpawnSec() {
   return riftSpawnSecAt(riftUpgradeLevel('sentinel'));
@@ -560,9 +561,10 @@ export function renderRift(container) {
       const abyssLocked = !!(S.collapsed || S._collapseAt || S._collapseChoicePending
         || (S.corruption || 0) >= (BALANCE.corruption.max || 100));
       riftSig = abyssLocked ? 'abyss' : 'eta';
+      // v4.3.3 反馈⑥：删「基础间隔 N 分钟 · 升级「裂隙哨站」可缩短」整行——
+      //   该值随哨站升级漂移（基础 60min、Lv1 显示 45min），与实际触发频率口径不符，只留倒计时。
       container.innerHTML = abyssLocked ? ''
-        : `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:2px">基础间隔 ${fmtSpawnMin(riftSpawnSec())} · 升级「裂隙哨站」可缩短</div>`;
+        : `<div style="font-size:13px;color:var(--text-1)">下一次裂隙 <b id="rift-eta" style="color:var(--purple)">--</b> 后出现</div>`;
     }
     const etaEl = container.querySelector('#rift-eta');
     if (etaEl) etaEl.textContent = fmtEta(riftEtaSec());
@@ -648,25 +650,26 @@ export function renderRiftPanel(container) {
     const lv = riftUpgradeLevel(id);
     const cost = lv >= u.cap ? null : riftUpgradeCost(id);
     // v2.6.4 ⑦ → v3.3.4 反馈⑤：哨站文案改「当前 → 下一级」，且下一级与 riftSpawnSec 同口径
-    // （原 next 用 Math.max(600, ...) 硬编码旧下限，Lv.0 时算出来也是 10 分钟 → 文案与实际生效不符）
+    // v4.3.3 反馈⑨：删「· 每级 -25%，下限 4 分钟」尾巴（下限已改 10 分钟，百分比与实际漂移不符）
     let desc = u.desc;
     if (id === 'sentinel') {
       const cur = riftSpawnSec();
       if (lv >= u.cap) {
-        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已满级，每级 -25%`;
+        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已满级`;
       } else {
         const next = riftSpawnSecAt(lv + 1);
         desc = next < cur - 1
-          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)} · 每级 -25%，下限 4 分钟`
+          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)}`
           : `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已到最短，继续升级不再缩短`;
       }
     }
     // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
-    // v3.4.9 反馈①：无限深入的开关移到左侧「自动转化」面板（本树只保留购买，避免两处开关不同步）
-    const isAuto = (id === 'auto_seal' || id === 'auto_embrace');
+    // v4.3.3 反馈⑧：三项（含无限深入）统一在本树显示互斥开关，删左侧「自动转化」里的深入开关
+    //   （v3.4.9 曾为防双开关不同步把它移走，现在把三处合一，单一入口）。
+    const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
     const autoOn = S.riftAuto === id;
     const autoToggle = isAuto && lv > 0
-      ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
+      ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" aria-pressed="${autoOn ? 'true' : 'false'}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
       : '';
     // v3.12.6 ⑥：未购入「无限深入」时整张卡不出现（原来是一张带「需先购入…」的锁定卡，
     //   玩家嫌这是把解锁条件写在面板上）。买入无限深入后自动解锁，无需任何提示文案。
@@ -678,7 +681,7 @@ export function renderRiftPanel(container) {
     html += `
       <div class="rift-upg-row" data-rift-upg="${id}">
         <div style="flex:1">
-          <div style="font-size:13px;color:var(--text-1)">${u.name} <span style="color:var(--text-3);font-size:11px">Lv.${lv}/${u.cap}</span></div>
+          <div style="font-size:13px;color:var(--text-1)">${u.name}${isAuto ? '' : ` <span style="color:var(--text-3);font-size:11px">Lv.${lv}/${u.cap}</span>`}</div>
           <div style="font-size:11px;color:var(--text-3)">${desc}</div>
         </div>
         ${autoToggle}

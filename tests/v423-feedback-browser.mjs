@@ -103,6 +103,7 @@ try {
 
   // ===== ③ 快照改名（走真实入口：💾 存档下拉）=====
   console.log('\n[③ 快照改名 / 存快照入口]');
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(450);
   const entry = await page.evaluate(() => ({
@@ -137,6 +138,7 @@ try {
   afterRename.stored.includes('深渊线备份') ? ok('localStorage 已落盘', afterRename.stored.join(' / ')) : bad('未落盘', JSON.stringify(afterRename.stored));
   !afterRename.stillEditing ? ok('提交后退出编辑态', '') : bad('仍停在编辑态', '');
   // Esc 取消
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
   await page.click('#save-list .snap-row:last-child .snap-name');
@@ -152,6 +154,7 @@ try {
     ? ok('Esc 取消不改名', afterEsc.names.join(' / '))
     : bad('Esc 仍写入', JSON.stringify(afterEsc));
   // 长度截断
+  await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
   await page.click('#save-list .snap-row:last-child .snap-name');
