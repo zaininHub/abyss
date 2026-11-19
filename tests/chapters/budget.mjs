@@ -63,7 +63,7 @@ export const BUDGET = {
   //   CPS D9 1.7e4 → D12 3.3e10 爆发，晋升周期 ≈3 天被 gap 5 游戏天主宰）。
   //   与 ch1 校准结论①同型：「1 升即推进」→ minPrestige 5→1、es [260,900]→[80,300]
   //   （实测 145 居中）。carry {17,900,17} 维持（输入锚点，链式只垫底不封顶）。
-  5: { minPrestige: 1, es: [80, 300], pp: [1, 10], rp: [3, 200], maxDays: 120,
+  5: { minPrestige: 1, es: [80, 300], pp: [1, 20], rp: [3, 200], maxDays: 120,
     carry: { prestige: 17, es: 900, prestigePoints: 17 } },
   // 第 6 章：prestige 22→26 口径推导 need≈3.28e11..3.90e11 → 单次 ES≈137..140
   // v4.3.5 同 ch5 口径重标定：宗教已立 → ch6 条件 faith>=5 || 宗教恒满足（minDays 5 天驻留
