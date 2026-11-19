@@ -866,6 +866,43 @@ function bindWageTipPop() {
   window.addEventListener('resize', () => { if (pop() && pop().classList.contains('show')) place(); });
 }
 
+// v4.3.2 反馈①：AI 台账悬浮气泡——fixed DOM（复用 wage-tip-pop），取代 data-tip::after 竖排。
+// head 由 renderAi 每次重建（slot.innerHTML），监听委托在稳定宿主 #ai-card；文案读宿主 dataset（同步写入）。
+function bindAiTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('ai-card');
+  if (!zone || zone._aiTipBound) return;
+  zone._aiTipBound = true;
+  const pop = () => document.getElementById('ai-tip-pop');
+  const place = () => {
+    const p = pop();
+    if (!p) return;
+    const anchor = zone.querySelector('[data-ai-head]');
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const tipW = Math.min(360, window.innerWidth * 0.88);
+    const below = r.top < 260; // 上方容纳不下（AI 标题在面板顶部）→ 翻到行下方，与 wage 气泡同规则
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const show = () => {
+    const p = pop();
+    if (!p) return;
+    p.textContent = zone.dataset.aiLedgerTip || '';
+    place();
+    p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => { const p = pop(); if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); } };
+  zone.addEventListener('mouseenter', (e) => { if (e.target.closest('[data-ai-head]')) show(); });
+  zone.addEventListener('mousemove', (e) => { if (e.target.closest('[data-ai-head]')) show(); else hide(); });
+  zone.addEventListener('mouseleave', hide);
+  zone.addEventListener('focusin', (e) => { if (e.target.closest('[data-ai-head]')) show(); });
+  zone.addEventListener('focusout', hide);
+  window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) place(); }, true);
+  window.addEventListener('resize', () => { if (pop() && pop().classList.contains('show')) place(); });
+}
+
 // ========== v4.1.2：顶栏产出/消耗悬浮——真实 DOM 气泡 + 分组换行（复用 wage-tip-pop 范式） ==========
 // 旧实现用 attr(data-tip) + ::after{white-space:nowrap}，长串「产出来源：A · B｜加成：C · D」挤成一团，
 // 且 absolute 定位被顶栏 overflow 裁剪。这里改 fixed + JS rect 定位 + 每条来源/加成独占一行。
@@ -1362,8 +1399,10 @@ function refreshTabVisibility() {
 // RP 蒸馏（灵感工坊）/ DM 探采（载具）/ PT 孵化（异兽）——解锁后各出现一枚快捷开关，
 // 与原位置开关读写同一状态字段（atriumOn / _probeEnabled / ptDistillOn），功能完全一致；
 // EP 不足时各系统自动暂停消耗，回升后自动恢复（v3.2.2：去除「需手动恢复」的自动关闭）
-const QS_STYLE_ON = 'padding:4px 14px;font-size:11.5px;background:var(--good,#3fb950);color:#fff;border:none;border-radius:4px;cursor:pointer';
-const QS_STYLE_OFF = 'padding:4px 14px;font-size:11.5px;background:var(--red,#f85149);color:#fff;border:none;border-radius:4px;cursor:pointer';
+// v4.3.2 反馈③：开关改整行下拉列表项（与存档/皮肤弹层同观感）——保留 data-qs 与「开/关」文案供事件委托与测试。
+function qsOption(key, label, on, title) {
+  return `<button class="btn qs-opt ${on ? 'on' : ''}" data-qs="${key}" title="${title}"><span>${label}</span><span class="qs-state">${on ? '开' : '关'}</span></button>`;
+}
 // v3.7.3 反馈②：未解锁的自动转化不再灰显占位——解锁后才出现（与 Wiki「各系统解锁后出现」一致）。
 // 六枚开关各自用唯一解锁判定源（四枚转化器 + 两枚裂隙科技）；全部未解锁时整块面板隐藏，不留空壳。
 function renderQuickSwitches() {
@@ -1372,30 +1411,24 @@ function renderQuickSwitches() {
   if (!host) return;
   const items = [];
   if (converterUnlocked('atrium')) {
-    const on = converterEnabled('atrium');
-    items.push(`<button data-qs="atrium" title="灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">蒸馏 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('atrium', '蒸馏', converterEnabled('atrium'), '灵感工坊自动蒸馏：EP → RP（与「研究点」页开关同步）'));
   }
   if (converterUnlocked('vehicles')) {
-    const on = converterEnabled('vehicles');
-    items.push(`<button data-qs="probe" title="载具探采：EP → DM（与「遗物」页探采开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">探采 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('probe', '探采', converterEnabled('vehicles'), '载具探采：EP → DM（与「遗物」页探采开关同步）'));
   }
   if (converterUnlocked('hatch')) {
-    const on = converterEnabled('hatch');
-    items.push(`<button data-qs="hatch" title="异兽孵化：EP → PT（与「异兽」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">孵化 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('hatch', '孵化', converterEnabled('hatch'), '异兽孵化：EP → PT（与「异兽」页开关同步）'));
   }
   if (converterUnlocked('temple')) {
-    const on = converterEnabled('temple');
-    items.push(`<button data-qs="temple" title="信仰圣所：EP → FP（与「宗教」页开关同步）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">圣所 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('temple', '圣所', converterEnabled('temple'), '信仰圣所：EP → FP（与「宗教」页开关同步）'));
   }
   // v3.4.9 反馈①：无限深入开关从裂隙科技树移到此处（与其余自动转化开关同一入口）
   if (riftUpgradeLevel('auto_descent') >= 1) {
-    const on = S.riftAuto === 'auto_descent';
-    items.push(`<button data-qs="descent" title="无限深入：裂隙出现时自动深入探索（消耗 EP，腐化超阈值会损失）与「自动封印/自动拥抱」互斥" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">深入 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('descent', '深入', S.riftAuto === 'auto_descent', '无限深入：裂隙出现时自动深入探索（消耗 EP，腐化超阈值会损失）与「自动封印/自动拥抱」互斥'));
   }
   // v3.4.9 反馈②：自动净化（腐化每涨 5% 自动净化 5%，消耗 EP；需先买「无限深入」）
   if (riftUpgradeLevel('auto_purify') >= 1) {
-    const on = !!S.autoPurify;
-    items.push(`<button data-qs="purify" title="自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）" style="${on ? QS_STYLE_ON : QS_STYLE_OFF}">净化 ${on ? '开' : '关'}</button>`);
+    items.push(qsOption('purify', '净化', !!S.autoPurify, '自动净化：腐化每涨 5% 自动净化 5%（消耗 EP，EP 不足时暂停）'));
   }
   // v4.0.1 反馈④：整块收入「⚡ 转化」悬浮按钮（#qs-fab）；无任何转化器解锁时隐藏该按钮（含其弹层）。
   if (fab) fab.style.display = items.length ? '' : 'none';
@@ -1650,6 +1683,7 @@ function bindEvents() {
   bindWageTipPop();
   bindFlowTipPop(); // v4.1.2：顶栏产出/消耗悬浮改真实 DOM 气泡（分组换行 + 净流说明）
   bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
+  bindAiTipPop(); // v4.3.2 反馈①：AI 台账悬浮改 fixed DOM 气泡（原 data-tip::after 在窄锚点下竖排）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   bindKeepAwake(); // v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。
@@ -2750,7 +2784,17 @@ let achPage = 0;
 function renderAchievementPanel(container) {
   if (!container) return;
   const defs = ACHIEVEMENTS;
-  const got = defs.filter(d => S.achievements[d.id]);
+  // v4.3.2 反馈②：成就按「解锁时间倒序」（最新解锁在前）。
+  //   时间戳来自 achievementRegistry 解锁时写入的 S.achievementTimes；旧档无时间戳 → 回落注册表索引倒序
+  //   （注册表大体按早期→后期排，后期成就通常更晚解锁，退化口径仍近似倒序）。
+  const times = S.achievementTimes || {};
+  const got = defs.filter(d => S.achievements[d.id]).slice().sort((a, b) => {
+    const ta = times[a.id], tb = times[b.id];
+    if (ta != null && tb != null) return tb - ta; // 都有时间戳：新的在前
+    if (ta != null) return -1; // 有时间戳的优先于无时间戳的旧档
+    if (tb != null) return 1;
+    return defs.indexOf(b) - defs.indexOf(a); // 都无时间戳：注册表倒序
+  });
   const n = got.length;
   // v3.12.3 反馈⑦：成就面板只保留「已解锁 N/总数」计数（由静态 #achievement-h3 常驻承载，
   // 它同时是收起开关，不在这里再产出嵌套面板 / 标题 / 说明段落）

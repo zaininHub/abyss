@@ -354,9 +354,20 @@ export function playerInit(cfg = {}) {
         const c = u && q.bulkCostCalc(u, 1);
         if (u && Number.isFinite(c) && c <= S.ep) { q.sim.buyUpgrade(u); st.chapBuys++; }
       }
-      // v4.3.1 收口说明：ch4 深空探测需 1000 DM，而 carry 种子 dm=0；裂隙封印成本=EP上限×30~50%，
-      //   低 CPS 阶段封印成功率极低（实测 12 天 2501 次点击仅 +76 DM）——需在独立批次重标定
-      //   ch4 的 DM 来源（种子带 DM / 调整 deep_space 成本 / 裂隙早期奖励），本批不塞无效点击。
+      // v4.3.2 反馈④：deep_space DM 1000→50 后 ch4 只需少量 DM——经真实裂隙封印获取。
+      //   纪律修正（v4.3.1 曾塞 2501 次无效点击）：只在「裂隙在场 ∧ EP 足够付 sealCost」时才点封印，
+      //   避免 EP 不足时 sealRift() 静默失败但计数已加。裂隙需 8 线程门槛，故先经 hire-btn 招募。
+      if (wantExps && (S.dm || 0) < 50 && !S.tech.deep_space) {
+        if ((S.cultists || []).length < 8 && document.getElementById('hire-btn')) {
+          try { document.getElementById('hire-btn').click(); } catch { /* 钱不够自然不招 */ }
+        }
+        if (S.activeRift && S.ep >= (S.activeRift.sealCost || Infinity)) {
+          q.sim.switchTab('rift-tab'); q.sim.render();
+          const sealBtn = document.getElementById('seal-rift');
+          if (sealBtn && !sealBtn.disabled) { sealBtn.click(); st.riftSeals = (st.riftSeals || 0) + 1; }
+          q.sim.switchTab('shop');
+        }
+      }
       if (wantExps && (S.expeditions || []).length < 2 && (S.starCps || 0) >= 0) {
         q.sim.switchTab('expedition');
         q.sim.render();

@@ -685,12 +685,7 @@ select:focus { outline: 1px solid var(--accent); outline-offset: 1px; }
 .ai-assistant-head { font-size: 12px; color: var(--text-2); cursor: help; white-space: nowrap; }
 .ai-assistant-head b { font-size: 13px; }
 .ai-assist-sep { color: var(--text-3); margin: 0 1px; }
-/* 台账悬浮较长：允许换行，避免气泡横穿面板 */
-.ai-assistant-head[data-tip]:hover::after {
-  max-width: min(320px, 86vw);
-  white-space: normal;
-  line-height: 1.6;
-}
+/* v4.3.2 反馈①：旧 data-tip::after 灰竖排气泡删除——台账改由 #ai-tip-pop（fixed DOM，复用 wage-tip-pop）渲染 */
 
 /* ========== 科技网格 ========== */
 .tech-grid {
@@ -2119,6 +2114,13 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
    弹层用基类 .save-menu-pop 定位（position:absolute; right:0; top:calc(100%+6px)），仅收窄到内容宽度。 */
 .qs-fab { position: relative; display: inline-block; }
 .qs-fab-pop { min-width: 200px; max-height: none; }
+/* v4.3.2 反馈③：转化开关改竖排下拉列表项（对齐皮肤/存档弹层观感）——整行按钮 + 状态右对齐 + 开启态语义色 */
+#quick-switches.qs-list { display: flex; flex-direction: column; gap: 4px; }
+#quick-switches .qs-opt { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; font-size: 12px; }
+#quick-switches .qs-opt.on { border-color: var(--good, #3fb950); color: var(--good, #3fb950); }
+#quick-switches .qs-opt:not(.on) { color: var(--text-3, #6e7681); }
+#quick-switches .qs-opt:hover { border-color: var(--accent); }
+#quick-switches .qs-state { font-size: 10.5px; opacity: .85; }
 /* 透明桥接伪元素：盖住「按钮 → 下拉」6px 断档，鼠标下移平滑进入弹层（与 .save-menu::after 同款思路） */
 .qs-fab::after {
   content: ''; position: absolute; right: 0; top: 100%;

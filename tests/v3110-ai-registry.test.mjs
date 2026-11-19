@@ -356,8 +356,11 @@ test('D2 SAVE_VERSION 保持 6（仅删字段，无存档结构变更）', () =>
 
 test('D3 面板源码：编制不足提示与台账 DOM 均由读侧派生，无 undefined 风险', () => {
   assert.match(AI_SRC, /data-ai-stall/, '编制不足提示存在');
-  // v3.12.5 反馈④：台账不再独占一行，改为助手行的 data-tip；常驻班组说明移入 Wiki
-  assert.match(AI_SRC, /data-ai-head[^>]*data-tip=/, '台账数值挂在助手行的 data-tip 上');
+  // v4.3.2 反馈①：台账从 data-tip::after（窄锚点竖排）改 fixed DOM 气泡——
+  //   head 保留 data-ai-head/aria-label，文案写进宿主 dataset.aiLedgerTip 供气泡读取；常驻班组说明仍只留 Wiki。
+  assert.match(AI_SRC, /data-ai-head[^>]*aria-label=/, '台账数值挂在助手行 aria-label 上');
+  assert.match(AI_SRC, /dataset\.aiLedgerTip/, '台账文案写入稳定宿主供气泡读取');
+  assert.ok(!/data-ai-head[^>]*data-tip=/.test(AI_SRC), '旧 data-tip 竖排气泡已移除');
   assert.match(AI_SRC, /本局已执行/, '台账读侧容错');
   assert.match(AI_SRC, /stalledActions\(\)/, '编制不足提示由派生谓词驱动');
   assert.match(AI_SRC, /actionCounts\(\)/, '台账读侧容错');

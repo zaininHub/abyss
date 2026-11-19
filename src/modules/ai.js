@@ -464,14 +464,16 @@ export function refreshAssistantAffordability() {
   // v3.12.5 反馈④：台账数值改为悬浮在助手行上，需要时才看，不占版面。
   const ledgerTip = `空闲 ${idle} · 占编 ${bound} · 共 ${n} 名｜本局已执行 ${totalActionCount(counts)} 次 · ${AI_ACTIONS.map(a => `${a.name} ${counts[a.id] || 0}`).join(' / ')}｜助手来自研究点「助手扩编协议」（每级 +1 名）`;
   // v3.12.7 ⑤：助手信息收成一行——只留「空闲/总数」（4/7），落进面板标题 <h3>。
-  // v3.12.13 ⑤：移除常驻「研究点扩编」提示，扩编入口说明收敛到悬浮框 data-tip（见 ledgerTip）。
-  const head = `<span class="ai-assistant-head" data-ai-head data-tip="${ledgerTip}" aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
+  // v3.12.13 ⑤：移除常驻「研究点扩编」提示，扩编入口说明收敛到悬浮框（见 ledgerTip）。
+  // v4.3.2 反馈①：去掉 data-tip（CSS ::after 在 40px 窄锚点下 shrink-to-fit 成竖排窄条），
+  //   改由 main.js bindAiTipPop 读 aria-label 渲染 fixed DOM 气泡（与 wage/flow/tide 同范式）。
+  const head = `<span class="ai-assistant-head" data-ai-head aria-label="${ledgerTip}"><b style="color:var(--cyan)" data-ai-assistant-count>${idle}</b><span class="ai-assist-sep">/</span><span style="color:var(--text-3)" data-ai-assistant-total>${n}</span></span>`;
   // v4.0.2 反馈⑤：预留线并入标题行 h3 内（与助手数量同处一行），百分比改为 <select> 下拉框。
   const ai = S.ai;
   const reserveOpts = BALANCE.ai.reserveOptions.map(r =>
     `<option value="${r}" ${ai.reserve === r ? 'selected' : ''}>${Math.round(r * 100)}%</option>`).join('');
   const reserveHtml = `<span class="ai-reserve-label">预留线 EP 上限</span><select class="ai-reserve-select" data-ai-reserve-sel>${reserveOpts}</select>`;
-  return { headHtml: head, reserveHtml, stallHtml: unstaffedHtml };
+  return { headHtml: head, reserveHtml, stallHtml: unstaffedHtml, tipText: ledgerTip }; // v4.3.2 ①：台账文案透传给面板写入宿主 dataset
 }
 
 // ========== 面板 ==========
@@ -536,6 +538,8 @@ export function renderAiPanel(container) {
     ? container.parentElement : document.getElementById('ai-card');
   const slot = card && card.querySelector('[data-ai-assist-slot]');
   if (slot) slot.innerHTML = section.headHtml;
+  // v4.3.2 反馈①：台账文案写进稳定宿主 dataset（head 每次重建，气泡读宿主不被缓存节点失效影响）
+  if (card && section.tipText) card.dataset.aiLedgerTip = section.tipText;
   // v4.0.2 反馈⑤：预留线下拉框注入标题行 h3 内的 [data-ai-reserve-slot]（与助手数量同处一行）。
   const rslot = card && card.querySelector('[data-ai-reserve-slot]');
   if (rslot) rslot.innerHTML = section.reserveHtml;

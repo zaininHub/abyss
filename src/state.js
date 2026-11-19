@@ -72,6 +72,7 @@ export function defaultState() {
     relics: {}, // v2.7.0：深渊遗物（DM 消费，跨转生保留）
     // 成就
     achievements: {},
+    achievementTimes: {}, // v4.3.2 反馈②：成就解锁时间戳（id → Date.now()），用于「最新解锁在前」倒序；旧档缺省 {} 回落注册表序
     // 剧情
     chapter: '1',
     chapterEnteredAt: Date.now(), // v3.6.0 方向⑥：章节最短驻留天数计时基准

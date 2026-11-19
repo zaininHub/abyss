@@ -7,7 +7,9 @@ export const TECHS = [
   // 此前 RP 已解锁（≥8 RP）但未研究「点击强化」时专注优化灰置，玩家「10 RP 不能升级」困惑
   {id:'focus_opt',col:1,cost:{rp:8,ep:8e4},name:'专注优化',desc:'专注升级成本 -25%；解锁「专注心核」（-25% 叠加）',req:[],unlocks:{buildings:['focus_core']}},
   {id:'entropy_reduce',col:3,cost:{rp:75,ep:2e6},name:'熵减协议',desc:'解锁「净化节点」族',req:[],unlocks:{buildings:[],purifiers:true}},
-  {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:1000},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],unlocks:{buildings:[],system:'expedition2'}},
+  // v4.3.2 反馈④：DM 1000→50——原口径基础 DM 上限恰 1000 且低 CPS 阶段封裂仅 ~6 DM/天（需 158 天），
+  //   致 ch4「expeditionsDone>=8」星图链断（deep_space 是首次远征唯一钥匙）。50 DM ≈8 天可达，留余量跑远征。
+  {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:50},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],unlocks:{buildings:[],system:'expedition2'}},
   {id:'ai_core',col:4,cost:{rp:50,ep:1e6},name:'AI 管理核心',desc:'解锁 AI 助手',req:[],unlocks:{buildings:[],system:'ai'}},
   {id:'chaos_shield',col:2,cost:{rp:90,ep:1.5e6},name:'混沌护盾',desc:'解锁「护盾协议」：线程流失概率减半',req:[],unlocks:{system:'chaos_shield'}}, // v2.8.10：补齐第 6 把钥匙
 ];

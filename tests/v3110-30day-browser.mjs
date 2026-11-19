@@ -115,8 +115,8 @@ async function uiCheck(page) {
       .find(d => (d.textContent || '').trim() === '编排倍率');
     const orchLabelOrphans = orchLabel ? 1 : 0;
     const orchLabelSameRow = !orchLabel;
-    // 成就面板为「已解锁分页」制，新增 3 条在列表末尾（末页）。
-    // 只取第一页会漏判，故逐页点击「下一页」收集全量文本再与读侧比对。
+    // 成就面板为「已解锁分页」制，v4.3.2 ②起按解锁时间倒序（最新在前，新增项落在首页而非末页）。
+    // 顺序变化不影响「全量收集后按名字比对」，故仍逐页点击「下一页」收集全量文本再与读侧比对。
     const achPanel = document.getElementById('achievement-panel');
     let achText = '', achPages = 0;
     if (achPanel) {
@@ -390,11 +390,12 @@ async function uiCheck(page) {
         const cards = [...panel.querySelectorAll('[data-ai-action]')].map(c => c.dataset.aiAction);
         const steppers = [...panel.querySelectorAll('[data-ai-crew-inc]')].map(b => b.dataset.aiCrewInc);
         const ledger = panel.querySelector('[data-ai-ledger]');
-        // v3.12.5 反馈④：台账不再独占一行，改为助手行的 data-tip
+        // v4.3.2 反馈①：台账改 fixed DOM 气泡（#ai-tip-pop）——文案在 head 的 aria-label
+        //   （旧 data-tip 在 40px 窄锚点下 shrink-to-fit 竖排，已移除）
         // v3.12.7 ⑤：助手行（4/N + 购买）已并入面板标题 <h3>，查询范围放宽到 #ai-card
         const scope = card || panel;
         const headEl = scope.querySelector('[data-ai-head]');
-        const headTip = (headEl && headEl.dataset.tip) || '';
+        const headTip = (headEl && headEl.getAttribute('aria-label')) || '';
         const stall = panel.querySelector('[data-ai-stall]');
         const countEl = scope.querySelector('[data-ai-assistant-count]');
         // 孤字换行：inline 元素换行会返回多个矩形，末矩形过窄即孤字（v3.9.0 同范式）
@@ -954,7 +955,7 @@ try {
     ok('AI 面板 5 张动作卡 + 占编步进器由注册表完整渲染（无 ON/OFF 开关）',
       `${A.cards.join(',')}`);
   else bad('AI 面板动作卡或步进器缺项', JSON.stringify({ cards: A.cards, switches: A.switches, steppers: A.steppers }));
-  // v3.12.5 反馈④：面板不再写「常驻班组/涨价」与独立台账行，台账改为悬浮在助手行上
+  // v4.3.2 反馈①：面板不再写「常驻班组/涨价」与独立台账行，台账改为 fixed DOM 气泡悬浮在助手行上
   if (!A.hasLedger && !A.crewHint && /本局已执行/.test(A.headTip || '') && !A.badText)
     ok('助手区块只留数量/占编/购买，台账移至悬浮（面板无教学文案）', (A.headTip || '').slice(0, 46));
   else bad('助手区块 UI 文案异常', JSON.stringify({ l: A.hasLedger, c: A.crewHint, t: (A.headTip || '').slice(0, 40), b: A.badText }));

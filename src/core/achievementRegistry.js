@@ -19,12 +19,13 @@ const BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));
 export function evaluateAchievements(S, ctx = {}) {
   if (!S) return [];
   const got = S.achievements || (S.achievements = {});
+  const times = S.achievementTimes || (S.achievementTimes = {}); // v4.3.2 ②：解锁时间戳（倒序排序用）
   const fresh = [];
   for (const a of ACHIEVEMENTS) {
     if (typeof a.test !== 'function' || got[a.id]) continue;
     let ok = false;
     try { ok = !!a.test(S, ctx); } catch { ok = false; }
-    if (ok) { got[a.id] = true; fresh.push(a); }
+    if (ok) { got[a.id] = true; times[a.id] = Date.now(); fresh.push(a); }
   }
   return fresh;
 }
@@ -35,6 +36,7 @@ export function unlockAchievement(S, id) {
   const got = S.achievements || (S.achievements = {});
   if (got[id]) return false;
   got[id] = true;
+  (S.achievementTimes || (S.achievementTimes = {}))[id] = Date.now(); // v4.3.2 ②
   return true;
 }
 
