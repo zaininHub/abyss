@@ -122,7 +122,7 @@ export const WIKI_SECTIONS = [
     <p class="wiki-warn">⚠️ 倒计时终结抉择（不可关闭，二选一）：<br>💰 <b>贿赂深渊</b>：上缴 90% EP，成为深渊的朋友（本局继续，腐化清零）→ 成就「恶魔的朋友」<br>💥 <b>同归于尽</b>：立即触发崩溃杀死深渊（本局湮灭 + 强制转生，湮灭残片 +1）→ 成就「凝视深渊」</p>
   ` },
   { id: 'rift', name: '裂隙与余烬', unlock: 'rift', body: () => `
-    <h4>深渊裂隙（班组 ${D.rift.threadUnlock} 条线程后解锁，基础 ${Math.round(D.rift.spawnSec/60)} 分钟一遇，在场 ${Math.round(D.rift.staySec/60)} 分钟）</h4>
+    <h4>深渊裂隙（班组 ${D.rift.threadUnlock} 条线程后解锁，首次 ${Math.round((D.rift.firstSpawnSec||D.rift.spawnSec)/60)} 分钟必出，此后基础 ${Math.round(D.rift.spawnSec/60)} 分钟一遇，在场 ${Math.round(D.rift.staySec/60)} 分钟）</h4>
     <p>裂隙初始恒为 <b>Lv.1</b>，且<b>不会自行升级</b>：只有主动购入 <b>科技树「裂隙等级」</b>（消耗 EP + DM，可无限升级，每级 +1 级、奖励同步提升）才会变强。等级名称沿用 ${D.rift.levelNames.join(' / ')}，超过 5 级统称「虚空之隙」。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显；<b>深入消耗随裂隙等级指数增长</b>（×1.75/级，Lv1 3 EP/s → Lv10 232 EP/s））。</p>
     <h4>裂隙余烬（跨转生保留）</h4>
     <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。裂隙等级本身改由科技树「裂隙等级」升级（EP + DM，无限）。</p>

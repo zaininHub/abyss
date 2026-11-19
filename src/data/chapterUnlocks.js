@@ -7,7 +7,9 @@ export const CHAPTER_UNLOCKS = Object.freeze([
   { chapter: 2,  id: 'granary',     name: '饵料仓库（PT）',        announce: '饵料仓库出现，异兽饼干线开启' },
   { chapter: 3,  id: 'starchart',   name: '星图',                  announce: '星图接入，远征队可以出发了' },
   { chapter: 4,  id: 'religion',    name: '宗教',                  announce: '信仰苏醒——宗教面板可唤醒信仰' },
-  { chapter: 5,  id: 'crossroad',   name: '岔路口 / 裂隙 / 探采',  announce: '命运的岔路口与深渊裂隙出现' },
+  // v4.3.0 深渊提前：裂隙改「8 条线程 + 首裂 10 分钟」在第 1~2 章即出现，
+  //   本章公告不再认领裂隙（原「岔路口 / 裂隙 / 探采」口径失真）；探采/深渊商店仍由首裂触发解锁。
+  { chapter: 5,  id: 'crossroad',   name: '岔路口 / 探采',         announce: '命运的岔路口出现——深渊已在低语中显形' },
   { chapter: 6,  id: 'transcend',   name: '超验 / 隐密圣学',       announce: '赞颂与超验开启，神格之路铺开' },
   { chapter: 7,  id: 'policy',      name: '周期政策',              announce: '周期政策开放——集结分身，自主立法' },
   { chapter: 8,  id: 'eternals',    name: '永恒矩阵',              announce: '永恒矩阵浮现，ES 可换成永久强化' },

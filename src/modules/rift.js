@@ -216,10 +216,14 @@ export function riftThreadsReady() {
 // 旧实现每帧掷骰（p = dt/spawnSec），理论上均值 = 间隔，但方差大、后台 rAF 挂起时几乎不推进，
 // 玩家长期看不到裂隙（反馈两次「裂隙不会触发」）。现改为计时器到点必出（±5% 抖动）。
 // v3.6.2 反馈②：删除「首次 90 秒必出」的新手加速——解锁节奏改由线程数门槛控制，首次同样 1 小时。
+// v4.3.0 深渊提前：恢复首现加速但改 10 分钟（firstSpawnSec）——15→8 线程让门槛早达，
+//   首现也提前，第 1 章末就能拿到第一口深渊内容；_riftSeen 置位后自然回落 1 小时常规节奏
+//   （S._riftNextSec 在裂隙出现时清零，下次重掷时已走 spawnSec 分支，无需额外标记）。
 export function riftNextSec() {
   if (!(S._riftNextSec > 0)) {
     const jitter = 0.95 + Math.random() * 0.1; // ±5%：体感随机但不偏离标称间隔
-    S._riftNextSec = riftSpawnSec() * jitter;
+    const base = S._riftSeen ? BALANCE.rift.spawnSec : (BALANCE.rift.firstSpawnSec || BALANCE.rift.spawnSec);
+    S._riftNextSec = base * jitter;
   }
   return S._riftNextSec;
 }
@@ -354,6 +358,25 @@ function settleRiftExpedition(dt) {
 
 // ---- 主 tick ----
 export function tickRift(dt) {
+  // v4.3.0 深渊提前②：第 1 章氛围低语（两条一次性叙事日志，无机制效果）——
+  //   深渊是核心玩法，但裂隙首见前玩家对「深渊」零感知；用两条低语在裂隙出现前铺垫氛围：
+  //   ① 开局 120s「细微低语」——第 1 章前几分钟就能听到深渊的第一声；
+  //   ② 线程门槛达标「低语逼近」——裂隙倒计时开始的预告（此刻距首裂 ≤10 分钟）。
+  //   判定只用即时字段（startedAt / riftThreadsReady），标记跨转生保留（与 _riftSeen 同风格）；
+  //   旧档两标记缺省补发一次不重复（标记写入即幂等）。置于深入结算 return 之前，保证任何状态都可触发。
+  if (!S._whisperSeen1 && (S.startedAt || 0) > 0 && (Date.now() - S.startedAt) >= 120000) {
+    S._whisperSeen1 = true;
+    log('工作台深处传来细微的低语……听不清内容，但它一直在。');
+  }
+  if (!S._whisperSeen2 && riftThreadsReady()) {
+    S._whisperSeen2 = true;
+    // 若 ① 尚未触发（旧档/快速档 startedAt 差值已超 120s）先补 ① 再发 ②，保持叙事顺序
+    if (!S._whisperSeen1) {
+      S._whisperSeen1 = true;
+      log('工作台深处传来细微的低语……听不清内容，但它一直在。');
+    }
+    log('低语逼近——代码底层有什么东西在苏醒。');
+  }
   // v2.6.1：深入探索结算优先（裂隙事件不并行出现）
   if (S.riftExpedition) {
     settleRiftExpedition(dt);
