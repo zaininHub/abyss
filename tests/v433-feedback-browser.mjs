@@ -176,6 +176,9 @@ try {
   //   carry 12→10、maxDays 16→120），断言改为锁新校准值——防后续批次静默改回。
   /4: \{ minPrestige: 2,[\s\S]*?maxDays: 120,[\s\S]*?carry: \{ prestige: 10, es: 120/.test(budgetSrc)
     ? ok('ch4 预算表已重标定（v4.3.4：minPrestige 2 / carry 10 / maxDays 120）') : bad('ch4 预算链被破坏');
+  // v4.3.5：ch6/16/17 信仰门槛断链修复——自动玩家宗教段必须走产品入口（唤醒/信奉/圣所）。
+  plSrc.includes('data-religion-unlock') && plSrc.includes('data-religion-temple')
+    ? ok('自动玩家宗教入口已补（唤醒 + 圣所，ch6/16/17 信仰链打通）') : bad('自动玩家宗教入口缺失');
 
   // ============ ⑨ 0 pageerror ============
   console.log('\n[⑨ pageerror]');
