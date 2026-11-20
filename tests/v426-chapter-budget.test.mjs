@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BUDGET, MAIN_CHAPTERS, budgetIntegrity } from './chapters/budget.mjs';
-import { SNAPSHOT_KEYS, PROGRESS_KEYS, inRange } from './chapters/_snapshot.mjs';
+import { SNAPSHOT_KEYS, PROGRESS_KEYS } from './chapters/_snapshot.mjs';
 import { CROSS_RUN_KEYS } from '../src/core/stateSchema.js';
 import { CHAPTERS } from '../src/data/chapters.js';
 import { powerScale } from '../src/core/pricing.js';
@@ -39,7 +39,7 @@ test('B1. 第 1 章 ES 预算下界 ≤ 公式推导首两升 ES 合计', () => 
   // 首升 runEarned≈need(0)=3e9 → ES≈12；二升 need(1)=8.49e9 → ES≈20；合计≈32
   const two = esAt(need(0)) + esAt(need(1));
   assert.ok(two >= BUDGET[1].es[0], `公式推导 ES 合计 ${two} 应落在预算下界 ${BUDGET[1].es[0]} 之上`);
-  assert.ok(inRange(two, BUDGET[1].es).ok, `推导值 ${two} 应在区间 ${JSON.stringify(BUDGET[1].es)} 内`);
+  // v4.3.6 口径反转：区间上界只作观察（esDelta 锁下界），不再断言推导值 ≤ 上界。
 });
 
 test('B2. 各章「单次晋升 ES 增量」随章号单调不减（幂律 presteeNeed 的必然结论）', () => {

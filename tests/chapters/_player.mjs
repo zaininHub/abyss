@@ -28,7 +28,15 @@ export function playerInit(cfg = {}) {
     holdPrestigeUntilAdvanced: !!cfg.holdPrestigeUntilAdvanced,
     // v4.3.5：rush 章（晋升门槛章）保持 8 游戏小时 gap 快速晋升（见 __runBatch 晋升段注释）
     rushCfg: !!cfg.rushCfg,
+    // v4.3.6：目标章（N+1）进入门槛 minDays——hold gap 自适应依据（run-range 从
+    //   产品 chapters.js 读入；v3110 不传 → 默认 5 保持旧行为 43200）。
+    nextMinDays: Number(cfg.nextMinDays || 5),
   };
+  // v4.3.6：hold gap 自适应拉伸（晋升驻留死锁修复）。晋升回拨 chapterEnteredAt=now-1d
+  //   （prestige.js）→ daysIn 峰值 = gap/8640 + 1；旧固定 43200（5 天）峰值 6.0，
+  //   进 minDays 7 的章（ch16/17/18）永不推进。公式：gap = max(43200, minDays·8640 + 2880)
+  //   保证峰值 = minDays + 1.33 天 ≥ minDays（+8 游戏小时缓冲防边界 tick 抖动）。
+  const HOLD_GAP = Math.max(43200, Math.ceil(window.__playerCfg.nextMinDays * 8640) + 2880);
   const S = window.S, q = window.__qa;
   window.__prodCands = q.UPGRADES.filter(u => u.cps > 0 && /^基础产出\+/.test(u.desc || ''));
   window.__capCands = q.UPGRADES.filter(u => ['reserve_bin', 'storage'].includes(u.id));
@@ -56,10 +64,11 @@ export function playerInit(cfg = {}) {
       window.__vt += 10000;
       window.__simT += 10000;
       window.__tick(window.__simT);
-      // v4.3.5 rush 驻留臂：晋升门槛刚冲线的第一个 tick 武器化 5 天驻留期（43200 tick）——
+      // v4.3.5 rush 驻留臂：晋升门槛刚冲线的第一个 tick 武器化驻留期（自适应天数）——
       //   此期间 rushHoldForResidency 生效，自动玩家停晋升让 chapterEnteredAt 驻留计时
-      //   走完 minDays 5 天，章节推进后 run-range 的完成判据（章内再晋升 1 次）由恢复的
+      //   走完 minDays，章节推进后 run-range 的完成判据（章内再晋升 1 次）由恢复的
       //   rush 快升在 8h gap 内完成。臂只在首次跨过门槛时装填一次（防反复重置）。
+      //   v4.3.6：驻留时长读 nextMinDays（与 HOLD_GAP 同源），不再是硬编码 43200。
       if (window.__playerCfg.rushCfg && window.__residencyUntilTick == null) {
         const pr = S.prestige || 0;
         const goal = Number(window.__playerCfg.goalChapter) || 0;
@@ -67,7 +76,8 @@ export function playerInit(cfg = {}) {
         const RUSH_GATES = { 8: 40, 14: 130, 15: 260 };
         const gate = RUSH_GATES[goal];
         if (gate != null && pr >= gate) {
-          window.__residencyUntilTick = window.__tickCount + 43200 + 2880; // 5 天驻留 + 8h 缓冲
+          const resid = Math.ceil(window.__playerCfg.nextMinDays * 8640) + 2880; // minDays 驻留 + 8h 缓冲
+          window.__residencyUntilTick = window.__tickCount + resid;
         }
       }
       if (S.ep >= q.epStorageCap() * 0.999) st.capStalls++;
@@ -118,8 +128,11 @@ export function playerInit(cfg = {}) {
           // v4.3.5：rushCfg=true（晋升门槛章 ch7/13/14 冲 prestige 40/130/260）时保持 2880
           //   快速晋升——5 游戏天 gap 下 130/260 级门槛数学不可达；重建随 unlockedBuildings
           //   跨局保留加快，快速攒 need 冲线后由后续章恢复正常 gap。
+          // v4.3.6：hold gap 不再是字面量 43200——HOLD_GAP 按 nextMinDays 自适应
+          //   （max(43200, minDays·8640+2880)），晋升回拨 1 天后 daysIn 峰值必然跨过
+          //   目标章 minDays 门槛（ch16/17/18 的 7 天驻留死锁修复）。
           const gap = window.__playerCfg.rushCfg ? PRESTIGE_GAP
-            : window.__playerCfg.holdPrestigeUntilAdvanced ? 43200 : PRESTIGE_GAP;
+            : window.__playerCfg.holdPrestigeUntilAdvanced ? HOLD_GAP : PRESTIGE_GAP;
           // v4.3.5 驻留死锁修复：晋升回拨 chapterEnteredAt=now-1d（prestige.js:86），
           // rush gap 8h 下每天晋升 3 次 → daysIn 恒 ~1.3 < minDays 5 → 章节永不推进
           // （ch7 实测 D46 pr149 远超门槛 40 仍卡 chapter=7）。修复：rush 模式下
@@ -409,11 +422,19 @@ export function playerInit(cfg = {}) {
       // v4.3.2 反馈④：deep_space DM 1000→50 后 ch4 只需少量 DM——经真实裂隙封印获取。
       //   纪律修正（v4.3.1 曾塞 2501 次无效点击）：只在「裂隙在场 ∧ EP 足够付 sealCost」时才点封印，
       //   避免 EP 不足时 sealRift() 静默失败但计数已加。裂隙需 8 线程门槛，故先经 hire-btn 招募。
-      if (wantExps && (S.dm || 0) < 50 && !S.tech.deep_space) {
+      // v4.3.6：补 ch19 封裂分支——ch19 cond riftsSealed>=8，而 riftsSealed 不在
+      //   SNAPSHOT_KEYS（晋升重置清零且不入快照），链式种子恒 0 → ch18 内必须真实封满
+      //   8 道。触发条件：ch17 起预攒（ch18 推进即用）；EP 水位守卫 = 封完后仍留
+      //   cap·18% 底仓（hold 驻留期 EP 攒量充足；首裂 10 分钟必出保供给）。
+      const needSeals = ((S.riftsSealed || 0) < 8)
+        && parseInt(String(S.chapter), 10) >= 17;
+      if ((wantExps && (S.dm || 0) < 50 && !S.tech.deep_space) || needSeals) {
         if ((S.cultists || []).length < 8 && document.getElementById('hire-btn')) {
           try { document.getElementById('hire-btn').click(); } catch { /* 钱不够自然不招 */ }
         }
-        if (S.activeRift && S.ep >= (S.activeRift.sealCost || Infinity)) {
+        const sealKeepFloor = needSeals ? q.epStorageCap() * 0.18 : 0; // 封完后须余的底仓
+        if (S.activeRift && S.ep >= (S.activeRift.sealCost || Infinity)
+          && S.ep - (S.activeRift.sealCost || 0) >= sealKeepFloor) {
           q.sim.switchTab('rift-tab'); q.sim.render();
           const sealBtn = document.getElementById('seal-rift');
           if (sealBtn && !sealBtn.disabled) { sealBtn.click(); st.riftSeals = (st.riftSeals || 0) + 1; }

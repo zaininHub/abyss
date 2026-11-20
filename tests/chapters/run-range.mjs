@@ -31,6 +31,7 @@ import { launchBrowser, prepPage, gotoAndSettle, sleep, TICKS_PER_DAY } from './
 import { playerInit } from './_player.mjs';
 import { snapshotFromState, seedFromSnapshot, compareBudget } from './_snapshot.mjs';
 import { BUDGET, MAIN_CHAPTERS } from './budget.mjs';
+import { CHAPTERS } from '../../src/data/chapters.js'; // v4.3.6：目标章 minDays 单一真源（防 _player 内联漂移）
 
 // ---- CLI 参数 ----
 const args = process.argv.slice(2);
@@ -206,9 +207,17 @@ try {
     // v4.3.5：rush 章（晋升门槛章：ch7/13/14 冲 prestige 40/130/260）传 rushCfg=true，
     //   自动玩家保持 gap 2880（8 游戏小时）快速晋升——hold 策略的 5 游戏天 gap 会让
     //   130/260 级门槛数学不可达（重建随 unlockedBuildings 跨局保留加快，快节奏攒 need 才能冲线）。
+    // v4.3.6：nextMinDays = 第 N+1 章进入门槛的 minDays（产品 chapters.js 单一真源）。
+    //   hold gap 必须保证「晋升回拨 1 天后 daysIn 峰值 ≥ minDays」：回拨公式
+    //   chapterEnteredAt=now-1d（prestige.js），daysIn 峰值 = gap/8640 + 1，旧固定 43200
+    //   （5 天）下峰值 6 < ch16/17/18 的 minDays 7 → 章节永不推进（ch15~18 全章 120 天
+    //   超时卡 chapter=15 的死锁根因）。gap = max(43200, minDays·8640 + 2880) 保证峰值
+    //   = minDays + 1.33 天，必然跨线。
     const rush = !!budget.rush;
+    const nextGate = (CHAPTERS.find(c => c.id === n + 1) || {});
+    const nextMinDays = typeof nextGate.minDays === 'number' ? nextGate.minDays : 3;
     await page.evaluate(playerInit, { prestigeGapTicks: 2880, goalChapter: n + 1, maxDays: budget.maxDays,
-      holdPrestigeUntilAdvanced: true, rushCfg: rush, label: 'ch' + n }); // v4.2.6 校准③：未推进前憋晋升（真人冲章节策略）
+      holdPrestigeUntilAdvanced: true, rushCfg: rush, nextMinDays, label: 'ch' + n }); // v4.2.6 校准③：未推进前憋晋升（真人冲章节策略）
     if (cp) {
       // 恢复玩家游标 / 统计器 / 配置——否则续跑后决策节拍重置，预算失真
       await page.evaluate(({ cursors, stats, playerCfg }) => {
