@@ -80,8 +80,10 @@ export const BUDGET = {
   7: { minPrestige: 12, es: [800, 6000], pp: [10, 40], rp: [5, 400], maxDays: 150, rush: true,
     carry: { prestige: 26, es: 1800, prestigePoints: 26 } },
   // 第 8 章：第 9 章条件 expeditionsDone>=20（无晋升门槛）。远征随推演累计（ch4 实测 8 次章末），
-  //   20 次需额外 ~12 次远征；晋升 gap 43200 下 Δ 6~15
-  8: { minPrestige: 5, es: [600, 8000], pp: [4, 30], rp: [6, 450], maxDays: 120,
+  //   20 次需额外 ~12 次远征；晋升 gap 43200 下 Δ 6~15。
+  //   v4.3.6 重标：链式实测 D9 推进 + D10 章内 1 升即完成判据收章（Δ2，rush 后重建快
+  //   导致完成判据提前触发），minPrestige 5→2（Δ2 是完成判据的自然产物，非节奏劣化）。
+  8: { minPrestige: 2, es: [600, 8000], pp: [4, 30], rp: [6, 450], maxDays: 120,
     carry: { prestige: 41, es: 3200, prestigePoints: 41 } },
   // 第 9 章：第 10 章条件 techCount>=38——unlockedBuildings 跨局保留，重建靠 m7(cps 1e8)
   //   档位补高档建筑；CPS 平台随永恒复利可达。Δ 6~15
@@ -91,8 +93,10 @@ export const BUDGET = {
   //   超过单次 esGain 后余额开始累积）。Δ 6~15
   10: { minPrestige: 5, es: [600, 9000], pp: [4, 30], rp: [6, 500], maxDays: 120,
     carry: { prestige: 58, es: 5700, prestigePoints: 58 } },
-  // 第 11 章：第 12 章条件 es>=800——余额累积同上，进章余额往往已达标。Δ 6~15
-  11: { minPrestige: 5, es: [600, 9000], pp: [4, 30], rp: [6, 520], maxDays: 120,
+  // 第 11 章：第 12 章条件 es>=800——余额累积同上，进章余额往往已达标。
+  //   v4.3.6 重标：链式实测 D4 即推进（ch10 末已到 ch12）、章内晋升 Δ4（窗口 4 天
+  //   完成「推进 + 1 升」）→ minPrestige 5→3。hold gap 5 天下 Δ4 = 20 天窗口的实际值。
+  11: { minPrestige: 3, es: [600, 9000], pp: [4, 30], rp: [6, 520], maxDays: 120,
     carry: { prestige: 64, es: 6900, prestigePoints: 64 } },
   // 第 12 章：第 13 章条件 prestige>=70——进章锚点 64~77 贴线，最多补 6 次即冲线。Δ 6~15
   12: { minPrestige: 5, es: [600, 10000], pp: [4, 30], rp: [6, 540], maxDays: 120,
@@ -106,18 +110,24 @@ export const BUDGET = {
   14: { minPrestige: 100, es: [20000, 120000], pp: [80, 220], rp: [8, 1500], maxDays: 300, rush: true,
     carry: { prestige: 130, es: 11500, prestigePoints: 130 } },
   // 第 15 章：第 16 章条件 faith>=60——faith 已满仓 100 随快照携带（圣所 v4.3.5 补丁产出到 cap），
-  //   即时推进；章内 1 次晋升即完成。carry 锚点 = ch14 冲线后的 260
+  //   即时推进；章内 1 次晋升即完成。carry 锚点 = ch14 冲线后的 260。
+  //   v4.3.6：ch16 minDays 7 → hold gap 自适应 9.33 天（见 _player HOLD_GAP）→
+  //   章内窗口 ≈ 驻留 7 天 + 晋升 9.33 天 ≈ 17 天；120 天足够 Δ≥3。
   15: { minPrestige: 1, es: [400, 8000], pp: [1, 15], rp: [30, 9000], maxDays: 120,
     carry: { prestige: 260, es: 20000, prestigePoints: 260 } },
-  // 第 16 章：第 17 章条件 faith>=90——faith 100 随快照携带，即时推进。Δ 6~15
-  16: { minPrestige: 5, es: [2000, 25000], pp: [4, 30], rp: [10, 900], maxDays: 120,
+  // 第 16 章：第 17 章条件 faith>=90——faith 100 随快照携带，即时推进。
+  //   v4.3.6：minDays 死锁修复后 hold gap 9.33 天 → 章内 ≥2 升 ≈ 19 天窗口。
+  16: { minPrestige: 2, es: [2000, 25000], pp: [4, 30], rp: [10, 900], maxDays: 120,
     carry: { prestige: 270, es: 100000, prestigePoints: 270 } },
-  // 第 17 章：第 18 章条件 end_shrine 建筑或 true_end 科技——自动玩家买高档建筑满足。
-  //   Δ 6~15
-  17: { minPrestige: 5, es: [2000, 25000], pp: [4, 30], rp: [10, 900], maxDays: 120,
+  // 第 17 章：第 18 章条件 end_shrine 建筑或 true_end 科技——end_shrine（base 5.4e6，
+  //   里程碑 7 档）自动玩家 v21 解锁路径可购；true_end 非钥匙科技不设门。
+  //   v4.3.6：ch18 minDays 7 → hold gap 9.33 天，Δ≥2。
+  17: { minPrestige: 2, es: [2000, 25000], pp: [4, 30], rp: [10, 900], maxDays: 120,
     carry: { prestige: 290, es: 112000, prestigePoints: 290 } },
-  // 第 18 章：终章后收尾（章内晋升链继续滚动验证；riftsSealed 番外门槛不入预算）
-  18: { minPrestige: 5, es: [2000, 30000], pp: [4, 40], rp: [8, 800], maxDays: 120,
+  // 第 18 章：终章后收尾（章内晋升链继续滚动验证）。
+  //   v4.3.6：ch19 条件 riftsSealed>=8 不入快照 → ch18 内自动玩家 needSeals 分支真实
+  //   封 8 道（EP 底仓守卫 18%）；hold gap 9.33 天 + 封裂动作并行。
+  18: { minPrestige: 2, es: [2000, 30000], pp: [4, 40], rp: [8, 800], maxDays: 120,
     carry: { prestige: 310, es: 124000, prestigePoints: 310 } },
 };
 

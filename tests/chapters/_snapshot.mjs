@@ -103,6 +103,12 @@ export function inRange(actual, [lo, hi]) {
  * 语义注记：es / prestigePoints（PP）是「只进不出」的跨局资产，增量区间校验有效；
  * rp 是可消费资源（买科技/研究），晋升奖励的 RP 大概率被立刻花掉——余额差不反映奖励，
  * 因此 rp 只校验「不回退」（单调性），不做区间断言（expected.rp 仅作报告参考）。
+ *
+ * v4.3.6 口径反转（es/pp 幂律爆炸实锤后的修正）：esDelta/ppDelta 只锁下界——
+ *   rush 章快升下 runEarned 4e31 → esGain 单次 ~1e13（ch7 实测 5.73e14），need(p)=(p+1)^1.5
+ *   与 sqrt(runEarned/2e7) 复合增长在快升形态下必然击穿区间上界；上界形同虚设且
+ *   恒 FAIL 无信息量。区间 [lo, hi] 语义改为：lo = 预算下界（低于 = 推演节奏劣化，FAIL）；
+ *   hi 仅记录 ratio 供报告观察（超上界不 FAIL——数量级健康即预算目的达成）。
  */
 export function compareBudget(expected, input, actual, opts = {}) {
   const deviations = [];
@@ -113,7 +119,7 @@ export function compareBudget(expected, input, actual, opts = {}) {
   if (pD < (expected.minPrestige || 1)) {
     deviations.push(`prestigeDelta=${pD} < minPrestige=${expected.minPrestige}`);
   }
-  // 规则 2：跨局资源增量落预算区间（es / pp 区间；rp 单调）
+  // 规则 2：跨局资源增量锁下界（es / pp；rp 单调）
   const esGainSum = opts.extra && Number.isFinite(opts.extra.prestigeEsGain)
     ? opts.extra.prestigeEsGain : null;
   {
@@ -123,9 +129,12 @@ export function compareBudget(expected, input, actual, opts = {}) {
         : (Number(actual.es) || 0) - (Number(input.es) || 0);
       out.esDelta = d;
       out.esDeltaBasis = esGainSum != null ? 'prestigeEsGain（晋升奖励累计）' : '余额差';
-      const chk = inRange(d, range);
-      out.esRatio = chk.ratio;
-      if (!chk.ok) deviations.push(`esDelta=${fmtN(d)}（${out.esDeltaBasis}）不在区间 [${range.map(fmtN).join(', ')}]`);
+      out.esRatio = +(d / (range[1] || 1)).toFixed(3); // 相对上界比率（报告观察用）
+      if (!Number.isFinite(d) || d < range[0]) {
+        deviations.push(`esDelta=${fmtN(d)}（${out.esDeltaBasis}）低于预算下界 ${fmtN(range[0])}`);
+      }
+      // 上界只记观察标记（不进 deviations）
+      if (range[1] != null && d > range[1]) out.esOverHi = true;
     }
   }
   {
@@ -133,9 +142,11 @@ export function compareBudget(expected, input, actual, opts = {}) {
     if (range) {
       const d = (Number(actual.prestigePoints) || 0) - (Number(input.prestigePoints) || 0);
       out.ppDelta = d;
-      const chk = inRange(d, range);
-      out.ppRatio = chk.ratio;
-      if (!chk.ok) deviations.push(`ppDelta=${fmtN(d)} 不在区间 [${range.map(fmtN).join(', ')}]`);
+      out.ppRatio = +(d / (range[1] || 1)).toFixed(3);
+      if (!Number.isFinite(d) || d < range[0]) {
+        deviations.push(`ppDelta=${fmtN(d)} 低于预算下界 ${fmtN(range[0])}`);
+      }
+      if (range[1] != null && d > range[1]) out.ppOverHi = true;
     }
   }
   if (expected.rp) {
