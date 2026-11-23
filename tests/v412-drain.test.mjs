@@ -49,3 +49,25 @@ test('D5 总消耗随满仓口径回落（与 computeCps 比较不再虚假净�
   assert.ok(capped < full, `满仓总消耗应低于未满（${capped} < ${full}）`);
   assert.equal(full - capped, 1350, '差额正好是工坊连续扣减 1350/s');
 });
+
+// v4.3.8 BUGFIX：结算侧 rp:atrium EP 扣费补 ×n² 对齐显示口径——
+//   旧结算 150×n 线性、economy.atriumDrainPerSec 显示 150×n²（v3.12.13 反馈⑫），
+//   4 级工坊实扣 600/s 而顶栏显示 2400/s，用户存档实测净流 +1549/s 被误报 -256/s。
+// 区间取法：id 到 '满仓涓流' 注释（registerFlow 体内 '});' 太多，不能按其截断）
+const { readFileSync } = await import('fs');
+function atriumFlowBody() {
+  const src = readFileSync(new URL('../src/systems/resourceFlows.js', import.meta.url), 'utf8');
+  const start = src.indexOf("id: 'rp:atrium'");
+  const end = src.indexOf('满仓涓流', start);
+  return src.slice(start, end);
+}
+test('D6 结算 EP 扣费 = 150×n²（源码级：rp:atrium 流 epNeed 口径）', () => {
+  const body = atriumFlowBody();
+  assert.ok(/\* atriumN \* atriumN \* dt/.test(body), `epNeed 应为 150×n²×dt（平方口径）：${(body.match(/const epNeed[^\n]*/) || [''])[0]}`);
+});
+
+test('D7 RP 产出保持线性（nominal=150×n×dt 独立于 epNeed，EP 不足按 used/epNeed 缩放）', () => {
+  const body = atriumFlowBody();
+  assert.ok(/const nominal = \(BALANCE\.atrium\.epRate \|\| 150\) \* atriumN \* dt;/.test(body), 'RP 名义扣费保持 ×n 线性');
+  assert.ok(/used \/ epNeed/.test(body), 'EP 不足时 RP 按实扣比例缩放');
+});
