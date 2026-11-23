@@ -5,7 +5,8 @@
 //   ② 产出/消耗单式 +X EP/s -Y EP/s；岗位下拉与晋升领导独立成行
 //   ③ 擅长岗位只留图标（.crew-aff-label 文字删除，名称入 title）
 //   ④ 科技树页头「· 当前 N RP」删除（顶栏同口径）
-//   ⑤ 研究点：DM 锚点未完成时星尘精炼不渲染（载具购入后出现）——浏览器行为验证
+//   ⑤ 研究点：v4.3.9 换源 converterUnlocked('vehicles')——金库旁路封堵（买金库≠采集解锁），
+//     跨局玩家买星尘金库零载具时星尘精炼不渲染，载具购入后出现——浏览器行为验证
 //   ⑥ 大模块 tab 按解锁顺序从左往右排列（解锁章序：shop/tech/rp ch1 → bazaar 首晋升 →
 //      pets ch2 → expedition ch3 → religion ch4 → rift ch5 → policy ch7 → relics ch3[v4.3.1 提前] → delve ch11）
 import puppeteer from 'puppeteer-core';
@@ -110,14 +111,21 @@ try {
     ? ok('⑥ 大模块 tab 按解锁顺序排列', tabOrder.map(x => x.replace('btn-', '')).join(' → '))
     : bad('⑥ tab 顺序不符', tabOrder.join(','));
 
-  // ---- ⑤ 研究点门控：DM 锚点未完成 → rp_dm 不渲染；种 scooter → 当帧渲染 ----
+  // ---- ⑤ 研究点门控：v4.3.9 换源 converterUnlocked('vehicles')——金库旁路封堵 ----
+  // 场景：跨局玩家（resDiscovered.dm 保留）买星尘金库（无载具）→ 采集未解锁，星尘精炼不得出现
   await page.evaluate(() => { window.__qa.sim.switchTab('rp'); });
   await sleep(400);
-  const rpBefore = await page.evaluate(() => ({
+  await page.evaluate(() => {
+    window.S.upgrades = Object.assign({}, window.S.upgrades, { dm_vault: 1 }); // 金库已买、零载具
+    window.__gameDirty.rp = true;
+    window.__qa.sim.render();
+  });
+  await sleep(900);
+  const rpVault = await page.evaluate(() => ({
     hasDm: !!document.querySelector('[data-research="rp_dm"]'),
     hasWage: !!document.querySelector('[data-research="rp_wage"]'),
   }));
-  rpBefore.hasWage && !rpBefore.hasDm ? ok('⑤ DM 锚点未完成时星尘精炼不渲染') : bad('⑤ 门控未生效', JSON.stringify(rpBefore));
+  rpVault.hasWage && !rpVault.hasDm ? ok('⑤ 金库已买零载具时星尘精炼不渲染（旁路封堵）') : bad('⑤ 金库旁路未封堵', JSON.stringify(rpVault));
   // 载具购入 → 置 RP 面板脏（帧系统 1s 周期内消费）→ 等 modSig 变化触发重建
   await page.evaluate(() => {
     window.S.upgrades = Object.assign({}, window.S.upgrades, { scooter: 1 });
