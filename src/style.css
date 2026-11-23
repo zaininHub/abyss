@@ -2067,8 +2067,14 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .crew-num b.c-sal { color: var(--bad); }
 .crew-line-num { flex-wrap: nowrap; } /* v4.2.8 反馈②：+X/-Y 同式单行不换行 */
 .crew-line-act { gap: 6px; }
-.crew-line-act select[data-bind] { font-size: 10.5px; max-width: 110px; flex: 1 1 auto; min-width: 0; }
-.crew-line-act .btn { font-size: 10.5px; padding: 2px 6px; margin-left: auto !important; }
+/* v4.3.17 反馈：岗位下拉固定窄宽——原 flex:1 1 auto 让它吃掉操作行剩余宽度，
+   晋升按钮出现/消失时两态跳变（无按钮弹到 max-width 110px、有按钮被挤到 ~78px），
+   且卡内过宽。固定 78px 后所有卡一致；超长选中项（已满/未解锁标注）由下拉弹层承载。
+   78 = 有按钮卡基线的实际分配宽：78 + gap6 + 晋升按钮 50.9 ≈ 卡内可用 135.6，放得下；
+   若取 88 会把按钮压到 41.6 触发「晋升★」换行（★ 掉第二行），按钮撑高 32px → 卡高 +13px，
+   连锁首屏自动填充组数变少（v4314 回归实测 18/2 失败）。 */
+.crew-line-act select[data-bind] { font-size: 10.5px; width: 78px; flex: 0 0 auto; min-width: 0; }
+.crew-line-act .btn { font-size: 10.5px; padding: 2px 6px; margin-left: auto !important; white-space: nowrap; }
 /* v4.2.7 反馈③：班组折叠标题（与 .orch-block-title 同构，复用 rp-fold-arrow 箭头） */
 .crew-block-title { cursor: pointer; user-select: none; }
 .crew-block-title:hover { color: var(--cyan-2); }
