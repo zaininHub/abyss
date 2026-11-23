@@ -79,8 +79,9 @@ try {
   });
   // v4.3.6b 反馈③：累积式加载——滚到底追加下一组（5→10→12），首卡保留可回看；
   //   全部展示完后文案收尾「已全部展示 N 项」，不再出现「已展示 16/16·下滑加载更多」矛盾。
-  /已展示 5 \/ \d+ 项/.test(d2.before.pager) ? ok('初始展示 5 条（已展示 5/12 进度文案，无按钮）', d2.before.pager) : bad('初始进度文案异常', d2.before.pager);
-  d2.noPagerBtn && d2.after.cards === 10 && /已展示 10 \/ \d+ 项/.test(d2.after.pager) && d2.after.firstCard === d2.before.firstCard
+  // v4.3.12 反馈①：进度文案删除——不可滚时 pager 整行不渲染（空）；触底加载后简短「下滑加载更多」。
+  !/已展示/.test(d2.before.pager) ? ok('初始无进度文案（v4.3.12：不可滚时不渲染 pager）', d2.before.pager || '(空)') : bad('初始进度文案异常', d2.before.pager);
+  d2.noPagerBtn && d2.after.cards === 10 && /下滑加载更多/.test(d2.after.pager) && !/已展示/.test(d2.after.pager) && d2.after.firstCard === d2.before.firstCard
     ? ok('滚动触底累积加载（5→10 追加，首卡保留可回看，无按钮）', d2.after.pager)
     : bad('滚动未累积加载或旧卡丢失', JSON.stringify(d2));
   d2.final.cards === 12 && /已全部展示 \d+ 项/.test(d2.final.pager) && !/下滑加载更多/.test(d2.final.pager)

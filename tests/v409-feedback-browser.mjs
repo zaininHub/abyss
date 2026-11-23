@@ -313,9 +313,11 @@ try {
   // v4.3.6b：累积加载——初始展示 5 条（PageSize 口径不变）
   f11a.cards === 5 ? ok('初始只展示 5 条成就', `cards=${f11a.cards}`) : bad('初始条数不符', `cards=${f11a.cards}`);
   // 运行期 checkAch 可能继续解锁新成就（种子 7 条 → 初始上限仍为 5 条），断言只锁 PageSize 口径
-  // v4.3.5 反馈③：翻页按钮移除 → 进度文案「已展示 N / M 项 · 下滑加载更多」；加载改纯滚动。
-  /已展示 5 \/ \d+ 项/.test(f11a.pagerText) ? ok('分页器进度文案「已展示 5/N 项」（无按钮）', f11a.pagerText) : bad('分页器文本不符', f11a.pagerText);
-  const f11total = Math.max(7, parseInt((/已展示 5 \/ (\d+) 项/.exec(f11a.pagerText) || [0, 7])[1], 10));
+  // v4.3.12 反馈①：进度文案删除——不可滚时不渲染 pager（空）；可滚时只剩简短「下滑加载更多」。
+  //   初始 5 条在 1600×1000 视口下通常撑不满容器 → pager 为空是**预期新行为**。
+  !/已展示/.test(f11a.pagerText) ? ok('分页器无进度文案（v4.3.12：不可滚时整行不渲染）', f11a.pagerText || '(空)') : bad('分页器文本不符', f11a.pagerText);
+  // v4.3.12：总数不再从 pager 解析（文案已删），从渲染卡数+触底加载行为推知
+  const f11total = 7;
   // v4.3.5 反馈③：按钮已删——加载走滚动（列表滚到底触发追加）
   // v4.3.6b：累积式加载断言——滚到底追加到 10 条（首卡保留），旧「翻页后 ≤5 条」断言随范式重做反转
   const f11b = await page.evaluate(async () => {
@@ -327,12 +329,12 @@ try {
     return {
       cards: document.querySelectorAll('#achievement-panel .ach-card').length,
       firstCard: document.querySelector('#achievement-panel .ach-card')?.textContent || '',
-      pager: document.querySelector('#achievement-panel .crew-pager').textContent.replace(/\s+/g, ' ').trim(),
+      pager: document.querySelector('#achievement-panel .crew-pager')?.textContent.replace(/\s+/g, ' ').trim() || '',
     };
   });
   results.f11b = f11b;
-  f11total >= 7 ? ok(`多种子成就（${f11total} 项，可累积加载）`, '') : bad('种子成就不足以加载', '');
-  f11b.cards === 10 && /已展示 10 \/ \d+ 项/.test(f11b.pager) && f11b.firstCard
+  f11total >= 7 ? ok(`多种子成就（${f11total}+ 项，可累积加载）`, '') : bad('种子成就不足以加载', '');
+  f11b.cards === 10 && /下滑加载更多/.test(f11b.pager) && !/已展示/.test(f11b.pager) && f11b.firstCard
     ? ok('滚动触底累积加载（5→10 追加，旧卡保留）', `cards=${f11b.cards} pager=${f11b.pager}`)
     : bad('累积加载未生效', `cards=${f11b.cards} pager=${f11b.pager}`);
 
