@@ -310,13 +310,14 @@ try {
   });
   results.f11a = f11a;
   f11a.exists ? ok('成就面板渲染', '') : bad('成就面板缺失', '');
-  f11a.cards === 5 ? ok('一页只显示 5 条成就', `cards=${f11a.cards}`) : bad('页内条数不符', `cards=${f11a.cards}`);
-  // 运行期 checkAch 可能继续解锁新成就（种子 7 条 → 页面上限仍为 5 条/页），断言只锁PageSize口径
-  // v4.3.5 反馈③：翻页按钮移除 → 进度文案「已展示 N / M 项 · 下滑加载更多」；翻页改纯滚动。
+  // v4.3.6b：累积加载——初始展示 5 条（PageSize 口径不变）
+  f11a.cards === 5 ? ok('初始只展示 5 条成就', `cards=${f11a.cards}`) : bad('初始条数不符', `cards=${f11a.cards}`);
+  // 运行期 checkAch 可能继续解锁新成就（种子 7 条 → 初始上限仍为 5 条），断言只锁 PageSize 口径
+  // v4.3.5 反馈③：翻页按钮移除 → 进度文案「已展示 N / M 项 · 下滑加载更多」；加载改纯滚动。
   /已展示 5 \/ \d+ 项/.test(f11a.pagerText) ? ok('分页器进度文案「已展示 5/N 项」（无按钮）', f11a.pagerText) : bad('分页器文本不符', f11a.pagerText);
   const f11total = Math.max(7, parseInt((/已展示 5 \/ (\d+) 项/.exec(f11a.pagerText) || [0, 7])[1], 10));
-  const f11pages = Math.ceil(f11total / 5);
-  // v4.3.5 反馈③：按钮已删——翻页走滚动（列表滚到底触发下一页）
+  // v4.3.5 反馈③：按钮已删——加载走滚动（列表滚到底触发追加）
+  // v4.3.6b：累积式加载断言——滚到底追加到 10 条（首卡保留），旧「翻页后 ≤5 条」断言随范式重做反转
   const f11b = await page.evaluate(async () => {
     const list = document.getElementById('achievement-panel');
     list.style.maxHeight = '120px';
@@ -325,14 +326,15 @@ try {
     await new Promise(r => setTimeout(r, 300));
     return {
       cards: document.querySelectorAll('#achievement-panel .ach-card').length,
+      firstCard: document.querySelector('#achievement-panel .ach-card')?.textContent || '',
       pager: document.querySelector('#achievement-panel .crew-pager').textContent.replace(/\s+/g, ' ').trim(),
     };
   });
   results.f11b = f11b;
-  f11b.cards >= 1 && f11b.cards <= 5 ? ok(`翻页后仍 ≤5 条（实际 ${f11b.cards}）`, `cards=${f11b.cards}`) : bad('第二页条数异常', `cards=${f11b.cards}`);
-  f11pages >= 2 ? ok(`多页成就（${f11total} 项 → ${f11pages} 页）`, '') : bad('种子成就不足以分页', '');
-  // v4.3.5 反馈③：进度文案推进到「已展示 10/N」（滚动翻页生效）
-  /已展示 10 \/ \d+ 项/.test(f11b.pager) ? ok('滚动后进度推进（已展示 10/N）', `pager=${f11b.pager}`) : bad('进度未推进', `cards=${f11b.cards} pager=${f11b.pager}`);
+  f11total >= 7 ? ok(`多种子成就（${f11total} 项，可累积加载）`, '') : bad('种子成就不足以加载', '');
+  f11b.cards === 10 && /已展示 10 \/ \d+ 项/.test(f11b.pager) && f11b.firstCard
+    ? ok('滚动触底累积加载（5→10 追加，旧卡保留）', `cards=${f11b.cards} pager=${f11b.pager}`)
+    : bad('累积加载未生效', `cards=${f11b.cards} pager=${f11b.pager}`);
 
   // ============ F3 新建初始空档 ============
   console.log('\n[F3] + 新建初始空档');

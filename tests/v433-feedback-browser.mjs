@@ -46,9 +46,9 @@ try {
     : bad('圆角/列裁剪未修', JSON.stringify(d1));
   d1.listOverflow === 'auto' ? ok('成就列表内滚（overflow-y:auto）') : bad('成就列表不可滚', d1.listOverflow);
 
-  // ============ ② 滚动触底自动翻页 ============
-  console.log('\n[② 滚动自动翻页]');
-  // 种足够成就（>5 条 = 2 页），强制渲染后滚动列表到底
+  // ============ ② 滚动触底累积加载（v4.3.6b 重做：追加而非翻页替换） ============
+  console.log('\n[② 滚动累积加载]');
+  // 种足够成就（>5 条 = 2 组），强制渲染后滚动列表到底
   const d2 = await page.evaluate(async () => {
     const S = window.S, q = window.__qa, ids = q.ACHIEVEMENT_IDS;
     S.achievements = {}; S.achievementTimes = {};
@@ -57,20 +57,35 @@ try {
     await new Promise(r => setTimeout(r, 400));
     const list = document.getElementById('achievement-panel');
     const before = { cards: list.querySelectorAll('.ach-card').length,
+      firstCard: list.querySelector('.ach-card')?.textContent || '',
       pager: (list.querySelector('.crew-pager')?.textContent || '').replace(/\s+/g, ' ').trim() };
     // 制造可滚：限制列表高度后滚到底
     list.style.maxHeight = '120px';
     list.scrollTop = list.scrollHeight;
     list.dispatchEvent(new Event('scroll'));
     await new Promise(r => setTimeout(r, 250));
-    return { before, noPagerBtn: !list.querySelector('[data-ach-page]'), afterCards: list.querySelectorAll('.ach-card').length,
-      afterPager: (list.querySelector('.crew-pager')?.textContent || '').replace(/\s+/g, ' ').trim() };
+    // v4.3.6b：累积断言——旧卡保留（首卡不变），卡片数 5→10，滚动位置不跳顶
+    const after = { cards: list.querySelectorAll('.ach-card').length,
+      firstCard: list.querySelector('.ach-card')?.textContent || '',
+      scrollTop: list.scrollTop,
+      pager: (list.querySelector('.crew-pager')?.textContent || '').replace(/\s+/g, ' ').trim() };
+    // 再滚到底加载完剩余（10→12），验证末页文案不再出现「下滑加载更多」
+    list.scrollTop = list.scrollHeight;
+    list.dispatchEvent(new Event('scroll'));
+    await new Promise(r => setTimeout(r, 250));
+    const final = { cards: list.querySelectorAll('.ach-card').length,
+      pager: (list.querySelector('.crew-pager')?.textContent || '').replace(/\s+/g, ' ').trim() };
+    return { before, noPagerBtn: !list.querySelector('[data-ach-page]'), after, final };
   });
-  // v4.3.5 反馈③：翻页按钮移除 → 进度文案改「已展示 N / M 项 · 下滑加载更多」；
-  //   滚动触底自动翻页保留（afterPager 从 5/12 推进到 10/12 证明翻页仍生效）。
-  /已展示 5 \/ \d+ 项/.test(d2.before.pager) ? ok('初始第 1 页（已展示 5/12 进度文案，无按钮）', d2.before.pager) : bad('初始进度文案异常', d2.before.pager);
-  d2.noPagerBtn && /已展示 10 \/ \d+ 项/.test(d2.afterPager) ? ok('滚动触底自动翻页（无按钮，纯滚动）', d2.afterPager)
-    : bad('滚动未自动翻页', JSON.stringify(d2));
+  // v4.3.6b 反馈③：累积式加载——滚到底追加下一组（5→10→12），首卡保留可回看；
+  //   全部展示完后文案收尾「已全部展示 N 项」，不再出现「已展示 16/16·下滑加载更多」矛盾。
+  /已展示 5 \/ \d+ 项/.test(d2.before.pager) ? ok('初始展示 5 条（已展示 5/12 进度文案，无按钮）', d2.before.pager) : bad('初始进度文案异常', d2.before.pager);
+  d2.noPagerBtn && d2.after.cards === 10 && /已展示 10 \/ \d+ 项/.test(d2.after.pager) && d2.after.firstCard === d2.before.firstCard
+    ? ok('滚动触底累积加载（5→10 追加，首卡保留可回看，无按钮）', d2.after.pager)
+    : bad('滚动未累积加载或旧卡丢失', JSON.stringify(d2));
+  d2.final.cards === 12 && /已全部展示 \d+ 项/.test(d2.final.pager) && !/下滑加载更多/.test(d2.final.pager)
+    ? ok('末组加载后收尾文案正确（已全部展示 12 项，无「下滑加载更多」）', d2.final.pager)
+    : bad('末页文案异常', JSON.stringify(d2.final));
 
   // ============ ③ 保活/存档/皮肤收进「选项」 ============
   console.log('\n[③ 选项菜单收纳]');

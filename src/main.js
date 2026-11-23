@@ -2785,11 +2785,11 @@ function checkAch() {
     log(`成就解锁：${a.name}——${a.desc}`, 'good');
     if (toast) toast(`🏆 成就解锁：${a.name}`);
   }
-  if (fresh.length) { dirty.achievements = true; dirty.storyline = true; }
+  if (fresh.length) { dirty.achievements = true; dirty.storyline = true; achPage = 1; /* v4.3.6b：新成就倒序插入队首，累积列表顺序变化 → 重置为首组 */ }
 }
 // v2.8.1：成就页面——只显示已解锁成就（达成即点亮，未达成不展示）
 const ACH_PAGE_SIZE = 5; // v3.3.3 反馈⑩：成就分页（与班组同范式，会话级页码）；v4.0.9 反馈⑪：一页 10 → 5 条
-let achPage = 0;
+let achPage = 1; // v4.3.6b：语义 = 已展示 chunk 数（累积加载，非翻页替换，1 起步）——已展示 = achPage * ACH_PAGE_SIZE 条
 function renderAchievementPanel(container) {
   if (!container) return;
   const defs = ACHIEVEMENTS;
@@ -2813,15 +2813,18 @@ function renderAchievementPanel(container) {
     const collapsed = document.getElementById('tab-achievement')?.classList.contains('sl-collapsed');
     achH3.innerHTML = `已解锁 <b style="color:var(--purple)">${n}/${defs.length}</b> <span class="sl-ind" style="color:var(--text-3)">${collapsed ? '▸' : '▾'}</span>`;
   }
+  const prevScroll = container._keepScroll; // v4.3.6b：累积加载滚动位置保持（读后即清，常规重建不钉住视口）
+  container._keepScroll = null;
   if (n === 0) {
     html += `<div style="font-size:13px;color:var(--text-3);padding:18px 0;text-align:center">尚未解锁任何成就——一切才刚刚开始。</div>`;
   } else {
-    // v3.3.3 反馈⑩：一页 10 条 + 分页（页码会话级，新达成项自动钳回最后一页）
+    // v4.3.6b 反馈③：累积式加载——滚动触底「追加」下一组（6→12→18），旧卡保留可回看，
+    //   不再是「翻页替换」（旧范式滚到底整面重建为下一页，列表跳顶且无法回看上一页）。
     const pageCount = Math.max(1, Math.ceil(n / ACH_PAGE_SIZE));
-    if (!Number.isFinite(achPage) || achPage < 0) achPage = 0;
-    if (achPage >= pageCount) achPage = pageCount - 1;
-    const start = achPage * ACH_PAGE_SIZE;
-    for (const a of got.slice(start, start + ACH_PAGE_SIZE)) {
+    if (!Number.isFinite(achPage) || achPage < 1) achPage = 1; // v4.3.6b：chunk 语义 1 起步（1 = 已展示第一组 5 条）
+    if (achPage > pageCount) achPage = pageCount;
+    const start = 0, end = Math.min(achPage * ACH_PAGE_SIZE, n); // 累积：始终从第 1 条渲染到已展示末尾
+    for (const a of got.slice(start, end)) {
       html += `<div class="ach-card" style="border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin:6px 0;display:flex;align-items:center;gap:12px">
         <span style="font-size:22px">${a.icon}</span>
         <div style="flex:1">
@@ -2830,15 +2833,19 @@ function renderAchievementPanel(container) {
         </div>
       </div>`;
     }
-    if (pageCount > 1) {
-      // v4.3.5 反馈③：去除「上一页/下一页」按钮与页码文字——滚动触底自动翻页已是唯一交互
-      //   （v4.3.3 反馈②引入），按钮组是历史自动化脚本兜底，实际玩家点击路径反而与滚动翻页打架
-      //   （点按钮翻页后 scrollTop 归零，观感是「列表跳回顶部」）。翻页状态由列表滚动承载。
-      html += `<div class="crew-pager" style="margin-top:8px"><span>已展示 ${Math.min(start + ACH_PAGE_SIZE, n)} / ${n} 项 · 下滑加载更多</span></div>`;
+    if (end < n) {
+      // v4.3.6b：还有未展示项才提示「下滑加载更多」；全部展示完显示收尾行（不再出现「已展示 16/16·下滑加载更多」矛盾文案）
+      html += `<div class="crew-pager" style="margin-top:8px"><span>已展示 ${end} / ${n} 项 · 下滑加载更多</span></div>`;
+    } else if (pageCount > 1) {
+      html += `<div class="crew-pager" style="margin-top:8px"><span>已全部展示 ${n} 项</span></div>`;
     }
   }
   container.innerHTML = html;
   container._achTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（渲染态，不入存档）
+  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳；_keepScroll 为 null 的常规重建从顶部开始）
+  if (prevScroll != null) {
+    requestAnimationFrame(() => { container.scrollTop = prevScroll; });
+  }
   // v3.3.3 反馈⑩：分页事件委托（容器级，重建不丢）
   // v4.3.3 反馈②：滚动触底自动翻页为主交互
   // v4.3.5 反馈③：移除 data-ach-page 按钮点击委托——按钮已删，滚动是唯一翻页入口；
@@ -2847,12 +2854,14 @@ function renderAchievementPanel(container) {
     container._achDelegated = true;
     container.addEventListener('scroll', () => {
       if (container._achScrollLock) return;
-      const pc = Math.max(1, Math.ceil((container._achTotal || 0) / ACH_PAGE_SIZE));
-      if (achPage >= pc - 1) return;
+      const total = container._achTotal || 0;
+      const shown = Math.min(achPage * ACH_PAGE_SIZE, total);
+      if (shown >= total) return; // 已全部展示
       if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20) {
         container._achScrollLock = true;
-        achPage++;
-        renderAchievementPanel(container); // innerHTML 重建 → scrollTop 归零，从新页顶部开始
+        achPage++; // v4.3.6b：追加下一组（旧卡保留）
+        container._keepScroll = container.scrollTop; // 保持滚动位置（追加而非跳顶）
+        renderAchievementPanel(container);
         requestAnimationFrame(() => { container._achScrollLock = false; });
       }
     }, { passive: true });

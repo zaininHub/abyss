@@ -24,7 +24,7 @@ const STATE_META = {
   losing:  { label: '流失预警', color: 'var(--bad,#f85149)' },
 };
 const PAGE_SIZE = 6; // v3.2.3 反馈①：班组档案卡分页浏览；v3.12.13 反馈#172：一页 5 条；v4.0.1 反馈③：一页 6 条
-let crewPage = 0; // 会话级页码（不落盘）
+let crewPage = 1; // v4.3.6b：语义 = 已展示 chunk 数（累积加载，非翻页替换，1 起步）——已展示 = crewPage * PAGE_SIZE 条
 let crewFilter = ''; // v3.4.6 反馈⑥：岗位筛选（'' = 全部；'free' = 空闲；其余 = converter id）——会话级，不落盘
 
 // 班组流水：cap 40 滚动窗口，随存档持久化
@@ -61,12 +61,12 @@ export function renderCrewPanel(container) {
   const filtered = !crewFilter ? all : all.filter(c => crewFilter === 'free' ? !c.boundTo : c.boundTo === crewFilter);
   const n = filtered.length;
   const nTotal = all.length;
-  // v3.2.3 反馈①：分页——一页 10 条；线程数变化后钳制页码
+  // v4.3.6b：累积加载 chunk 钳制——chunk 语义 = 已展示组数（1 起步），不超过总页数
   const pageCount = Math.max(1, Math.ceil(n / PAGE_SIZE));
-  if (!Number.isFinite(crewPage) || crewPage < 0) crewPage = 0;
-  if (crewPage >= pageCount) crewPage = pageCount - 1;
-  const start = crewPage * PAGE_SIZE;
-  const pageCultists = filtered.slice(start, start + PAGE_SIZE);
+  if (!Number.isFinite(crewPage) || crewPage < 1) crewPage = 1; // 初始至少展示第一组
+  if (crewPage > pageCount) crewPage = pageCount;
+  const start = 0, end = Math.min(crewPage * PAGE_SIZE, n); // v4.3.6b：累积渲染 0..end（旧卡保留）
+  const pageCultists = filtered.slice(start, end);
   const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
   // v4.0.0 反馈④：状态行已下线，签名不再因全局状态变化触发整卡重建；
@@ -118,9 +118,9 @@ export function renderCrewPanel(container) {
     </div>`;
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
-  const pager = pageCount > 1
-    ? `<div class="crew-pager"><span>已展示 ${Math.min((crewPage + 1) * PAGE_SIZE, n)} / ${n} 条线程 · 下滑加载更多${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>`
-    : '';
+  const pager = end < n
+    ? `<div class="crew-pager"><span>已展示 ${end} / ${n} 条线程 · 下滑加载更多${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>`
+    : (pageCount > 1 ? `<div class="crew-pager"><span>已全部展示 ${n} 条线程${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>` : '');
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
   // v4.2.7 反馈③：产出/薪资行删除（顶栏已有同口径），改为与效能编排同构的可折叠类目标题「班组 ▼」。
   //   产出/薪资仍是真实玩法数值，只是不在班组卡头重复；数字仍在顶栏 h-ep/h-salary 实时显示。
@@ -195,7 +195,7 @@ export function renderCrewPanel(container) {
       const fsel = ev.target.closest ? ev.target.closest('[data-crew-filter-select]') : null;
       if (fsel) {
         crewFilter = fsel.value || '';
-        crewPage = 0;
+        crewPage = 1; // v4.3.6b：筛选变更重置为初始一组（累积语义下 1 = 首组已展示）
         renderCrewPanel(container);
         return;
       }
@@ -211,20 +211,28 @@ export function renderCrewPanel(container) {
       } else { unbindThread(c); crewPush(`【${c.name}】从岗位撤离（消耗恢复）`, ''); }
       renderCrewPanel(container);
     });
-    // v4.3.3 反馈②：滚动触底自动翻页（按钮保留兼容历史脚本）。判定用当前筛选后的总条数。
+    // v4.3.3 反馈②：滚动触底自动翻页。判定用当前筛选后的总条数。
+    // v4.3.6b：累积式加载——触底「追加」下一组（旧卡保留），重建后恢复滚动位置（不跳顶）。
     container.addEventListener('scroll', () => {
       if (container._crewScrollLock || container.dataset.crewFold === '1') return;
-      const pc = Math.max(1, Math.ceil((container._crewTotal || 0) / PAGE_SIZE));
-      if (crewPage >= pc - 1) return;
+      const total = container._crewTotal || 0;
+      if (crewPage * PAGE_SIZE >= total) return; // 已全部展示
       if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20) {
         container._crewScrollLock = true;
-        crewPage++;
+        crewPage++; // 追加下一组
+        container._keepScroll = container.scrollTop; // 保持视口（累积追加不跳顶）
         renderCrewPanel(container);
         requestAnimationFrame(() => { container._crewScrollLock = false; });
       }
     }, { passive: true });
   }
   container._crewTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（筛选后）
+  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳；常规数据变化重建不写 _keepScroll 则从顶部开始）
+  if (container._keepScroll != null) {
+    const keep = container._keepScroll;
+    container._keepScroll = null;
+    requestAnimationFrame(() => { container.scrollTop = keep; });
+  }
   refreshCrewDyn(container, start, pageCultists);
 }
 
