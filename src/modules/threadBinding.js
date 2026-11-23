@@ -9,7 +9,7 @@
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { PROFESSION_BY_ID, LEADER_PROFESSION_ID, LAZY_PROFESSION_ID, CONVERTER_IDS, RESOURCE_CONVERTER_IDS, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
-import { researchMult } from '../core/research.js'; // v3.12.0 反馈⑩：研究点「班组扩编」接入领导者全局加成
+// v4.3.14 反馈②：领导改固定 1% 全局加成——researchMult('crew') 乘区已移除，此 import 下线
 
 const B = () => BALANCE.thread.binding;
 
@@ -156,10 +156,12 @@ export function threadXpGainPerSec(c) {
 
 // ---- 方向③：领导者全局加成 ----
 export function leaderCount() { return (S.cultists || []).filter(isLeader).length; }
+// v4.3.14 反馈②：领导全局加成改「固定 +1%/位」（原 +10%/位且被班组扩编放大）。
+//   用户口径：领导是全局 1% 产出加成位，文案「+1%」，数值恒定不吃研究点放大——
+//   移除 researchMult('crew') 乘区（rp_crew 语义改为按 desc 直接生效，见 balance.js）。
 export function leaderGlobalMult() {
   const n = leaderCount();
-  // v3.12.0 反馈⑩：「班组扩编」是研究点的玩法扩展项，放大班组领导者全局加成。
-  return (1 + Math.min(B().leaderGlobalCap, n * B().leaderGlobalPerLeader)) * researchMult('crew');
+  return 1 + Math.min(B().leaderGlobalCap, n * B().leaderGlobalPerLeader);
 }
 
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
@@ -319,6 +321,8 @@ export function rollProfession(suggested) {
 export function tickThreads(dt) {
   const leveled = [];
   for (const c of (S.cultists || [])) {
+    // v4.3.14 反馈②：领导不升级——等级在晋升时清零，且不再积累 XP（全局 +1% 是固定加成位）
+    if (isLeader(c)) continue;
     const g = threadXpGainPerSec(c);
     if (g <= 0) continue;
     c.xp = (c.xp || 0) + g * dt;

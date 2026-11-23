@@ -286,7 +286,8 @@ export function globalMult() {
   m *= devotionMult();
   m *= policyMult('ep');
   m *= policyMult('global'); // v2.8.6 B2a：牺牲——全局 -10%
-  m *= leaderGlobalMult(); // v3.3.0：领导者线程全局加成（每个 +5%，封顶 +25%）
+  m *= leaderGlobalMult(); // v4.3.14 反馈②：领导固定 +1% 全局加成（不再被班组扩编放大）
+  m *= researchMult('crew'); // v4.3.14 反馈②：班组扩编（rp_crew）乘区改挂全局——原只放大领导加成
   // v3.4.6 反馈③：星际燃料模式——持续燃烧 CPS 加速全局产出（星图页开关，CPS 耗尽自动熄火）
   if (S.fuelMode && (S.starCps || 0) > 0) m *= 1.5;
   // v3.7.0：线专属全局乘区统一走规则表，并置于软上限「之前」。
@@ -661,12 +662,19 @@ function staffOutputParts() {
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
-    const one = (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
-    const factor = threadBindOutputFactor(c);
+    // v4.3.14 反馈②：领导零个人产出——改为全局 +1% 加成位（globalMult 内 leaderGlobalMult），
+    //   不再按 (output×0.8×…) 计入线程产出；薪资仍按平均口径照扣（消耗固定 EP）。
+    const isLead = c.leader === true;
+    const one = isLead ? 0 : (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
+    const factor = isLead ? 1 : threadBindOutputFactor(c);
     total += one * factor;
     salaryBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
   }
-  return { total, salaryBase };
+  // v4.3.14 反馈⑥：专注份额单独核算——产出悬浮窗把「线程裸产出」与「专注增量」拆成两行，
+  //   玩家不再疑惑「线程行里是否已含专注」。focusPart = total − total/专注乘数（专注一项的绝对量）。
+  const focusMult = 1 + focusTotalBonus(S.focusLevel);
+  const focusPart = focusMult > 1 ? total - total / focusMult : 0;
+  return { total, salaryBase, focusPart };
 }
 
 export function staffOutputPerSec() {
@@ -892,10 +900,14 @@ export function cpsBreakdown() {
     if (!u.cps) continue;
     other += u.cps * (S.upgrades[u.id] || 0);
   }
-  const thread = staffOutputPerSec(); // 线程基础产出（心态/线程乘区），全局乘区在 computeCps 统一应用
+  // v4.3.14 反馈⑥：线程行拆「裸产出」+「专注增量」两行——专注不再是隐藏在「加成与说明」里的百分比，
+  //   而是直接给绝对量（+X/s），与线程行分开计算、分开展示。
+  const { total: thread, focusPart } = staffOutputParts();
   const parts = [];
   if (other > 0.005) parts.push(`基础产出 +${fmt(other)}/s`);
-  if (thread > 0.005) parts.push(`线程 +${fmt(thread)}/s`);
+  const bare = thread - focusPart;
+  if (bare > 0.005) parts.push(`线程 +${fmt(bare)}/s`);
+  if (focusPart > 0.005) parts.push(`线程·专注加成 +${fmt(focusPart)}/s`);
   return parts;
 }
 export function drainBreakdown() {

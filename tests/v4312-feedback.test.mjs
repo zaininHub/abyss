@@ -37,13 +37,17 @@ test('R1b 成就 pager 可滚判定用近似 + 渲染后二次校正钩子', () 
   assert.ok(!/已展示.*\d+.*\/.*\d+/.test(src), '成就 pager 仍含 N / M 形式文案');
 });
 
-test('R1c 班组面板同款：进度文案删除 + 近似判定 + 二次校正', () => {
+test('R1c 班组面板同款：进度文案删除 + 近似判定 + 自动填充（v4.3.14 反馈①反转）', () => {
   const src = stripComments(read('src/modules/crew.js'));
   assert.ok(!/已展示\s*\$/.test(src), '班组面板仍有「已展示 N / M 条线程」进度文案（模板串形式）');
   assert.ok(/approxH\s*=\s*end\s*\*\s*76\s*\+\s*60/.test(src), '班组 pager 近似可滚判定（end*76+60）缺失');
-  assert.ok(/\.crew-pager-maybe/.test(src), '班组 pager 二次校正钩子（crew-pager-maybe）缺失');
-  assert.ok(/scrollHeight\s*<=\s*container\.clientHeight\s*\+\s*4\)\s*maybe\.remove\(\)/.test(src), '班组 pager 不可滚移除逻辑缺失');
-  // 末组收尾文案保留「已全部展示 N 条线程」
+  // v4.3.14 反馈①：二次校正 remove 反转为「不可滚自动追加下一组」——
+  //   两列 grid 下首组 6 卡远不满容器（探针实测 ch=sh=600 不可滚），remove 范式
+  //   让玩家永远无法触底展开。新范式：渲染后 while 不可滚即追加，直到可滚或全部展示。
+  assert.ok(/crewPage\s*<\s*pageCount\s*&&\s*container\.scrollHeight\s*<=\s*container\.clientHeight\s*\+\s*4/.test(src), '班组自动填充循环（不可滚即追加）缺失');
+  assert.ok(/insertAdjacentHTML\('beforeend',\s*more\)/.test(src), '班组自动填充未追加卡片');
+  assert.ok(/crewCardHtml/.test(src), '班组卡片生成函数 crewCardHtml 缺失（主循环与填充共用）');
+  // 填充后 pager 文案按真实组数回写（全部展示时改「已全部展示 N 条线程」）
   assert.ok(/已全部展示\s*\$\{n\}\s*条线程/.test(src), '班组面板末组收尾文案「已全部展示 N 条线程」缺失');
 });
 

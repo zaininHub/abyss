@@ -69,11 +69,8 @@ export function buyRiftLevelTech() {
   log(`[裂隙] 裂隙等级科技升至 Lv.${S.riftLevelTech}（-${fmt(cost.ep)} EP / -${fmt(cost.dm)} DM）：裂隙等级与奖励 +1 级`, 'good');
   return { ok: true, level: S.riftLevelTech };
 }
-// 科技树「裂隙等级」卡片：结构签名去重，可购态原地刷新
-// v3.4.1 反馈②：与科技树其余卡片完全同构（.tech / .name / .desc / .cost + .locked 灰显），
-// 不再用 .item v21（在 .tech-grid 里没有 .cant 规则 → 买不起也不灰，且 max-width:520px 破坏栅格）；
-// 文案同步收紧为「每级…」句式（对齐「每级全局产出 +2%」）
-let riftTechSig = '';
+// v4.3.14 反馈③：裂隙等级升级从科技树独立分类迁入裂隙模块——渲染为「裂隙科技」上方的
+//   rift-upg-row 风格行（EP + DM 双消耗、无限升级），与余烬升级同面板同视觉语言。
 function riftTechAfford(cost) {
   return (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
 }
@@ -83,70 +80,28 @@ function riftTechTip(lv, cur) {
   const next = Math.min(riftMaxLevel(), cur + 1);
   return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP） · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM\n当前裂隙 Lv.${cur}`;
 }
-let riftTechShownPrev = null; // v4.2.5 反馈①：门控态记忆（null=首帧必写一次）
-export function renderRiftLevelTech(container) {
-  if (!container) return;
-  const title = document.getElementById('rift-tech-title');
+/**
+ * 裂隙等级行（v4.3.14 反馈③）：由 renderRiftPanel 在「裂隙科技」标题上方调用。
+ * 门控：_riftSeen / riftsSealed 任一粘性标记（与旧科技树挂载点同口径）。
+ * 返回 html 片段；空串 = 未见过裂隙（整行不渲染）。
+ */
+export function riftLevelRowHtml() {
   const shown = !!S._riftSeen || (S.riftsSealed || 0) > 0;
-  // v4.2.5 反馈①：本函数被 300ms 低频帧系统反复驱动，若每帧强写 container.style.display
-  // 会顶掉 bindFoldToggle 的折叠态（玩家收起 #rift-tech-list 后 300ms 内被强制还原）。
-  // 门控显示只在 shown 状态切换时写入；折叠交互（foldSiblings 写的 display）不被触碰。
-  // 边界安全：shown 只会 false→true 单向出现（_riftSeen / riftsSealed 均为粘性），
-  // 标题隐藏期玩家无法点击折叠，不存在「折叠后门控翻转把内容顶回展开」的组合。
-  if (shown !== riftTechShownPrev) {
-    riftTechShownPrev = shown;
-    if (title) title.style.display = shown ? '' : 'none';
-    container.style.display = shown ? '' : 'none';
-  }
-  if (!shown) { container.innerHTML = ''; riftTechSig = ''; return; }
+  if (!shown) return '';
   const lv = riftLevelTech();
-  const cost = riftLevelTechCost();
-  const cur = Math.min(riftMaxLevel(), riftLevelOf(computeCps()));
-  // v3.4.1 反馈②：与「研究升级」卡完全同构（name + count + desc + cost，两行内收口），
-  // 不再自造 .name span[style] 双段行——此前描述换行 3 行、多一行「当前裂隙」，比同排 tech 卡高 40%
-  const sig = `${lv}|${cur}`;
-  if (sig !== riftTechSig) {
-    riftTechSig = sig;
-    // v3.4.8 反馈①：展示「下一级裂隙」的深入消耗（指数曲线，60s 总量更直观）
-    const nextLv = Math.min(riftMaxLevel(), cur + 1);
-    container.innerHTML = `<div class="tech" data-rift-level title="${riftTechTip(lv, cur)}">
-      <div class="name"><span>裂隙等级</span><span class="count mono">Lv.${lv}</span></div>
-      <div class="desc">裂隙等级 +1<br>深入消耗 ${fmt(riftDelveEpPerSec(nextLv))} EP/s</div>
-      <div class="cost mono" data-rift-level-cost>${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</div>
-    </div>`;
-    const el = container.querySelector('[data-rift-level]');
-    if (el && !el._bound) {
-      el._bound = true;
-      el.addEventListener('click', () => {
-        if (!riftTechAfford(riftLevelTechCost())) return; // 灰态不可点，避免连点误买
-        const r = buyRiftLevelTech();
-        if (!r.ok && toast) toast(r.reason);
-        dirty.tech = true;
-        dirty.rift = true;
-      });
-    }
-  }
-  refreshRiftLevelTechAfford();
-}
-
-// v3.4.1 反馈②⑥：可购态每秒原地刷新（此前只在 dirty.tech 时重算，EP/DM 变化后卡片长期停在旧灰态）
-export function refreshRiftLevelTechAfford() {
-  const el = document.querySelector('[data-rift-level]');
-  if (!el) return;
   const cost = riftLevelTechCost();
   const afford = riftTechAfford(cost);
-  el.classList.toggle('locked', !afford);
-  const c = el.querySelector('[data-rift-level-cost]');
-  const txt = `${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM`;
-  if (c && c.textContent !== txt) c.textContent = txt;
-  const lv = riftLevelTech();
-  const cur = Math.min(riftMaxLevel(), riftLevelOf(computeCps()));
-  const t = el.querySelector('.name .count');
-  const wantLv = `Lv.${lv}`;
-  if (t && t.textContent !== wantLv) t.textContent = wantLv;
-  el.title = riftTechTip(lv, cur);
+  const pricePill = `<span style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</span>`;
+  return `
+      <div class="rift-upg-row" data-rift-level title="${riftTechTip(lv, Math.min(riftMaxLevel(), riftLevelOf(computeCps())))}">
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--text-1)">裂隙等级 <span style="color:var(--text-3);font-size:11px">Lv.${lv}</span></div>
+          <div style="font-size:11px;color:var(--text-3)">裂隙等级 +1（深入消耗 ${fmt(riftDelveEpPerSec(Math.min(riftMaxLevel(), riftLevelOf(computeCps())) + 1))} EP/s）</div>
+        </div>
+        <button class="btn ${afford ? '' : 'disabled'}" data-rift-level-buy ${afford ? '' : 'disabled'}>升级</button>
+        ${pricePill}
+      </div>`;
 }
-
 // ---- v3.4.8 反馈①：深入消耗陡增（原线性 ×lv → 指数） ----
 // 消耗 = delveEpPerSec × delveEpGrowth^(Lv-1)；Lv1 3/s、Lv5 28/s、Lv10 232/s、Lv15 1.9K/s
 // tick 结算、卡片文案、悬浮提示三处统一走本函数（避免三份硬编码再次漂移）
@@ -486,7 +441,10 @@ export function sealRift() {
   spendRes('ep', r.sealCost);
   const dmGain = grantRiftRewards(r, BALANCE.rift.emberSeal, false);
   S.riftsSealed++;
-  log(`裂隙封印成功（${riftLevelName(r.level)}）：+${dmGain.toFixed(1)} DM（深渊物质）`, 'good');
+  // v4.3.14 反馈⑦：首裂不发 DM，日志不再打印「+0.0 DM」——dmGain>0 才带 DM 段
+  log(dmGain > 0
+    ? `裂隙封印成功（${riftLevelName(r.level)}）：+${dmGain.toFixed(1)} DM（深渊物质）`
+    : `裂隙封印成功（${riftLevelName(r.level)}）`, 'good');
   S.activeRift = null;
   save(S);
   dirty.rift = true; // v2.1.1 P1-A：置空后立即触发裂隙区重渲染，消除卡片残留
@@ -535,6 +493,16 @@ export function refreshRiftAffordability() {
     const dmUnlock = !!(S.resDiscovered && S.resDiscovered.dm);
     delve.disabled = !dmUnlock;
     delve.classList.toggle('disabled', !dmUnlock);
+  }
+  // v4.3.14 反馈③：裂隙等级行可购态每秒同步（EP/DM 变化即时灰显/点亮——
+  //   自科技树迁入后原 refreshRiftLevelTechAfford 下线，能力并入本函数）
+  const lvRow = document.querySelector('[data-rift-level]');
+  if (lvRow) {
+    const cost = riftLevelTechCost();
+    const afford = riftTechAfford(cost);
+    const btn = lvRow.querySelector('button[data-rift-level-buy]');
+    if (btn) { btn.disabled = !afford; btn.classList.toggle('disabled', !afford); }
+    lvRow.classList.toggle('cant', !afford);
   }
 }
 
@@ -659,6 +627,9 @@ export function renderRiftPanel(container) {
   // v4.3.13 反馈②：VS 相关升级（余烬共振/虚空之心）在首次获取 VS 前隐藏——
   //   玩家还没见过虚空碎片（VS 来自深潜/裂隙深入），提前亮出只会增加理解成本。
   const vsSeen = (S.vs || 0) > 0;
+  // v4.3.14 反馈③：裂隙等级行——移自科技树独立分类，置于「裂隙科技」上方；
+  //   门控只看「见过裂隙」（不必先有余烬），余烬科技树仍按 emberSeen 单独门控。
+  html += riftLevelRowHtml();
   if (emberSeen) {
     html += `<div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技</div>`;
     for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {

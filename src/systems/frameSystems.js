@@ -20,8 +20,8 @@ import { tickThreads } from '../modules/threadBinding.js';
 import { tickReligion, refreshReligionAffordability } from '../modules/religions.js';
 import { tickDelve, delveUnlocked } from '../modules/delve.js';
 import { tickBazaar, bazaarUnlocked } from '../modules/bazaar.js';
-import { tickRift, riftEtaSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel,
-  riftPurgeCostMult, refreshRiftAffordability } from '../modules/rift.js';
+import { tickRift, riftEtaSec, fmtEta, riftUpgradeLevel,
+  riftPurgeCostMult, refreshRiftAffordability } from '../modules/rift.js'; // v4.3.14 反馈③：renderRiftLevelTech 移除（裂隙等级迁入裂隙模块）
 import { tickVehicleCollect } from '../modules/vehicles.js';
 import { tickProjects } from '../modules/projects.js';
 import { tickExpeditions, tickColonies, refreshExpeditionAffordability } from '../modules/expedition.js';
@@ -65,11 +65,8 @@ export function registerFrameSystems(deps = {}) {
   registerSystem({
     id: 'threads', phase: AFTER_EP_AUX, order: 20,
     run: (ctx) => {
-      const leveled = tickThreads(ctx.dt);
-      for (const nm of leveled) {
-        log(`线程【${nm}】晋升，班组调度经验提升`, 'good');
-        if (toast) toast(`🎖️ 线程【${nm}】晋升！`);
-      }
+      // v4.3.14 反馈④：线程升级是高频自然成长，不再打日志/toast（班组卡 Lv 实时可见）
+      tickThreads(ctx.dt);
     },
   });
 
@@ -82,6 +79,8 @@ export function registerFrameSystems(deps = {}) {
         const totalNominal = staffOutputPerSec();
         if (credited > 0 && totalNominal > 0) {
           for (const c of S.cultists) {
+            // v4.3.14 反馈②：领导零个人产出，不参与贡献分摊（避免零产出线程仍积累贡献进度）
+            if (c.leader === true) continue;
             const nom = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1);
             c.earned = (c.earned || 0) + credited * (nom / totalNominal);
           }
@@ -279,8 +278,7 @@ export function registerFrameSystems(deps = {}) {
         ctx.dirty.orchestration = true;
         const st = orchestrationState(S);
         if (orchestrationUnlocked(S) && st.autoTide && ctx.lastScheduleModeBooted) {
-          const phase = ((Number(S.tidePhase) || 0) % 4 + 4) % 4;
-          log(`潮汐预案：进入${TIDE_PHASE_NAMES[phase]}，排班切换为「${(MODE_BY_ID.get(cur) || {}).name || cur}」`, 'good');
+          // v4.3.14 反馈④：潮汐排班随相位自动切换不打日志（编排卡倍率实时可见）
         }
         ctx.lastScheduleModeBooted = true;
       }
@@ -465,9 +463,7 @@ export function registerFrameSystems(deps = {}) {
       refreshRiftAffordability();
       refreshExpeditionAffordability();
       refreshAssistantAffordability();
-      const document_ = doc();
-      const riftTechEl = document_ && document_.getElementById('rift-tech-list');
-      if (riftTechEl) renderRiftLevelTech(riftTechEl);
+      // v4.3.14 反馈③：科技树「裂隙等级」挂载点已删（迁入裂隙模块）——renderRiftLevelTech 调用下线
     },
   });
 

@@ -75,8 +75,8 @@ export function renderCrewPanel(container) {
   const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
-  let cards = '';
-  for (const c of pageCultists) {
+  // v4.3.14 反馈①：卡片 HTML 生成提取为局部函数——主循环与「自动填充」共用（消除两份拷贝漂移）。
+  const crewCardHtml = (c) => {
     const p = threadProfession(c);
     // v3.6.3 反馈④：卡内只留「擅长岗位图标」（悬浮可读名称），不写职业名、不写所处岗位、不写贡献累计
     const affinityName = p && p.affinity && CONVERTERS[p.affinity] ? CONVERTERS[p.affinity].name : (p ? p.desc : '无擅长岗位');
@@ -86,7 +86,7 @@ export function renderCrewPanel(container) {
     const lvl = threadLevel(c);
     // v4.3.13 反馈⑥：领导徽章去「领导」字样只留星标——双字徽章把身份行挤出两列栅格导致错位；
     //   领导身份完整语义仍在悬浮（stateTip「 · 领导」）。
-    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)" title="领导（全局加成位）">★</span>' : '';
+    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1%）">★</span>' : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     const opts = visibleTypes.slice();
@@ -105,7 +105,7 @@ export function renderCrewPanel(container) {
     //   ③ 操作行：岗位下拉 + 晋升领导按钮 同排。
     //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
     const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''} · 擅长：${escAttr(affinityName)}`;
-    cards += `<div class="crew-card">
+    return `<div class="crew-card">
       <div class="crew-line crew-line-id">
         <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
         <span class="crew-name">${c.name}</span>
@@ -118,7 +118,9 @@ export function renderCrewPanel(container) {
       </div>
       <div class="crew-line crew-line-act">${bindCtrl}${leaderBtn}</div>
     </div>`;
-  }
+  };
+  let cards = '';
+  for (const c of pageCultists) cards += crewCardHtml(c);
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
   // v4.3.12 反馈①：进度文案删除——旧「已展示 N / M 条线程 · 下滑加载更多」常驻行在容器
   //   不可滚动时是死文案；改为仅列表真实可滚时显示「下滑加载更多」，否则不渲染 pager 行。
@@ -148,9 +150,34 @@ export function renderCrewPanel(container) {
     </div>`;
   // v4.3.12 反馈①：pager 可滚判定二次校正——渲染后按真实 scrollHeight 口径，
   //   「不可滚但 pager 在」则移除（同步执行，无闪烁）。
-  const maybe = container.querySelector('.crew-pager-maybe');
-  if (maybe && container.scrollHeight <= container.clientHeight + 4) maybe.remove();
-  else if (maybe) maybe.classList.remove('crew-pager-maybe');
+  // v4.3.14 反馈①：滚动展开 bug 修复——班组卡是两列 grid（一行两个），首组 6 卡只占
+  //   3 行，在宽视口下远不满容器（探针实测 ch=sh=600 不可滚）→ 玩家无法触底 →
+  //   无法展开更多。参考成就口径补「自动填充」：渲染后若还有更多且内容不可滚，
+  //   自动追加下一组（复用 crewCardHtml），循环直到可滚或全部展示（上限 pageCount 防失控）。
+  {
+    let guard = 0;
+    while (crewPage < pageCount && container.scrollHeight <= container.clientHeight + 4 && guard++ < 50) {
+      crewPage++;
+      const end2 = Math.min(crewPage * PAGE_SIZE, n);
+      const more = filtered.slice(pageCultists.length, end2).map(crewCardHtml).join('');
+      if (!more) break;
+      const grid = container.querySelector('.crew-grid');
+      if (!grid) break;
+      grid.insertAdjacentHTML('beforeend', more);
+      pageCultists.push(...filtered.slice(pageCultists.length, end2)); // 后续 pager 文案口径
+    }
+    // 填充后按真实口径修正 pager（v4.3.14 反馈①：自动填充范式取代 crew-pager-maybe 二次校正——
+    //   不可滚即自动追加下一组，pager 文案在填充后按真实组数回写）
+    const pagerEl = container.querySelector('.crew-pager');
+    if (pagerEl && crewPage >= pageCount) {
+      const sp = pagerEl.querySelector('span');
+      if (sp) sp.textContent = `已全部展示 ${n} 条线程${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}`;
+    } else if (!pagerEl) {
+      // 填充后仍不可滚且还有更多（罕见：卡高异常）→ 兜底补 pager
+      const body = container.querySelector('.crew-fold-body');
+      if (body && crewPage < pageCount) body.insertAdjacentHTML('beforeend', '<div class="crew-pager crew-pager-maybe"><span>下滑加载更多</span></div>');
+    }
+  }
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
   if (!container._crewDelegated) {
     container._crewDelegated = true;
@@ -171,13 +198,22 @@ export function renderCrewPanel(container) {
           // v3.3.1 反馈⑤：领导者同一时间只能有一位——晋升新人即自动卸任上一位
           if (!c.leader) {
             const prev = S.cultists.find(x => x.leader && x !== c);
-            if (prev) { prev.leader = false; crewPush(`【${prev.name}】卸任领导者（领导者只能存在一位）`); }
+            if (prev) {
+              prev.leader = false;
+              // v4.3.14 反馈②：卸任领导从 Lv1 重新开始升级（晋升时等级已清，此处兜底旧档）
+              prev.level = 1; prev.xp = 0;
+              crewPush(`【${prev.name}】卸任领导者（领导者只能存在一位）`);
+            }
             c.leader = true;
+            // v4.3.14 反馈②：提拔为领导会去除该员工等级（领导不升级，退回时从 Lv1 开始）
+            c.level = 1; c.xp = 0;
             // v3.7.1 反馈①：领导者只提供全局加成，不能同时占用岗位
             if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位`); }
-            crewPush(`【${c.name}】晋升为领导者，全局产出提升`, 'good');
+            crewPush(`【${c.name}】晋升为领导，全局产出 +1%`, 'good');
           } else {
             c.leader = false;
+            // v4.3.14 反馈②：卸任后从 Lv1 开始升级（领导期等级冻结在 1）
+            c.level = 1; c.xp = 0;
             crewPush(`【${c.name}】卸任领导者，恢复为可分配线程`);
           }
           renderCrewPanel(container);
@@ -254,7 +290,7 @@ export function renderCrewPanel(container) {
       }
     }, { passive: true });
   }
-  container._crewTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（筛选后）
+  container._crewTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（筛选后）；v4.3.14：含自动填充后的 crewPage 口径
   // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳）
   // v4.3.7 反馈⑥：fallback 实时捕获——与成就面板同根因（dirty-periodic 周期重建重置 scrollTop，
   // _keepScroll 只在触底追加时写入且读后即清，第二次周期重建即跳顶）。常规重建也捕获实时位置，
