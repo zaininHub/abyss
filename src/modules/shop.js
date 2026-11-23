@@ -1772,7 +1772,12 @@ export const RESEARCH_RES_ANCHORS = Object.freeze({ faith: 'faith' });
 const RESEARCH_MODULE_GATES = {
   // v4.2.8：星尘精炼门控收紧——裂隙触发只解锁探采平台，DM 真实入账（顶栏出现）才显示该项；
   //   旧口径 _riftSeen 会在玩家尚未购入载具时提前摆出（用户实测：DM 未解锁即见「星尘精炼」）
-  rp_dm:         (s) => anchorDone('dm', s),                            // 载具 DM：DM 资源真实发现（顶栏首次入账）
+  // v4.3.9：星尘精炼门控换源——anchorDone('dm') 有两条点亮路径（购载具 scooter ∨ 购星尘金库
+  //   dm_vault，v3.0.3 反馈⑪「金库买入亦亮出」是显示锚点语义），跨局玩家 resDiscovered.dm 保留
+  //   → 新局金库卡片直接可见可买 → 买金库即误亮星尘精炼，而载具为 0、采集根本没解锁（用户实测）。
+  //   加成本身只作用于载具采集（economy researchMult('dm') 是 vehicles 乘区），正确同源门 =
+  //   converterUnlocked('vehicles')（已有载具 > 0），与 v4.3.7 反馈③ 探采页头开关完全同源。
+  rp_dm:         (s) => converterUnlocked('vehicles', s),               // 载具 DM：已购任一载具（采集真实可用）
   rp_expedition: (s) => starChartUnlocked(s),                           // 远征：星图已开启
   rp_bazaar:     (s) => !!(s.bazaar && s.bazaar.unlocked),              // 集市：职级点买断后
   rp_ai:         (s) => !!(s.tech && s.tech.ai_core),                   // AI 助手：科技树「AI 管理核心」（rp_ai_unit 已挂 requiresTech，双保险）

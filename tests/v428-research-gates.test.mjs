@@ -1,7 +1,8 @@
 // v4.2.8 反馈专项（单测）：研究点门控收紧——「未解锁资源的升级被提前解锁」根治验证
 //
 // 覆盖（用户反馈⑤，参考星尘精炼）：
-//   ① rp_dm（星尘精炼）：DM 真实入账（anchorDone('dm')）才显示——旧口径 _riftSeen 提前摆卡
+//   ① rp_dm（星尘精炼）：v4.3.9 换源 converterUnlocked('vehicles')——加成只作用于载具采集，
+//     旧 anchorDone('dm') 有金库旁路（买金库≠采集解锁，用户实测「采集未解锁星尘精炼就解锁了」）
 //   ② rp_starres（星蕴提纯）：首支远征返航（expeditionsDone>0）才显示——星图开启只代表「能去」
 //   ③ rp_colony2 / rp_cosmos2：已拥有殖民地才显示——未殖民时 +N% 无处生效
 //   ④ 签名接线：modSig 消费 RESEARCH_MODULE_GATES（门控位变化当帧重建）
@@ -55,15 +56,20 @@ function collectResearchIds(node, out = []) {
   return out;
 }
 
-test('G1 星尘精炼：DM 锚点未完成不显示，载具入队后放行', () => {
+test('G1 星尘精炼：载具门（converterUnlocked vehicles）未完成不显示，载具入队后放行', () => {
   // 旧口径场景（_riftSeen=true 但从未购载具/金库）：不得放行——用户实测的提前解锁场景
   const riftSeenNoDm = { ...S, _riftSeen: true, riftsSealed: 1, upgrades: {} };
   assert.equal(shop.researchResourceUnlocked(u('rp_dm'), riftSeenNoDm), false, '_riftSeen 但无载具 → 不显示');
-  // DM 锚点完成 = 首辆载具（scooter）购入，与顶栏 DM 显示同源
+  // v4.3.9 反馈：门控换源 converterUnlocked('vehicles')——加成只作用于载具采集，
+  // 旧 anchorDone('dm') 有金库旁路（v3.0.3 反馈⑪ 显示锚点语义），买金库不该点亮研究项
   const dmIn = { ...S, _riftSeen: true, riftsSealed: 1, upgrades: { scooter: 1 } };
   assert.equal(shop.researchResourceUnlocked(u('rp_dm'), dmIn), true, '购入载具 → 显示');
-  // 无裂隙标记但已购金库：不依赖 _riftSeen，锚点真实即放行
-  assert.equal(shop.researchResourceUnlocked(u('rp_dm'), { ...S, upgrades: { dm_vault: 1 } }), true, '购入金库无 rift 标记 → 显示');
+  // 反转 v4.3.8 旧行为：购金库（无载具）不再放行——采集未解锁时研究项不提前摆出
+  assert.equal(shop.researchResourceUnlocked(u('rp_dm'), { ...S, upgrades: { dm_vault: 1 } }), false, '仅购金库无载具 → 不显示（v4.3.9 换源）');
+  // 跨局旁路场景：resDiscovered.dm 跨转生保留 + 新局金库可见可买 → 仍须由载具放行
+  assert.equal(shop.researchResourceUnlocked(u('rp_dm'), { ...S, resDiscovered: { dm: true }, upgrades: { dm_vault: 3 } }), false, '跨局 dm 标记+金库已购 → 仍由载具门放行');
+  // 非首辆载具（convoy 等 vehicles.ids 任一）同样放行
+  assert.equal(shop.researchResourceUnlocked(u('rp_dm'), { ...S, upgrades: { convoy: 1 } }), true, '购入任意载具 → 显示');
 });
 
 test('G2 星蕴提纯：未派远征不显示，首支远征返航后放行', () => {
@@ -109,27 +115,31 @@ test('G5 行为：门控状态变化当帧重建研究面板（远征返航后 r
   assert.ok(after.includes('rp_starres'), '远征返航当帧重建并出现');
 });
 
-test('G6 行为：DM 锚点未完成时 rp_dm 不渲染，载具购入后出现', () => {
+test('G6 行为：载具未购时 rp_dm 不渲染，载具购入后出现（金库旁路封堵）', () => {
   fresh();
   S.rp = 1e9;
   S.rpTheories = { rp_entropy: 4, rp_wage: 2 }; // 组链：prod 4 级让「深渊协议」组显形
+  S.upgrades = { dm_vault: 1 };                 // v4.3.9 反馈场景：金库已买但零载具——采集未解锁
   const c = fakeContainer();
   shop.renderResearchUpgrades(c);
   const before = collectResearchIds(c);
   assert.ok(before.includes('rp_wage'), '同组 rp_wage 正常渲染（夹具有效）');
-  assert.ok(!before.includes('rp_dm'), '无载具时 rp_dm 不渲染');
-  S.upgrades = { scooter: 1 }; // DM 锚点完成（与 anchorDone('dm') 同源判定）
+  assert.ok(!before.includes('rp_dm'), '仅金库无载具时 rp_dm 不渲染');
+  S.upgrades = { scooter: 1 }; // 载具门放行（converterUnlocked('vehicles') 同源判定）
   shop.renderResearchUpgrades(c);
   assert.ok(collectResearchIds(c).includes('rp_dm'), '载具购入当帧渲染');
 });
 
-test('G7 行为：buyResearchUpgrade 对锚点未完成资源拦截', () => {
+test('G7 行为：buyResearchUpgrade 对载具门未完成资源拦截', () => {
   fresh();
   S.rp = 1e9;
   const denied = shop.buyResearchUpgrade('rp_dm');
   assert.equal(denied.ok, false);
   assert.match(denied.reason, /尚未解锁/);
   assert.equal((S.rpTheories || {}).rp_dm, undefined, '拦截不得写入研究等级');
+  S.upgrades = { dm_vault: 1 }; // 金库旁路同样拦截（v4.3.9 换源）
+  const deniedVault = shop.buyResearchUpgrade('rp_dm');
+  assert.equal(deniedVault.ok, false, '仅金库无载具 → 购买仍拦截');
   S.upgrades = { scooter: 1 };
   const allowed = shop.buyResearchUpgrade('rp_dm');
   assert.equal(allowed.ok, true, '载具购入后可购买');
