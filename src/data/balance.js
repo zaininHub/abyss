@@ -87,9 +87,9 @@ export const BALANCE = {
       mismatchLevelBonus: 0.01, // 每级：非匹配岗位转化加成 +1%/级
       matchProfBonus: 0.15,     // 匹配岗位额外转化加成 +15%（v3.3.1 反馈⑩：25%→15%，消耗增多的收益略微减少）
       mismatchProfBonus: 0.03,  // 非匹配岗位额外转化加成 +3%
-      leaderBonus: 0.08,        // 领导者绑定额外 +8%
-      leaderGlobalPerLeader: 0.10, // 全局产出 +10%/领导者（v3.3.1 反馈⑤：领导唯一，单人加成上调）
-      leaderGlobalCap: 0.10,    // 全局加成上限 +10%（领导只能存在一个）
+      leaderBonus: 0.08,        // 领导者绑定额外 +8%（旧档残留绑定兼容兜底，正常路径不可达）
+      leaderGlobalPerLeader: 0.01, // v4.3.14 反馈②：全局产出 +1%/领导（固定，不吃研究点放大；文案「+1%」）
+      leaderGlobalCap: 0.01,    // 全局加成上限 +1%（领导只能存在一个）
       xpPerSec: 1,              // 在岗每秒 XP 基础
       xpSuitableMult: 2.5,      // 匹配/领导岗位 XP ×2.5（合适岗位等级涨得多）
       xpCap: 6000,              // XP 上限（封顶等级用）
@@ -484,7 +484,7 @@ export const BALANCE = {
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200,  growth: 1.8,  fx: { key: 'faith',   v: 0.10 }, desc: 'FP 产出 +10%/级' },
     { id: 'rp_policy',      name: '律令演绎',   cap: 8,  base: 520,  growth: 1.70, fx: { key: 'policy',  v: 0.06 }, desc: '政策效果 +6%/级' },
     { id: 'rp_project',     name: '项目统筹',   cap: 3,  base: 2400, growth: 1.85, fx: { key: 'project', v: 1    }, desc: '可并行任务 +1/级' },
-    { id: 'rp_crew',        name: '班组扩编',   cap: 8,  base: 3200, growth: 1.88, fx: { key: 'crew',    v: 0.10 }, desc: '班组全局加成 +10%/级' },
+    { id: 'rp_crew',        name: '班组扩编',   cap: 8,  base: 3200, growth: 1.88, fx: { key: 'crew',    v: 0.10 }, desc: '全局产出 +10%/级' }, // v4.3.14 反馈②：领导固定 +1% 不再吃本放大；乘区改挂 economy.globalMult（原只放大领导加成）
     { id: 'rp_expedition',  name: '远征后勤',   cap: 8,  base: 4000, growth: 1.90, fx: { key: 'expedition', v: 0.12 }, desc: '远征收益 +12%/级' },
     { id: 'rp_bazaar',      name: '集市协议',   cap: 8,  base: 4800, growth: 1.92, fx: { key: 'bazaar',  v: 0.12 }, desc: '集市交易收益 +12%/级' },
     // —— 深渊扩展（累计 4 级后显现）——反馈⑤：深渊研究定位为「扩展玩法」而非单纯 +X%/级，

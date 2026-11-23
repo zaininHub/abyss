@@ -11,7 +11,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   wageDebtMult, wageKeepCostMult, // v1.3 C：四态徽章展示用（v4.2.3：wageLoseChance 随文案精简移出——概率不再对玩家展示）
   isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
-  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, focusTotalBonus, unitCost, fmtRes,
+  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, unitCost, fmtRes,
   corruptionCap, researchMult, clampRunResourceBalances, spendRes, esCost, esGain } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径） // v4.2.6：esCost 走 economy 单参包装（闭包读 S.eternal，QA 钩子与产品读侧同源） // v4.2.8：esGain 供分章节推演累计晋升 ES 奖励（纯读函数）
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
@@ -61,7 +61,7 @@ import { lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS } from './core/li
 import { maybeTriggerEvent, peekNextEvent, eventPool } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（v4.3.14 反馈③迁入裂隙模块）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
 import { ensureAbyssGaze, setGazeInteract } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { ensureWishWell, initWishWell, ensureFarewellGift, initFarewellGift, tickFarewellRecall } from './modules/wishDock.js';
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
@@ -450,7 +450,7 @@ function registerAllPanels() {
       else { eternalEl.innerHTML = ''; if (eternalTitle) eternalTitle.style.display = 'none'; }
     }
     const riftTechEl = document.getElementById('rift-tech-list');
-    if (riftTechEl) renderRiftLevelTech(riftTechEl);
+    if (riftTechEl) riftTechEl.innerHTML = ''; // v4.3.14 反馈③：裂隙等级已迁入裂隙模块（旧挂载点清空兜底）
   } });
   registerPanel({ key: 'pets', render: () => {
     const petEl = document.getElementById('pet-grid');
@@ -916,7 +916,7 @@ function flowTipHtml(kind) {
   const isOut = kind === 'output';
   const parts = isOut ? cpsBreakdown() : drainBreakdown();
   const mults = multBreakdown();
-  const focusTag = S.focusLevel > 0 ? `专注 +${Math.round(focusTotalBonus(S.focusLevel) * 100)}%` : '';
+  // v4.3.14 反馈⑥：专注已是产出来源里的独立行（+X/s 绝对量），「加成与说明」组不再重复列百分比
   const wSt = (S.wageState || {}).state;
   const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `休眠期仅扣保命成本 ×${wageKeepCostMult()}` : '';
   const title = isOut
@@ -927,10 +927,9 @@ function flowTipHtml(kind) {
   if (!parts.length) html += `<div class="w-dim">· 无</div>`;
   else for (const p of parts) html += `<div>· ${escHtml(p)}</div>`;
   html += `</div>`;
-  if (mults.length || focusTag || wageNote) {
+  if (mults.length || wageNote) {
     html += `<div class="ft-group"><span class="ft-label">加成与说明</span>`;
     for (const m of mults) html += `<div>· ${escHtml(m)}</div>`;
-    if (focusTag) html += `<div>· ${escHtml(focusTag)}</div>`;
     if (wageNote) html += `<div class="w-warn">· ${escHtml(wageNote)}</div>`;
     html += `</div>`;
   }
@@ -1285,10 +1284,7 @@ function switchTab(id) {
   if (id === 'shop') dirty.shop = true;
   if (id === 'tech') {
     dirty.tech = true;
-    // v4.2.5 反馈①：「裂隙等级（EP + DM 购买）」纯类目 h3 接入折叠；
-    // 「科技树」「永恒矩阵」带动态数据行（当前 RP/ES），保持页级标题观感不接。
-    const riftT = document.getElementById('rift-tech-title');
-    if (riftT && !riftT.dataset.foldBound) { riftT.dataset.foldBound = '1'; bindFoldToggle(riftT); }
+    // v4.3.14 反馈③：科技树「裂隙等级」分类已删除（迁入裂隙模块）——rift-tech-title fold 绑定下线
   }
   if (id === 'rp') {
     renderRpPanel(); renderResearchUpgrades(document.getElementById('research-upgrade-list')); renderRpFamily(document.getElementById('rp-upgrade-list')); renderFamilyUpgrades(document.getElementById('family-upgrade-list'));
@@ -1952,6 +1948,14 @@ function bindEvents() {
     wikiModal.addEventListener('click', (ev) => { if (ev.target === wikiModal) wikiModal.style.display = 'none'; });
   }
   document.getElementById('rift-tab-panel')?.addEventListener('click', (e) => { // v2.6.1：裂隙余烬升级树
+    // v4.3.14 反馈③：裂隙等级行（自科技树迁入）——升级按钮
+    const lvBtn = e.target.closest('[data-rift-level-buy]');
+    if (lvBtn) {
+      const r = buyRiftLevelTech();
+      if (!r.ok) toast(r.reason);
+      renderRiftPanel(document.getElementById('rift-tab-panel'));
+      return;
+    }
     // v2.8.30：自动动作开关（互斥单开——再点关闭；开新的自动关旧）
     const autoEl = e.target.closest('[data-rift-auto]');
     if (autoEl) {
@@ -2926,10 +2930,8 @@ function tickTide(dt) {
     S.tidePhase = (S.tidePhase + 1) % 4;
     S.tideTimer = BALANCE.tide.phaseDuration;
     const info = tidePhaseInfo(S.tidePhase);
-    if (prev !== S.tidePhase) {
-      log(`潮汐：进入${info.name}期 (${info.icon})`, 'good');
-      toast(`潮汐→${info.name}`);
-    }
+    // v4.3.14 反馈④：潮汐变换是周期性自然节律，不再打日志/toast（顶栏潮汐角标仍实时反映相位）
+    if (prev !== S.tidePhase && toast) toast(`潮汐→${info.name}`);
   }
 }
 
