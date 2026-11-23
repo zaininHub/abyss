@@ -84,9 +84,13 @@ export function renderCrewPanel(container) {
       ? `<span class="crew-affinity" title="${affinityName}" style="font-size:13px;cursor:help">${p.icon}</span>`
       : '<span class="crew-affinity" title="无擅长岗位" style="font-size:13px">·</span>';
     const lvl = threadLevel(c);
+    // v4.3.16 反馈①：领导不显示等级——全局 +1% 是固定加成位、等级冻结 Lv1 不参与玩法，
+    //   卡面与悬浮都去掉 Lv（避免玩家误以为领导还能升级）。
+    const leaderLv = isLeader(c);
+    const lvHtml = leaderLv ? '' : ` <span class="crew-lv">Lv.${lvl}</span>`;
     // v4.3.13 反馈⑥：领导徽章去「领导」字样只留星标——双字徽章把身份行挤出两列栅格导致错位；
     //   领导身份完整语义仍在悬浮（stateTip「 · 领导」）。
-    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1%）">★</span>' : '';
+    const leaderBadge = leaderLv ? ' <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1%）">★</span>' : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     // v4.3.15 反馈②：满员岗位标「（已满）」——容量 = 设施数量（灵感工坊 2 座 → 2 坑），
@@ -112,12 +116,11 @@ export function renderCrewPanel(container) {
     //   ② 数值行：+X EP/s -Y EP/s（带符号同式）；
     //   ③ 操作行：岗位下拉 + 晋升领导按钮 同排。
     //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
-    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''} · 擅长：${escAttr(affinityName)}`;
+    const stateTip = `${c.name}${leaderLv ? '' : ` · Lv.${lvl}`} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLeader(c) ? ' · 领导' : ''} · 擅长：${escAttr(affinityName)}`;
     return `<div class="crew-card">
       <div class="crew-line crew-line-id">
         <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
-        <span class="crew-name">${c.name}</span>
-        <span class="crew-lv">Lv.${lvl}</span>
+        <span class="crew-name">${c.name}</span>${lvHtml}
         <span class="crew-aff-wrap">${affinityIcon}</span>${leaderBadge}
       </div>
       <div class="crew-line crew-line-num">
@@ -324,13 +327,29 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
   const outEls = container.querySelectorAll('.c-out');
   const salEls = container.querySelectorAll('.c-sal');
   const n = S.cultists.length || 1;
-  const salPer = staffSalaryPerSec() / n; // 全局平均薪资 ÷ 人数 = 单人消耗基数
+  const salTotal = staffSalaryPerSec();
+  const salPer = salTotal / n; // 全局平均薪资 ÷ 人数 = 单人消耗基数
+  // v4.3.16 反馈①：全员薪资基数（staffOutputParts.salaryBase 同构）——领导实扣份额分母。
+  let salBase = 0;
+  for (const c of S.cultists) {
+    const isLead = c.leader === true;
+    const one = (c.output || 3) * 0.8 * (isLead ? 1 : (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)));
+    salBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : threadBindOutputFactor(c));
+  }
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
-    const out = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
+    // v4.3.16 反馈①：领导零个人产出（全局 +1% 加成位）——卡面产出显示 0；
+    //   消耗显示实扣份额 = staffSalaryPerSec × (领导裸基数 / 全员薪资基数)，与
+    //   staffOutputParts salaryBase 内领导份额同口径（不吃 mood/等级/岗位/产线放大 →「固定 EP」）。
+    const isLead = c.leader === true;
+    const out = isLead ? 0
+      : (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
     outEls[i].textContent = fmt(out);
     // v4.2.7 反馈①：个人消耗 = 平均薪资 × 岗位系数（与 staffSalaryPerSec 的 bindAvg 口径同源）
-    if (salEls[i]) salEls[i].textContent = fmt(salPer * salaryFactorOf(c));
+    const sal = isLead
+      ? (salBase > 0 ? salTotal * ((c.output || 3) * 0.8) / salBase : 0)
+      : salPer * salaryFactorOf(c);
+    if (salEls[i]) salEls[i].textContent = fmt(sal);
   }
 }
 

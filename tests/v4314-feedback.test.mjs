@@ -47,7 +47,11 @@ test('R2b 班组扩编乘区改挂 economy.globalMult（无死数据红线）', 
 test('R2c 领导零个人产出：staffOutputParts 跳过 leader', () => {
   const eco = stripComments(read('src/modules/economy.js'));
   assert.ok(/const\s+isLead\s*=\s*c\.leader\s*===\s*true/.test(eco), 'staffOutputParts 未判定领导');
-  assert.ok(/const\s+one\s*=\s*isLead\s*\?\s*0\s*:/.test(eco), '领导个人产出应为 0');
+  // v4.3.16 反馈①反转：领导产出仍为 0，但薪资基数计入固定份额（消耗固定 EP 落地）——
+  //   total 累加跳过领导（isLead ? 0 :），salaryBase 用裸基数 bare 不吃乘区
+  assert.ok(/total \+= isLead \? 0 : one \* factor;/.test(eco), '领导个人产出应为 0（total 累加跳过）');
+  assert.ok(/const\s+bare\s*=\s*\(c\.output \|\| 3\) \* 0\.8;/.test(eco), '领导薪资基数应为固定裸基数（output×0.8）');
+  assert.ok(/salaryBase \+= one \* \(c\.boundTo === HYPER_CONVERTER_ID \? 1 : factor\);/.test(eco), '薪资基数应计入领导固定份额');
 });
 
 test('R2d 领导不升级 + 提拔清等级：tickThreads 跳过 leader + 晋升/卸任重置 level/xp', () => {

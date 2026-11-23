@@ -663,11 +663,15 @@ function staffOutputParts() {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
     // v4.3.14 反馈②：领导零个人产出——改为全局 +1% 加成位（globalMult 内 leaderGlobalMult），
-    //   不再按 (output×0.8×…) 计入线程产出；薪资仍按平均口径照扣（消耗固定 EP）。
+    //   不再按 (output×0.8×…) 计入线程产出。
+    // v4.3.16 反馈①：领导消耗固定 EP——薪资基数计入领导固定份额（裸基数 = output×0.8，
+    //   不吃 mood/outMult/等级/岗位放大，「固定」指不随后期乘区水涨船高）。
+    //   领导 boundTo 恒 null（bindThread/智能分配/晋升三处钳制），factor 恒 1。
     const isLead = c.leader === true;
-    const one = isLead ? 0 : (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
+    const bare = (c.output || 3) * 0.8;
+    const one = isLead ? bare : (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
     const factor = isLead ? 1 : threadBindOutputFactor(c);
-    total += one * factor;
+    total += isLead ? 0 : one * factor;
     salaryBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
   }
   // v4.3.14 反馈⑥：专注份额单独核算——产出悬浮窗把「线程裸产出」与「专注增量」拆成两行，
