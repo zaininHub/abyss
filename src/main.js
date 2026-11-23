@@ -2838,14 +2838,24 @@ function renderAchievementPanel(container) {
       </div>`;
     }
     if (end < n) {
-      // v4.3.6b：还有未展示项才提示「下滑加载更多」；全部展示完显示收尾行（不再出现「已展示 16/16·下滑加载更多」矛盾文案）
-      html += `<div class="crew-pager" style="margin-top:8px"><span>已展示 ${end} / ${n} 项 · 下滑加载更多</span></div>`;
+      // v4.3.12 反馈①：进度文案「已展示 N / M 项 · 下滑加载更多」删除——玩家实测这种常驻行
+      //   在容器不可滚动时（首组未撑出滚动高度）是死文案，且无法通过操作消除。
+      //   新口径：仅当列表真实可滚（能触底加载）才渲染简短提示；不可滚时不渲染 pager 行。
+      //   可滚判定用「待渲染内容是否超过容器高度」的近似：卡片数 × 卡高（~58px）+ 头部，
+      //   渲染后由 _achFixPager 二次校正（真实 scrollHeight 口径，见 innerHTML 之后）。
+      const approxH = end * 58 + 16;
+      if (approxH > container.clientHeight) html += `<div class="crew-pager ach-pager-maybe" style="margin-top:8px"><span>下滑加载更多</span></div>`;
     } else if (pageCount > 1) {
       html += `<div class="crew-pager" style="margin-top:8px"><span>已全部展示 ${n} 项</span></div>`;
     }
   }
   container.innerHTML = html;
   container._achTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（渲染态，不入存档）
+  // v4.3.12 反馈①：pager 可滚判定二次校正——渲染后按真实 scrollHeight 口径，
+  //   「不可滚但 pager 在」则移除（rAF 前同步执行，无闪烁）。
+  const maybe = container.querySelector('.ach-pager-maybe');
+  if (maybe && container.scrollHeight <= container.clientHeight + 4) maybe.remove();
+  else if (maybe) maybe.classList.remove('ach-pager-maybe');
   // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳）
   // v4.3.7 反馈⑥：周期重建也恢复（prevScroll 现回落到实时 scrollTop，见上方注释）；
   //   scrollTop=0 时不空耗 rAF（首次渲染本就从顶部开始）
@@ -2856,10 +2866,21 @@ function renderAchievementPanel(container) {
   // v4.3.3 反馈②：滚动触底自动翻页为主交互
   // v4.3.5 反馈③：移除 data-ach-page 按钮点击委托——按钮已删，滚动是唯一翻页入口；
   //   自动化脚本兼容：直接操纵列表滚动（scrollTop = scrollHeight）即可触发翻页。
+  // v4.3.12 反馈②：10s 无操作回缩——累积加载出的额外组在 10s 无滚动后收起回第一页
+  //   （恢复 v4.3.5 反馈③原始诉求；v4.3.6b 累积式重做时该行为被移除）。
   if (!container._achDelegated) {
     container._achDelegated = true;
     container.addEventListener('scroll', () => {
       if (container._achScrollLock) return;
+      // 任何滚动都算「操作」：刷新回缩计时（achPage=1 时不挂计时器，无内容可收）
+      clearTimeout(container._achIdleTimer);
+      if (achPage > 1) {
+        container._achIdleTimer = setTimeout(() => {
+          achPage = 1; // 收起回第一页
+          container._keepScroll = null; // 回缩后从顶部开始
+          renderAchievementPanel(container);
+        }, 10000);
+      }
       const total = container._achTotal || 0;
       const shown = Math.min(achPage * ACH_PAGE_SIZE, total);
       if (shown >= total) return; // 已全部展示

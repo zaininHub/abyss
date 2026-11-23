@@ -118,8 +118,12 @@ export function renderCrewPanel(container) {
     </div>`;
   }
   if (!cards) cards = `<div class="crew-card more">${crewFilter ? '当前岗位暂无线程' : '暂无线程——去商店招募第一条线程'}</div>`;
+  // v4.3.12 反馈①：进度文案删除——旧「已展示 N / M 条线程 · 下滑加载更多」常驻行在容器
+  //   不可滚动时是死文案；改为仅列表真实可滚时显示「下滑加载更多」，否则不渲染 pager 行。
+  //   可滚判定用近似（卡数 × 卡高 ~76px），渲染后由 crew-pager-maybe 二次校正（真实口径）。
+  const approxH = end * 76 + 60; // 卡高 + 筛选行/标题
   const pager = end < n
-    ? `<div class="crew-pager"><span>已展示 ${end} / ${n} 条线程 · 下滑加载更多${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>`
+    ? (approxH > container.clientHeight ? `<div class="crew-pager crew-pager-maybe"><span>下滑加载更多</span></div>` : '')
     : (pageCount > 1 ? `<div class="crew-pager"><span>已全部展示 ${n} 条线程${crewFilter && n !== nTotal ? `（筛选自全班组 ${nTotal}）` : ''}</span></div>` : '');
   // v3.3.1 反馈⑦：班组面板不再展示事件流水（日志区已承担记录；班组只保留人员与调度）
   // v4.2.7 反馈③：产出/薪资行删除（顶栏已有同口径），改为与效能编排同构的可折叠类目标题「班组 ▼」。
@@ -140,6 +144,11 @@ export function renderCrewPanel(container) {
     <div class="crew-grid">${cards}</div>
     ${pager}
     </div>`;
+  // v4.3.12 反馈①：pager 可滚判定二次校正——渲染后按真实 scrollHeight 口径，
+  //   「不可滚但 pager 在」则移除（同步执行，无闪烁）。
+  const maybe = container.querySelector('.crew-pager-maybe');
+  if (maybe && container.scrollHeight <= container.clientHeight + 4) maybe.remove();
+  else if (maybe) maybe.classList.remove('crew-pager-maybe');
   // v3.2.3 反馈①：分页按钮事件委托（容器级，重建不丢）
   if (!container._crewDelegated) {
     container._crewDelegated = true;
@@ -213,8 +222,18 @@ export function renderCrewPanel(container) {
     });
     // v4.3.3 反馈②：滚动触底自动翻页。判定用当前筛选后的总条数。
     // v4.3.6b：累积式加载——触底「追加」下一组（旧卡保留），重建后恢复滚动位置（不跳顶）。
+    // v4.3.12 反馈②：10s 无操作回缩——与成就面板同款（累积组 10s 无滚动收起回第一页）。
     container.addEventListener('scroll', () => {
       if (container._crewScrollLock || container.dataset.crewFold === '1') return;
+      // 任何滚动都算「操作」：刷新回缩计时（crewPage=1 时不挂计时器）
+      clearTimeout(container._crewIdleTimer);
+      if (crewPage > 1) {
+        container._crewIdleTimer = setTimeout(() => {
+          crewPage = 1; // 收起回第一页
+          container._keepScroll = null;
+          renderCrewPanel(container);
+        }, 10000);
+      }
       const total = container._crewTotal || 0;
       if (crewPage * PAGE_SIZE >= total) return; // 已全部展示
       if (container.scrollTop + container.clientHeight >= container.scrollHeight - 20) {
