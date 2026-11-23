@@ -490,16 +490,20 @@ export function registerFrameSystems(deps = {}) {
       if (bldHost) {
         const base = BALANCE.atrium.base || 5e4;
         const atrOwned = (S.upgrades && S.upgrades.atrium) || 0;
-        const shouldAtr = atrOwned >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
+        // v4.3.10：atrium 首购卡显隐门换 runEarned（本局累计），与 shop.renderAtriumDistill 同源——
+        //   allTimeEp 跨局保留会让跨局玩家新局提前显卡，帧级 dirty 判定与卡片渲染口径漂移
+        const shouldAtr = atrOwned >= 1 || (S.ep || 0) >= base * 0.3 || (S.runEarned || 0) >= base * 0.3;
         const hasAtr = !!bldHost.querySelector('.atrium-distill');
         const shouldHatch = S.ptAutoHatch === true || (S.resDiscovered && S.resDiscovered.pt) || (S.pt || 0) > 0 || (S.ptHatchLv || 1) > 1;
         const hasHatch = !!bldHost.querySelector('.hatch-upg');
         if (hasAtr !== shouldAtr || hasHatch !== shouldHatch) d.shop = true;
       }
       let n = 0;
+      // v4.3.10：解锁计数门换 runEarned（本局累计）——旧 allTimeEp 跨局保留，跨局玩家新局
+      //   一开局 n 就顶满，lastUnlockedCount 初始化后无 toast，但主商店门全开（补能间爆雷同源）
       for (const u of UPGRADES) {
         const owned = S.upgrades[u.id] || 0;
-        if (owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3) n++;
+        if (owned > 0 || S.ep >= u.base * 0.3 || S.runEarned >= u.base * 0.3) n++;
       }
       if (ctx.lastUnlockedCount === -1) ctx.lastUnlockedCount = n;
       if (n !== ctx.lastUnlockedCount) {

@@ -173,7 +173,12 @@ function shopUnlocked(u) {
   // v3.4.6 反馈⑫：曲线对调后关键件 = 备用粮仓（12K 首购、门槛 3.6K EP）；存储节点（45K）走正常门槛揭示
   if (u.id === 'reserve_bin') return true;
   if (VAULT_IDS.includes(u.id)) return vaultForced(u);
-  return S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
+  // v4.3.10 反馈：跨局指标解锁旁路封堵——allTimeEp 在 CROSS_RUN_KEYS 跨局保留，
+  //   跨局玩家新局旧累计直接顶开门（CPU 门槛 9e6 远低于旧局累计），「开局没几分钟补能间就解锁，
+  //   完全买不起」；主商店贵卡有链窗口（???）挡着，补能间走全可见 split 无链保护成唯一爆雷点。
+  //   换 runEarned（本局累计，RUN_RESET_KEYS 晋升清零）：新档 runEarned==allTimeEp 行为不变，
+  //   跨局玩家新局重新累计；文案「累计 X EP 解锁」语义仍成立（本局累计）。
+  return S.ep >= u.base * 0.3 || S.runEarned >= u.base * 0.3;
 }
 
 // v3.12.8 ①：资源仓库（矩阵存储库/饵料仓库/星尘金库/誓约圣龛）不靠「累计 EP」解锁，
@@ -350,7 +355,9 @@ export function renderAtriumDistill(container) {
   if (!container) return;
   const n = (S.upgrades && S.upgrades.atrium) || 0;
   const base = BALANCE.atrium.base || 5e4;
-  const revealed = n >= 1 || (S.ep || 0) >= base * 0.3 || (S.allTimeEp || 0) >= base * 0.3;
+  // v4.3.10：首购卡解锁门同源换 runEarned（本局累计）——allTimeEp 跨局保留会让跨局玩家
+  //   新局灵感工坊首购卡提前摆出（15K 门槛 vs 旧局巨量累计），与补能间同病同源。
+  const revealed = n >= 1 || (S.ep || 0) >= base * 0.3 || (S.runEarned || 0) >= base * 0.3;
   let el = container.querySelector('.atrium-distill');
   if (!revealed) { if (el) el.remove(); return; }
   const owned = n >= 1;

@@ -469,7 +469,7 @@ t('D2：采集按数值确定性产出（v2.4：不再概率掷骰，显示与�
 t('A：三开关——预留线拦截 / net<0 停止招募 / 关闭后无动作（数值）', () => {
   S.tech['ai_core'] = true;
   S.tidePhase = 1; S.upgrades = {}; S.milesDone = {};
-  S.allTimeEp = 1e9; // 保证候选项全部解锁可见
+  S.runEarned = 1e9; S.allTimeEp = 1e9; // 保证候选项全部解锁可见（v4.3.10 起门走 runEarned 本局累计）
   const cap = epStorageCap();
   // 1) 自动升级受预留线拦截：EP 低于预留线不买（助手充足，仅验证预留线）
   S.ai = { autoUpgrade: true, autoHire: false, autoClaim: false, reserve: 0.3, timer: 0, assistants: 5, crew: { upgrade: 5 } };

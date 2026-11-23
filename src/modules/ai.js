@@ -149,9 +149,11 @@ export function reserveLine() {
   return epStorageCap() * (S.ai?.reserve ?? BALANCE.ai.defaultReserve);
 }
 
+// v4.3.10：解锁门与主商店 shopUnlocked 同源——allTimeEp 跨局保留会让跨局玩家新局
+//   AI 自动升级跳过门槛（买本局还远未企及的贵项）；换 runEarned（本局累计）对齐。
 function aiShopUnlocked(u) {
   const owned = S.upgrades[u.id] || 0;
-  return owned > 0 || S.ep >= u.base * 0.3 || S.allTimeEp >= u.base * 0.3;
+  return owned > 0 || S.ep >= u.base * 0.3 || S.runEarned >= u.base * 0.3;
 }
 
 // v2.8.3：AI 自动升级白名单——仅基础产出模块（无 cat 标签的纯产出卡；资源/线程/存储/DM/净化/载具全部排除）
