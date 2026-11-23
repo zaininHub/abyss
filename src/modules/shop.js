@@ -6,14 +6,14 @@ import { UPGRADES } from '../data/upgrades.js';
 import { OFF_UPGRADES } from '../data/offlineUpgrades.js';
 import { CROSSROAD_BUILDINGS, buildingCost, buildingLevel, buildingMaxed, V21_BUILDINGS, v21Level, v21Maxed, unlockRpV21, unlockMilestoneV21, capOf, crossroadById, crossroadOwned } from '../data/buildings.js';
 import { getBuildings, getTechs } from '../core/provider.js';
-import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale, prestigeBoost, spendRes, buyRes } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解 // v3.12.13：资源增减/升级统计（任务进度口径） // v4.3.5 反馈⑤：prestigeBoost 工坊总计口径
+import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, CAP_EXPANSION_IDS, hasTech, v21BuildingCost, totalDrainPerSec, epStorageCap, epCapAfterBuy, rpCap, dmCap, ptCap, rpCapParts, ptCapParts, dmCapParts, staffOutputPerSec, staffSalaryPerSec, rpEffScale, prestigeBoost, spendRes, buyRes, rpDistillRate } from './economy.js'; // v2.8.30 ③：禁购检查 // v3.0.8：epCapAfterBuy 存储文案统一口径 // v3.0.9：线程产出/薪资变化量 // v3.1.1 反馈⑤：探采汇率递增 // v3.3.3 反馈③：RP 效率递增 // v3.10.5：rpCapParts/ptCapParts/dmCapParts 上限构成分解 // v3.12.13：资源增减/升级统计（任务进度口径） // v4.3.5 反馈⑤：prestigeBoost 工坊总计口径 // v4.3.7 反馈④：rpDistillRate 蒸馏按钮并入开关行
 import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
-import { converterEnabled, setConverterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v3.4.6 反馈⑤：卡面产出与 tick 同口径（绑定加成封顶 ×2）
+import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v4.3.7 反馈③：探采页头开关加载具解锁门
 import { autoBuildUnlocked, autoBuildActivateCost, autoBuildActivable, activateAutoBuild, allResDiscovered } from './ai.js'; // v4.0.9 反馈⑧：自动购建激活入口迁入研究点「AI 助手」类目
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
@@ -415,7 +415,15 @@ export function atriumUpgCost(n) {
 export function renderAtriumSwitch(host) {
   if (!host) return;
   const n = (S.upgrades && S.upgrades.atrium) || 0;
-  if (n < 1) { host.innerHTML = ''; host.style.display = 'none'; return; }
+  const distillBtn = (extraStyle = '') => `<button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px;${extraStyle}" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>`;
+  if (n < 1) {
+    // v4.3.7 反馈④：工坊未购时蒸馏按钮仍需可用（原独立行承载；现并入本渲染，单独成行不隐藏）
+    host.style.display = '';
+    host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+      <span style="font-size:12px;color:var(--text-3)">灵感工坊未购入</span>${distillBtn()}
+    </div>`;
+    return;
+  }
   host.style.display = '';
   const on = converterEnabled('atrium');
   // v4.3.5 反馈⑤：总计口径对齐真实结算——
@@ -427,11 +435,16 @@ export function renderAtriumSwitch(host) {
   const atFull = (S.rp || 0) >= rpCap();
   const epS = atFull ? 0 : (BALANCE.atrium.epRate || 150) * n * n;
   const rpS = (BALANCE.atrium.rate || 0.15) * n * Math.min(converterThreadBoost('atrium'), 2) * prestigeBoost(); // v3.4.6 反馈⑤：绑定加成封顶 ×2 // v3.12.0 反馈⑫：职级加成
+  // v4.3.7 反馈④：①标题去「 · 自动蒸馏」（开关文案已自表意）②开关按钮文案固定「自动」、
+  //   状态用颜色表达（绿=开 / 红=关）+ aria-pressed 供读屏与测试判定
   // v4.3.1 反馈⑤：速率文案改「总计 -X EP/s +Y RP/s」（与灵感工坊升级卡同款），去「EP 不足自动暂停，回升继续」括注
+  // v4.3.7 反馈④：手动蒸馏按钮并入开关行尾（原先独占一行，研究点页显得空旷且层级混乱）；
+  // 保留 id=rp-distill-btn（main.js 委托在 #rp-panel 容器级，click 冒泡可达，事件不需迁移）
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
-    <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n} · 自动蒸馏</span>
-    <button class="mini-btn" data-atrium-switch style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${on ? '开' : '关'}</button>
+    <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n}</span>
+    <button class="mini-btn" data-atrium-switch aria-pressed="${on}" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">自动</button>
     <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
+    ${distillBtn('margin-left:auto')}
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {
@@ -802,6 +815,19 @@ function updateVehicleCollectHeader() {
       updateVehicleCollectHeader();
       dirty.top = true;
     });
+  }
+  // v4.3.7 反馈③：探采未解锁（尚无载具）时不显示页头开关——
+  // 原先整组随裂隙触发即显示（riftShown），载具数=0 时开关毫无作用却已可见，
+  // 用户感知「探采还没解锁，转化开关就出现了」。converterUnlocked('vehicles') 即载具已购；
+  // DOM 先建后控显隐（display:none），购入首辆载具同帧恢复显示，不需重建。
+  const probeAllowed = converterUnlocked('vehicles');
+  const probeBtn = el.querySelector('[data-probe-toggle]');
+  if (probeBtn) probeBtn.style.display = probeAllowed ? '' : 'none';
+  if (!probeAllowed) {
+    if (infoEl.textContent !== info) { infoEl.textContent = info; el.title = tip; }
+    const warnEl2 = el.querySelector('.probe-warn');
+    if (warnEl2) warnEl2.style.display = 'none';
+    return;
   }
   if (infoEl.textContent !== info) { infoEl.textContent = info; el.title = tip; }
   const warnEl = el.querySelector('.probe-warn');

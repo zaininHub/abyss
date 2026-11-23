@@ -1,7 +1,7 @@
 {
   "name": "abyss-idle",
   "private": true,
-  "version": "4.3.6b",
+  "version": "4.3.7",
   "type": "module",
   "scripts": {
     "dev": "vite",

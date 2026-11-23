@@ -1552,11 +1552,10 @@ function renderRpPanel() {
     <!-- v4.3.5 反馈⑤：去「当前 RP 2.90K / 2.90K」行——顶栏 🔬RP 已有同口径当前值，
          面板内重复数字且与上限同显时「2.90K / 2.90K」观感冗余。
          自动蒸馏开关上移为面板主体；手动蒸馏按钮下移到开关之后（高频操作排前，低频排后）。 -->
+    <!-- v4.3.7 反馈④：蒸馏按钮并入灵感工坊开关行尾（shop.js renderAtriumSwitch 内渲染），
+         原独立行删除；工坊未购（n=0）时 host 显示一行占位提示，蒸馏按钮仍可用（保留高频操作入口） -->
     <div id="atrium-switch-host"></div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>
-    </div>
-  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行 // v4.3.5 反馈⑤：蒸馏下移
+  </div>`; // v2.8.7：解释入问号 ⓘ、蒸馏按钮减小 // v3.3.1：工坊开关移入本页 // v4.0.9 反馈②：三行说明压一行 // v4.3.5 反馈⑤：蒸馏下移 // v4.3.7 反馈④：蒸馏并入开关行
   renderAtriumSwitch(document.getElementById('atrium-switch-host'));
 }
 
@@ -2813,7 +2812,12 @@ function renderAchievementPanel(container) {
     const collapsed = document.getElementById('tab-achievement')?.classList.contains('sl-collapsed');
     achH3.innerHTML = `已解锁 <b style="color:var(--purple)">${n}/${defs.length}</b> <span class="sl-ind" style="color:var(--text-3)">${collapsed ? '▸' : '▾'}</span>`;
   }
-  const prevScroll = container._keepScroll; // v4.3.6b：累积加载滚动位置保持（读后即清，常规重建不钉住视口）
+  // v4.3.6b：累积加载滚动位置保持（读后即清，常规重建不钉住视口）
+  // v4.3.7 反馈⑥：fallback 实时捕获——dirty-periodic 每 2s 置脏全量重建（innerHTML 替换重置
+  // scrollTop），而 _keepScroll 只在滚动触底加载下一组时写入，读后即清 → 第二次周期重建时无恢复值，
+  // 视口跳回顶部，用户感知「翻页后约 10s 未操作就复原」。现在常规重建也捕获实时 scrollTop，
+  // 周期刷新不再打断浏览位置；只有玩家主动收起/切页后才从顶部开始（符合直觉）。
+  const prevScroll = container._keepScroll != null ? container._keepScroll : container.scrollTop;
   container._keepScroll = null;
   if (n === 0) {
     html += `<div style="font-size:13px;color:var(--text-3);padding:18px 0;text-align:center">尚未解锁任何成就——一切才刚刚开始。</div>`;
@@ -2842,8 +2846,10 @@ function renderAchievementPanel(container) {
   }
   container.innerHTML = html;
   container._achTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（渲染态，不入存档）
-  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳；_keepScroll 为 null 的常规重建从顶部开始）
-  if (prevScroll != null) {
+  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳）
+  // v4.3.7 反馈⑥：周期重建也恢复（prevScroll 现回落到实时 scrollTop，见上方注释）；
+  //   scrollTop=0 时不空耗 rAF（首次渲染本就从顶部开始）
+  if (prevScroll != null && prevScroll > 0) {
     requestAnimationFrame(() => { container.scrollTop = prevScroll; });
   }
   // v3.3.3 反馈⑩：分页事件委托（容器级，重建不丢）
