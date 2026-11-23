@@ -479,7 +479,7 @@ export const BALANCE = {
     { id: 'rp_offline',     name: '离线协议',   cap: 5,  base: 150, growth: 1.8,  fx: { key: 'offline', v: 0.12 }, desc: '离线效率 +12%/级' },
     // —— 深渊协议（累计 4 级后显现）——
     { id: 'rp_wage',        name: '薪酬协商',   cap: 4,  base: 600,  growth: 1.85, fx: { key: 'wage',    v: -0.04 }, desc: '线程消耗 -4%/s' },
-    { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90,   growth: 1.65, fx: { key: 'storage', v: 0.08 }, desc: 'EP 存储上限 +8%/级' },
+    { id: 'rp_storage',     name: '存储协议',   cap: 8,  base: 90,   growth: 1.65, fx: { key: 'storage', v: 0.12 }, desc: 'EP 存储上限 +12%/级' }, // v4.3.7 反馈②：0.08→0.12（满级 +96%，扩容量需显著高于 EP 购买上限的量级）
     { id: 'rp_dm',          name: '星尘精炼',   cap: 8,  base: 100,  growth: 1.65, fx: { key: 'dm',     v: 0.08 }, desc: '载具 DM 采集 +8%/级' },
     { id: 'rp_faith',       name: '圣颂研究',   cap: 5,  base: 200,  growth: 1.8,  fx: { key: 'faith',   v: 0.10 }, desc: 'FP 产出 +10%/级' },
     { id: 'rp_policy',      name: '律令演绎',   cap: 8,  base: 520,  growth: 1.70, fx: { key: 'policy',  v: 0.06 }, desc: '政策效果 +6%/级' },

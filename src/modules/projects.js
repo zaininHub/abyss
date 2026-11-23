@@ -6,6 +6,7 @@ import {
 } from './economy.js';
 import { templeFaithPerSec } from '../data/religions.js'; // 信仰圣所 FP/s（data 层定义）
 import { anchorDone } from './disclosure.js'; // v3.12.13：资源未解锁不刷出对应任务（与顶栏同口径）
+import { relicsUnlocked } from '../data/relics.js'; // v4.3.7 反馈⑤：DM spend/buy 任务要求遗物升级可用
 import { fxValue } from '../core/effectEngine.js'; // v2.1 建筑驱动：项目平行台
 import { BALANCE } from '../data/balance.js';
 
@@ -56,7 +57,13 @@ function availableResKinds() {
   const out = [];
   for (const [key, def] of Object.entries(RES_PROJECTS)) {
     if (def.anchor && !anchorDone(def.anchor, S)) continue; // 资源未解锁 → 不刷该类任务
+    // v4.3.7 反馈⑤：kind 级独立门控——DM 的 消耗（遗物锻造）/购入（遗物收藏）实际依赖遗物系统
+    // 可用（relicsUnlocked = 遗物章节开启 ∧ DM 已发现 ∧ 裂隙已触发），但资源锚点（scooter∨dm_vault）
+    // 远早于遗物门达成，导致「DM 解锁了但遗物未开」时任务要求花费 DM 却无处可花。
+    // gain（深渊采掘）不受影响：scooter 本身即产 DM。其余资源无 kind 级附加条件（kindGate 为空）。
+    const kindGate = kind => !(key === 'dm' && kind.metric !== 'gain') || relicsUnlocked();
     for (const kind of Object.values(def.kinds)) {
+      if (!kindGate(kind)) continue;
       out.push({ key, metric: kind.metric, name: kind.name, desc: kind.desc, resLabel: def.label });
     }
   }

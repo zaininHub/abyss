@@ -227,10 +227,13 @@ export function renderCrewPanel(container) {
     }, { passive: true });
   }
   container._crewTotal = n; // v4.3.3 反馈②：滚动翻页判定总条数（筛选后）
-  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳；常规数据变化重建不写 _keepScroll 则从顶部开始）
-  if (container._keepScroll != null) {
-    const keep = container._keepScroll;
-    container._keepScroll = null;
+  // v4.3.6b：重建后恢复滚动位置（累积追加时视口不跳）
+  // v4.3.7 反馈⑥：fallback 实时捕获——与成就面板同根因（dirty-periodic 周期重建重置 scrollTop，
+  // _keepScroll 只在触底追加时写入且读后即清，第二次周期重建即跳顶）。常规重建也捕获实时位置，
+  // 周期刷新不再打断浏览；scrollTop=0 时不空耗 rAF。
+  const keep = container._keepScroll != null ? container._keepScroll : container.scrollTop;
+  container._keepScroll = null;
+  if (keep != null && keep > 0) {
     requestAnimationFrame(() => { container.scrollTop = keep; });
   }
   refreshCrewDyn(container, start, pageCultists);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.3.6b</title>
+<title>深渊效能工作台 v4.3.7</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -55,6 +55,10 @@
         <button class="btn" id="sys-menu-btn" aria-label="选项：悬停展开保活/存档/皮肤" aria-haspopup="true" aria-expanded="false">⚙ 选项</button>
         <div class="save-menu-pop sys-menu-pop" id="sys-pop">
           <div class="save-list-label">⚙ 选项</div>
+          <!-- v4.3.7 反馈①：保活开关前置到弹层首位——原先排最后，存档弹层（save-pop）向下展开
+               （max-height:60vh）时物理覆盖住保活按钮，导致无法点到。DOM 前置后皮肤/存档弹层
+               向下展开均不再遮挡它（自身向下展开的内容在其下方，不回盖上方兄弟项）。 -->
+          <button class="btn keep-awake-btn" id="keep-awake-btn" aria-pressed="false" title="保持屏幕唤醒：防止休眠/息屏导致浏览器挂起、挂机产出中断">☀ 保活</button>
           <!-- 皮肤菜单：切换界面色彩/风格主题，悬停展开 -->
           <div class="skin-menu" id="skin-menu">
             <button class="btn" id="skin-menu-btn" aria-label="皮肤：悬停展开主题列表" aria-haspopup="true" aria-expanded="false">🎨 皮肤</button>
@@ -82,8 +86,6 @@
               <input type="file" id="import-file" accept=".json,application/json" style="display:none">
             </div>
           </div>
-          <!-- 保活开关（Wake Lock）——防止休眠/息屏导致挂机产出中断；不支持时灰显并提示 -->
-          <button class="btn keep-awake-btn" id="keep-awake-btn" aria-pressed="false" title="保持屏幕唤醒：防止休眠/息屏导致浏览器挂起、挂机产出中断">☀ 保活</button>
         </div>
       </div>
       <!-- v4.1.0 反馈②：暂停按钮移到按钮组最右并加警示色（字体用 --warn，浅色主题自动用深色变体） -->
