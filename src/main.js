@@ -2474,6 +2474,9 @@ function onSaveListClick(e) {
       if (!data) { toast('快照不存在'); return; }
       const cur = localStorage.getItem(SAVE_KEY);
       if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
+      // v4.3.8 BUGFIX：置位清档守卫——写入空档后到 reload 完成前，beforeunload / 5s 自动保存
+      // 不得把内存中的旧 S 回写覆盖（与 doReset 同源；v438 实测未置位时空档读取被旧档覆盖）。
+      resetGuard = true;
       localStorage.setItem(SAVE_KEY, data);
       toast('已恢复快照，页面即将刷新');
       setTimeout(() => location.reload(), 600);
@@ -2535,6 +2538,8 @@ function importSave(e) {
       askConfirm('导入存档并覆盖当前', `导入外部存档（${sum}）将覆盖当前本地游戏进度。\n当前进度会自动备份（abyss_idle_v2_bak）。确定继续？`, () => {
         const cur = localStorage.getItem(SAVE_KEY);
         if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur);
+        // v4.3.8 BUGFIX：与快照读取同因——导入覆盖当前后 reload 前必须挡住旧 S 回写。
+        resetGuard = true;
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         toast('存档导入成功，页面即将刷新');
         setTimeout(() => location.reload(), 600);

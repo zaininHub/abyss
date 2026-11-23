@@ -103,12 +103,21 @@ registerFlow({
     const mult = flowMultiplier('rp', { S, dt });
 
     if (!atriumRpFull) {
-      const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * dt;
+      // v4.3.8 BUGFIX：EP 扣费补 ×n² 对齐 v3.12.13 反馈⑫ 设计口径——
+      //   economy.atriumDrainPerSec（顶栏消耗）早已是 150×n²，本结算仍 150×n 线性，
+      //   4 级工坊实扣 600/s 而顶栏显示 2400/s（虚高 1800/s），用户存档实测
+      //   净流真实 +1549/s 被误报为 -256/s（「产出<消耗」红色❗假告警）。
+      //   RP 产出保持 ×n 线性（设计即「消耗增长快于产出」），与 EP 扣费解耦：
+      //   按名义扣费 150×n 计算，EP 不足（used < epNeed）时按实扣比例缩放。
+      const epNeed = (BALANCE.atrium.epRate || 150) * atriumN * atriumN * dt;
       const used = Math.min(S.ep, epNeed);
       S.ep -= used;
-      // 严格线性：RP = 实扣 EP × (rate / epRate) × 绑定加成 ÷ 效率递增系数
-      const rpGain = used * ((BALANCE.atrium.rate || 0.15) / (BALANCE.atrium.epRate || 150))
-        * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale() * mult;
+      // 严格线性：RP = 名义扣费(150×n×dt) × (rate / epRate) × 绑定加成 ÷ 效率递增系数；
+      // EP 不足时乘 used/epNeed（扣不到足额 EP → RP 同比例少产）
+      const nominal = (BALANCE.atrium.epRate || 150) * atriumN * dt;
+      const scale = epNeed > 0 ? used / epNeed : 0;
+      const rpGain = nominal * ((BALANCE.atrium.rate || 0.15) / (BALANCE.atrium.epRate || 150))
+        * Math.min(converterThreadBoost('atrium'), 2) / rpEffScale() * mult * scale;
       const before = S.rp || 0;
       addRp(rpGain);
       spendRes('ep', used); // v4.0.4：蒸馏扣掉的 EP 同样计入「限时内消耗 EP」任务进度
