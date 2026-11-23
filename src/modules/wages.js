@@ -135,6 +135,11 @@ export function tickWages(dt) {
         w.loseTimer -= 60; // 流失后计数重置，下次判定仍在 60s 后
         if (Math.random() < wageLoseChance() && S.cultists.length > 0) {
           const lost = S.cultists.pop();
+          // v4.3.11 反馈③：记录流失名单（本局，尾部最新），供「离职礼盒召回」按名字带回；
+          //   run 级数据挂 wageState（本局重置键）不新增顶层字段
+          if (!Array.isArray(w.lostLog)) w.lostLog = [];
+          w.lostLog.push({ name: lost.name, at: Date.now() });
+          if (w.lostLog.length > 20) w.lostLog.shift(); // 只留最近 20 名，防长局膨胀
           if (S.cultists.length === 0) resetWageState(w);
           wlog(`线程【${lost.name}】在休眠中流失（余额 ${fmt(S.ep)} EP）`, 'bad');
           crewPush(`【${lost.name}】在休眠中流失了${lost.earned ? `（累计贡献 ${fmt(lost.earned)} EP）` : ''}`, 'bad'); // v3.1.0 反馈③：个人档案式流失记录

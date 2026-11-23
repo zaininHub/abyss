@@ -189,14 +189,19 @@ function onWishToss() {
 export function initWishWell() { ensureWishWell(); }
 
 // ========== 离职礼盒（sp3_farewell 购买入口） ==========
+// v4.3.11 反馈①：门收紧——旧口径 dormant/losing/staffUnhappy≥3 都摆按钮，但 dormant 只是
+//   「可能流失」（休眠 ≥1800s 才进 losing 流失预警），玩家「没有流失就看到离职任务」；
+//   staffUnhappy 是 v1.3 废弃字段恒 0（economy 注释：被四态状态机替代）。按钮只在 losing 显示。
 // 文案承诺「购买离职礼盒（1 EP）送给流失的线程」，条件加入 S._farewellBought 前置，
-// 由本按钮提供购买入口。仅在休眠(dormant)/流失(losing)/staffUnhappy≥3 且本局未完成时显示。
+// 由本按钮提供购买入口。仅在流失预警(losing) 且本局未完成时显示。
 const FAREWELL_COST = 1;
+// v4.3.11 反馈③：首购后礼物生效 5 分钟，期间每 60s 概率召回一名已流失线程
+const FAREWELL_RECALL_MS = 5 * 60 * 1000;
 function farewellAvailable() {
   if ((S._specialTasksDone || {}).sp3_farewell) return false; // 本局已完成
   if (S._farewellBought) return false; // 已购买待结算（下一帧自动完成）
   const w = S.wageState || {};
-  return w.state === 'dormant' || w.state === 'losing' || (S.staffUnhappy || 0) >= 3;
+  return w.state === 'losing'; // v4.3.11 反馈①：仅流失预警（正在流失）
 }
 export function ensureFarewellGift() {
   let b = document.getElementById('farewell-gift');
@@ -205,7 +210,8 @@ export function ensureFarewellGift() {
     b = document.createElement('button');
     b.id = 'farewell-gift';
     b.className = 'farewell-gift';
-    b.title = '离职礼盒：送给流失线程的临别礼物（1 EP）—— 触发特殊任务「离职礼物」，解锁纪念墙';
+    // v4.3.11 反馈②：文案两段式——首行任务全名+时限，次行要求
+    b.title = '特殊任务：离职礼物 - 无时间限制\n要求购买"离职礼盒"（1 EP）送给流失的线程';
     b.innerHTML = '🎁<span class="fg-label">离职礼盒</span><span class="fg-cost">1 EP</span>';
     b.addEventListener('click', onFarewellBuy);
     document.body.appendChild(b);
@@ -218,6 +224,8 @@ function onFarewellBuy() {
   if ((S.ep || 0) < FAREWELL_COST) { toast(`EP 不足（需 ${FAREWELL_COST} EP）`); return; }
   S.ep -= FAREWELL_COST; spendRes('ep', FAREWELL_COST);
   S._farewellBought = true;
+  // v4.3.11 反馈③：首购记录时间——5 分钟召回窗（成就「临别赠礼」由 checkSpecialTasks 点亮）
+  S.wageState.farewellGiftAt = Date.now();
   b.disabled = true;
   b.classList.add('giving');
   save(S); dirty.top = true;
@@ -229,5 +237,35 @@ function onFarewellBuy() {
     checkSpecialTasks(S, log, toast); // 立即结算，玩家即时看到奖励
     save(S); dirty.top = true; dirty.achievements = true;
   }, 800);
+}
+// v4.3.11 反馈③：召回 tick——礼盒购买后 5 分钟内，每 60s 30% 概率召回一名已流失线程。
+//   由 main.js 周期调用（低频，无独立帧系统）。召回 = 从 lostLog 尾部取回名字，重铸线程入列。
+export function tickFarewellRecall() {
+  const w = S.wageState || {};
+  if (!S._farewellBought || !w.farewellGiftAt) return; // 未购买过（任务完成后 _farewellBought 保持 true）
+  if (Date.now() - w.farewellGiftAt > FAREWELL_RECALL_MS) { w.farewellGiftAt = 0; return; } // 窗口关闭
+  // v4.3.11 注意：局部名用 lostList，不遮蔽顶部导入的 runtime log()（v4.3.5 同名遮蔽教训）
+  const lostList = (w.lostLog || []).filter(x => x && x.name);
+  if (!lostList.length || S.cultists.length >= 200) return; // 无流失名单或线程已满
+  w._recallTimer = (w._recallTimer || 0) + 1;
+  if (w._recallTimer < 60) return; // 60s 一次
+  w._recallTimer = 0;
+  if (Math.random() >= 0.3) return;
+  const back = lostList.pop();
+  w.lostLog = lostList;
+  S.cultists.push({
+    id: Date.now() + Math.random(),
+    name: back.name,
+    profession: 'worker',
+    level: 1, xp: 0, leader: false, boundTo: null,
+    output: 0.5 + Math.random() * 0.5,
+    mood: '正常',
+    moodTimer: 30 + Math.random() * 60,
+  });
+  log(`🤝 离职礼盒送达——流失线程【${back.name}】被召回归队！`, 'good');
+  if (toast) toast(`🤝【${back.name}】回来了`);
+  // v4.3.11：班组渲染在 orchestration 面板内（无独立 crew 面板键），置脏走 orchestration
+  dirty.orchestration = true; dirty.top = true;
+  save(S);
 }
 export function initFarewellGift() { ensureFarewellGift(); }

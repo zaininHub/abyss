@@ -50,6 +50,9 @@ export const ACHIEVEMENTS = [
   { id: 'abyss_gaze_egg', name: '凝视深渊', icon: '👁️', desc: '在裂隙余烬中购得「深渊凝视」——屏幕底部中央浮起一只眼睛，正左右打量着你', test: (s, ctx) => !!s.abyssGazeUnlocked },
   { id: 'wish1',    name: '掷币入井', icon: '🪙', desc: '首次向许愿池投币（100 EP）', test: (s, ctx) => (s.wishCoins || 0) >= 1 },
   { id: 'wishwin',  name: '奇迹发生', icon: '✨', desc: '许愿池中奖（0.01% 概率 +100K EP）', test: (s, ctx) => !!s.wishWon },
+  // v4.3.11 反馈③：首购离职礼盒成就——由 checkSpecialTasks 完成 sp3_farewell 时点亮
+  //   （S.achievements.farewell_gift 直写，checkAch 注册表轮询读到即播报）
+  { id: 'farewell_gift', name: '临别赠礼', icon: '🎁', desc: '首次购得「离职礼盒」（1 EP）送给流失预警中的线程', test: (s, ctx) => !!(s.achievements && s.achievements.farewell_gift) || !!(s._specialTasksDone && s._specialTasksDone.sp3_farewell) },
   { id: 'bazaar1',    name: '初次交易', icon: '🏪', desc: '在深渊集市完成首笔交易', test: (s, ctx) => (s.bazaar && s.bazaar.trades) >= 1 },
   { id: 'bazaar_t3',  name: '集市巨贾', icon: '💼', desc: '集市等级达到 Lv.3（累计 60 笔成交）', test: (s, ctx) => (s.bazaar && s.bazaar.trades) >= 60 },
   { id: 'bazaar100', name: '百笔成交', icon: '📈', desc: '在深渊集市累计完成 100 笔交易', test: (s, ctx) => (s.bazaar && s.bazaar.trades) >= 100 },
