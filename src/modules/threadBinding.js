@@ -41,7 +41,8 @@ export function converterUnlocked(type, S0 = S) {
 }
 
 // ---- v3.6.5 反馈①~③：岗位容量 = 对应设施数量 ----
-// 智能分配 / 新线程自动安置都不会让某岗位的线程数超过该值；手动下拉仍可自由调整。
+// v4.3.15 反馈②：智能分配 / 新线程自动安置 / **手动下拉**都不让某岗位线程数超过该值
+// （bindThread 已加容量钳制，「手动下拉仍可自由调整」旧语义废弃；超线程除外恒无上限）。
 //   vehicles：探采平台所有载具升级数量之和（scooter/convoy/orbital/submersible）
 //   atrium  ：灵感工坊数量（升级级数）
 //   hatch   ：异兽孵化工坊数量（孵化升级级数，未解锁时为 0）
@@ -59,7 +60,7 @@ export function converterCapacity(type, S0 = S) {
   }
 }
 
-// 某岗位当前在岗线程数（含手动超额绑定，用于面板展示）
+// 某岗位当前在岗线程数（容量钳制后不应超额；此值供面板展示与 bindThread 容量判定）
 export function converterLoad(type) {
   return (S.cultists || []).filter(c => c.boundTo === type).length;
 }
@@ -184,10 +185,16 @@ export function converterThreadBoost(type) {
 }
 
 // ---- 绑定 / 解绑 / 晋升 ----
+// v4.3.15 反馈②：手动绑定同样受岗位容量钳制（灵感工坊买 2 座最多 2 条线程，其他岗位同理；
+// 超线程除外恒无上限）。同岗位已满（其他线程占着）→ 拒绝并返回 false，由 UI 提示玩家。
+//   目标岗位是线程当前岗位 → 属于原地重选（没占新坑），放行。
 export function bindThread(c, type) {
   // v3.7.1 反馈①：领导者是全局加成位，任何岗位都不收；顺手纠正旧档残留绑定
   if (!canBind(c)) { c.boundTo = null; return false; }
   if (!CONVERTERS[type]) return false;
+  // v4.3.15 反馈②：容量钳制（超线程除外）——非本岗位线程进入已满岗位被拒绝
+  if (type !== HYPER_CONVERTER_ID && c.boundTo !== type
+    && converterLoad(type) >= converterCapacity(type)) return false;
   c.boundTo = type;
   c.assignSince = Date.now();
   return true;

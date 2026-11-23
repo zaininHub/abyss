@@ -113,8 +113,13 @@ test('R7a 蒸馏按钮只写「蒸馏」，消耗产出入悬浮', () => {
   const m = src.match(/id="rp-distill-btn"[\s\S]{0,400}?<\/button>/);
   assert.ok(m, '蒸馏按钮模板缺失');
   assert.ok(/>蒸馏<\/button>$/.test(m[0].trim()), '按钮文字非纯「蒸馏」');
-  assert.ok(/单次蒸馏：-/.test(m[0]), '悬浮缺「单次蒸馏：-X EP」');
-  assert.ok(/\+\$\{fmt\(distillRp\)\}\s*RP/.test(m[0]), '悬浮缺「+Y RP」');
+  // v4.3.15 反馈①：悬浮载体从原生 title 属性改为 data-distill-tip（DOM 气泡即时显示，
+  //   消除浏览器 title ~1s 延迟）——文案移到 distillTip 变量，断言分两段：模板引用变量 + 变量含文案。
+  assert.ok(/data-distill-tip=/.test(m[0]), '悬浮应走 data-distill-tip（DOM 气泡）');
+  const tip = src.match(/const distillTip = `([^`]+)`/);
+  assert.ok(tip, 'distillTip 变量缺失');
+  assert.ok(/单次蒸馏：-/.test(tip[1]), '悬浮缺「单次蒸馏：-X EP」');
+  assert.ok(new RegExp('\\+\\$\\{fmt\\(distillRp\\)\\}\\s*RP').test(tip[1]), '悬浮缺「+Y RP」');
 });
 
 test('R7b 蒸馏在左、自动在右', () => {

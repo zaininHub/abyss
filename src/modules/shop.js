@@ -39,6 +39,8 @@ const THREAD_IDS = ['cpu', 'gpu'];
 
 export function setToastFn(fn) { toastFn = fn; }
 function shopToast(msg) { if (toastFn) toastFn(msg); }
+// v4.3.15 反馈①：属性值转义（data-distill-tip 内嵌引号安全）
+function escAttrShop(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
 // ========== 核心购买（口径不变；v2.3.1 ⑥ 固定 ×1） ==========
 // v3.0.7 反馈②：「产出不足」禁购只针对「消耗 EP 换其他资源」的转化项——
@@ -427,7 +429,11 @@ export function renderAtriumSwitch(host) {
   //   EP 侧 = max(floor(EP×25%), 蒸馏率)，RP 侧 = 该 EP 量 / 蒸馏率。
   const distillEp = S.ep > 0 ? Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) : 0;
   const distillRp = distillEp > 0 ? Math.floor(distillEp / rpDistillRate()) : 0;
-  const distillBtn = (extraStyle = '') => `<button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px;${extraStyle}" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="单次蒸馏：-${fmt(distillEp)} EP +${fmt(distillRp)} RP（蒸馏 EP 的 25%，不足 1 RP 按最低 1 RP 额消耗）">蒸馏</button>`;
+  // v4.3.15 反馈①：悬浮改 data-distill-tip（DOM 气泡读取源）——原生 title 属性有浏览器默认
+  //   ~1s 延迟（hoverTimeToOverride），玩家感知「过很久才展出」；气泡即时显示且样式统一。
+  //   文案口径不变（v4313 R7a 断言继续命中按钮模板内的「单次蒸馏：-」）。
+  const distillTip = `单次蒸馏：-${fmt(distillEp)} EP +${fmt(distillRp)} RP（蒸馏 EP 的 25%，不足 1 RP 按最低 1 RP 额消耗）`;
+  const distillBtn = (extraStyle = '') => `<button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px;${extraStyle}" data-distill-tip="${escAttrShop(distillTip)}" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''}>蒸馏</button>`;
   if (n < 1) {
     // v4.3.7 反馈④：工坊未购时蒸馏按钮仍需可用（原独立行承载；现并入本渲染，单独成行不隐藏）
     host.style.display = '';

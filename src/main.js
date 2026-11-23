@@ -568,7 +568,7 @@ function renderTop() {
   const hEp = document.getElementById('h-ep');
   const hCps = document.getElementById('h-cps');
   const hSalary = document.getElementById('h-salary'); // v2.4.1：顶栏 EP 消耗（线程薪资，负面红）
-  const hRun = document.getElementById('h-run');
+  // v4.3.15 反馈⑤：h-run（本局累计 EP）顶栏 stat 已删除——晋升面板同口径承载，runEarned 仍为结算真源
   const hRank = document.getElementById('h-rank');
   const hRp = document.getElementById('h-rp');
   const hEs = document.getElementById('h-es');
@@ -645,7 +645,7 @@ function renderTop() {
       if (p._tipSig !== html) { p._tipSig = html; p.innerHTML = html; }
     }
   }
-  if (hRun) hRun.textContent = fmt(S.runEarned);
+  // v4.3.15 反馈⑤：h-run 写入已删（顶栏不再显示本局累计 EP）
   // v4.0.5：职级点按整数展示（旧档若残留 1.414… 也不会把顶栏撑成长小数）
   if (hRank) hRank.textContent = String(Math.max(0, Math.round(Number(S.prestigePoints) || 0)));
   if (hRp) hRp.textContent = fmt(S.rp) + ' / ' + fmt(rpCap()); // v2.8.27 ②：RP 存储上限（矩阵存储库扩容）
@@ -869,6 +869,52 @@ function bindWageTipPop() {
   // 滚动/改尺寸时气泡跟着挪（旧 ::after 随 hover 天然跟随，DOM 版需手动）
   window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) place(); }, true);
   window.addEventListener('resize', () => { if (pop() && pop().classList.contains('show')) place(); });
+}
+
+// v4.3.15 反馈①：蒸馏按钮悬浮气泡——原生 title 有浏览器 ~1s 显示延迟（「过很久才展出」），
+// 改 fixed DOM 气泡（wage-tip-pop 范式）即时显示。文案来源 data-distill-tip（renderAtriumSwitch
+// 每次重渲染时写入），事件委托挂稳定宿主 #rp-panel 容器（按钮重建不丢监听）。
+function bindDistillTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('rp-panel');
+  if (!zone || zone._distillTipBound) return;
+  zone._distillTipBound = true;
+  // 气泡节点一次性创建挂 body（renderRpPanel 重建面板不影响 fixed 定位的气泡本体）
+  if (!document.getElementById('distill-tip-pop')) {
+    const popEl = document.createElement('div');
+    popEl.id = 'distill-tip-pop';
+    popEl.className = 'wage-tip-pop distill-tip-pop';
+    popEl.setAttribute('role', 'tooltip');
+    popEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(popEl);
+  }
+  const pop = () => document.getElementById('distill-tip-pop');
+  const place = (anchor) => {
+    const p = pop();
+    if (!p || !anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const tipW = Math.min(360, window.innerWidth * 0.88);
+    const below = r.top < 260;
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const anchorOf = (e) => e.target.closest ? e.target.closest('[data-distill-tip]') : null;
+  const show = (e) => {
+    const anchor = anchorOf(e);
+    if (!anchor) return;
+    const p = pop();
+    if (!p) return;
+    p.textContent = anchor.dataset.distillTip || '';
+    place(anchor);
+    p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => { const p = pop(); if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); } };
+  zone.addEventListener('mouseover', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('mouseout', (e) => { if (anchorOf(e)) hide(); });
+  zone.addEventListener('focusin', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('focusout', hide);
+  window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) hide(); }, true);
 }
 
 // v4.3.2 反馈①：AI 台账悬浮气泡——fixed DOM（复用 wage-tip-pop），取代 data-tip::after 竖排。
@@ -1688,6 +1734,7 @@ function bindEvents() {
   bindFlowTipPop(); // v4.1.2：顶栏产出/消耗悬浮改真实 DOM 气泡（分组换行 + 净流说明）
   bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
   bindAiTipPop(); // v4.3.2 反馈①：AI 台账悬浮改 fixed DOM 气泡（原 data-tip::after 在窄锚点下竖排）
+  bindDistillTipPop(); // v4.3.15 反馈①：蒸馏按钮悬浮改 DOM 气泡（原生 title ~1s 延迟）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   bindKeepAwake(); // v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。

@@ -60,12 +60,13 @@ try {
   d2.text === '蒸馏'
     ? ok('蒸馏按钮精简为「蒸馏」二字（消耗/产出入悬浮）', d2.text)
     : bad('蒸馏按钮文案不符', d2.text);
+  // v4.3.15 反馈①：悬浮载体从原生 title 改 data-distill-tip（DOM 气泡即时显示）——断言同步换源
   const d2t = await page.evaluate(() => {
     const btn = document.getElementById('rp-distill-btn');
-    return btn ? (btn.getAttribute('title') || '') : '';
+    return btn ? (btn.getAttribute('data-distill-tip') || '') : '';
   });
   /-\s*[\d.]+[KMB]?\s*EP\s*\+\s*[\d.]+[KMB]?\s*RP/.test(d2t)
-    ? ok('悬浮含消耗与产出（-X EP +Y RP）', d2t)
+    ? ok('悬浮含消耗与产出（-X EP +Y RP，data-distill-tip）', d2t)
     : bad('悬浮缺消耗/产出', d2t);
 
   // ---- ⑦ 研究点组名「产能研究」「储备扩容」 ----

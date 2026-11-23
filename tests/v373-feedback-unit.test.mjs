@@ -51,12 +51,17 @@ console.log('[A] 班组面板不再展示「在岗/容量」');
 
 test('A1 crew.js 不再计算或拼接容量数字', () => {
   assert.ok(!CREW.includes('slotText'), '不应再有 slotText 辅助函数');
-  assert.ok(!/converterLoad\(|converterCapacity\(/.test(CREW), '不应再从 threadBinding 读容量用于展示');
+  // v4.3.15 反馈②：converterLoad/converterCapacity 重新引入——用于满员岗位「（已满）」标注
+  //   与 bindThread 容量钳制提示（容量=设施数量语义回归），非旧「在岗/容量 x/x」展示。
+  //   反转断言：不得再出现 x/x 拼接展示格式与说明行文案。
+  assert.ok(!/\$\{converterLoad\([^)]*\)\}\/\$\{converterCapacity/.test(CREW), '不应再拼接「x/x」容量展示');
   assert.ok(!CREW.includes('在岗/可容纳'), '说明行不应再写「在岗/可容纳」');
 });
 
 test('A2 下拉选项与筛选按钮只拼岗位名', () => {
-  assert.match(CREW, /\$\{CONVERTERS\[t\] \? CONVERTERS\[t\]\.name : t\}\$\{visibleTypes\.includes\(t\) \? '' : '（未解锁）'\}/, '下拉只保留岗位名 + 旧档未解锁标记');
+  // v4.3.15 反馈②：下拉选项在岗位名后可附「（已满）」标注（容量钳制的视觉提示）——
+  //   反转 v3.7.3「只拼岗位名」为「岗位名 + 未解锁标记 + 可选已满标注」。
+  assert.match(CREW, /CONVERTERS\[t\] \? CONVERTERS\[t\]\.name : t\}\$\{visibleTypes\.includes\(t\) \? '' : '（未解锁）'\}\$\{full \? '（已满）' : ''\}/, '下拉保留岗位名 + 未解锁标记 + 已满标注');
   assert.ok(!CREW.includes('${CONVERTERS[t].name}${slotText(t)}'), '筛选按钮不再附容量');
 });
 

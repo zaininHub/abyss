@@ -103,10 +103,12 @@ try {
     : bad('④ 页头文案不符', JSON.stringify(techH));
 
   // ---- ⑥ 大模块 tab 解锁顺序排列 ----
+  // v4.3.15 反馈④：裂隙解锁早（ch5，且用户明确「大模块应该移到研究点右侧」）——
+  //   顺序调整为 shop/tech/rp/裂隙 → 集市 → 异兽 → 星图 → 宗教 → 政策 → 遗物 → 深潜
   const tabOrder = await page.evaluate(() =>
     [...document.querySelectorAll('.tabs button')].map(b => b.id).filter(id => !['btn-prestige', 'btn-achievement', 'btn-offline', 'btn-storyline'].includes(id)));
-  const WANT_ORDER = ['btn-shop', 'btn-tech', 'btn-rp', 'btn-bazaar', 'btn-pets', 'btn-expedition',
-    'btn-religion', 'btn-rift-tab', 'btn-policy', 'btn-relics', 'btn-delve'];
+  const WANT_ORDER = ['btn-shop', 'btn-tech', 'btn-rp', 'btn-rift-tab', 'btn-bazaar', 'btn-pets', 'btn-expedition',
+    'btn-religion', 'btn-policy', 'btn-relics', 'btn-delve'];
   JSON.stringify(tabOrder) === JSON.stringify(WANT_ORDER)
     ? ok('⑥ 大模块 tab 按解锁顺序排列', tabOrder.map(x => x.replace('btn-', '')).join(' → '))
     : bad('⑥ tab 顺序不符', tabOrder.join(','));

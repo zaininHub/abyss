@@ -11,7 +11,7 @@ import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
-  unlockedConverterIds,
+  unlockedConverterIds, converterLoad, converterCapacity,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
 // v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
@@ -89,15 +89,23 @@ export function renderCrewPanel(container) {
     const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1%）">★</span>' : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
+    // v4.3.15 反馈②：满员岗位标「（已满）」——容量 = 设施数量（灵感工坊 2 座 → 2 坑），
+    //   选中仍会被 bindThread 容量钳制拒绝并回显旧值；标注让玩家在下拉里就能看出原因。
     const opts = visibleTypes.slice();
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
+      opts.map(t => {
+        const full = t !== c.boundTo && t !== HYPER_CONVERTER_ID && converterLoad(t) >= converterCapacity(t);
+        return `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}${full ? '（已满）' : ''}</option>`;
+      })).join('');
     // v3.7.1 反馈①：领导者是全局加成位，不给岗位下拉；v3.7.3 反馈③：卡面不再写领导岗位说明文字
     const bindCtrl = isLeader(c)
       ? ''
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
-    const leaderBtn = isLazyProfession(c) ? '' :
+    // v4.3.15 反馈③：已有领导时其他线程不显示晋升按钮（领导唯一），卸任后恢复——
+    //   「换领导」入口统一收敛到现任领导的「卸任★」，避免玩家误点直接顶替。
+    const hasLeader = (S.cultists || []).some(x => isLeader(x) && x !== c);
+    const leaderBtn = isLazyProfession(c) || (!isLeader(c) && hasLeader) ? '' :
       `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '卸任★' : '晋升★'}</button>`; // v4.3.13 反馈⑥：去「领导」字样防错位
     // v4.2.8 反馈①②③：卡片三行紧凑栅格——
     //   ① 身份行：⚡心情图标（悬浮显示 岗位/超线程/心情/领导 完整状态）+ 线程名 + Lv + 擅长岗位图标（去文字，悬浮读名）；
@@ -259,7 +267,12 @@ export function renderCrewPanel(container) {
       if (!c) return;
       const v = sel.value;
       if (v) {
-        bindThread(c, v);
+        // v4.3.15 反馈②：bindThread 容量钳制拒绝（岗位满员）→ 回显旧值 + 提示玩家
+        if (!bindThread(c, v)) {
+          crewPush(`【${c.name}】分配失败：${CONVERTERS[v] ? CONVERTERS[v].name : v} 已满员（容量 = 设施数量），请先升级设施或换岗`, 'bad');
+          sel.value = c.boundTo || '';
+          return;
+        }
         const match = threadProfession(c) && threadProfession(c).affinity === v;
         crewPush(`【${c.name}】分配至${CONVERTERS[v].name}${match ? '（擅长岗位，无 EP/消耗惩罚）' : ''}`, 'good');
       } else { unbindThread(c); crewPush(`【${c.name}】从岗位撤离（消耗恢复）`, ''); }
