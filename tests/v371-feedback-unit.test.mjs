@@ -59,7 +59,10 @@ test('A1 canBind 是「能否占岗位」的唯一判定源：领导 false，普
 });
 
 test('A2 bindThread 拒绝领导者，并清空旧档残留绑定', () => {
-  reset();
+  // v4.3.15 反馈②：容量钳制上线后，普通线程可绑定前提 = 容量 > 0 且岗位未满——
+  //   探采容量 1（scooter=1；领导残留绑定占坑 1 个但领导者绑定会被下一行拒绝时清空，
+  //   之后坑位空闲）→ n 绑定 vehicles 放行。
+  reset({ upgrades: { scooter: 1 } });
   const c = mk(1, { leader: true, boundTo: 'vehicles' });
   S.cultists.push(c);
   assert.equal(bindThread(c, 'atrium'), false);
@@ -68,6 +71,11 @@ test('A2 bindThread 拒绝领导者，并清空旧档残留绑定', () => {
   S.cultists.push(n);
   assert.equal(bindThread(n, 'vehicles'), true);
   assert.equal(n.boundTo, 'vehicles');
+  // v4.3.15 反馈②：容量满 → 拒绝（探采容量 1 已被 n 占）
+  const m = mk(3);
+  S.cultists.push(m);
+  assert.equal(bindThread(m, 'vehicles'), false, '岗位满员（容量=设施数）应拒绝');
+  assert.equal(m.boundTo, null, '被拒绝后保持空闲');
 });
 
 test('A3 全量智能分配：领导者恒空闲、不占容量、不进超线程，其它线程照常分配', () => {
