@@ -520,9 +520,9 @@ try {
     ok('旧档（无 resonance 字段）安全加载且 SAVE_VERSION 保持 6',
       `默认 ${JSON.stringify(bootState.resonance)}`);
   } else bad('旧档兼容或存档版本异常', JSON.stringify(bootState));
-  // v3.12.8：成就基线 140 → 138（守夜人 / 潮汐级联两条随策略移除）
+  // v3.12.8：成就基线 140 → 138 → 139（v4.3.11 新增 farewell_gift「临别赠礼」）
   // v4.2.X：面板基线 27 → 26（轮回面板移除，回响商店并入晋升面板）
-  if (bootState.panels === 26 && bootState.achievements === 138) {
+  if (bootState.panels === 26 && bootState.achievements === 139) { // v4.3.11：138 → 139（farewell_gift）
     ok('面板清单 / 成就注册表启动期完整接线',
       `${bootState.panels} 面板 / ${bootState.achievements} 成就 / ${bootState.systems} 系统已登记`);
   } else bad('启动期声明清单不完整', JSON.stringify(bootState));
@@ -810,7 +810,7 @@ try {
     `${rui.layers}/20 层 · ${rui.rows.map(x => x.key + '×' + x.mult.toFixed(2)).join(' ')}`);
   else if (resonanceDue) bad('共鸣卡文案与读侧不一致', JSON.stringify(rui));
   // v3.12.8：基线下移到 138（删除 orch_vigil / cascade 两条随策略一并移除的成就）
-  if (ui.achTotal === 138) ok('成就注册表 138 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
+  if (ui.achTotal === 139) ok('成就注册表 139 条完整渲染（逐页）', `${ui.achPages} 页 / ${ui.achTotal} 条`);
   else bad('成就总数不符', JSON.stringify({ total: ui.achTotal }));
   // v4.2.0：v3.10.0 成就（共鸣三连 + chapter35/policy11/research55）均落在长线门槛上；
   //   第 10 章门禁前 30 天推演本就不可达，属预期节奏——结构有效性由 138 条注册表断言兜底。

@@ -167,13 +167,14 @@ test('A8 静态接线：各处不再内联手写清单', () => {
 
 console.log('[B] 成就注册表（纯函数可单测）');
 
-test('B1 138 条成就、id 唯一、无语义重复', () => {
+test('B1 139 条成就、id 唯一、无语义重复', () => {
   // v3.12.8：删除 orch_vigil（守夜人）/ cascade（潮汐级联）——对应策略已按反馈移除
-  assert.equal(ACHIEVEMENTS.length, 138);
-  assert.equal(reg.ACHIEVEMENT_IDS.length, 138);
-  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 138);
+  // v4.3.11：新增 farewell_gift「临别赠礼」（首购离职礼盒，138 → 139）
+  assert.equal(ACHIEVEMENTS.length, 139);
+  assert.equal(reg.ACHIEVEMENT_IDS.length, 139);
+  assert.equal(new Set(reg.ACHIEVEMENT_IDS).size, 139);
   assert.deepEqual(reg.duplicateAchievementTests(), [], 'es1000/es1k 类重复不得回归');
-  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 134); // 138 - 4 条手动点亮
+  assert.equal(ACHIEVEMENTS.filter(a => typeof a.test === 'function').length, 135); // 139 - 4 条手动点亮
   assert.ok(!reg.ACHIEVEMENT_IDS.includes('es1k') && !reg.ACHIEVEMENT_IDS.includes('vow'), '两条语义重复项已移除');
 });
 

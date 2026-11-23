@@ -157,10 +157,10 @@ console.log('[P0-2] 特殊任务触发验证');
     assert.ok(S._specialTasksDone['sp1_museum'], '应触发 sp1');
   });
 
-  t('sp3_farewell：休眠状态时触发', () => {
+  t('sp3_farewell：流失预警状态时触发（v4.3.11 收紧：dormant 不再触发）', () => {
     S._specialTasksDone = {};
     S.buildings = {};
-    S.wageState = { state: 'dormant', debtSec: 0, dormantSec: 10, bufferSec: 0, loseTimer: 0 };
+    S.wageState = { state: 'losing', debtSec: 0, dormantSec: 2000, bufferSec: 0, loseTimer: 10 };
     S._farewellBought = true; // 达成条件含「已购买离职礼盒」（1 EP），此前测试漏设 → 恒失败
     checkSpecialTasks(S, null, null);
     assert.ok(S._specialTasksDone['sp3_farewell'], '应触发 sp3');

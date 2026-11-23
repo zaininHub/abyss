@@ -63,7 +63,7 @@ import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
 import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, renderRiftLevelTech, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（科技树）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
 import { ensureAbyssGaze, setGazeInteract } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
-import { ensureWishWell, initWishWell, ensureFarewellGift, initFarewellGift } from './modules/wishDock.js';
+import { ensureWishWell, initWishWell, ensureFarewellGift, initFarewellGift, tickFarewellRecall } from './modules/wishDock.js';
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
 import { UPGRADES } from './data/upgrades.js';
 import { CHAPTERS } from './data/chapters.js'; // v2.8.15：Wiki 章节讲解
@@ -177,14 +177,8 @@ function renderOrchestrationPanel() {
     <div class="orch-mult-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px;font-size:10.5px;color:var(--text-2);margin-bottom:6px">
       ${res.rows.map(r => `<div style="white-space:nowrap"><span aria-hidden="true" style="${r.focused ? 'color:var(--accent)' : 'opacity:.35'}">${RES_FOCUS_ICONS[r.key] || r.icon}</span> ${r.label} <b class="mono" style="color:${r.mult > 1.0001 ? 'var(--good,#3fb950)' : r.mult < 0.9999 ? 'var(--warn)' : 'var(--text-3)'}">×${r.mult.toFixed(2)}</b></div>`).join('')}
     </div></section>`;
-  } else if (visible) {
-    // v4.3.5 反馈④：共鸣未解锁时不再整块消失——番外章节树（33~37 共鸣章）与成就文案提前提到共鸣，
-    //   玩家在编排卡找不到对应区即「显示被遮挡」。加一行解锁预告（不暴露内部数值条件，与 ??? 范式一致），
-    //   解锁后本行被共鸣块替换（sig 含 res.unlocked，切换会触发重建）。
-    html += `<section class="orch-block" data-orch-block="resonance">
-      <div class="orch-block-title"><span aria-hidden="true">▲</span> 相位共鸣<span class="orch-block-note">尚未解锁</span></div>
-      <div style="font-size:10.5px;color:var(--text-3);margin:6px 0 6px">推进主线至「镜像」之后，编排卡在此处亮出共鸣开关与焦点。</div>
-    </section>`;
+  // v4.3.11 反馈④：共鸣未解锁时整块不展示——v4.3.5 反馈④ 的「预告行」用户实测后仍嫌
+  //   「展示并写明无用文案」（预告没有可操作内容，纯占位）；番外章节树与 wiki 已承担指引职责。
   }
   el.innerHTML = html;
   placeTideSchedPop(); // v4.0.0 ⑤：fixed 浮层按触发按钮视口坐标重定位
@@ -397,7 +391,8 @@ function updateCrossroad() {
 function registerAllPanels() {
   registerPanel({ key: '__prelude', always: true, render: () => {
     ensureWishWell();       // v2.8.30 ③：许愿池（购买研究升级后即时出现/移除）
-    ensureFarewellGift();   // v2.9.2：离职礼盒（线程休眠/流失期间出现）
+    ensureFarewellGift();   // v2.9.2：离职礼盒（v4.3.11 起仅流失预警 losing 期间出现）
+    tickFarewellRecall();   // v4.3.11 反馈③：礼盒 5 分钟召回窗（60s 一次概率判定）
   } });
   registerPanel({ key: 'top', render: renderTop });
   registerPanel({ key: 'hero', render: renderHero });

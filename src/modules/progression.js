@@ -27,8 +27,10 @@ export const SPECIAL_TASKS = [
   {
     id: 'sp3_farewell',
     name: '离职礼物',
+    // v4.3.11 反馈①：条件收紧到 losing（流失预警）——dormant 只是「可能流失」（休眠 ≥1800s
+    //   才进 losing），旧口径玩家「没有流失就触发了离职任务」；staffUnhappy 是废弃字段恒 0。
     desc: '无时间限制；要求购买"离职礼盒"（1 EP）送给流失的线程',
-    condition: (S) => ((S.wageState?.state === 'dormant') || S.staffUnhappy >= 3) && S._farewellBought,
+    condition: (S) => S.wageState?.state === 'losing' && S._farewellBought,
     reward: { type: 'memorial_wall', msg: '解锁"纪念墙"（记录所有流失线程的名字和存活时间）' },
     triggered: false,
     line: 'any',
@@ -157,8 +159,16 @@ export function checkSpecialTasks(S, log, toast) {
         if (task.reward.ep) S.ep = Math.min(S.ep + task.reward.ep, 1e15);
         if (task.reward.dm) addDm(task.reward.dm);
         if (task.reward.fa) { S.faith = (S.faith || 0) + task.reward.fa; gainRes('fp', task.reward.fa); }
-        if (log) log(`特殊任务：${task.name} - ${task.desc}`, 'good');
+        // v4.3.11 反馈②：完成日志两段式——「特殊任务：{名} - {时限}」换行「{要求}」。
+        //   task.desc 约定「无时间限制/限时…；{要求}」格式，按第一个「；」拆两行。
+        const semi = task.desc.indexOf('；');
+        const timeLimit = semi >= 0 ? task.desc.slice(0, semi) : task.desc;
+        const requirement = semi >= 0 ? task.desc.slice(semi + 1) : '';
+        if (log) log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
         if (toast) toast(`✓ ${task.name}`);
+        // v4.3.11 反馈③：sp3 首次完成点亮成就「临别赠礼」（首购离职礼盒）
+        //   _specialTasksDone 在晋升时保留（不在 RUN_RESET_KEYS），成就判定双路径兜底：点亮过就不再熄灭
+        if (task.id === 'sp3_farewell') S.achievements = Object.assign({}, S.achievements, { farewell_gift: true });
       }
     } catch { /* silently skip */ }
   }
