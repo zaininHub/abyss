@@ -1747,16 +1747,10 @@ function bindEvents() {
     const idx = Number(btn.dataset.claim);
     const p = S.projects[idx];
     if (p && p.status === 'pending') {
-      const res = claimProject(p);
+      claimProject(p);
       dirty.projects = true; dirty.top = true;
-      // v2.8.28 修复：EP 奖励领取时已达存储上限 → 溢出自动转入 RP 蒸馏池，明确提示避免「无法领取」困惑
-      // v4.3.13 反馈⑤：RP 未解锁时不再提「转入 RP 蒸馏池」（未购仓库溢出不转 RP，见 v3.0.9 口径）
-      if (res && res.ok && res.amount > 0 && res.epGained < res.amount) {
-        const rpOn = !!(S.resDiscovered && S.resDiscovered.rp);
-        toast(rpOn
-          ? `任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 自动转入 RP 蒸馏池`
-          : `任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 未计入`);
-      }
+      // v4.3.16 反馈②：删除「任务 EP 已达存储上限」toast——addEp 统一入口内部已处理溢出
+      //   （满仓涓流/RP 溢出池），任务领取照常结算，弹窗只会造成「被扣了什么」的困惑。
     }
   });
 

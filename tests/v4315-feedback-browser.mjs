@@ -111,13 +111,15 @@ await sleep(800);
     // 拒绝后 renderCrewPanel 重建 DOM——重新查节点读回显值
     const selAfter = document.querySelector('[data-bind="' + cs[2].id + '"]');
     // 下拉「（已满）」标注（换一条空闲线程的卡看 atrium 选项文案；同样轮询）
-    let selFree = null;
-    for (let i = 0; i < 30 && !selFree; i++) {
+    // v4.3.16 加固：选项文案也轮询——查询窗口恰逢低频帧重建时 selFree.options 读到旧节点（空文案）
+    let optText = '';
+    for (let i = 0; i < 30 && !/（已满）/.test(optText); i++) {
       await new Promise(r2 => setTimeout(r2, 100));
-      selFree = document.querySelector('[data-bind="' + cs[3].id + '"]');
+      const selFree = document.querySelector('[data-bind="' + cs[3].id + '"]');
+      const optFull = selFree ? [...selFree.options].find(o => o.value === 'atrium') : null;
+      if (optFull) optText = optFull.textContent || '';
     }
-    const optFull = selFree ? [...selFree.options].find(o => o.value === 'atrium') : null;
-    return { third, load3, feed, selAfter: selAfter ? selAfter.value : null, optText: optFull ? optFull.textContent : '' };
+    return { third, load3, feed, selAfter: selAfter ? selAfter.value : null, optText };
   });
   if (r.err) ok(false, r.err);
   else {
