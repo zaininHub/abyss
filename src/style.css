@@ -307,7 +307,7 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
   transition: background .15s, transform .09s ease, box-shadow .09s ease;
 }
 
-.btn:hover { background: #30363d; }
+.btn:not(:disabled):not(.tab-locked):hover { background: #30363d; } /* v4.3.13 反馈③：锁定 tab 不高亮（与 v2.7.0 发光 hover 同口径排除） */
 
 /* v3.12.3：点击反馈更顺滑（轻微缩放 + 阴影），避免生硬跳变 */
 .btn:active { transform: scale(0.95); box-shadow: 0 0 0 2px rgba(168,85,247,.25); }

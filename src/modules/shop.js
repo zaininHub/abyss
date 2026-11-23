@@ -422,7 +422,12 @@ export function atriumUpgCost(n) {
 export function renderAtriumSwitch(host) {
   if (!host) return;
   const n = (S.upgrades && S.upgrades.atrium) || 0;
-  const distillBtn = (extraStyle = '') => `<button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px;${extraStyle}" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="蒸馏当前 EP 的 25%（不足 1 RP 时按最低 1 RP 额消耗），按蒸馏效率转化为 RP">蒸馏（-${fmt(rpDistillRate())}/EP +${S.ep > 0 ? fmt(Math.floor(Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) / rpDistillRate())) : 0}RP）</button>`;
+  // v4.3.13 反馈⑦：单次蒸馏按钮只写「蒸馏」二字——消耗/产出细节（-X EP +Y RP）移入
+  //   悬浮 title；原按钮内长文案在窄容器里换行错位。换算口径与点击结算一致：
+  //   EP 侧 = max(floor(EP×25%), 蒸馏率)，RP 侧 = 该 EP 量 / 蒸馏率。
+  const distillEp = S.ep > 0 ? Math.max(Math.floor((S.ep || 0) * 0.25), rpDistillRate()) : 0;
+  const distillRp = distillEp > 0 ? Math.floor(distillEp / rpDistillRate()) : 0;
+  const distillBtn = (extraStyle = '') => `<button class="btn rp-distill-btn" id="rp-distill-btn" style="padding:2px 8px;font-size:11px;${extraStyle}" ${((S.ep || 0) < rpDistillRate() || (S.rp || 0) >= rpCap()) ? 'disabled' : ''} title="单次蒸馏：-${fmt(distillEp)} EP +${fmt(distillRp)} RP（蒸馏 EP 的 25%，不足 1 RP 按最低 1 RP 额消耗）">蒸馏</button>`;
   if (n < 1) {
     // v4.3.7 反馈④：工坊未购时蒸馏按钮仍需可用（原独立行承载；现并入本渲染，单独成行不隐藏）
     host.style.display = '';
@@ -449,9 +454,9 @@ export function renderAtriumSwitch(host) {
   // 保留 id=rp-distill-btn（main.js 委托在 #rp-panel 容器级，click 冒泡可达，事件不需迁移）
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n}</span>
-    <button class="mini-btn" data-atrium-switch aria-pressed="${on}" style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">自动</button>
+    ${distillBtn()} <!-- v4.3.13 反馈⑦：蒸馏在左（高频手动操作靠前），自动开关移到右侧 -->
     <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
-    ${distillBtn('margin-left:auto')}
+    <button class="mini-btn" data-atrium-switch aria-pressed="${on}" style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">自动</button>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {

@@ -56,10 +56,17 @@ try {
     const btn = document.getElementById('rp-distill-btn');
     return { text: btn ? btn.textContent.trim() : null };
   });
-  /蒸馏（-[\d.]+[KMB]?\/EP \+[\d.]+[KMB]?RP）/.test(d2.text || '')
-    ? ok('蒸馏按钮为紧凑单行「蒸馏（-X/EP +NRP）」', d2.text)
+  // v4.3.13 反馈⑦：按钮只写「蒸馏」二字，消耗/产出移入悬浮 title
+  d2.text === '蒸馏'
+    ? ok('蒸馏按钮精简为「蒸馏」二字（消耗/产出入悬浮）', d2.text)
     : bad('蒸馏按钮文案不符', d2.text);
-  !/效率|预计|25%/.test(d2.text || '') ? ok('旧文案（效率/预计/25%）已移除', '') : bad('旧文案残留', d2.text);
+  const d2t = await page.evaluate(() => {
+    const btn = document.getElementById('rp-distill-btn');
+    return btn ? (btn.getAttribute('title') || '') : '';
+  });
+  /-\s*[\d.]+[KMB]?\s*EP\s*\+\s*[\d.]+[KMB]?\s*RP/.test(d2t)
+    ? ok('悬浮含消耗与产出（-X EP +Y RP）', d2t)
+    : bad('悬浮缺消耗/产出', d2t);
 
   // ---- ⑦ 研究点组名「产能研究」「储备扩容」 ----
   console.log('\n[⑦ 研究点组名]');

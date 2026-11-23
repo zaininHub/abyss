@@ -229,14 +229,17 @@ function onFarewellBuy() {
   b.disabled = true;
   b.classList.add('giving');
   save(S); dirty.top = true;
-  // 礼盒飘出动画（0.8s）后立即结算 sp3_farewell（checkSpecialTasks 读到 _farewellBought=true 并完成）
+  // v4.3.13 反馈①：购买即同步结算——去掉 800ms setTimeout 依赖。旧实现若购买后立刻关页，
+  //   _farewellBought=true 落盘但 sp3 未结算；下次进入 losing 时 checkSpecialTasks 静默补结算
+  //   会凭空打出「完成」日志（玩家视角「将要流失时打印了特殊任务」）。改为：飘出动画照播，
+  //   结算与日志/toast 同帧完成，任何时刻落盘都不存在「已购未结算」中间态。
   setTimeout(() => {
     b.classList.remove('giving');
     b.disabled = false;
     b.style.display = 'none';
-    checkSpecialTasks(S, log, toast); // 立即结算，玩家即时看到奖励
-    save(S); dirty.top = true; dirty.achievements = true;
   }, 800);
+  checkSpecialTasks(S, log, toast); // 立即结算，玩家即时看到奖励
+  save(S); dirty.top = true; dirty.achievements = true;
 }
 // v4.3.11 反馈③：召回 tick——礼盒购买后 5 分钟内，每 60s 30% 概率召回一名已流失线程。
 //   由 main.js 周期调用（低频，无独立帧系统）。召回 = 从 lostLog 尾部取回名字，重铸线程入列。

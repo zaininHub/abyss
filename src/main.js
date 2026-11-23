@@ -1169,7 +1169,12 @@ function renderHero() {
   if (hint) {
     if (S.ep >= cap * 0.95) {
       hint.style.display = '';
-      hint.textContent = `EP 已达上限 (${fmt(cap)})，溢出转入 RP 溢出池（5% 转化）`; // v2.8.21 ⑥：EP 上限后不再产生腐化
+      // v4.3.13 反馈⑤：RP 未解锁（未购矩阵存储库）时不提「溢出转入 RP」——该机制在
+      //   RP 解锁前根本不生效（v3.0.9 反馈②口径），提示出现会让玩家误以为 RP 已解锁。
+      const rpOn = !!(S.resDiscovered && S.resDiscovered.rp);
+      hint.textContent = rpOn
+        ? `EP 已达上限 (${fmt(cap)})，溢出转入 RP 溢出池（5% 转化）` // v2.8.21 ⑥：EP 上限后不再产生腐化
+        : `EP 已达上限 (${fmt(cap)})`;
       hint.style.color = 'var(--bad)';
     } else if (S.ep >= cap * 0.8) {
       hint.style.display = '';
@@ -1702,8 +1707,12 @@ function bindEvents() {
       const res = claimProject(p);
       dirty.projects = true; dirty.top = true;
       // v2.8.28 修复：EP 奖励领取时已达存储上限 → 溢出自动转入 RP 蒸馏池，明确提示避免「无法领取」困惑
+      // v4.3.13 反馈⑤：RP 未解锁时不再提「转入 RP 蒸馏池」（未购仓库溢出不转 RP，见 v3.0.9 口径）
       if (res && res.ok && res.amount > 0 && res.epGained < res.amount) {
-        toast(`任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 自动转入 RP 蒸馏池`);
+        const rpOn = !!(S.resDiscovered && S.resDiscovered.rp);
+        toast(rpOn
+          ? `任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 自动转入 RP 蒸馏池`
+          : `任务 EP 已达存储上限，超出 ${fmt(res.amount - res.epGained)} EP 未计入`);
       }
     }
   });

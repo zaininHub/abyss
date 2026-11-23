@@ -84,7 +84,9 @@ export function renderCrewPanel(container) {
       ? `<span class="crew-affinity" title="${affinityName}" style="font-size:13px;cursor:help">${p.icon}</span>`
       : '<span class="crew-affinity" title="无擅长岗位" style="font-size:13px">·</span>';
     const lvl = threadLevel(c);
-    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)">★领导</span>' : '';
+    // v4.3.13 反馈⑥：领导徽章去「领导」字样只留星标——双字徽章把身份行挤出两列栅格导致错位；
+    //   领导身份完整语义仍在悬浮（stateTip「 · 领导」）。
+    const leaderBadge = isLeader(c) ? ' <span style="color:var(--good,#3fb950)" title="领导（全局加成位）">★</span>' : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     const opts = visibleTypes.slice();
@@ -96,7 +98,7 @@ export function renderCrewPanel(container) {
       ? ''
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     const leaderBtn = isLazyProfession(c) ? '' :
-      `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '取消领导' : '晋升领导'}</button>`;
+      `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLeader(c) ? '卸任★' : '晋升★'}</button>`; // v4.3.13 反馈⑥：去「领导」字样防错位
     // v4.2.8 反馈①②③：卡片三行紧凑栅格——
     //   ① 身份行：⚡心情图标（悬浮显示 岗位/超线程/心情/领导 完整状态）+ 线程名 + Lv + 擅长岗位图标（去文字，悬浮读名）；
     //   ② 数值行：+X EP/s -Y EP/s（带符号同式）；
@@ -184,6 +186,13 @@ export function renderCrewPanel(container) {
       }
       const ab = ev.target.closest ? ev.target.closest('[data-autobind]') : null;
       if (ab) {
+        // v4.3.13 反馈⑥：智能分配前置要求已设置领导——领导是全局加成位、恒空闲，
+        //   无领导时全班组都在岗位上，玩家没有可调配的全局位；先晋升一名领导再分配。
+        if (!(S.cultists || []).some(c => isLeader(c))) {
+          crewPush('请先晋升一名领导（★），再使用智能分配', 'bad');
+          renderCrewPanel(container);
+          return;
+        }
         // v3.3.5 反馈①：每次点击都对当前线程做一次完整重排（不再只填空闲线程）
         const k = autoAssignThreads();
         crewPush(k > 0 ? `智能分配：调整 ${k} 条线程（先填满资源岗位，其余转入超线程）` : '智能分配：当前分配已是最优，无需调整', k > 0 ? 'good' : '');

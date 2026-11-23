@@ -159,13 +159,22 @@ export function checkSpecialTasks(S, log, toast) {
         if (task.reward.ep) S.ep = Math.min(S.ep + task.reward.ep, 1e15);
         if (task.reward.dm) addDm(task.reward.dm);
         if (task.reward.fa) { S.faith = (S.faith || 0) + task.reward.fa; gainRes('fp', task.reward.fa); }
-        // v4.3.11 反馈②：完成日志两段式——「特殊任务：{名} - {时限}」换行「{要求}」。
-        //   task.desc 约定「无时间限制/限时…；{要求}」格式，按第一个「；」拆两行。
-        const semi = task.desc.indexOf('；');
-        const timeLimit = semi >= 0 ? task.desc.slice(0, semi) : task.desc;
-        const requirement = semi >= 0 ? task.desc.slice(semi + 1) : '';
-        if (log) log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
-        if (toast) toast(`✓ ${task.name}`);
+        // v4.3.13 反馈①：sp3 残留中间态静默补结算——旧档可能存在 _farewellBought=true 但
+        //   sp3 未结算（上局购买时关页，800ms setTimeout 未跑）的落盘态；此时若进入 losing，
+        //   本函数会凭空打出「完成」日志（玩家视角「将要流失时打印了特殊任务」）。
+        //   口径：只有「本局内玩家真实点击购买」触发的结算才打日志弹 toast；
+        //   帧系统每轮扫描发现的残留补结算一律静默（按钮路径在 wishDock.onFarewellBuy 同帧结算，
+        //   正常游戏流程不会走到这里）。其余特殊任务保持原口径（完成即日志）。
+        const silentBackfill = task.id === 'sp3_farewell';
+        if (!silentBackfill) {
+          // v4.3.11 反馈②：完成日志两段式——「特殊任务：{名} - {时限}」换行「{要求}」。
+          //   task.desc 约定「无时间限制/限时…；{要求}」格式，按第一个「；」拆两行。
+          const semi = task.desc.indexOf('；');
+          const timeLimit = semi >= 0 ? task.desc.slice(0, semi) : task.desc;
+          const requirement = semi >= 0 ? task.desc.slice(semi + 1) : '';
+          if (log) log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
+          if (toast) toast(`✓ ${task.name}`);
+        }
         // v4.3.11 反馈③：sp3 首次完成点亮成就「临别赠礼」（首购离职礼盒）
         //   _specialTasksDone 在晋升时保留（不在 RUN_RESET_KEYS），成就判定双路径兜底：点亮过就不再熄灭
         if (task.id === 'sp3_farewell') S.achievements = Object.assign({}, S.achievements, { farewell_gift: true });
