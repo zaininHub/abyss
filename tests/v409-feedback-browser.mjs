@@ -113,7 +113,8 @@ try {
   // v4.3.5 反馈⑤：「当前 RP X / Y」行删除（顶栏 🔬RP 已有同口径当前值）——断言反转为「不存在」
   rpHead.statCount === 0 ? ok('「当前 RP」行已删（顶栏承载）', `count=${rpHead.statCount}`) : bad('.stat 行仍在', `count=${rpHead.statCount}`);
   !rpHead.hasPreview ? ok('「预计 N RP」独立 span 已并入按钮文案', '') : bad('#rp-distill-preview 仍存在', '');
-  /\/EP \+/.test(rpHead.btnText) ? ok('效率口径并入按钮文案（v4.2.9 紧凑格式 -X/EP +NRP）', rpHead.btnText) : bad('按钮缺效率信息', rpHead.btnText);
+  // v4.3.13 反馈⑦：效率口径从按钮文案移入悬浮 title（按钮只留「蒸馏」二字防错位）
+  rpHead.btnText === '蒸馏' ? ok('按钮精简为「蒸馏」二字（效率口径移入悬浮，v4.3.13）', rpHead.btnText) : bad('按钮文案异常', rpHead.btnText);
 
   // ============ F8 自动购建激活入口迁研究点 ============
   console.log('\n[F8] 自动购建激活入口（研究点 AI 助手类目）');

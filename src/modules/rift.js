@@ -277,7 +277,7 @@ export function buyRiftUpgrade(id) {
 export function delveRift() {
   if (!S.activeRift) return { ok: false, reason: '裂隙已闭合' };
   if (S.riftExpedition) return { ok: false, reason: '已在深入探索中' };
-  if (!S.resDiscovered || !S.resDiscovered.dm) return { ok: false, reason: '需先发现深渊之力（DM）——购入首辆载具或通过裂隙封印获得 DM' };
+  if (!S.resDiscovered || !S.resDiscovered.dm) return { ok: false, reason: '需先发现深渊之力（DM）——购入首辆载具后经探采获得' }; // v4.3.13 反馈④：首裂不再送 DM，提示同步去掉「裂隙封印获得」路径
   const r = S.activeRift;
   const epCost = Math.ceil(r.sealCost * 0.5); // v2.8.30 ⑤：深入只消耗 EP（去 DM 门槛）
   if (S.ep < epCost) return { ok: false, reason: `EP 不足（需 ${fmt(epCost)}）` };
@@ -414,6 +414,11 @@ export function tickRift(dt) {
         power: level,
         level: level,
         sealCost: Math.ceil(cap * ratio * riftSealCostMult()),
+        // v4.3.13 反馈④：首裂不发 DM——首裂出现时 DM 全链未开放（载具未购、深入未开、
+        //   升级未解锁），封印/拥抱附带的 1 DM 是玩家眼中的「凭空赠送」（悬空货币）。
+        //   firstRift 标记的裂隙结算时 dmReward 视作 0（见 grantRiftRewards 调用处），
+        //   从第二只裂隙起 DM 奖励恢复正常——此时玩家已进入 DM 语义链。
+        firstRift: !S._riftSeen,
         dmReward: Math.ceil(1 * level),
         expiresAt: Date.now() + (BALANCE.rift.staySec || 600) * 1000, // v3.6.2 反馈②：在场 10 分钟（原 2 分钟）
       };
@@ -423,11 +428,13 @@ export function tickRift(dt) {
         else if (S.riftAuto === 'auto_embrace') embraceRift();
         else if (S.riftAuto === 'auto_descent') delveRift();
       }
-      // v2.5 ①：首次触发深渊裂隙 = 探采平台/深渊商店解锁（持久标记，跨转生保留）
+      // v2.5 ①：首次触发深渊裂隙 = 探采平台/深渊商店入口开放（持久标记，跨转生保留）
+      // v4.3.13 反馈④：日志文案改「入口已开放」——旧文案「已解锁」与真实解锁顺序不符：
+      //   探采平台/深渊商店的功能解锁 = 购入载具（converterUnlocked），首裂只是开放入口可见性。
       if (!S._riftSeen) {
         S._riftSeen = true;
         dirty.shop = true;
-        log('裂隙开启：探采平台与深渊商店已解锁', 'good');
+        log('裂隙开启：探采平台与深渊商店入口已开放', 'good');
       }
       log(`深渊裂隙在代码底层裂开：${riftLevelName(level)}（Lv.${level}）`, 'bad');
     }
@@ -445,9 +452,10 @@ export function tickRift(dt) {
 
 // ---- v2.6.1 奖励结算（封印/拥抱共用：DM + RP + VS + 信仰 + 余烬） ----
 function grantRiftRewards(r, emberGain, embrace) {
-  const dmGain = sealDmReward(r) * riftDmMult();
-  addDm(dmGain); // v2.8.27 ②：DM 上限
-  if (dmGain > 0) discoverDm();
+  // v4.3.13 反馈④：首裂不发 DM——首裂（firstRift 标记）结算时 dmReward 视作 0，
+  //   不点亮 resDiscovered.dm（发现锚点只能由载具链/后续裂隙点亮）。
+  const dmGain = r.firstRift ? 0 : sealDmReward(r) * riftDmMult();
+  if (dmGain > 0) { addDm(dmGain); discoverDm(); } // v2.8.27 ②：DM 上限
   // RP：锚点解锁后 + level × 0.5（透镜同加成）
   if (S.resDiscovered && S.resDiscovered.rp) {
     const rpGain = BALANCE.rift.rpPerLevel * r.level * riftDmMult();
@@ -644,41 +652,50 @@ export function renderRiftPanel(container) {
     : fmtEta(riftEtaSec());
   let html = `<div class="off-stat"><span>封印次数</span><b>${S.riftsSealed || 0}</b></div>
     <div class="off-stat"><span>裂隙间隔</span><b>${fmtSpawnMin(riftSpawnSec())}</b></div>
-    ${abyssLocked ? '' : `<div class="off-stat"><span id="rift-eta-label">${etaLabel}</span><b id="rift-eta-tab" style="color:var(--purple)">${etaText}</b></div>`}
-    <div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技 · 余烬购买</div>`;
-  for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
-    const lv = riftUpgradeLevel(id);
-    const cost = lv >= u.cap ? null : riftUpgradeCost(id);
-    // v2.6.4 ⑦ → v3.3.4 反馈⑤：哨站文案改「当前 → 下一级」，且下一级与 riftSpawnSec 同口径
-    // v4.3.3 反馈⑨：删「· 每级 -25%，下限 4 分钟」尾巴（下限已改 10 分钟，百分比与实际漂移不符）
-    let desc = u.desc;
-    if (id === 'sentinel') {
-      const cur = riftSpawnSec();
-      if (lv >= u.cap) {
-        desc = `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已满级`;
-      } else {
-        const next = riftSpawnSecAt(lv + 1);
-        desc = next < cur - 1
-          ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)}`
-          : `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已到最短，继续升级不再缩短`;
+    ${abyssLocked ? '' : `<div class="off-stat"><span id="rift-eta-label">${etaLabel}</span><b id="rift-eta-tab" style="color:var(--purple)">${etaText}</b></div>`}`;
+  // v4.3.13 反馈②：裂隙科技树在首次获取余烬前整块不渲染——没见过余烬的玩家看到
+  //   「余烬购买」树只会困惑（买不起也看不懂余烬是什么）；拿到第一枚余烬后整树亮出。
+  const emberSeen = (S.riftEmber || 0) > 0;
+  // v4.3.13 反馈②：VS 相关升级（余烬共振/虚空之心）在首次获取 VS 前隐藏——
+  //   玩家还没见过虚空碎片（VS 来自深潜/裂隙深入），提前亮出只会增加理解成本。
+  const vsSeen = (S.vs || 0) > 0;
+  if (emberSeen) {
+    html += `<div style="margin:10px 0 6px;font-size:11px;color:var(--text-2)">裂隙科技</div>`;
+    for (const [id, u] of Object.entries(BALANCE.rift.upgrades)) {
+      // v4.3.13 反馈②：VS 升级门——vs 为 0 时两张 VS 卡不渲染
+      if (!vsSeen && (id === 'echo' || id === 'voidheart')) continue;
+      const lv = riftUpgradeLevel(id);
+      const cost = lv >= u.cap ? null : riftUpgradeCost(id);
+      // v2.6.4 ⑦ → v3.3.4 反馈⑤：哨站文案改「当前 → 下一级」，且下一级与 riftSpawnSec 同口径
+      // v4.3.3 反馈⑨：删「· 每级 -25%，下限 4 分钟」尾巴（下限已改 10 分钟，百分比与实际漂移不符）
+      let desc = u.desc;
+      if (id === 'sentinel') {
+        const cur = riftSpawnSec();
+        if (lv >= u.cap) {
+          desc = `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已满级`;
+        } else {
+          const next = riftSpawnSecAt(lv + 1);
+          desc = next < cur - 1
+            ? `裂隙出现间隔 ${fmtSpawnMin(cur)} → ${fmtSpawnMin(next)}`
+            : `裂隙出现间隔 ${fmtSpawnMin(cur)} · 已到最短，继续升级不再缩短`;
+        }
       }
-    }
-    // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
-    // v4.3.3 反馈⑧：三项（含无限深入）统一在本树显示互斥开关，删左侧「自动转化」里的深入开关
-    //   （v3.4.9 曾为防双开关不同步把它移走，现在把三处合一，单一入口）。
-    const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
-    const autoOn = S.riftAuto === id;
-    const autoToggle = isAuto && lv > 0
-      ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" aria-pressed="${autoOn ? 'true' : 'false'}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
-      : '';
-    // v3.12.6 ⑥：未购入「无限深入」时整张卡不出现（原来是一张带「需先购入…」的锁定卡，
-    //   玩家嫌这是把解锁条件写在面板上）。买入无限深入后自动解锁，无需任何提示文案。
-    if (id === 'auto_purify' && lv === 0 && riftUpgradeLevel('auto_descent') < 1) continue;
-    const maxed = cost === null;
-    const afford = !maxed && (S.riftEmber || 0) >= cost;
-    // v2.8.30 review：余烬升级价格 pill 化（灰满级/绿可购/红不足）——与回响商店卡统一
-    const pricePill = `<span style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${maxed ? 'rgba(139,148,158,.15)' : afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 余烬'}</span>`;
-    html += `
+      // v2.8.30：自动动作升级项（已购）显示互斥开关——最多开一个
+      // v4.3.3 反馈⑧：三项（含无限深入）统一在本树显示互斥开关，删左侧「自动转化」里的深入开关
+      //   （v3.4.9 曾为防双开关不同步把它移走，现在把三处合一，单一入口）。
+      const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
+      const autoOn = S.riftAuto === id;
+      const autoToggle = isAuto && lv > 0
+        ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" aria-pressed="${autoOn ? 'true' : 'false'}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
+        : '';
+      // v3.12.6 ⑥：未购入「无限深入」时整张卡不出现（原来是一张带「需先购入…」的锁定卡，
+      //   玩家嫌这是把解锁条件写在面板上）。买入无限深入后自动解锁，无需任何提示文案。
+      if (id === 'auto_purify' && lv === 0 && riftUpgradeLevel('auto_descent') < 1) continue;
+      const maxed = cost === null;
+      const afford = !maxed && (S.riftEmber || 0) >= cost;
+      // v2.8.30 review：余烬升级价格 pill 化（灰满级/绿可购/红不足）——与回响商店卡统一
+      const pricePill = `<span style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${maxed ? 'rgba(139,148,158,.15)' : afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${maxed ? 'var(--text-3)' : afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${maxed ? '已满级' : cost + ' 余烬'}</span>`;
+      html += `
       <div class="rift-upg-row" data-rift-upg="${id}">
         <div style="flex:1">
           <div style="font-size:13px;color:var(--text-1)">${u.name}${isAuto ? '' : ` <span style="color:var(--text-3);font-size:11px">Lv.${lv}/${u.cap}</span>`}</div>
@@ -687,6 +704,7 @@ export function renderRiftPanel(container) {
         ${autoToggle}
         ${maxed ? pricePill : `<button class="btn ${afford ? '' : 'disabled'}" data-rift-buy="${id}" ${afford ? '' : 'disabled'}>${cost} 余烬</button>`}
       </div>`;
+    }
   }
   container.innerHTML = html;
 }
