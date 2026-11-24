@@ -424,6 +424,8 @@ function normalizeCrew(raw) {
     if (c.level === undefined) c.level = 1;
     if (c.xp === undefined) c.xp = 0;
     if (c.leader === undefined) c.leader = false;
+    // v4.3.21 反馈⑥：领导等级（Lv1 起步，+0.01%/级）——旧档缺省补 Lv1（+1% 与 v4.3.20 行为一致）
+    if (c.leaderLv === undefined) c.leaderLv = 1;
     if (c.boundTo !== undefined && c.boundTo !== null && raw.converterOn && raw.converterOn[c.boundTo] === false) c.boundTo = null;
   }
   // v3.3.1 反馈⑤：领导者唯一——旧档若存在多位领导者，只保留第一位

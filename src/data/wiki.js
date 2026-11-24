@@ -103,7 +103,7 @@ export const WIKI_SECTIONS = [
     <p>班组调「人头」：线程去哪个岗位、自由产出多少、领导者全局加成；效能编排调「倍率」：四条管线各乘多少。两者分层相乘，不互相覆盖——EP、RP、PT 各结算一次，DM 探采只看编排，不吃班组加成。</p>
     <h4>岗位容量与智能分配</h4>
     <p>每个资源岗位可容纳的线程数 = 对应设施数量：探采平台 = 所有载具升级数量之和，灵感工坊 = 工坊级数，异兽孵化 = 孵化工坊级数，信仰圣所 = 圣所等级。智能分配先把所有已解锁且开启的资源岗位按容量填满（擅长职业优先归位），放不下的才转入超线程；资源岗位满员、未解锁、开关关闭或容量为 0 时，其余线程统一转入超线程。分配时优先安排空闲线程，再重排已在岗线程以纠正错位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程会自动补进还有空位的岗位，且不打扰其它线程。「一键收回」把所有线程撤离岗位、全部置为空闲（消耗恢复）。</p>
-    <p>🎖️ 领导提供固定全局产出 +${Math.round(D.thread.binding.leaderGlobalPerLeader * 100)}%，不占任何岗位、不计入岗位容量，没有个人 EP 产出、不升级，薪资照常消耗；提拔时会去除该员工等级，卸任后从 Lv1 重新开始升级，恢复为可分配线程。</p>
+    <p>🎖️ 领导是全局加成位：全局产出 +${Math.round(D.thread.binding.leaderGlobalPerLeader * 100)}% 基础（Lv1），可在班组卡「升级★」逐级提升，每级 +0.01%、每秒消耗 +${D.thread.binding.leaderEpPerSecPerLv} EP/s（Lv.n 消耗 ${D.thread.binding.leaderEpPerSecPerLv}×n EP/s）；不占任何岗位、不计入岗位容量，没有个人 EP 产出，薪资照常消耗另计。任命时该线程 worker 等级重置 Lv1；卸任后领导等级保留、线程恢复为可分配状态（默认空闲），再任命同一线程时恢复其保留的领导等级。</p>
     <h4>超线程岗位</h4>
     <p>⚙️ 超线程不依赖任何模块解锁，开局即可分配：该线程自由 EP 产出 ×${D.thread.binding.hyperOutputMult}、消耗 ×${D.thread.binding.hyperSalaryMult}。它不产出转化资源，是智能分配的最后兜底岗位：只有资源岗位按容量分配完之后，剩下的线程才会转到这里。</p>
     <h4>懒惰态（EP 满上限惩罚）</h4>
@@ -126,7 +126,7 @@ export const WIKI_SECTIONS = [
     <h4>深渊裂隙（班组 ${D.rift.threadUnlock} 条线程后解锁，首次 ${Math.round((D.rift.firstSpawnSec||D.rift.spawnSec)/60)} 分钟必出，此后基础 ${Math.round(D.rift.spawnSec/60)} 分钟一遇，在场 ${Math.round(D.rift.staySec/60)} 分钟）</h4>
     <p>裂隙初始恒为 <b>Lv.1</b>，且<b>不会自行升级</b>：只有主动购入 <b>科技树「裂隙等级」</b>（消耗 EP + DM，可无限升级，每级 +1 级、奖励同步提升）才会变强。等级名称沿用 ${D.rift.levelNames.join(' / ')}，超过 5 级统称「虚空之隙」。三选项：<b>封印</b>（消耗 EP = 存储上限 30%~50%，得 DM+RP+余烬）/ <b>拥抱</b>（损失 20% EP 换 ×5 爆发）/ <b>深入</b>（60s 探索，产出递增 + 腐化累积，超 ${D.rift.delveFailCorrupt}% 损失 ${Math.round(D.rift.delveFailLoss*100)}% 封印成本；DM 未解锁时按钮灰显；<b>深入消耗随裂隙等级指数增长</b>（×1.75/级，Lv1 3 EP/s → Lv10 232 EP/s））。</p>
     <h4>裂隙余烬（跨转生保留）</h4>
-    <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（DM+20%/级）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。裂隙等级本身改由科技树「裂隙等级」升级（EP + DM，无限）。</p>
+    <p>封印 +${D.rift.emberSeal} / 拥抱 +${D.rift.emberEmbrace} / 深入 +${D.rift.emberDelve}×级。用于裂隙科技：哨站（间隔 -25%/级）、透镜（封印/拥抱的 DM·RP +20%/级，深入不含）、护符（成本 -10%/级）、余烬共振（VS+50%/级），及三项自动动作（互斥单开）。裂隙等级本身改由科技树「裂隙等级」升级（EP + DM，无限）。</p>
     <p class="wiki-hint">腐化满额/吞噬倒计时期间不触发新裂隙（走吞噬路径，避免机制叠加）。</p>
   ` },
   { id: 'religion', name: '宗教与虔诚', unlock: 'faith', body: () => `

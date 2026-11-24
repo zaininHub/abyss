@@ -48,8 +48,9 @@ console.log('[1] 领导乘区进产出弹窗');
     // textContent 或 innerHTML 任一含「领导 +1%（全局产出）」；弹窗可能 display:none（hover 才显示），
     // 但内容已随 hover 更新——用 textContent 判定
     const blob = (r.text || '') + (r.html || '');
-    ok(/领导 \+1%（全局产出）/.test(blob), '产出弹窗应含「领导 +1%（全局产出）」');
-    ok(!/领导 \+1% EP/.test(blob), '语义是全局产出而非 EP');
+    // v4.3.21 反转：领导行 toFixed(2)（Lv1 → +1.00%）
+    ok(/领导 \+1\.00%（全局产出）/.test(blob), '产出弹窗应含「领导 +1.00%（全局产出）」');
+    ok(!/领导 \+1\.00% EP/.test(blob), '语义是全局产出而非 EP');
   }
 }
 
@@ -109,9 +110,9 @@ console.log('[2] 关闭转化线程下岗');
   });
   if (r2.err) ok(false, r2.err);
   else {
-    ok(r2.grew, '关闭开关后日志增长');
-    ok(r2.texts.some(t => /2 条线程下岗了/.test(t)), `日志含「2 条线程下岗了」（实际：${r2.texts.find(t => /下岗/.test(t)) || '无'}）`);
-    ok(r2.bound, '绑定线程已置空闲（boundTo 清空）');
+    // v4.3.21 反馈⑤反转：快捷开关全部静默——下岗不再打日志（功能本身保留）
+    ok(!r2.grew, '关闭开关后日志零增长（v4.3.21 反馈⑤ 静默）');
+    ok(r2.bound, '绑定线程已置空闲（boundTo 清空，下岗功能保留）');
     ok(r2.disabledOpt === true, '下岗后孵化岗在下拉中灰显（disabled）');
   }
 }

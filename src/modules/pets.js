@@ -4,7 +4,6 @@ import { getStorylinePets } from '../core/storylineContent.js'; // v3.7.0：异�
 import { elv, fmt, ptCap, spendRes, buyRes } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
 import { BALANCE } from '../data/balance.js'; // v3.4.0 反馈③：孵化汇率与 tick 同源
 import { converterThreadBoost, setConverterEnabled } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径） // v4.3.20 反馈②：孵化关闭线程下岗
-import { log } from '../core/runtime.js'; // v4.3.19 反馈⑥：原位置孵化开关补日志
 import { checkEasterEggs } from './progression.js';
 
 // v3.7.0：不能把表在模块加载时固化——main.js 才在启动链里 setStoryline，
@@ -334,15 +333,9 @@ export function renderPetGrid(container) {
       }
       const tog = ev.target.closest ? ev.target.closest('[data-pt-distill-toggle]') : null;
       if (tog) {
-        // v4.3.20 反馈②：关闭时线程下岗（孵化岗位）+ 下岗日志（与快捷开关同口径）
-        const turningOff = S.ptDistillOn !== false;
+        // v4.3.21 反馈⑤：快捷开关类操作全部静默（开关/下岗均不打日志）——下岗功能本身保留
         S.ptDistillOn = S.ptDistillOn === true ? false : true;
-        // v4.3.19 反馈⑥：补日志（与快捷开关同口径——原位置开关此前静默）
-        log(`异兽孵化${S.ptDistillOn ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, S.ptDistillOn ? 'good' : 'bad');
-        if (turningOff && S.ptDistillOn !== true) {
-          const offN = setConverterEnabled('hatch', false);
-          if (offN > 0) log(`${offN} 条线程下岗了（异兽孵化停转，岗位收回）...`, 'bad');
-        }
+        if (S.ptDistillOn !== true) setConverterEnabled('hatch', false);
         save(S);
         _gridSig = '';
         renderPetGrid(container);

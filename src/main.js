@@ -11,7 +11,7 @@ import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBre
   wageDebtMult, wageKeepCostMult, // v1.3 C：四态徽章展示用（v4.2.3：wageLoseChance 随文案精简移出——概率不再对玩家展示）
   isLazy, // v2.7.1：线程懒惰态（EP 满上限惩罚）；倍率值直接读 BALANCE.lazy（v4.0.3 徽章只留状态名）
   rpDistillRate, vehicleDmPerMin, vehicleEpPerDm, vehicleRateMult, probeFlowPerSec, rpEffScale, // v2.7.4 ⑦：RP 蒸馏效率 // v3.2.2 ①：DM 探采快捷开关解锁判定 // v3.3.3 反馈③：RP 效率递增
-  multBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, unitCost, fmtRes,
+  multBreakdown, drainMultBreakdown, addRp, addPt, rpCap, dmCap, ptCap, focusPerLevel, unitCost, fmtRes,
   corruptionCap, researchMult, clampRunResourceBalances, spendRes, esCost, esGain } from './modules/economy.js'; // v3.10.2 ④：上限回落钳制 // v3.7.0 QA：腐化上限 / 研究读侧 // v2.8.22 ④：加成明细悬浮 + v2.8.30 专注曲线 // v3.4.1 ④：资源数值统一口径 // v3.12.13：资源增减统计（任务进度口径） // v4.2.6：esCost 走 economy 单参包装（闭包读 S.eternal，QA 钩子与产品读侧同源） // v4.2.8：esGain 供分章节推演累计晋升 ES 奖励（纯读函数）
 // v2.0：特殊任务 + 彩蛋系统（从 events.js 提取，打破 main.js ↔ events.js 循环依赖）
 import { checkEasterEggs } from './modules/progression.js';
@@ -30,7 +30,8 @@ import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaar
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS, bindFoldToggle } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组） // v4.2.5 ①：bindFoldToggle 导出（研究点/科技树/遗物纯类目 h3 统一折叠）
 import { EXPAND_KEY, anchorShown, anchorDone, riftShown, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
-import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, leaderLvOf, levelUpLeader, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源 // v4.3.21 反馈⑥：领导等级制 QA 钩子
+import { leaderSalaryPerSec } from './modules/economy.js'; // v4.3.21 反馈⑥：领导津贴真源（QA 钩子）
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -1006,7 +1007,8 @@ let _flowTipKind = null;
 function flowTipHtml(kind) {
   const isOut = kind === 'output';
   const parts = isOut ? cpsBreakdown() : drainBreakdown();
-  const mults = multBreakdown();
+  // v4.3.21 反馈③：消耗弹窗只显示「消耗减少」类乘区（drainMultBreakdown），不再复读产出侧全局加成
+  const mults = isOut ? multBreakdown() : drainMultBreakdown();
   // v4.3.14 反馈⑥：专注已是产出来源里的独立行（+X/s 绝对量），「加成与说明」组不再重复列百分比
   const wSt = (S.wageState || {}).state;
   const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `休眠期仅扣保命成本 ×${wageKeepCostMult()}` : '';
@@ -1540,35 +1542,24 @@ function bindQuickSwitches() {
     const b = e.target.closest('[data-qs]');
     if (!b) return;
     const k = b.dataset.qs;
-    // v4.3.20 反馈②：关闭转化 → 岗位线程下岗（setConverterEnabled 返回下岗数），日志汇总
-    const offIds = { atrium: 'atrium', probe: 'vehicles', hatch: 'hatch', temple: 'temple' };
-    const convKey = offIds[k];
-    const turningOff = convKey ? converterEnabled(convKey) : false;
-    let offN = 0;
-    if (k === 'atrium') offN = setConverterEnabled('atrium', !converterEnabled('atrium'));
-    else if (k === 'probe') offN = setConverterEnabled('vehicles', !converterEnabled('vehicles'));
-    else if (k === 'hatch') offN = setConverterEnabled('hatch', !converterEnabled('hatch'));
-    else if (k === 'temple') offN = setConverterEnabled('temple', !converterEnabled('temple'));
+    // v4.3.21 反馈⑤：快捷开关全部静默（开关/下岗均不打日志）——下岗功能本身保留（setConverterEnabled 内部置闲）。
+    // v4.3.20 反馈②：关闭转化 → 岗位线程下岗（setConverterEnabled 内部处理，返回值仅供原位置开关路径参考）
+    if (k === 'atrium') setConverterEnabled('atrium', !converterEnabled('atrium'));
+    else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
+    else if (k === 'hatch') setConverterEnabled('hatch', !converterEnabled('hatch'));
+    else if (k === 'temple') setConverterEnabled('temple', !converterEnabled('temple'));
     // v3.4.9 反馈①：无限深入（与自动封印/自动拥抱互斥——同一 riftAuto 字段）
     else if (k === 'descent') {
       const on = S.riftAuto === 'auto_descent';
       S.riftAuto = on ? null : 'auto_descent';
-      log(`快捷开关：无限深入${on ? '关闭' : '开启（裂隙出现即自动深入，消耗 EP 换 DM/余烬）'}`, on ? 'bad' : 'good');
     }
     // v3.4.9 反馈②：自动净化
     else if (k === 'purify') {
       S.autoPurify = !S.autoPurify;
-      log(`快捷开关：自动净化${S.autoPurify ? '开启（腐化每涨 5% 自动净化 5%，消耗 EP）' : '关闭'}`, S.autoPurify ? 'good' : 'bad');
     }
     save(S); // 状态即时落盘（与原位置开关同口径）
     dirty.shop = true; dirty.top = true; dirty.rp = true; dirty.pets = true; dirty.religion = true; dirty.rift = true; // 原位置开关卡随渲染周期同步
     renderQuickSwitches();
-    if (k === 'descent' || k === 'purify') return; // 上面已单独打日志（不走下方的转化器文案）
-    const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化', temple: '圣所产出' };
-    const nowOn = converterEnabled(convKey);
-    log(`快捷开关：${labels[k]}${nowOn ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, nowOn ? 'good' : 'bad');
-    // v4.3.20 反馈②：下岗汇总日志（N 条线程下岗了...）
-    if (turningOff && !nowOn && offN > 0) log(`${offN} 条线程下岗了（${labels[k]}停转，岗位收回）...`, 'bad');
   });
 }
 
@@ -3233,7 +3224,7 @@ if (typeof window !== 'undefined') {
     petsModuleUnlocked, // v3.7.2 ①：异兽模块与顶栏 PT 同口径的唯一解锁判定
     starChartUnlocked, // v3.12.9：星图解锁唯一判定源（宠物在前）
     prestigePanelVisible, // v3.7.3 ⑤：晋升模块与 P3 阶段门控同源
-    threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
+    threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, leaderLvOf, levelUpLeader, leaderSalaryPerSec, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
       converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子
     // v3.7.0：核心抽象接线与 30 天浏览器推演所需的只读/纯函数钩子（不改变玩法）
     lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS,

@@ -104,8 +104,8 @@ await sleep(600);
   ok(r.level === 1 && r.xp === 0, `提拔后等级重置（Lv.${r.level} xp=${r.xp}）`);
   ok(r.starText === '★' && /全局产出 \+1%/.test(r.starTip), `星标「★」+悬浮「全局产出 +1%」（实际「${r.starTip}」）`);
   ok(r.noSelect, '领导卡无岗位下拉');
-  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /晋升为领导，全局产出 \+1%/.test(e.msg)));
-  ok(feedOk, '晋升班组流水「+1%」文案');
+  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.1，全局产出 \+1\.00%，消耗 10 EP\/s）/.test(e.msg)));
+  ok(feedOk, '晋升班组流水改等级制口径「就任领导（Lv.1，全局产出 +1.00%，消耗 10 EP/s）」');
 }
 
 // ===== ③ 裂隙面板 =====

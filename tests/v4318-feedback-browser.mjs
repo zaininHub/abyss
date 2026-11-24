@@ -26,6 +26,7 @@ await sleep(1500);
 // 种班组场景：解锁班组 + 5 条线程
 await page.evaluate(() => {
   window.S._crewUnlocked = true;
+  window.S.ep = 50000; // v4.3.21：领导津贴在 EP<=0 时钳 0——种 EP 才能验卡面消耗
   window.S.cultists = Array.from({ length: 5 }, (_, i) => ({
     id: i + 1, name: 'T' + i, profession: 'worker', level: 1, xp: 0,
     leader: false, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60,
@@ -93,8 +94,9 @@ console.log('[1] 智能分配灰显 / 领导卡 +1%');
   });
   if (r2.err) ok(false, r2.err);
   else {
-    ok(r2.cOut === '1%', `领导卡产出行「1%」（实际「${r2.cOut}」）`);
-    ok(!r2.hasLv, '领导卡无 Lv');
+    ok(r2.cOut === '1.00%', `领导卡产出行「1.00%」（v4.3.21 toFixed(2)，实际「${r2.cOut}」）`);
+    // v4.3.21 反转：领导卡显示领导等级 Lv.X，旧断言「无 Lv」删除
+    ok(r2.hasLv, '领导卡显示领导等级 Lv.X（v4.3.21 等级制）');
     ok(r2.cSal && parseFloat(r2.cSal.replace(/,/g, '')) > 0, `领导卡消耗 >0（实际「${r2.cSal}」）`);
     ok(r2.salAfter >= r2.salBefore - 1e-9, `晋升后顶栏薪资不降（${r2.salBefore.toFixed(3)} → ${r2.salAfter.toFixed(3)}，Lv1 空闲同口径）`);
   }

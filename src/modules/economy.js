@@ -21,8 +21,8 @@ import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
   threadBindOutputFactor, threadBindSalaryFactor, converterThreadBoost,
-  leaderGlobalMult, threadLevel, threadLevelMult, converterEnabled,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈③：工坊消耗与开关同口径
+  leaderGlobalMult, leaderLvOf, threadLevel, threadLevelMult, converterEnabled,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈③：工坊消耗与开关同口径 // v4.3.21 反馈⑥：领导等级消耗
 
 const B = BALANCE;
 
@@ -609,6 +609,15 @@ function staffCostBase() {
   return geomCostRaw({ base: BALANCE.thread.firstCost, growth: 1.25, owned: n, qty: 0, mult: earlyDiscount });
 }
 
+// v4.3.21 反馈⑥：领导每秒消耗 = 10 EP/s × 领导等级（独立于薪资口径的「领导津贴」）。
+//   显示=实扣：顶栏消耗、班组卡面、tickWages 实扣三处同源本函数。
+export function leaderSalaryPerSec() {
+  if ((S.ep || 0) <= 0) return 0; // EP 已空：与薪资同口径钳 0
+  const lead = (S.cultists || []).find(c => c && c.leader === true);
+  if (!lead) return 0;
+  return 10 * leaderLvOf(lead);
+}
+
 export function staffSalaryPerSec() {
   let m = 1;
   // v3.4.8 反馈⑦：能量合剂/循环供氧/生物打印餐/内存扩容/缓存优化（消耗优化整组）已删除——
@@ -653,15 +662,20 @@ export function focusTotalBonus(lv) {
 // 与 staffOutputParts 的 one 同口径。此前卡面是裸口径、消耗侧 salPer 是全局实扣口径
 //（salaryBase 已含 outMult），产线越强两侧偏差越大，10 级超线程出现「+8.9/-14」
 // 收支倒挂观感。补齐后产出/消耗同口径可比；纯显示层，不动真值（EP 生产速度不变）。
-export function threadOutMult() {
-  let outMult = 1;
-  // v2.8.30：专注每级加成从少到多（8%/12%/20% 分段递增），达到上限后固定 20%/级
-  outMult *= (1 + focusTotalBonus(S.focusLevel));
-  outMult *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
+// v4.3.21 反馈②：拆出 focus / rest 两段——「升级专注只加产出、不推高线程薪资消耗」；
+//   threadOutMult() 仍是产出侧全口径真源（focus × rest），薪资走 rest（salaryOutMult）。
+function threadOutMultParts() {
+  const focus = 1 + focusTotalBonus(S.focusLevel);
+  let rest = 1;
+  rest *= (1 + fxValue('threadAdd')) * fxValue('threadMul') * researchMult('thread'); // v2.1 建筑驱动 + v2.8.4 研究点·矩阵意识
   // v3.4.7 反馈①：CPU/GPU 限购（cpu 3 级 / gpu 2 级），加成随级数乘算叠加（+50%/级、×2/级）
-  if (S.upgrades.cpu) outMult *= Math.pow(1.5, S.upgrades.cpu || 0);
-  if (S.upgrades.gpu) outMult *= Math.pow(2, S.upgrades.gpu || 0);
-  return outMult;
+  if (S.upgrades.cpu) rest *= Math.pow(1.5, S.upgrades.cpu || 0);
+  if (S.upgrades.gpu) rest *= Math.pow(2, S.upgrades.gpu || 0);
+  return { focus, rest };
+}
+export function threadOutMult() {
+  const { focus, rest } = threadOutMultParts();
+  return focus * rest;
 }
 
 // v3.6.3 ②：一次算出「实际产出」与「薪资基数」两份，避免两处各自重算导致口径漂移。
@@ -670,7 +684,12 @@ function staffOutputParts() {
   // v2.1 R1 修复：这里只应用线程专属乘数（团队协作/CPU/GPU）。
   // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
   // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
-  const outMult = threadOutMult(); // v4.3.18 反馈②：真源收敛到 threadOutMult（消除两处口径漂移）
+  // v4.3.18 反馈②：真源收敛到 threadOutMult（消除两处口径漂移）
+  // v4.3.21 反馈②：薪资基数走 salaryOutMult（不含专注）——升级专注只加产出不推高薪资；
+  //   产出 total 仍吃专注全口径（产出侧 threadOutMult = focus × rest）。
+  const { focus, rest } = threadOutMultParts();
+  const outMult = focus * rest; // 产出侧全口径（= threadOutMult）
+  const salaryOutMult = rest;   // 薪资侧口径（不含专注）
   let total = 0, salaryBase = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
@@ -683,13 +702,14 @@ function staffOutputParts() {
     //   玩家感知「固定消耗少了」；且卡面显示 salPer 平均摊派与实扣不符。同口径后显示=实扣。
     const isLead = c.leader === true;
     const one = (c.output || 3) * 0.8 * mood * outMult * (isLead ? 1 : threadLevelMult(threadLevel(c)));
+    const oneSal = (c.output || 3) * 0.8 * mood * salaryOutMult * (isLead ? 1 : threadLevelMult(threadLevel(c)));
     const factor = isLead ? 1 : threadBindOutputFactor(c);
     total += isLead ? 0 : one * factor;
-    salaryBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
+    salaryBase += oneSal * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
   }
   // v4.3.14 反馈⑥：专注份额单独核算——产出悬浮窗把「线程裸产出」与「专注增量」拆成两行，
   //   玩家不再疑惑「线程行里是否已含专注」。focusPart = total − total/专注乘数（专注一项的绝对量）。
-  const focusMult = 1 + focusTotalBonus(S.focusLevel);
+  const focusMult = focus;
   const focusPart = focusMult > 1 ? total - total / focusMult : 0;
   return { total, salaryBase, focusPart };
 }
@@ -878,6 +898,9 @@ export function computeCps() {
 
 // ========== v2.8.14：顶部产出/消耗来源明细（按升级类目合并） ==========
 // v2.8.22 ④：全局加成明细（与 globalMult 同口径，悬浮气泡展示）——只列实际生效项
+// v4.3.21 反馈③：拆产/消两套——产出侧列 globalMult 全部乘区（multBreakdown），
+//   消耗侧只列「消耗减少」类乘区（drainMultBreakdown：薪资口径里的减免项），
+//   不再把职级/全局加成等产出行复读进消耗弹窗（与产出加成重复、语义错位）。
 export function multBreakdown() {
   const parts = [];
   if (S.prestigePoints > 0) parts.push(`职级 ×${prestigeBoost().toFixed(2)}`); // v4.2.X：明细与真实乘区同源（软递减）
@@ -907,11 +930,25 @@ export function multBreakdown() {
   //   （economy.globalMult: m *= leaderGlobalMult()），此前悬浮明细漏列，玩家不知 1% 去哪了。
   //   语义口径：全局 EP 产出 +1%（不是 EP +1%）；与班组扩编（researchMult('crew')）同属班组系乘区。
   const lead = leaderGlobalMult();
-  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(0)}%（全局产出）`);
+  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(2)}%（全局产出）`);
   // v3.7.0：线专属乘区（与 globalMult 同源），悬浮明细不再漏列
   const lineG = lineRule(K.GLOBAL_MULT, 1, S);
   if (lineG !== 1) parts.push(`线专属全局 ×${lineG.toFixed(2)}`);
   if (lineFlag(K.SYMBIOSIS, S)) parts.push('共生 ×1.05');
+  return parts;
+}
+
+// v4.3.21 反馈③：消耗侧减免明细——只列「全局消耗减少」类乘区（与 staffSalaryPerSec 的 m 段同源），
+//   不再复读产出侧全局加成（职级/全局加成/宠物/遗物等）。
+export function drainMultBreakdown() {
+  const parts = [];
+  if (S.upgrades.dmmind) parts.push('深渊心智 ×0.60 薪资');
+  const fuel = fxValue('fuelMul');
+  if (fuel < 0.999) parts.push(`节能建筑 ×${fuel.toFixed(2)} 薪资`);
+  const wageTech = researchMult('wage');
+  if (wageTech < 0.999) parts.push(`薪酬协商 ×${wageTech.toFixed(2)}`);
+  const echo = echoWageMult();
+  if (echo < 0.999) parts.push(`回响·薪酬共鸣 ×${echo.toFixed(2)}`);
   return parts;
 }
 
@@ -936,6 +973,9 @@ export function drainBreakdown() {
   const parts = [];
   const sal = salaryDrainPerSec();
   if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
+  // v4.3.21 反馈⑥：领导津贴单独一行（10 EP/s × 等级，独立于薪资口径）
+  const lead = leaderSalaryPerSec();
+  if (lead > 0.005) parts.push(`领导津贴 -${fmt(lead)}/s（10×Lv）`);
   const probe = probeDrainPerSec();
   if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
   const faith = faithDrainNow(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
@@ -1020,7 +1060,7 @@ export function atriumDrainPerSec() {
   return (BALANCE.atrium.epRate || 150) * n * n;
 }
 export function totalDrainPerSec() {
-  return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
+  return salaryDrainPerSec() + leaderSalaryPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
 }
 // v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 resourceFlows pt:hatch 流实扣同口径）
 // v4.3.20 反馈③：口径统一到实扣——旧式 5000×lv² 与实扣 15000×lv×绑定加成矛盾（lv=3 顶栏虚高 3 倍），

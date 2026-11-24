@@ -170,9 +170,31 @@ export function leaderCount() { return (S.cultists || []).filter(isLeader).lengt
 // v4.3.14 反馈②：领导全局加成改「固定 +1%/位」（原 +10%/位且被班组扩编放大）。
 //   用户口径：领导是全局 1% 产出加成位，文案「+1%」，数值恒定不吃研究点放大——
 //   移除 researchMult('crew') 乘区（rp_crew 语义改为按 desc 直接生效，见 balance.js）。
+// v4.3.21 反馈⑥：领导等级制——+1% 基础（Lv1）+ 0.01%/级，leaderGlobalCap 下线（上限改由
+//   leaderLevelCap 控制曲线）；领导等级存 c.leaderLv（旧档缺省按 1）。
+export function leaderLvOf(c) {
+  const lv = Math.max(1, Math.floor(Number(c && c.leaderLv) || 1));
+  return Math.min(lv, B().leaderLevelCap || 50);
+}
 export function leaderGlobalMult() {
   const n = leaderCount();
-  return 1 + Math.min(B().leaderGlobalCap, n * B().leaderGlobalPerLeader);
+  if (n <= 0) return 1;
+  // 领导唯一（state.js 归一化保证），取现任领导的等级
+  const lead = (S.cultists || []).find(isLeader);
+  const lv = leaderLvOf(lead);
+  return 1 + B().leaderGlobalPerLeader + (lv - 1) * B().leaderLevelBonusPerLv;
+}
+// v4.3.21 反馈⑥：领导升级（手动按钮）——全局加成 +0.01%/级、每秒消耗 +10 EP/s×级。
+// 升级不耗资源（消耗体现在每秒 EP 支出），代价是持续的额外 EP 支出。
+export function leaderUpgradeCost() { return 0; } // 升级本身免费（曲线靠每秒消耗平衡），保留钩子供 UI
+export function canLevelUpLeader(c) {
+  return !!(c && isLeader(c) && leaderLvOf(c) < (B().leaderLevelCap || 50));
+}
+export function levelUpLeader(c) {
+  if (!c || !isLeader(c)) return { ok: false, reason: '该线程不是领导' };
+  if (!canLevelUpLeader(c)) return { ok: false, reason: '已达领导等级上限' };
+  c.leaderLv = leaderLvOf(c) + 1;
+  return { ok: true, level: c.leaderLv };
 }
 
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
@@ -341,7 +363,8 @@ export function rollProfession(suggested) {
 export function tickThreads(dt) {
   const leveled = [];
   for (const c of (S.cultists || [])) {
-    // v4.3.14 反馈②：领导不升级——等级在晋升时清零，且不再积累 XP（全局 +1% 是固定加成位）
+    // v4.3.21 反馈⑥：领导等级走手动升级按钮（levelUpLeader），不积 XP；worker 等级在
+    //   任命时已重置 Lv1，卸任恢复普通线程后按普通规则重新积累 XP。
     if (isLeader(c)) continue;
     const g = threadXpGainPerSec(c);
     if (g <= 0) continue;

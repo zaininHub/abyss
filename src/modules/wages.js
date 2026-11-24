@@ -8,7 +8,7 @@
 // 转机：休眠或流失预警持续 ≥60s 后恢复，触发补偿 buff（产出 ×restBonusMult 持续 restBonusSec，默认 ×1.5/120s）
 import { S } from '../state.js';
 import { BALANCE } from '../data/balance.js';
-import { staffSalaryPerSec, wageDebtMult, wageKeepCostMult, wageLoseChance, fmt } from './economy.js';
+import { staffSalaryPerSec, leaderSalaryPerSec, wageDebtMult, wageKeepCostMult, wageLoseChance, fmt } from './economy.js';
 import { crewPush } from './crew.js'; // v3.1.0 反馈③：班组流水（状态切换写入班组事件）
 
 let logFn = null;
@@ -44,6 +44,9 @@ export function tickWages(dt) {
     // 休眠/流失预警：只扣保命成本
     S.ep = Math.max(0, S.ep - Math.min(S.ep, salary * wageKeepCostMult() * dt));
   }
+  // v4.3.21 反馈⑥：领导津贴独立实扣（10 EP/s×等级，不随薪资四态打折——领导是独立雇佣关系）
+  const leadSal = leaderSalaryPerSec();
+  if (leadSal > 0) S.ep = Math.max(0, S.ep - Math.min(S.ep, leadSal * dt));
 
   // ---- 状态迁移 ----
   if (w.state === 'ok') {

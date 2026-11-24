@@ -105,11 +105,13 @@ test('C1 班组面板不含「不占岗位」字样', () => {
 });
 
 test('C2 领导卡仍不给岗位下拉（v3.7.1 不变量不回退）', () => {
-  assert.match(CREW, /const bindCtrl = isLeader\(c\)\s*\? ''/, '领导分支为空字符串');
+  // v4.3.21 反馈⑥：bindCtrl 变量改名 isLead（领导等级制重构），语义不变
+  assert.match(CREW, /const bindCtrl = isLead\s*\? ''/, '领导分支为空字符串');
   assert.match(CREW, /<select data-bind="\$\{c\.id\}"/, '普通线程仍有下拉');
 });
 
 test('C3 Wiki 规则说明保留玩法事实（非班组面板）', () => {
+  // v4.3.21 反馈⑥：领导等级制文案改写（+1% 基础 +0.01%/级），「不占任何岗位」语义保留
   assert.match(WIKI, /不占任何岗位、不计入岗位容量/, 'Wiki 仍解释领导全局位规则');
 });
 

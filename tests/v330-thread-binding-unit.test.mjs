@@ -157,10 +157,15 @@ test('方向③：领导者提供全局加成，且封顶', () => {
   assert.equal(leaderGlobalMult(), 1);
   S.cultists.push(mkCultist({ leader: true }));
   assert.equal(leaderCount(), 1);
+  // v4.3.21 反馈⑥：领导等级制——Lv1 = +1% 基础；多位领导只会取现任（state 归一化唯一）
   assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader);
-  // 超过封顶数仍被钳制
-  for (let i = 0; i < 20; i++) S.cultists.push(mkCultist({ leader: true }));
-  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalCap);
+  // 等级加成：Lv.n = +1% + (n-1)×0.01%
+  S.cultists[0].leaderLv = 10;
+  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + 9 * BALANCE.thread.binding.leaderLevelBonusPerLv);
+  // 超过等级上限仍被钳制
+  S.cultists[0].leaderLv = 999;
+  const cap = BALANCE.thread.binding.leaderLevelCap || 50;
+  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + (cap - 1) * BALANCE.thread.binding.leaderLevelBonusPerLv);
 });
 
 test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.3.8 口径），关闭后归 0', () => {
