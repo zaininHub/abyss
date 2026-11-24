@@ -37,7 +37,8 @@ test('R1b crew 卡面：领导不显示 Lv + 产出行「+1%」+ 消耗平均摊
   // v4.3.21 反转：领导等级制——卡面显示领导 Lv（leaderLvOf），普通线程显示 worker Lv；
   //   产出行直出「+X% 全局」与独立津贴消耗行；动态刷新跳领导产出行、消耗行走津贴真源
   assert.ok(/const\s+lvHtml\s*=\s*isLead\s*\?\s*` <span class="crew-lv">Lv\.\$\{leadLv\}<\/span>`\s*:\s*` <span class="crew-lv">Lv\.\$\{lvl\}<\/span>`/.test(crew), '领导卡面应显示领导等级 Lv');
-  assert.ok(/isLead\s*\?\s*`<span class="crew-num">\+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b> 全局/.test(crew), '领导产出行应直出等级实算百分比');
+  // v4.3.22 消歧：产出行改「全局产出 +X.XX%」+「津贴 -Y EP/s」
+  assert.ok(/isLead\s*\?\s*`<span class="crew-num">全局产出 \+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b>/.test(crew), '领导产出行应直出「全局产出 +等级实算百分比」');
   assert.ok(/if\s*\(c\.leader !== true\)\s*\{/.test(crew), '动态刷新应只跳领导产出行');
   assert.ok(/c\.leader === true \? fmt\(leaderSalaryPerSec\(\)\) : fmt\(salPer \* salaryFactorOf\(c\)\)/.test(crew), '领导消耗行应走津贴真源（10 EP/s×级）');
 });

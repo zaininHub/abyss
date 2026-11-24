@@ -38,17 +38,19 @@ function unlocked(key) {
 const D = BALANCE;
 const purify = D.corruption.purge;
 
-// v3.12.6 ⑨：百科改为「玩法索引」写法——先按玩法分卷，再在卷内给机制 / 数值 / 注意三段，
+// v3.12.6 反馈⑨：百科改为「玩法索引」写法——先按玩法分卷，再在卷内给机制 / 数值 / 注意三段，
 // 而不是按代码模块平铺。分组是纯导航结构，章节 id 与内容不变（历史断言与外部引用继续有效）。
+// v4.3.22 反馈③（kg 化）：每卷补 related 跨卷互链——章节尾部渲染「相关章节」跳转按钮，
+//   解决「看了线程章不知道薪资四态和编排的关系去哪查」类跨卷迷路。
 export const WIKI_GROUPS = [
-  { key: 'loop', name: '核心循环', hint: '先看这一卷：一分钟能上手', ids: ['intro', 'flows', 'res'] },
-  { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance'] },
+  { key: 'loop', name: '核心循环', hint: '先看这一卷：一分钟能上手', ids: ['intro', 'flows', 'res'], related: ['thread', 'prestige', 'appendix'] },
+  { key: 'thread', name: '线程与编排', hint: '人头怎么排、倍率怎么压', ids: ['thread', 'orchestration', 'schedule', 'watch', 'resonance'], related: ['rift', 'delve', 'assistant'] },
   // v4.0.9 反馈④：深渊层卷纳入星空与远征
-  { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市 / 星空', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'expedition', 'line'] },
+  { key: 'abyss', name: '深渊层', hint: '裂隙 / 腐化 / 信仰 / 深潜 / 集市 / 星空', ids: ['tide', 'rift', 'religion', 'policy', 'delve', 'bazaar', 'expedition', 'line'], related: ['watch', 'prestige', 'line'] },
   // v4.0.9 反馈④：长线卷纳入永恒矩阵专章；查阅卷收许愿池与彩蛋
-  { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'eternals', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'] },
-  { key: 'auto', name: '自动化', hint: 'AI 助手的编制与节拍', ids: ['assistant', 'supply', 'ledger', 'automation_num'] },
-  { key: 'ref', name: '查阅', hint: '解锁条件与公式', ids: ['unlock', 'appendix', 'misc'] },
+  { key: 'long', name: '长线与转生', hint: '什么会留下、什么会清零', ids: ['prestige', 'eternals', 'ach', 'longline', 'chronicle', 'chronicle2', 'chronicle3', 'chronicle4'], related: ['res', 'misc'] },
+  { key: 'auto', name: '自动化', hint: 'AI 助手的编制与节拍', ids: ['assistant', 'supply', 'ledger', 'automation_num'], related: ['thread', 'orchestration', 'unlock'] },
+  { key: 'ref', name: '查阅', hint: '解锁条件与公式', ids: ['unlock', 'appendix', 'misc'], related: ['intro', 'res'] },
 ];
 
 export const WIKI_SECTIONS = [
@@ -71,6 +73,19 @@ export const WIKI_SECTIONS = [
     </ol>
     <h4>想找 AI 助手？</h4>
     <p>AI 助手（自动化挂机的核心）走这条线：<b>研究点攒 50 RP + 100 万 EP → 科技树买「AI 管理核心」→ 右侧出现 AI 助手面板 → 研究点页「AI 助手」分组买「助手扩编协议」扩编</b>。详细编制/占编/节拍说明见左栏「自动化」卷的四章；自动购建（AI 自动买建筑）需全部资源点解锁后，在研究点页「AI 助手」分组一次性激活。</p>
+    <h4>按问题找答案（速查）</h4>
+    <table class="wiki-tbl wiki-qa"><tr><th>我遇到的问题</th><th>去哪查</th></tr>
+      <tr><td>EP 满了不涨 / 产出浪费</td><td>「资源与货币」· 存储上限；「产出与台账」· 来源明细</td></tr>
+      <tr><td>线程不产出 / 产出变低</td><td>「线程与薪资」· 薪资四态 + 心情；「潮汐与腐化」· 腐化惩罚</td></tr>
+      <tr><td>线程怎么分配岗位</td><td>「线程与薪资」· 岗位容量与智能分配；职业擅长看班组卡图标悬浮</td></tr>
+      <tr><td>领导有什么用 / 怎么升级</td><td>「线程与薪资」· 领导段（全局 EP 产出加成位，班组卡「升级★」）</td></tr>
+      <tr><td>EP 一直掉 / 薪资扛不住</td><td>「线程与薪资」· 四态薪资状态机；「潮汐与腐化」· 值守与长夜</td></tr>
+      <tr><td>裂隙是什么 / 腐化满了会怎样</td><td>「裂隙与余烬」；「潮汐与腐化」· 腐化与吞噬倒计时</td></tr>
+      <tr><td>晋升会失去什么 / 保留什么</td><td>「晋升循环」；「长线与转生」卷各章（什么留下什么清零）</td></tr>
+      <tr><td>AI 助手不干活 / 占编是什么</td><td>「自动化」卷：AI 助手与自动化 → 定价与扩编 → 动作台账</td></tr>
+      <tr><td>XX 系统怎么解锁</td><td>「解锁条件手册」（全系统解锁条件一张表）</td></tr>
+      <tr><td>日志里的「特殊任务」「彩蛋」</td><td>「许愿池与彩蛋」· 特殊任务表 + 彩蛋触发清单</td></tr>
+    </table>
     <p>挂机张力来自三层：<b>存储上限</b>（EP 满了必须花，否则浪费产出）、<b>线程薪资四态</b>（EP 不足会欠薪→休眠→流失）、<b>矩阵腐化</b>（深入裂隙/深潜累积腐化，满额触发深渊吞噬倒计时）。</p>
     <p class="wiki-hint">看数习惯：面板上的「/秒」「/10 分钟」是同一套账，想核对就比同一帧的顶栏产出与本局增量。</p>
   ` },
@@ -103,7 +118,7 @@ export const WIKI_SECTIONS = [
     <p>班组调「人头」：线程去哪个岗位、自由产出多少、领导者全局加成；效能编排调「倍率」：四条管线各乘多少。两者分层相乘，不互相覆盖——EP、RP、PT 各结算一次，DM 探采只看编排，不吃班组加成。</p>
     <h4>岗位容量与智能分配</h4>
     <p>每个资源岗位可容纳的线程数 = 对应设施数量：探采平台 = 所有载具升级数量之和，灵感工坊 = 工坊级数，异兽孵化 = 孵化工坊级数，信仰圣所 = 圣所等级。智能分配先把所有已解锁且开启的资源岗位按容量填满（擅长职业优先归位），放不下的才转入超线程；资源岗位满员、未解锁、开关关闭或容量为 0 时，其余线程统一转入超线程。分配时优先安排空闲线程，再重排已在岗线程以纠正错位，原本手动设定的超线程也会先被拉回来补资源岗位；新招募的线程会自动补进还有空位的岗位，且不打扰其它线程。「一键收回」把所有线程撤离岗位、全部置为空闲（消耗恢复）。</p>
-    <p>🎖️ 领导是全局加成位：全局产出 +${Math.round(D.thread.binding.leaderGlobalPerLeader * 100)}% 基础（Lv1），可在班组卡「升级★」逐级提升，每级 +0.01%、每秒消耗 +${D.thread.binding.leaderEpPerSecPerLv} EP/s（Lv.n 消耗 ${D.thread.binding.leaderEpPerSecPerLv}×n EP/s）；不占任何岗位、不计入岗位容量，没有个人 EP 产出，薪资照常消耗另计。任命时该线程 worker 等级重置 Lv1；卸任后领导等级保留、线程恢复为可分配状态（默认空闲），再任命同一线程时恢复其保留的领导等级。</p>
+    <p>🎖️ 领导是全局加成位：全局 EP 产出 +${Math.round(D.thread.binding.leaderGlobalPerLeader * 100)}% 基础（Lv1，按总产出百分比放大、不是 +1% EP/s 的固定流量），可在班组卡「升级★」逐级提升，每级 +0.01%、领导津贴每秒 ${D.thread.binding.leaderEpPerSecPerLv} EP/s（Lv.n 津贴 ${D.thread.binding.leaderEpPerSecPerLv}×n EP/s）；不占任何岗位、不计入岗位容量，没有个人 EP 产出，薪资照常消耗另计。任命时该线程 worker 等级重置 Lv1；卸任后领导等级保留、线程恢复为可分配状态（默认空闲），再任命同一线程时恢复其保留的领导等级。</p>
     <h4>超线程岗位</h4>
     <p>⚙️ 超线程不依赖任何模块解锁，开局即可分配：该线程自由 EP 产出 ×${D.thread.binding.hyperOutputMult}、消耗 ×${D.thread.binding.hyperSalaryMult}。它不产出转化资源，是智能分配的最后兜底岗位：只有资源岗位按容量分配完之后，剩下的线程才会转到这里。</p>
     <h4>懒惰态（EP 满上限惩罚）</h4>
@@ -397,6 +412,18 @@ export const WIKI_SECTIONS = [
   { id: 'misc', name: '许愿池与彩蛋', unlock: null, body: () => `
     <h4>许愿池（设施「许愿池」购入后出现）</h4>
     <p>购入通用设施「许愿池」（100K EP）后，屏幕边缘出现可拖动/可收起的许愿池浮窗：投一枚硬币（100 EP，3 秒冷却）——万分之 1 概率获得 100K EP（受存储上限约束，溢出转入 RP 池）。文案「万一呢？」就是这个玩法的全部设计说明；投币计数与中奖各挂一枚成就。</p>
+    <h4>特殊任务（后台自动判定，达成即日志 + 弹 toast ✓）</h4>
+    <p>特殊任务是隐藏的一次性目标，不占任务版、不看条件不触发，达成时日志打「特殊任务：{名} - {要求}」。三个通用 + 三个线专属：</p>
+    <table class="wiki-tbl"><tr><th>任务</th><th>达成条件</th><th>结果</th></tr>
+      <tr><td>🏛️ 博物馆的访客</td><td>名下建筑买够 2 种、且全部建筑总级数 ≥3（买了就达成，等级就是展品）</td><td>纪念性收录（无资源奖励）——你的工作台被博物馆看上了</td></tr>
+      <tr><td>🧵 最后的线程</td><td>线程总数达到 100 名</td><td>纪念性收录（纪念第 100 名线程的到来；当前版本无附加效果）</td></tr>
+      <tr><td>🎁 离职礼物</td><td>线程进入流失预警时，任务版出现「离职礼盒」按钮，花 1 EP 买下</td><td>流失记录（最近流失线程记名留档）+ 5 分钟召回窗 + 成就「临别赠礼」</td></tr>
+      <tr><td>📋 协议测试（秩序线）</td><td>秩序重构者线，完成 3 次「重写」操作</td><td>RP +5（纪念性收录：协议编辑器重写功能已随版本演进下线，此任务在当前版本实际不可达成）</td></tr>
+      <tr><td>👁️ 深渊凝视（深渊线）</td><td>深渊行者线，腐化达到 30</td><td>DM +2</td></tr>
+      <tr><td>📢 传教（信仰线）</td><td>信仰传播者线，线程总数达到 50 名</td><td>FA（信仰）+5</td></tr>
+    </table>
+    <h4>彩蛋（隐藏触发，🥚 标记）</h4>
+    <p>EP 恰好 42 时点击工作台 / 凌晨 4 点打开游戏 / 连续 5 次晋升不选天赋 / 挂机 30 分钟不动 / 开局 1 分钟不操作 / 同时清空线程·升级·科技且信仰 ≥1000 / 按序购入 warmup→lean→speed2→quantum2 / 拥有影猫时连点它 10 次。彩蛋发现即日志「🥚 …」，部分藏资源奖励（PT/DM/RP），跨晋升保留收集记录。</p>
     <h4>离职礼盒</h4>
     <p>线程进入休眠/流失预警或全员不开心时，任务版会出现一次性任务「离职礼盒」：花 1 EP 给流失线程买礼盒，完成本局特殊任务。温柔对待你的线程。</p>
   ` },

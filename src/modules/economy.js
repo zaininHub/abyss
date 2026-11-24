@@ -930,7 +930,7 @@ export function multBreakdown() {
   //   （economy.globalMult: m *= leaderGlobalMult()），此前悬浮明细漏列，玩家不知 1% 去哪了。
   //   语义口径：全局 EP 产出 +1%（不是 EP +1%）；与班组扩编（researchMult('crew')）同属班组系乘区。
   const lead = leaderGlobalMult();
-  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(2)}%（全局产出）`);
+  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(2)}%（全局 EP 产出）`);
   // v3.7.0：线专属乘区（与 globalMult 同源），悬浮明细不再漏列
   const lineG = lineRule(K.GLOBAL_MULT, 1, S);
   if (lineG !== 1) parts.push(`线专属全局 ×${lineG.toFixed(2)}`);

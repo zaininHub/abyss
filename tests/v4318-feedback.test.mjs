@@ -17,8 +17,8 @@ const stripComments = (s) => s.replace(/\/\/[^\n]*/g, '');
 
 test('R1 crew：领导卡「+1%」直出 + refreshCrewDyn 跳产出行、消耗行照刷', () => {
   const crew = stripComments(read('src/modules/crew.js'));
-  // v4.3.21 反转：领导等级制——产出行模板直出等级实算百分比「+X% 全局」+ 独立津贴消耗行
-  assert.ok(/isLead\s*\?\s*`<span class="crew-num">\+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b> 全局/.test(crew), '领导产出行应直出等级实算百分比');
+  // v4.3.21 反转：领导等级制——产出行模板直出「全局产出 +X.XX%」+ 独立津贴消耗行；v4.3.22 消歧
+  assert.ok(/isLead\s*\?\s*`<span class="crew-num">全局产出 \+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b>/.test(crew), '领导产出行应直出「全局产出 +等级实算百分比」');
   // 领导只跳产出行（if c.leader !== true 包住 out 写入）；消耗行在 if 外（照刷，否则恒 -0 假象）
   assert.ok(/if\s*\(c\.leader !== true\)\s*\{/.test(crew), '动态刷新应只跳领导产出行');
   const loop = crew.match(/for\s*\(let i = 0; i < outEls\.length[\s\S]*?\n {2}\}/);
