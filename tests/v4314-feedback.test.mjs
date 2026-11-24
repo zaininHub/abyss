@@ -33,12 +33,14 @@ test('R1a 班组自动填充：渲染后不可滚即追加下一组', () => {
 test('R2a 领导固定 +1%：balance 值与 leaderGlobalMult 不再乘研究点', () => {
   const bal = stripComments(read('src/data/balance.js'));
   assert.ok(/leaderGlobalPerLeader:\s*0\.01/.test(bal), 'leaderGlobalPerLeader 应为 0.01（+1% 基础）');
-  // v4.3.21 反转：leaderGlobalCap 下线，上限改由 leaderLevelCap 控制曲线（+0.01%/级）
-  assert.ok(/leaderLevelBonusPerLv:\s*0\.0001/.test(bal), '每级 +0.01% 应为 leaderLevelBonusPerLv=0.0001');
+  // v4.3.23 反转：三键下线（leaderLevelBonusPerLv/leaderEpPerSecPerLv/leaderLevelCap）
+  assert.ok(!/leaderLevelBonusPerLv/.test(bal), 'leaderLevelBonusPerLv 应已下线（等级走普通乘数）');
+  assert.ok(!/leaderEpPerSecPerLv/.test(bal), 'leaderEpPerSecPerLv 应已下线（津贴取消）');
+  assert.ok(!/leaderLevelCap/.test(bal), 'leaderLevelCap 应已下线（等级上限走 levelCap=10）');
   const tb = stripComments(read('src/modules/threadBinding.js'));
   assert.ok(!/researchMult\('crew'\)/.test(tb), 'leaderGlobalMult 不应再乘 researchMult(crew)');
-  // v4.3.21 反转：公式改「1 + 基础 + (lv-1)×每级」，上限由 leaderLvOf 钳制
-  assert.ok(/1\s*\+\s*B\(\)\.leaderGlobalPerLeader\s*\+\s*\(lv\s*-\s*1\)\s*\*\s*B\(\)\.leaderLevelBonusPerLv/.test(tb), 'leaderGlobalMult 公式应为 1+基础+(lv-1)×每级');
+  // v4.3.23 反转：公式改「1 + 基础 × threadLevelMult(领导Lv)」
+  assert.ok(/1\s*\+\s*B\(\)\.leaderGlobalPerLeader\s*\*\s*threadLevelMult/.test(tb), 'leaderGlobalMult 公式应为 1+基础×等级乘数');
 });
 
 test('R2b 班组扩编乘区改挂 economy.globalMult（无死数据红线）', () => {
@@ -57,31 +59,37 @@ test('R2c 领导零个人产出：staffOutputParts 跳过 leader', () => {
   assert.ok(/salaryBase \+= oneSal \* \(c\.boundTo === HYPER_CONVERTER_ID \? 1 : factor\);/.test(eco), '薪资基数应计入领导份额');
 });
 
-test('R2d 领导等级制：tickThreads 跳过 leader + 任命重置 worker 等级 + 卸任保留领导等级', () => {
+test('R2d 领导走普通 XP 路径：tickThreads 不跳 leader + 任命不重置等级', () => {
   const tb = stripComments(read('src/modules/threadBinding.js'));
-  assert.ok(/if\s*\(isLeader\(c\)\)\s*continue;/.test(tb), 'tickThreads 应跳过领导（不积累 XP）');
+  // v4.3.23 反转：tickThreads 不再跳领导——领导也按普通 XP 积累升级
+  //   （精确锁 tickThreads 函数体：autoAssignThreads 的 isLeader continue 是合法逻辑，不能误杀）
+  const tt = tb.match(/export function tickThreads\(dt\)\s*\{[\s\S]{0,600}?\n\}/);
+  assert.ok(tt, 'tickThreads 函数缺失');
+  assert.ok(!/isLeader\(c\)\)\s*continue;/.test(tt[0]), 'tickThreads 不应再跳过领导（v4.3.23 普通 XP 路径）');
+  // threadXpGainPerSec 领导特判：恒按合适口径积 XP（领导不绑岗位）
+  assert.ok(/isLeader\(c\)\)\s*return\s*B\(\)\.xpPerSec\s*\*\s*B\(\)\.xpSuitableMult/.test(tb), 'threadXpGainPerSec 应给领导恒定合适口径 XP');
   const crew = stripComments(read('src/modules/crew.js'));
   const m = crew.match(/if\s*\(!c\.leader\)\s*\{[\s\S]{0,700}?crewPush\(`【\$\{c\.name\}】就任领导/);
   assert.ok(m, '晋升分支缺失');
-  // v4.3.21 反转：任命时重置该线程 worker 等级 Lv1 + 领导等级起步/恢复（c.leaderLv 取保留值）
-  assert.ok(/c\.level\s*=\s*1;\s*c\.xp\s*=\s*0/.test(m[0]), '任命时应重置该线程等级（level=1, xp=0）');
-  assert.ok(/c\.leaderLv\s*=\s*Math\.max\(1,/.test(m[0]), '任命时应恢复领导等级（保留值，首任 Lv1）');
+  // v4.3.23 反转：任命不再重置等级（等级是线程自身属性，跨任命保留）
+  assert.ok(!/c\.level\s*=\s*1;\s*c\.xp\s*=\s*0/.test(m[0]), '任命不应重置该线程等级（v4.3.23）');
+  assert.ok(!/c\.leaderLv\s*=/.test(crew), 'crew.js 不应再写 leaderLv（字段已下线）');
   const ret = crew.match(/else\s*\{[\s\S]{0,300}?c\.leader\s*=\s*false;[\s\S]{0,300}?crewPush\(`【\$\{c\.name\}】卸任领导者/);
   assert.ok(ret, '卸任分支缺失');
-  // v4.3.21 反转：卸任不再清等级——领导等级保留（旧断言「卸任后从 Lv1 重新开始」已删除）
-  // 注：正则惰性匹配止于「卸任领导者」，保留文案在模板串内，故对全文断言
-  assert.ok(/卸任领导者（领导等级 Lv\.\$\{leaderLvOf\(c\)\} 保留）/.test(crew), '卸任应保留领导等级');
+  // v4.3.23 反转：卸任文案改「经验保留，回归普通线程」
+  assert.ok(/卸任领导者（Lv\.\$\{threadLevel\(c\)\} 经验保留，回归普通线程）/.test(crew), '卸任应保留等级');
 });
 
 test('R2e 领导文案「+1%」：卡片悬浮 + wiki + 晋升日志', () => {
   const crew = read('src/modules/crew.js');
-  // v4.3.21 反转：等级制文案——星标悬浮写「+1% 基础，每级 +0.01%」
-  assert.ok(/领导（全局 EP 产出 \+1% 基础，每级 \+0\.01%/.test(crew), '卡片星标悬浮应写「全局 EP 产出 +1% 基础，每级 +0.01%」（v4.3.22 消歧）');
+  // v4.3.23 反转：等级制文案——星标悬浮写「+1% × 等级乘数」
+  assert.ok(/领导（全局 EP 产出 \+1% × 等级乘数/.test(crew), '卡片星标悬浮应写「全局 EP 产出 +1% × 等级乘数」（v4.3.23）');
   const wiki = read('src/data/wiki.js');
-  // v4.3.21 反转：wiki 文案改等级制口径（+1% 基础 Lv1 + 升级按钮 + 卸任保留）
+  // v4.3.23 反转：wiki 文案改普通升级口径（无津贴、无手动升级、任命不重置）
   assert.ok(/领导是全局加成位/.test(wiki), 'wiki 应写「领导是全局加成位」');
-  assert.ok(/每级 \+0\.01%、领导津贴每秒 \$\{D\.thread\.binding\.leaderEpPerSecPerLv\} EP\/s/.test(wiki), 'wiki 应写明每级加成与津贴（v4.3.22 消歧口径）');
-  assert.ok(/卸任后领导等级保留/.test(wiki), 'wiki 应写明卸任保留等级');
+  assert.ok(/等级乘数/.test(wiki), 'wiki 应写等级乘数口径');
+  assert.ok(!/领导津贴/.test(wiki), 'wiki 不应再出现「领导津贴」（机制下线）');
+  assert.ok(!/升级★/.test(wiki.split('领导是全局加成位')[1] || ''), 'wiki 领导段不应再写手动「升级★」（v4.3.23）');
 });
 
 // ============ 反馈③ 裂隙等级迁移 ============

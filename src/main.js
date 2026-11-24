@@ -30,8 +30,7 @@ import { tickBazaar, renderBazaarPanel, bindBazaarPanel, canUnlockBazaar, bazaar
 import { religionUnlocked, faithCap } from './data/religions.js'; // v3.4.9 反馈⑧：FP 上限进顶栏
 import { renderShop, renderThreadShop, renderVehicles, renderDmShop, renderBuildings, renderV21Buildings, renderCrossroadBuildings, renderFamilyUpgrades, renderOfflineUpgrades, refreshShopAffordability, refreshShopItem, refreshV21Item, refreshShopChain, renderRpFamily, renderResearchUpgrades, renderAtriumDistill, renderAtriumSwitch, renderHatchUpgrade, setToastFn, researchUpgCost, RP_GROUPS, buyUpgrade, researchResourceUnlocked, RESEARCH_RES_ANCHORS, bindFoldToggle } from './modules/shop.js'; // v3.7.0 QA：研究分组 + 自动玩家走真实购买入口 // v2.3.1 ⑥：setBulk/getBulk 移除；v2.8.2 ④：renderRpFamily（RP 加成组） // v4.2.5 ①：bindFoldToggle 导出（研究点/科技树/遗物纯类目 h3 统一折叠）
 import { EXPAND_KEY, anchorShown, anchorDone, riftShown, petsModuleUnlocked, starChartUnlocked } from './modules/disclosure.js'; // v2.3.1 缺陷④清档回收 + ①锚点判定（rev18 9.1/9.2）；v3.7.2 ①：异兽模块唯一解锁判定源
-import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, leaderLvOf, levelUpLeader, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源 // v4.3.21 反馈⑥：领导等级制 QA 钩子
-import { leaderSalaryPerSec } from './modules/economy.js'; // v4.3.21 反馈⑥：领导津贴真源（QA 钩子）
+import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, leaderLvOf, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源 // v4.3.23 反馈①：levelUpLeader/leaderSalaryPerSec 下线
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
@@ -3241,8 +3240,8 @@ if (typeof window !== 'undefined') {
     petsModuleUnlocked, // v3.7.2 ①：异兽模块与顶栏 PT 同口径的唯一解锁判定
     starChartUnlocked, // v3.12.9：星图解锁唯一判定源（宠物在前）
     prestigePanelVisible, // v3.7.3 ⑤：晋升模块与 P3 阶段门控同源
-    threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, leaderLvOf, levelUpLeader, leaderSalaryPerSec, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
-      converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子
+    threadBind: { bindThread, unbindThread, autoAssignThreads, releaseAllThreads, leaderCount, leaderGlobalMult, leaderLvOf, canBind, converterThreadBoost, threadLevelFromXp, rollProfession, aiSuggestedProfession, tickThreads,
+      converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, converterCapacity, converterLoad }, // v3.6.3 ②③ / v3.6.5 ①~③：岗位解锁/系数/容量 QA 钩子 // v4.3.23 反馈①：levelUpLeader/leaderSalaryPerSec 下线
     // v3.7.0：核心抽象接线与 30 天浏览器推演所需的只读/纯函数钩子（不改变玩法）
     lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS,
     // v3.8.0：资源流引擎与效能编排（QA / 30 天推演数值守恒核对）

@@ -618,6 +618,17 @@ html.theme-light .wage-tip-pop .w-bad, html.theme-mint .wage-tip-pop .w-bad, htm
 }
 html.theme-light .policy-new-badge, html.theme-mint .policy-new-badge { color: #1d6fd8; }
 html.theme-autumn .policy-new-badge { color: #8a5a00; }
+/* v4.3.23 反馈③：商店组标题徽章（博物馆「馆藏认证」）——金色描边呼应收藏语义，
+   浅色主题换深金色变体保证可读 */
+.group-title-badge {
+  display: inline-block; margin-right: 6px; padding: 0 5px;
+  border-radius: 3px; background: rgba(210,153,34,.18);
+  border: 1px solid rgba(210,153,34,.45);
+  color: #d29922; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .8px; vertical-align: 1px; cursor: help;
+}
+html.theme-light .group-title-badge, html.theme-mint .group-title-badge { color: #9a6700; }
+html.theme-autumn .group-title-badge { color: #7a5200; }
 .policy-foot, .dealer-meta { font-size: 10.5px !important; color: var(--text-3) !important; line-height: 1.6; }
 .dealer-cost { font-size: 11px !important; line-height: 1.6; }
 

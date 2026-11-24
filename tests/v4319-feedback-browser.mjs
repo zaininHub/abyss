@@ -16,7 +16,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) { pass++; console.log('  ok -', name); } else { fail++; console.log('  NOT OK -', name); } };
 
-const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--allow-file-access-from-files'] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1600, height: 1000 });
 const pageErrors = [];
@@ -163,7 +163,9 @@ console.log('[5] 原位置开关日志');
   if (r.err) ok(false, r.err);
   else {
     ok(r.grew, `开关点击后日志增长（末条「${r.last}」）`);
-    ok(/自动蒸馏/.test(r.last), '日志内容为「自动蒸馏…」');
+    // v4.3.23 反转：v4.3.21 反馈⑤快捷开关类操作全部静默（开关不打日志）——
+    //   本用例原断言 v4.3.19「自动蒸馏…」日志，现反转为静默口径（不新增日志）
+    ok(!/自动蒸馏/.test(r.last), '开关点击静默（v4.3.21 反馈⑤：不打日志；末条非蒸馏日志）');
   }
 }
 

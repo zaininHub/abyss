@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) { pass++; console.log('  ok -', name); } else { fail++; console.log('  NOT OK -', name); } };
 
-const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--allow-file-access-from-files'] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1600, height: 1000 });
 const pageErrors = [];
@@ -22,15 +22,14 @@ page.on('pageerror', e => pageErrors.push(String(e).slice(0, 120)));
 await page.goto(GAME_URL);
 await sleep(1500);
 
-// ===== ① 领导卡面消歧文案 =====
+// ===== ① 领导卡面消歧文案（v4.3.23 反转：津贴行/升级按钮下线，统一 Lv 口径） =====
 console.log('[1] 领导卡面消歧');
 {
   const r = await page.evaluate(async () => {
     window.S._crewUnlocked = true;
-    window.S.ep = 50000;
     window.S.cultists = [{
       id: 1, name: 'L0', profession: 'overseer', level: 1, xp: 0,
-      leader: true, leaderLv: 1, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60,
+      leader: true, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60,
     }];
     let card = null;
     for (let i = 0; i < 40 && !card; i++) {
@@ -39,23 +38,23 @@ console.log('[1] 领导卡面消歧');
     }
     if (!card) return { err: 'no card' };
     const numLine = card.querySelector('.crew-line-num');
-    return { text: numLine ? numLine.textContent : '', btnTitle: (card.querySelector('[data-lead-up]') || {}).title || '', badge: (card.querySelector('[style*="3fb950"]') || {}).title || '' };
+    return { text: numLine ? numLine.textContent : '', upBtn: !!card.querySelector('[data-lead-up]'), badge: (card.querySelector('[style*="3fb950"]') || {}).title || '' };
   });
   if (r.err) ok(false, r.err);
   else {
     ok(/全局产出 \+1\.00%/.test(r.text), `产出行写「全局产出 +1.00%」（实际「${r.text}」）`);
-    ok(/津贴 -10 EP\/s/.test(r.text), '消耗行写「津贴 -10 EP/s」');
-    ok(/全局 EP 产出 \+1% 基础/.test(r.badge), '星标悬浮写「全局 EP 产出 +1% 基础」');
-    ok(/全局 EP 产出 \+0\.01%\/级，领导津贴/.test(r.btnTitle), '升级按钮悬浮写「全局 EP 产出 +0.01%/级，领导津贴」');
+    ok(!/津贴/.test(r.text), '消耗行不再写「津贴」（v4.3.23 津贴下线）');
+    ok(/全局 EP 产出 \+1% × 等级乘数/.test(r.badge), '星标悬浮写「全局 EP 产出 +1% × 等级乘数」（v4.3.23）');
+    ok(!r.upBtn, '手动升级按钮已下线（v4.3.23）');
   }
 }
 
-// ===== ①b 就任日志口径 =====
+// ===== ①b 就任日志口径（v4.3.23 反转：随等级提升、无津贴） =====
 console.log('[1b] 就任日志消歧');
 {
   const r = await page.evaluate(async () => {
     window.S.cultists = [
-      { id: 10, name: 'WA', profession: 'worker', level: 7, xp: 0, leader: false, leaderLv: 1, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60 },
+      { id: 10, name: 'WA', profession: 'worker', level: 7, xp: 0, leader: false, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60 },
     ];
     let btn = null;
     for (let i = 0; i < 40 && !btn; i++) {
@@ -68,7 +67,7 @@ console.log('[1b] 就任日志消歧');
     return { feed: (window.S.crewFeed || []).map(e => e.msg).join('||') };
   });
   if (r.err) ok(false, r.err);
-  else ok(/就任领导（Lv\.1，全局 EP 产出 \+1\.00%，领导津贴 10 EP\/s）/.test(r.feed), `就任日志写「全局 EP 产出 +1.00%，领导津贴 10 EP/s」（实际含：${(r.feed.match(/就任领导[^\n|]*/) || ['无'])[0]}）`);
+  else ok(/就任领导（Lv\.7，全局 EP 产出 \+1\.48%，随等级提升）/.test(r.feed), `就任日志写「全局 EP 产出 +1.48%，随等级提升」（实际含：${(r.feed.match(/就任领导[^\n|]*/) || ['无'])[0]}）`);
 }
 
 // ===== ② wiki 特殊任务表 + 速查表 =====
@@ -103,7 +102,8 @@ console.log('[2] wiki 特殊任务与速查表');
     else {
       ok(/特殊任务（后台自动判定/.test(r2.text), 'misc 章含「特殊任务」表');
       ok(/博物馆的访客/.test(r2.text), '特殊任务表含「博物馆的访客」');
-      ok(/名下建筑买够 2 种/.test(r2.text), '达成条件写玩家视角白话「名下建筑买够 2 种…」');
+      // v4.3.23 反转：博物馆条件改工位口径
+      ok(/同时拥有 3 种工位/.test(r2.text), '达成条件写新口径「同时拥有 3 种工位…」（v4.3.23）');
       ok(/彩蛋（隐藏触发/.test(r2.text), '含「彩蛋」触发清单');
     }
   }

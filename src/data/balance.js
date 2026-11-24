@@ -88,13 +88,11 @@ export const BALANCE = {
       matchProfBonus: 0.15,     // 匹配岗位额外转化加成 +15%（v3.3.1 反馈⑩：25%→15%，消耗增多的收益略微减少）
       mismatchProfBonus: 0.03,  // 非匹配岗位额外转化加成 +3%
       leaderBonus: 0.08,        // 领导者绑定额外 +8%（旧档残留绑定兼容兜底，正常路径不可达）
-      // v4.3.21 反馈⑥：领导等级制——任命时该线程 worker 等级置 Lv1、领导等级首次 Lv1（+1% 基础），
-      //   每升 1 级全局加成 +0.01%、每秒消耗 +10 EP/s×等级（手动升级按钮，消耗即代价）；
-      //   卸任后领导等级保留（再任命同一线程恢复该等级）、线程默认空闲。leaderGlobalCap 随旧公式下线。
-      leaderGlobalPerLeader: 0.01, // Lv1 基础全局产出 +1%（固定，不吃研究点放大）
-      leaderLevelBonusPerLv: 0.0001, // 每级全局产出 +0.01%（Lv1 = +1% 基础）
-      leaderEpPerSecPerLv: 10,       // 领导每秒消耗 = 10 EP/s × 等级（独立于薪资口径，显示=实扣）
-      leaderLevelCap: 50,            // 领导等级上限（Lv50 = +1.49%）
+      // v4.3.23 反馈①：领导升级改革——废除独立 leaderLv/手动升级按钮/领导津贴三键
+      //  （leaderLevelBonusPerLv/leaderEpPerSecPerLv/leaderLevelCap 下线）。领导等级走
+      //   普通线程等级路径（c.level，在岗积 XP 自动升级），全局加成 = leaderGlobalPerLeader
+      //   × threadLevelMult（Lv1 = +1.00%，Lv10 = +1.72%），消耗回归普通薪资口径。
+      leaderGlobalPerLeader: 0.01, // Lv1 基础全局产出 +1%（固定，不吃研究点放大；随领导等级乘数放大）
       xpPerSec: 1,              // 在岗每秒 XP 基础
       xpSuitableMult: 2.5,      // 匹配/领导岗位 XP ×2.5（合适岗位等级涨得多）
       xpCap: 6000,              // XP 上限（封顶等级用）

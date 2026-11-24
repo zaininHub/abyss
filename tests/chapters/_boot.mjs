@@ -32,7 +32,10 @@ export async function launchBrowser() {
   return puppeteer.launch({
     executablePath: chromePath(),
     headless: 'new',
-    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--no-zygote'],
+    // v4.3.23：Chrome 新版对 file:// 下 ES module 的 CORS 严格化——共享启动层补
+    //   --allow-file-access-from-files（与 v4314-4323 专项脚本、v3129-playthrough 同口径），
+    //   否则 dist/index.html 加载后 window.__qa 等模块钩子全部 undefined。
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--no-zygote', '--allow-file-access-from-files'],
   });
 }
 

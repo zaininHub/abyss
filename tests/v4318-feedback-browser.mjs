@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) { pass++; console.log('  ok -', name); } else { fail++; console.log('  NOT OK -', name); } };
 
-const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--allow-file-access-from-files'] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1600, height: 1000 });
 const pageErrors = [];
@@ -97,7 +97,8 @@ console.log('[1] 智能分配灰显 / 领导卡 +1%');
     ok(r2.cOut === '1.00%', `领导卡产出行「1.00%」（v4.3.21 toFixed(2)，实际「${r2.cOut}」）`);
     // v4.3.21 反转：领导卡显示领导等级 Lv.X，旧断言「无 Lv」删除
     ok(r2.hasLv, '领导卡显示领导等级 Lv.X（v4.3.21 等级制）');
-    ok(r2.cSal && parseFloat(r2.cSal.replace(/,/g, '')) > 0, `领导卡消耗 >0（实际「${r2.cSal}」）`);
+    // v4.3.23 反转：津贴下线后领导卡面只渲染「全局产出 +X%」，不再有 .c-sal 消耗行
+    ok(r2.cSal === null, `领导卡无独立消耗行（v4.3.23 津贴下线；实际 cSal=${r2.cSal}）`);
     ok(r2.salAfter >= r2.salBefore - 1e-9, `晋升后顶栏薪资不降（${r2.salBefore.toFixed(3)} → ${r2.salAfter.toFixed(3)}，Lv1 空闲同口径）`);
   }
 }

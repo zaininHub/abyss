@@ -236,8 +236,10 @@ export function renderShop(container) {
   };
   // v2.3.1 ⑤（rev18 9.3 分组表）：工位在前、仓储区在后；分组纯显示不拆链
   // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
+  // v4.3.23 反馈③：完成「博物馆的访客」后，工位标题挂「馆藏认证」徽章
+  const museumCertified = !!((S._specialTasksDone || {}).sp1_museum);
   renderChainedGroups(container, split, [
-    { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat },
+    { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat, badge: museumCertified ? '馆藏认证' : '', badgeTip: '完成特殊任务「博物馆的访客」——同时拥有 3 种工位且等级之和 ≥50' },
     { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
     { title: '仓储区', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });

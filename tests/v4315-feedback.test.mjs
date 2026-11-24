@@ -57,10 +57,11 @@ test('R3 有领导时其他线程不渲染晋升按钮（卸任后恢复）', ()
   const crew = stripComments(read('src/modules/crew.js'));
   // hasLeader 定义与 leaderBtn 消费分两行——分两段断言
   assert.match(crew, /const hasLeader = \(S\.cultists \|\| \[\]\)\.some\(x => isLeader\(x\) && x !== c\)/, '缺「已有其他领导」判定');
-  // v4.3.21 反转：leaderBtn 三元含 + 升级按钮拼接，语句以 ` : ''); 结尾
-  const m = crew.match(/const leaderBtn = [\s\S]{0,900}?` : ''\);/);
+  // v4.3.23 反转：升级按钮下线，leaderBtn 语句以 `</button>`; 结尾
+  const m = crew.match(/const leaderBtn = [\s\S]{0,600}?<\/button>`;/);
   assert.ok(m, 'leaderBtn 渲染缺失');
   assert.match(m[0], /!isLead && hasLeader/, '非领导线程在有领导时应隐藏按钮');
+  assert.ok(!/data-lead-up/.test(crew), '手动升级按钮 data-lead-up 应已下线（v4.3.23）');
 });
 
 // ============ 反馈④ 裂隙 tab 移到研究点右侧 ============
