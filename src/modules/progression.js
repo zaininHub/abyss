@@ -3,6 +3,7 @@
 import { S, save } from '../state.js';
 import { addRp, addDm, addPt, gainRes } from './economy.js'; // v2.8.27 ②：资源上限
 import { UPGRADES } from '../data/upgrades.js'; // v4.3.23 反馈③：博物馆任务「工位」判定源
+import { dirty } from '../core/runtime.js'; // v4.3.24 缺陷修复：静态引入（原动态 import 见下方说明）
 
 // v4.3.23 反馈③：工位分类升级 id 集（与 shop.js「工位」组谓词同口径：cps>0 且非资源建筑/集市）
 export const MUSEUM_STATION_IDS = UPGRADES.filter(u => u.cps > 0 && !u.produces && !u.cat).map(u => u.id);
@@ -196,9 +197,11 @@ export function checkSpecialTasks(S, log, toast) {
           if (log) log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
           if (toast) toast(`✓ ${task.name}`);
           // v4.3.23 反馈③：sp1_museum 完成后置脏商店（工位标题徽章即时出现）
-          if (task.id === 'sp1_museum') {
-            import('../core/runtime.js').then(({ dirty }) => { dirty.shop = true; }).catch(() => {});
-          }
+          // v4.3.24 缺陷修复：改静态 import 调用——原 `import('../core/runtime.js')` 动态导入会让
+          //   Rollup 在产物里注入 __vitePreload(..., import.meta.url)，使 vite.config 的
+          //   fileProtocolCompat 判定「产物含模块语法」而跳过 script/crossorigin 降级，
+          //   结果双击 dist/index.html（file://）时脚本与 style.css 双双被 CORS 拦截 —— 即「CSS 失效」。
+          if (task.id === 'sp1_museum') dirty.shop = true;
         }
         // v4.3.11 反馈③：sp3 首次完成点亮成就「临别赠礼」（首购离职礼盒）
         //   _specialTasksDone 在晋升时保留（不在 RUN_RESET_KEYS），成就判定双路径兜底：点亮过就不再熄灭
