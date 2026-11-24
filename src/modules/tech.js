@@ -6,6 +6,7 @@ import { hasTech, fmt, esCost, tideMult, techCostOf, techAfford, spendRes, gainR
 import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned, boughtOrderIndex } from './listkit.js';
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
+import { chapterAtLeast } from '../core/chapterGates.js'; // v4.3.19 反馈⑦：科技卡片章节门禁（章节>前置）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦
 
 let techContainer = null;
@@ -15,8 +16,17 @@ let techEls = new Map();  // id -> el（未研究可购项）
 let eternalEls = new Map();
 
 // v2.8.18：AI 管理核心恒显示、无 cps 里程碑门槛（RP 50 + 1M EP 即门槛，不足时灰态）——用户多轮反馈「无法升级」根因是 cps≥1e4 门槛在中期不可达
-function techVisible(t) { return true; }
-export function techReqOk(t) { return t.req.every(r => hasTech(r)); }
+// v4.3.19 反馈⑦：科技卡片章节门禁（章节>前置）——带 minChapter 的科技在当前章未达时整卡隐藏；
+//   已研究科技恒可见（回进「已研究」折叠区计数），避免老档卡片凭空消失。
+function techChapterOk(t, s) {
+  if (!t || t.minChapter === undefined) return true;
+  return chapterAtLeast(t.minChapter, s || S);
+}
+export function techVisible(t) {
+  if (hasTech(t.id)) return true;
+  return techChapterOk(t);
+}
+export function techReqOk(t) { return techChapterOk(t) && t.req.every(r => hasTech(r)); }
 
 export function renderTech(container) {
   techContainer = container;
@@ -78,6 +88,7 @@ function makeTechItem(t) {
   // v2.8.18：锁定原因 title——前置科技（cps 门槛已移除，ai_core 仅 RP+EP 判定）
   const techs = getTechs();
   const hints = [];
+  if (t.minChapter !== undefined && !techChapterOk(t)) hints.push(`章节：第 ${t.minChapter} 章解锁`);
   if (t.req.length) hints.push(`前置：${t.req.map(r => techs.find(x => x.id === r)?.name || r).join(' → ')}`);
   div.title = hints.join('；') || '无前置';
   // v2.8.13：科技卡片结构与升级商店 .item 统一（name/desc/cost），UI 设计一致
@@ -99,7 +110,7 @@ function bindTechDelegate(container) {
 
 export function buyTech(t, el) {
   if (hasTech(t.id)) return;
-  if (!techReqOk(t)) return;
+  if (!techReqOk(t)) return; // v4.3.19 反馈⑦：techReqOk 已含章节门禁（章节>前置），绕过 DOM 的直调入口（校准玩家/QA）同被钳制
   // v2.8.7：科技树多资源成本（RP + EP + DM + ES 综合消耗，退潮乘数作用于 RP）
   const cost = techCostOf(t);
   if (!techAfford(t)) return;

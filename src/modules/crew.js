@@ -81,11 +81,20 @@ export function renderCrewPanel(container) {
   // v4.3.14 反馈①：卡片 HTML 生成提取为局部函数——主循环与「自动填充」共用（消除两份拷贝漂移）。
   const crewCardHtml = (c) => {
     const p = threadProfession(c);
-    // v3.6.3 反馈④：卡内只留「擅长岗位图标」（悬浮可读名称），不写职业名、不写所处岗位、不写贡献累计
+    // v4.3.19 反馈①：擅长岗位图标悬浮说明增强——原 title 只写岗位名（懒散者写 desc 长句），且原生
+    //   title 有 ~1s 显示延迟被玩家感知为「问号没有任何悬浮窗」。改 DOM 即时气泡（data-aff-tip 锚点，
+    //   bindAffTipPop 委托 #crew-panel），文案三段式：职业身份 + 擅长岗位 + 机制说明。
+    const affTip = p
+      ? (p.affinity === 'command'
+        ? `🎖️ ${p.name}：可晋升为领导者（★，全局产出 +1%），不占用生产岗位`
+        : p.affinity
+          ? `${p.icon} ${p.name} · 擅长「${CONVERTERS[p.affinity] ? CONVERTERS[p.affinity].name : p.affinity}」岗位——绑定该岗位无产出/消耗惩罚；绑定其他岗位：产出 ×0.6、消耗 ×1.5`
+          : `😪 ${p.name}：天生怠惰——绑定任何岗位产出 ×0.4、消耗 ×2.25（惩罚更重，建议保持空闲）`)
+      : '该线程暂无职业（擅长岗位图标问号光标）——绑定任何岗位都按普通惩罚计（产出 ×0.6、消耗 ×1.5）';
     const affinityName = p && p.affinity && CONVERTERS[p.affinity] ? CONVERTERS[p.affinity].name : (p ? p.desc : '无擅长岗位');
     const affinityIcon = p
-      ? `<span class="crew-affinity" title="${affinityName}" style="font-size:13px;cursor:help">${p.icon}</span>`
-      : '<span class="crew-affinity" title="无擅长岗位" style="font-size:13px">·</span>';
+      ? `<span class="crew-affinity" data-aff-tip="${escAttr(affTip)}" style="font-size:13px;cursor:help" aria-label="${escAttr(affTip)}">${p.icon}</span>`
+      : `<span class="crew-affinity" data-aff-tip="${escAttr(affTip)}" style="font-size:13px;cursor:help" aria-label="${escAttr(affTip)}">·</span>`;
     const lvl = threadLevel(c);
     // v4.3.16 反馈①：领导不显示等级——全局 +1% 是固定加成位、等级冻结 Lv1 不参与玩法，
     //   卡面与悬浮都去掉 Lv（避免玩家误以为领导还能升级）。
@@ -96,15 +105,17 @@ export function renderCrewPanel(container) {
     const leaderBadge = leaderLv ? ' <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1%）">★</span>' : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
-    // v4.3.15 反馈②：满员岗位标「（已满）」——容量 = 设施数量（灵感工坊 2 座 → 2 坑），
-    //   选中仍会被 bindThread 容量钳制拒绝并回显旧值；标注让玩家在下拉里就能看出原因。
-    const opts = visibleTypes.slice();
+    // v4.3.19 反馈②：满员岗位从下拉源头移除（不止标「已满」）——用户口径「岗位满了，下拉框就
+    //   应该没这个岗位」（超线程恒无上限除外）。容量 = 设施数量（灵感工坊 2 座 → 2 坑）；
+    //   自身在岗岗位保留（原地重选不占新坑，bindThread 放行）；旧档隐藏岗位绑定项同保留。
+    //   智能分配 / 招募增量安置本就容量感知，此处补齐手动路径的最后缺口（v4.3.15 只做了标注+拒绝）。
+    const opts = visibleTypes.filter(t =>
+      t === HYPER_CONVERTER_ID
+      || t === c.boundTo
+      || converterLoad(t) < converterCapacity(t));
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      opts.map(t => {
-        const full = t !== c.boundTo && t !== HYPER_CONVERTER_ID && converterLoad(t) >= converterCapacity(t);
-        return `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}${full ? '（已满）' : ''}</option>`;
-      })).join('');
+      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
     // v3.7.1 反馈①：领导者是全局加成位，不给岗位下拉；v3.7.3 反馈③：卡面不再写领导岗位说明文字
     const bindCtrl = isLeader(c)
       ? ''

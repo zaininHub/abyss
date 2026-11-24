@@ -691,12 +691,12 @@ function tideTipHtml() {
   let any = false;
   if (epMult !== 1) { html += row('产出', pct(epMult), epMult > 1 ? 'w-good' : 'w-bad'); any = true; }
   if (salMult !== 1) { html += row('薪资', pct(salMult), salMult > 1 ? 'w-good' : 'w-bad'); any = true; }
-  if (techMult !== 1) { html += row('科技成本', pct(techMult), techMult < 1 ? 'w-good' : 'w-bad'); any = true; }
+  if (techMult !== 1) { html += row('科技树价格', pct(techMult), techMult < 1 ? 'w-good' : 'w-bad'); any = true; } // v4.3.19 反馈④：「科技成本」→「科技树价格」（仅科技树 RP 项打折，升级/建筑不吃）
   if (info.eventBadWeight !== 1) { html += row('负面事件概率', `×${info.eventBadWeight}`, info.eventBadWeight > 1 ? 'w-bad' : 'w-good'); any = true; }
   if (info.eventGoodDur !== 1) { html += row('正面事件持续', `×${info.eventGoodDur}`, info.eventGoodDur > 1 ? 'w-good' : 'w-bad'); any = true; }
   if (!any) html += `<div class="w-dim">· 无修正</div>`;
   html += `</div>`;
-  html += `<div class="ft-note w-dim">四相位循环：涨潮（产出↑薪资↑）→ 平潮（无修正）→ 退潮（产出↓薪资↓）→ 乱流（负面事件↑）。科技树按当前相位价格结算。</div>`;
+  html += `<div class="ft-note w-dim">四相位循环：涨潮（产出↑薪资↑）→ 平潮（无修正）→ 退潮（产出↓薪资↓）→ 乱流（负面事件↑）。科技树按当前相位价格结算（折扣只作用于科技树研究价，升级/建筑不打折）。</div>`;
   return html;
 }
 
@@ -906,6 +906,51 @@ function bindDistillTipPop() {
     const p = pop();
     if (!p) return;
     p.textContent = anchor.dataset.distillTip || '';
+    place(anchor);
+    p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => { const p = pop(); if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); } };
+  zone.addEventListener('mouseover', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('mouseout', (e) => { if (anchorOf(e)) hide(); });
+  zone.addEventListener('focusin', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('focusout', hide);
+  window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) hide(); }, true);
+}
+
+// v4.3.19 反馈①：班组擅长岗位图标悬浮气泡——原生 title ~1s 延迟被玩家感知为「问号没有任何悬浮窗」。
+// 复用 wage-tip-pop 范式（即时显示 + rect 定位 + 上下翻转 + 左右钳制）；文案来源 data-aff-tip
+// （renderCrewPanel 重建卡时写入），事件委托挂稳定宿主 #crew-panel（卡片重建不丢监听）。
+function bindAffTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('crew-panel');
+  if (!zone || zone._affTipBound) return;
+  zone._affTipBound = true;
+  if (!document.getElementById('aff-tip-pop')) {
+    const popEl = document.createElement('div');
+    popEl.id = 'aff-tip-pop';
+    popEl.className = 'wage-tip-pop aff-tip-pop';
+    popEl.setAttribute('role', 'tooltip');
+    popEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(popEl);
+  }
+  const pop = () => document.getElementById('aff-tip-pop');
+  const place = (anchor) => {
+    const p = pop();
+    if (!p || !anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const tipW = Math.min(320, window.innerWidth * 0.88);
+    const below = r.top < 260;
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const anchorOf = (e) => e.target.closest ? e.target.closest('[data-aff-tip]') : null;
+  const show = (e) => {
+    const anchor = anchorOf(e);
+    if (!anchor) return;
+    const p = pop();
+    if (!p) return;
+    p.textContent = anchor.dataset.affTip || '';
     place(anchor);
     p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
   };
@@ -1179,7 +1224,7 @@ function renderHero() {
     focusBtn.disabled = !canFocus;
     focusBtn.style.opacity = canFocus ? '1' : '0.5';
     focusBtn.classList.toggle('poor', !canFocus);
-    focusBtn.setAttribute('aria-label', `强化专注至 Lv.${S.focusLevel + 1}，需要 ${fmt(focusPrice)} EP`);
+    focusBtn.setAttribute('aria-label', `强化专注至 Lv.${S.focusLevel + 1}，需要 ${fmt(focusPrice)} EP（价格 ×1.6 逐级递增；Lv5 前 +8%/级、Lv6~10 +12%/级、之后 +20%/级）`);
   }
   // v2.8.17 ⑦：专注不再提示点击、不靠悬浮 title——EP 不足仅暗色
   // v4.0.8 反馈③：悬浮说明（data-tip）整条删除——NEXT 已写明「线程产出+N%」就地自明，
@@ -1750,6 +1795,7 @@ function bindEvents() {
   bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
   bindAiTipPop(); // v4.3.2 反馈①：AI 台账悬浮改 fixed DOM 气泡（原 data-tip::after 在窄锚点下竖排）
   bindDistillTipPop(); // v4.3.15 反馈①：蒸馏按钮悬浮改 DOM 气泡（原生 title ~1s 延迟）
+  bindAffTipPop(); // v4.3.19 反馈①：班组擅长岗位图标悬浮改 DOM 气泡（同款延迟问题）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   bindKeepAwake(); // v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）
   // v4.0.6 反馈②：购买入口从「整条可点」收成显式按钮（与招募按钮同构），避免行内误触。

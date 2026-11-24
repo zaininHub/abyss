@@ -111,7 +111,7 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'tide', name: '潮汐与腐化', unlock: null, body: () => `
     <h4>深渊潮汐（${D.tide.phaseDuration}s/相位 × 4 循环）</h4>
-    <table class="wiki-tbl"><tr><th>相位</th><th>产出</th><th>薪资</th><th>科技成本</th><th>事件</th></tr>
+    <table class="wiki-tbl"><tr><th>相位</th><th>产出</th><th>薪资</th><th>科技树价格</th><th>事件</th></tr>
       ${D.tide.phases.map(p => `<tr><td>${p.icon} ${p.name}</td><td>${(p.epMult*100-100|0)}%</td><td>${(p.salaryMult*100-100|0)}%</td><td>${(p.techCostMult*100-100|0)}%</td><td>${p.eventBadWeight>1?'负面 ×'+p.eventBadWeight:'正常'}</td></tr>`).join('')}
     </table>
     <h4>矩阵腐化</h4>
@@ -232,7 +232,7 @@ export const WIKI_SECTIONS = [
       <tr><td>深潜</td><td>第 11 章 ∧ ES ≥ 3 ∧ DM 已发现 ∧ 宗教已信奉</td><td>深潜 tab，终局层</td></tr>
       <tr><td>深渊集市</td><td>职级 ≥ 1 ∧ 已发现 RP</td><td>集市 tab，资源兑换</td></tr>
       <tr><td>晋升</td><td>第 4 章 ∧ 本局累计 EP 达标（首次 30 亿）</td><td>晋升 tab</td></tr>
-      <tr><td>星图（远征）</td><td>第 3 章 ∧ 异兽 / PT 锚点完成 ∧ RP 锚点完成 ∧（科技「深空探测」或已有远征记录）</td><td>星图探索（消耗 EP/RP/PT 换星际燃料 CPS、携带出战异兽每只 +10%）；深空殖民与宇宙探索同链，星图未开放时研究分组「星际」也不摆出。PT 是本局制，转生后需重新点亮才会再开</td></tr>
+      <tr><td>星图（远征）</td><td>第 3 章 ∧ 异兽 / PT 锚点完成 ∧ RP 锚点完成 ∧（科技「深空探测」或已有远征记录）</td><td>星图探索（消耗 EP/RP/PT 换星际燃料 CPS、携带出战异兽每只 +10%）；深空殖民与宇宙探索同链，星图未开放时研究分组「星际」也不摆出。科技「深空探测」本身也在第 3 章后才会出现在科技树。PT 是本局制，转生后需重新点亮才会再开</td></tr>
       <tr><td>故事线 / 岔路口</td><td>游玩满 1.5 天（P4 阶段门控）</td><td>三线立誓与岔路口</td></tr>
       <tr><td>宇宙探索（星图内）</td><td>星图已开放 ∧ 科技树「深空探测」∧ RP 已发现</td><td>6 项大工程，消耗星际燃料 CPS 一次性换多资源；深空殖民同样烧 CPS</td></tr>
       <tr><td>效能建筑</td><td>购入「矩阵存储库」（RP 锚点）</td><td>商店页「效能建筑」分区，按大组分类（锅炉房 / 研究与事件）</td></tr>
@@ -250,7 +250,7 @@ export const WIKI_SECTIONS = [
       <li>升级/建筑：base × growth^级 × costMult()（默认 growth 1.30；50 级后每级额外 ×1.08）</li>
       <li>扩容类：无限升级 + 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）</li>
       <li>线程招募：firstCost × 1.25^线程数</li>
-      <li>专注：30 × 1.6^级</li>
+      <li>专注：30 × 1.6^级（指数涨价换「每级 +8% → +12% → +20%」的递增加成；专注优化 -25%、专注心核再 -25% 降价）</li>
       <li>探采平台：载具价 ×1.30^已购数；载具 cps = 0（不产 EP，只扣 EP 换 DM）；EP→DM 汇率 = ${fmt(D.vehicles.epPerDm)} × ${D.vehicles.epPerDmGrowth}^总载具数；载具协议使 DM 采集速率 ×${D.vehicles.protocolMult}</li>
     </ul>
     <h4>效能建筑 · 全局产出（「锅炉房」组）</h4>

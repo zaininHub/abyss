@@ -110,16 +110,23 @@ await sleep(800);
     const feed = (window.S.crewFeed || []).slice(-1)[0]?.msg || '';
     // 拒绝后 renderCrewPanel 重建 DOM——重新查节点读回显值
     const selAfter = document.querySelector('[data-bind="' + cs[2].id + '"]');
-    // 下拉「（已满）」标注（换一条空闲线程的卡看 atrium 选项文案；同样轮询）
-    // v4.3.16 加固：选项文案也轮询——查询窗口恰逢低频帧重建时 selFree.options 读到旧节点（空文案）
-    let optText = '';
-    for (let i = 0; i < 30 && !/（已满）/.test(optText); i++) {
+    // v4.3.19 反转：满员岗位从下拉源头移除（不再标「（已满）」）——
+    //   空闲线程（cs[3]）的下拉里不应再有 atrium 选项；自身在岗线程（cs[0]）仍保留。
+    // v4.3.16 加固保留：轮询等低频帧重建，避免读到旧节点。
+    let optText = null, ownText = null;
+    for (let i = 0; i < 30 && optText === null; i++) {
       await new Promise(r2 => setTimeout(r2, 100));
       const selFree = document.querySelector('[data-bind="' + cs[3].id + '"]');
-      const optFull = selFree ? [...selFree.options].find(o => o.value === 'atrium') : null;
-      if (optFull) optText = optFull.textContent || '';
+      const selOwn = document.querySelector('[data-bind="' + cs[0].id + '"]');
+      if (selFree && selFree.options.length) {
+        const optFull = [...selFree.options].find(o => o.value === 'atrium');
+        if (selOwn && [...selOwn.options].some(o => o.value === 'atrium')) {
+          optText = optFull ? optFull.textContent : null;
+          ownText = 'kept';
+        }
+      }
     }
-    return { third, load3, feed, selAfter: selAfter ? selAfter.value : null, optText };
+    return { third, load3, feed, selAfter: selAfter ? selAfter.value : null, optText, ownText };
   });
   if (r.err) ok(false, r.err);
   else {
@@ -127,7 +134,8 @@ await sleep(800);
     ok(r.load3 === 2, `atrium 在岗数钳制为 2（实际 ${r.load3}）`);
     ok(/已满员/.test(r.feed), `满员分配有班组提示（「${r.feed.slice(0, 30)}」）`);
     ok(r.selAfter === '' || r.selAfter === null, `拒绝后下拉回显空闲（value=「${r.selAfter}」）`);
-    ok(/（已满）/.test(r.optText), `下拉满员选项标「（已满）」（「${r.optText}」）`);
+    ok(r.optText === null, `满员岗位已从空闲线程下拉移除（atrium 选项=${r.optText === null ? '缺席' : r.optText}）`);
+    ok(r.ownText === 'kept', `自身在岗岗位保留在下拉（原地重选豁免）`);
   }
   // 智能分配同口径：atrium 不超 2
   const auto = await page.evaluate(() => {

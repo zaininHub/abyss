@@ -41,11 +41,13 @@ test('R2a bindThread 容量钳制：满员拒绝、超线程豁免、原地重�
   assert.match(tb, /&& converterLoad\(type\) >= converterCapacity\(type\)\) return false;/, '满员拒绝缺失');
 });
 
-test('R2b crew.js 满员提示 + 回显旧值 + 下拉「（已满）」标注', () => {
+test('R2b crew.js 满员提示 + 回显旧值 + 下拉源头移除满员岗位（v4.3.19 反转：标注改移除）', () => {
   const crew = stripComments(read('src/modules/crew.js'));
   assert.match(crew, /分配失败：.*已满员（容量 = 设施数量）/, '满员 crewPush 提示缺失');
   assert.match(crew, /sel\.value = c\.boundTo \|\| '';/, '拒绝后未回显旧值');
-  assert.match(crew, /full \? '（已满）' : ''/, '下拉缺「（已满）」标注');
+  // v4.3.19 反馈②：满员岗位不再标「（已满）」而是直接从下拉 opts 移除（超线程/自身岗位豁免）
+  assert.match(crew, /converterLoad\(t\) < converterCapacity\(t\)/, '下拉缺满员岗位源头过滤');
+  assert.doesNotMatch(crew, /（已满）/, '旧「（已满）」标注残留');
   assert.ok(/converterLoad, converterCapacity/.test(crew), 'converterLoad/Capacity 未导入');
 });
 
