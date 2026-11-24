@@ -26,20 +26,20 @@ test('R1a economy.staffOutputParts：领导产出 0、薪资按 Lv1 空闲同口
   // one 定义：普通线程吃等级；领导不吃等级（Lv1 空闲同口径）但吃 mood/outMult
   const m = eco.match(/const\s+one\s*=\s*\(c\.output\s*\|\|\s*3\)\s*\*\s*0\.8\s*\*\s*mood\s*\*\s*outMult\s*\*\s*\(isLead\s*\?\s*1\s*:\s*threadLevelMult\(threadLevel\(c\)\)\);/);
   assert.ok(m, 'one 应为 Lv1 空闲同口径（领导不吃等级，普通线程吃等级）');
-  // 产出：领导 0（total 累加跳过）；薪资：领导按 one 计入（factor 恒 1，boundTo 恒 null）
+  // 产出：领导 0（total 累加跳过）；薪资：领导按 oneSal 计入（factor 恒 1，boundTo 恒 null）
   assert.ok(/total\s*\+=\s*isLead\s*\?\s*0\s*:\s*one\s*\*\s*factor;/.test(eco), '领导个人产出应跳过');
-  assert.ok(/salaryBase\s*\+=\s*one\s*\*\s*\(c\.boundTo\s*===\s*HYPER_CONVERTER_ID\s*\?\s*1\s*:\s*factor\);/.test(eco), '薪资基数应计入领导份额');
+  // v4.3.21 反转：薪资基数行改 oneSal（#390 薪资解耦专注后按 salaryOutMult 口径计薪）
+  assert.ok(/salaryBase\s*\+=\s*oneSal\s*\*\s*\(c\.boundTo\s*===\s*HYPER_CONVERTER_ID\s*\?\s*1\s*:\s*factor\);/.test(eco), '薪资基数应计入领导份额');
 });
 
 test('R1b crew 卡面：领导不显示 Lv + 产出行「+1%」+ 消耗平均摊派', () => {
   const crew = stripComments(read('src/modules/crew.js'));
-  // 领导隐藏 Lv（卡面 + stateTip）
-  assert.ok(/const\s+lvHtml\s*=\s*leaderLv\s*\?\s*''\s*:/.test(crew), '领导卡面应隐藏 Lv');
-  assert.ok(/\$\{c\.name\}\$\{leaderLv\s*\?\s*''\s*:\s*` · Lv\.\$\{lvl\}`\}/.test(crew), 'stateTip 领导应去 Lv');
-  // v4.3.18 反馈①：领导产出行直出「1%」（模板），动态刷新只跳产出行、消耗行照刷
-  assert.ok(/isLeader\(c\)\s*\?\s*`<span class="crew-num">\+<b class="c-out">1%<\/b> EP\/s<\/span>`/.test(crew), '领导产出行应直出「+1%」');
+  // v4.3.21 反转：领导等级制——卡面显示领导 Lv（leaderLvOf），普通线程显示 worker Lv；
+  //   产出行直出「+X% 全局」与独立津贴消耗行；动态刷新跳领导产出行、消耗行走津贴真源
+  assert.ok(/const\s+lvHtml\s*=\s*isLead\s*\?\s*` <span class="crew-lv">Lv\.\$\{leadLv\}<\/span>`\s*:\s*` <span class="crew-lv">Lv\.\$\{lvl\}<\/span>`/.test(crew), '领导卡面应显示领导等级 Lv');
+  assert.ok(/isLead\s*\?\s*`<span class="crew-num">\+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b> 全局/.test(crew), '领导产出行应直出等级实算百分比');
   assert.ok(/if\s*\(c\.leader !== true\)\s*\{/.test(crew), '动态刷新应只跳领导产出行');
-  assert.ok(!/const\s+out\s*=\s*isLead\s*\?\s*0\s*:/.test(crew), '旧「领导产出 0」口径应已移除');
+  assert.ok(/c\.leader === true \? fmt\(leaderSalaryPerSec\(\)\) : fmt\(salPer \* salaryFactorOf\(c\)\)/.test(crew), '领导消耗行应走津贴真源（10 EP/s×级）');
 });
 
 // ============ v4.3.18 反馈② 卡面产出口径补齐 outMult ============
@@ -51,9 +51,11 @@ test('R3 crew 卡面产出行与 staffOutputParts 同口径（outMult 放大）'
   const m = crew.match(/const\s+out\s*=\s*\(c\.output\s*\|\|\s*3\)\s*\*\s*0\.8\s*\*\s*\(MOOD_MULT\[c\.mood\]\s*\|\|\s*1\)\s*\*\s*outLine\s*\*\s*threadLevelMult\(threadLevel\(c\)\)\s*\*\s*threadBindOutputFactor\(c\);/);
   assert.ok(m, '产出行应含 mood×outMult×等级×岗位全乘区');
   // economy 侧 threadOutMult 真源存在且 staffOutputParts 复用同一真源
+  // v4.3.21 反转：staffOutputParts 改用 threadOutMultParts()（focus/rest 拆分），outMult = focus × rest
   const eco = stripComments(read('src/modules/economy.js'));
   assert.ok(/export function threadOutMult\(\)/.test(eco), 'economy 应导出 threadOutMult 真源');
-  assert.ok(/const\s+outMult\s*=\s*threadOutMult\(\);/.test(eco), 'staffOutputParts 应复用 threadOutMult 真源');
+  assert.ok(/const\s+\{\s*focus,\s*rest\s*\}\s*=\s*threadOutMultParts\(\);/.test(eco), 'staffOutputParts 应复用 threadOutMultParts 真源');
+  assert.ok(/const\s+outMult\s*=\s*focus \* rest;/.test(eco), '产出侧 outMult = focus × rest');
 });
 
 // ============ 反馈② 任务领取「已达存储上限」toast 删除 ============

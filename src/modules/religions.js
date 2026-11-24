@@ -120,8 +120,8 @@ export function toggleTemple() {
     S.devotion = Math.max(0, (S.devotion || 0) - devLoss);
     S.religion.templeOff = true;
     // v4.3.20 反馈②：关闭圣所 → 信仰岗位线程下岗（与快捷开关/其他岗位同口径）
-    const offN = setConverterEnabled('temple', false);
-    if (offN > 0) rlog(`${offN} 条线程下岗了（圣所产出停转，岗位收回）...`, 'bad');
+    // v4.3.21 反馈⑤：下岗不再打日志（快捷开关类操作全部静默）
+    setConverterEnabled('temple', false);
     save(S);
     const parts = [];
     if (faithLoss > 0) parts.push(`-${faithLoss.toFixed(2)} FP`);

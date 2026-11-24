@@ -25,6 +25,7 @@ await sleep(1500);
 // 种班组场景：解锁班组 + 5 条线程（1 条将任领导）
 await page.evaluate(() => {
   window.S._crewUnlocked = true;
+  window.S.ep = 50000; // v4.3.21：领导津贴在 EP<=0 时钳 0——种 EP 才能验卡面消耗
   window.S.cultists = Array.from({ length: 5 }, (_, i) => ({
     id: i + 1, name: 'T' + i, profession: 'worker', level: 1, xp: 0,
     leader: false, boundTo: null, output: 0.5, mood: '正常', moodTimer: 60,
@@ -69,9 +70,10 @@ console.log('[1] 领导固定消耗 + 卡面无等级');
   else {
     const salAfter = await page.evaluate(() => window.__qa.staffSalaryPerSec());
     ok(r.leader, 'T0 晋升为领导');
-    ok(!r.hasLv, '领导卡面不显示 Lv');
-    // v4.3.18 反馈①反转：领导产出行直出「1%」（不再是 0）
-    ok(r.cOut === '1%', `领导卡面产出行显示「1%」（实际「${r.cOut}」）`);
+    // v4.3.21 反转：领导卡现在显示领导等级 Lv.X（leaderLv），旧断言「不显示 Lv」删除
+    ok(/Lv\.\d/.test(r.cardText), '领导卡面显示领导等级 Lv.X（v4.3.21 等级制）');
+    // v4.3.21 反转：领导产出行 toFixed(2)（不再是整数「1%」）
+    ok(r.cOut === '1.00%', `领导卡面产出行显示「1.00%」（实际「${r.cOut}」）`);
     ok(r.cSal && parseFloat(r.cSal.replace(/,/g, '')) > 0, `领导卡面消耗显示 >0（实际「${r.cSal}」）`);
     ok(salAfter > salBefore - 1e-9 && Math.abs(salAfter - salBefore) < 1e-9 || salAfter >= salBefore,
       `晋升前后顶栏薪资不变（Lv1 空闲同口径；bug 口径是下降：${salBefore.toFixed(3)} → ${salAfter.toFixed(3)}）`);

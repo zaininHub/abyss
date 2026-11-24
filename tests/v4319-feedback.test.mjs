@@ -100,15 +100,15 @@ test('R5 style.css：.tab-locked 与 .btn.tab-locked:disabled 合并统一规则
   assert.ok(!/\.tab-locked\s*\{[^}]*opacity:\s*0\.55/.test(css), '旧 opacity 0.55 规则应删除');
 });
 
-// ============ 反馈⑥ 原位置开关补日志 ============
+// ============ 反馈⑥ 原位置开关补日志（v4.3.21 反转：快捷开关类操作全部静默） ============
 
-test('R6 三处原位置开关打日志（蒸馏/探采/孵化），与快捷开关同口径', () => {
+test('R6 三处原位置开关静默（蒸馏/探采/孵化）——v4.3.21 反馈⑤ 反转删除日志', () => {
   const shop = stripComments(read('src/modules/shop.js'));
-  assert.ok(/log\(`自动蒸馏\$\{onAfter/.test(shop), '蒸馏开关日志缺失');
-  assert.ok(/log\(`载具探采\$\{onAfter/.test(shop), '探采开关日志缺失');
+  assert.ok(!/log\(`自动蒸馏/.test(shop), '蒸馏开关日志应删除（v4.3.21 反馈⑤）');
+  assert.ok(!/log\(`载具探采/.test(shop), '探采开关日志应删除（v4.3.21 反馈⑤）');
   const pets = stripComments(read('src/modules/pets.js'));
-  assert.ok(/log\(`异兽孵化\$\{S\.ptDistillOn/.test(pets), '孵化开关日志缺失');
-  assert.ok(/import \{ log \} from '\.\.\/core\/runtime\.js';/.test(read('src/modules/pets.js')), 'pets 应引入 log');
+  assert.ok(!/log\(`异兽孵化/.test(pets), '孵化开关日志应删除（v4.3.21 反馈⑤）');
+  assert.ok(!/import \{ log \} from '\.\.\/core\/runtime\.js';/.test(read('src/modules/pets.js')), 'pets 的 log import 应一并清理');
 });
 
 // ============ 反馈⑦ 深空探测章节门禁 ============

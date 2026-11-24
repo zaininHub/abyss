@@ -32,11 +32,13 @@ test('R1a 班组自动填充：渲染后不可滚即追加下一组', () => {
 
 test('R2a 领导固定 +1%：balance 值与 leaderGlobalMult 不再乘研究点', () => {
   const bal = stripComments(read('src/data/balance.js'));
-  assert.ok(/leaderGlobalPerLeader:\s*0\.01/.test(bal), 'leaderGlobalPerLeader 应为 0.01（+1%）');
-  assert.ok(/leaderGlobalCap:\s*0\.01/.test(bal), 'leaderGlobalCap 应为 0.01');
+  assert.ok(/leaderGlobalPerLeader:\s*0\.01/.test(bal), 'leaderGlobalPerLeader 应为 0.01（+1% 基础）');
+  // v4.3.21 反转：leaderGlobalCap 下线，上限改由 leaderLevelCap 控制曲线（+0.01%/级）
+  assert.ok(/leaderLevelBonusPerLv:\s*0\.0001/.test(bal), '每级 +0.01% 应为 leaderLevelBonusPerLv=0.0001');
   const tb = stripComments(read('src/modules/threadBinding.js'));
   assert.ok(!/researchMult\('crew'\)/.test(tb), 'leaderGlobalMult 不应再乘 researchMult(crew)');
-  assert.ok(/1\s*\+\s*Math\.min\(B\(\)\.leaderGlobalCap,\s*n\s*\*\s*B\(\)\.leaderGlobalPerLeader\)/.test(tb), 'leaderGlobalMult 公式应为固定 1+1%');
+  // v4.3.21 反转：公式改「1 + 基础 + (lv-1)×每级」，上限由 leaderLvOf 钳制
+  assert.ok(/1\s*\+\s*B\(\)\.leaderGlobalPerLeader\s*\+\s*\(lv\s*-\s*1\)\s*\*\s*B\(\)\.leaderLevelBonusPerLv/.test(tb), 'leaderGlobalMult 公式应为 1+基础+(lv-1)×每级');
 });
 
 test('R2b 班组扩编乘区改挂 economy.globalMult（无死数据红线）', () => {
@@ -51,28 +53,35 @@ test('R2c 领导零个人产出：staffOutputParts 跳过 leader', () => {
   //   不吃等级/岗位系数）——v4.3.16 的 bare 固定裸基数实扣偏低 ~40%，玩家反馈「固定消耗少了」
   assert.ok(/total \+= isLead \? 0 : one \* factor;/.test(eco), '领导个人产出应为 0（total 累加跳过）');
   assert.ok(!/bare\s*=\s*\(c\.output/.test(eco), 'bare 固定裸基数应已移除（v4.3.18 反转）');
-  assert.ok(/salaryBase \+= one \* \(c\.boundTo === HYPER_CONVERTER_ID \? 1 : factor\);/.test(eco), '薪资基数应计入领导份额');
+  // v4.3.21 反转：薪资基数行改 oneSal（#390 薪资解耦专注后按 salaryOutMult 口径计薪）
+  assert.ok(/salaryBase \+= oneSal \* \(c\.boundTo === HYPER_CONVERTER_ID \? 1 : factor\);/.test(eco), '薪资基数应计入领导份额');
 });
 
-test('R2d 领导不升级 + 提拔清等级：tickThreads 跳过 leader + 晋升/卸任重置 level/xp', () => {
+test('R2d 领导等级制：tickThreads 跳过 leader + 任命重置 worker 等级 + 卸任保留领导等级', () => {
   const tb = stripComments(read('src/modules/threadBinding.js'));
   assert.ok(/if\s*\(isLeader\(c\)\)\s*continue;/.test(tb), 'tickThreads 应跳过领导（不积累 XP）');
   const crew = stripComments(read('src/modules/crew.js'));
-  const m = crew.match(/if\s*\(!c\.leader\)\s*\{[\s\S]{0,600}?crewPush\(`【\$\{c\.name\}】晋升为领导/);
+  const m = crew.match(/if\s*\(!c\.leader\)\s*\{[\s\S]{0,700}?crewPush\(`【\$\{c\.name\}】就任领导/);
   assert.ok(m, '晋升分支缺失');
-  assert.ok(/c\.level\s*=\s*1;\s*c\.xp\s*=\s*0/.test(m[0]), '提拔时应重置该员工等级（level=1, xp=0）');
-  const ret = crew.match(/else\s*\{[\s\S]{0,300}?c\.leader\s*=\s*false;[\s\S]{0,200}?crewPush\(`【\$\{c\.name\}】卸任领导者/);
+  // v4.3.21 反转：任命时重置该线程 worker 等级 Lv1 + 领导等级起步/恢复（c.leaderLv 取保留值）
+  assert.ok(/c\.level\s*=\s*1;\s*c\.xp\s*=\s*0/.test(m[0]), '任命时应重置该线程等级（level=1, xp=0）');
+  assert.ok(/c\.leaderLv\s*=\s*Math\.max\(1,/.test(m[0]), '任命时应恢复领导等级（保留值，首任 Lv1）');
+  const ret = crew.match(/else\s*\{[\s\S]{0,300}?c\.leader\s*=\s*false;[\s\S]{0,300}?crewPush\(`【\$\{c\.name\}】卸任领导者/);
   assert.ok(ret, '卸任分支缺失');
-  assert.ok(/c\.level\s*=\s*1;\s*c\.xp\s*=\s*0/.test(ret[0]), '卸任后应从 Lv1 重新开始');
+  // v4.3.21 反转：卸任不再清等级——领导等级保留（旧断言「卸任后从 Lv1 重新开始」已删除）
+  // 注：正则惰性匹配止于「卸任领导者」，保留文案在模板串内，故对全文断言
+  assert.ok(/卸任领导者（领导等级 Lv\.\$\{leaderLvOf\(c\)\} 保留）/.test(crew), '卸任应保留领导等级');
 });
 
 test('R2e 领导文案「+1%」：卡片悬浮 + wiki + 晋升日志', () => {
   const crew = read('src/modules/crew.js');
-  assert.ok(/领导（全局产出 \+1%）/.test(crew), '卡片星标悬浮应写「全局产出 +1%」');
+  // v4.3.21 反转：等级制文案——星标悬浮写「+1% 基础，每级 +0.01%」
+  assert.ok(/领导（全局产出 \+1% 基础，每级 \+0\.01%/.test(crew), '卡片星标悬浮应写「全局产出 +1% 基础，每级 +0.01%」');
   const wiki = read('src/data/wiki.js');
-  assert.ok(/领导提供固定全局产出/.test(wiki), 'wiki 应写「领导提供固定全局产出」');
-  assert.ok(/没有个人 EP 产出、不升级/.test(wiki), 'wiki 应写明零产出 + 不升级');
-  assert.ok(/提拔时会去除该员工等级，卸任后从 Lv1 重新开始升级/.test(wiki), 'wiki 应写明等级重置规则');
+  // v4.3.21 反转：wiki 文案改等级制口径（+1% 基础 Lv1 + 升级按钮 + 卸任保留）
+  assert.ok(/领导是全局加成位/.test(wiki), 'wiki 应写「领导是全局加成位」');
+  assert.ok(/每级 \+0\.01%、每秒消耗 \+\$\{D\.thread\.binding\.leaderEpPerSecPerLv\} EP\/s/.test(wiki), 'wiki 应写明每级加成与消耗');
+  assert.ok(/卸任后领导等级保留/.test(wiki), 'wiki 应写明卸任保留等级');
 });
 
 // ============ 反馈③ 裂隙等级迁移 ============

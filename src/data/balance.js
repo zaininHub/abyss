@@ -88,8 +88,13 @@ export const BALANCE = {
       matchProfBonus: 0.15,     // 匹配岗位额外转化加成 +15%（v3.3.1 反馈⑩：25%→15%，消耗增多的收益略微减少）
       mismatchProfBonus: 0.03,  // 非匹配岗位额外转化加成 +3%
       leaderBonus: 0.08,        // 领导者绑定额外 +8%（旧档残留绑定兼容兜底，正常路径不可达）
-      leaderGlobalPerLeader: 0.01, // v4.3.14 反馈②：全局产出 +1%/领导（固定，不吃研究点放大；文案「+1%」）
-      leaderGlobalCap: 0.01,    // 全局加成上限 +1%（领导只能存在一个）
+      // v4.3.21 反馈⑥：领导等级制——任命时该线程 worker 等级置 Lv1、领导等级首次 Lv1（+1% 基础），
+      //   每升 1 级全局加成 +0.01%、每秒消耗 +10 EP/s×等级（手动升级按钮，消耗即代价）；
+      //   卸任后领导等级保留（再任命同一线程恢复该等级）、线程默认空闲。leaderGlobalCap 随旧公式下线。
+      leaderGlobalPerLeader: 0.01, // Lv1 基础全局产出 +1%（固定，不吃研究点放大）
+      leaderLevelBonusPerLv: 0.0001, // 每级全局产出 +0.01%（Lv1 = +1% 基础）
+      leaderEpPerSecPerLv: 10,       // 领导每秒消耗 = 10 EP/s × 等级（独立于薪资口径，显示=实扣）
+      leaderLevelCap: 50,            // 领导等级上限（Lv50 = +1.49%）
       xpPerSec: 1,              // 在岗每秒 XP 基础
       xpSuitableMult: 2.5,      // 匹配/领导岗位 XP ×2.5（合适岗位等级涨得多）
       xpCap: 6000,              // XP 上限（封顶等级用）
@@ -384,7 +389,7 @@ export const BALANCE = {
     levelTech: { baseEp: 2e5, epGrowth: 1.9, baseDm: 10, dmGrowth: 1.7 },
     upgrades: {
       sentinel: { name: '裂隙哨站', cap: 5, desc: '裂隙出现间隔逐级缩短（下限 10 分钟）' }, // v4.3.3 反馈⑨：下限 4→10 分钟，去「每级 -25%」文案
-      lens:     { name: '裂隙透镜', cap: 5, desc: '裂隙 DM/RP 奖励 +20%/级' },
+      lens:     { name: '裂隙透镜', cap: 5, desc: '封印/拥抱的 DM·RP 奖励 +20%/级（深入不含）' }, // v4.3.21 反馈①：深入裂隙不产 RP 也不吃透镜，原「裂隙 DM/RP」文案误导
       charm:    { name: '裂隙护符', cap: 5, desc: '封印成本 -10%/级' },
       echo:     { name: '余烬共振', cap: 3, desc: '虚空碎片奖励 +50%/级' },
       // v2.8.30：裂隙自动动作（消耗大量余烬，单级；开关互斥最多开一个）

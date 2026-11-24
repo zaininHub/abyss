@@ -468,11 +468,8 @@ export function renderAtriumSwitch(host) {
   if (btn) btn.addEventListener('click', () => {
     // v4.3.19 反馈⑥：原位置开关与快捷开关同口径打日志（此前只有快捷开关记「快捷开关：灵感蒸馏…」，
     //   研究点页开关静默——日志里查不到谁关了蒸馏）
-    // v4.3.20 反馈②：关闭时线程下岗（setConverterEnabled 返回下岗数）+ 下岗日志
-    const onAfter = !converterEnabled('atrium');
-    const offN = setConverterEnabled('atrium', onAfter);
-    log(`自动蒸馏${onAfter ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, onAfter ? 'good' : 'bad');
-    if (!onAfter && offN > 0) log(`${offN} 条线程下岗了（灵感蒸馏停转，岗位收回）...`, 'bad');
+    // v4.3.21 反馈⑤：快捷开关类操作全部静默（开关/下岗均不打日志）——下岗功能本身保留
+    setConverterEnabled('atrium', !converterEnabled('atrium'));
     save(S);
     dirty.shop = true;
     dirty.rp = true;
@@ -836,12 +833,8 @@ function updateVehicleCollectHeader() {
     if (btn) btn.addEventListener('click', () => {
       // v3.3.4 反馈①：统一走 setConverterEnabled（写 converterOn + _probeEnabled 镜像），
       // 避免「页头开关只改 _probeEnabled，而采购率读 converterOn」导致开启后仍不采集
-      // v4.3.19 反馈⑥：补日志（与快捷开关同口径）
-      // v4.3.20 反馈②：关闭时线程下岗 + 下岗日志
-      const onAfter = !converterEnabled('vehicles');
-      const offN = setConverterEnabled('vehicles', onAfter);
-      log(`载具探采${onAfter ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, onAfter ? 'good' : 'bad');
-      if (!onAfter && offN > 0) log(`${offN} 条线程下岗了（载具探采停转，岗位收回）...`, 'bad');
+      // v4.3.21 反馈⑤：快捷开关类操作全部静默（开关/下岗均不打日志）——下岗功能本身保留
+      setConverterEnabled('vehicles', !converterEnabled('vehicles'));
       save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
       updateVehicleCollectHeader();
       dirty.top = true;
