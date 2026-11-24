@@ -12,7 +12,7 @@ import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
   unlockedConverterIds, converterLoad, converterCapacity, converterEnabled,
-  leaderLvOf, leaderGlobalMult,
+  leaderLvOf, leaderGlobalMult, leaderGlobalPercent,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页） // v4.3.20 反馈②：未开启岗位灰显 // v4.3.23 反馈①：领导等级走普通 XP 路径（levelUpLeader/canLevelUpLeader 下线）
 // v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
@@ -88,7 +88,7 @@ export function renderCrewPanel(container) {
     //   bindAffTipPop 委托 #crew-panel），文案三段式：职业身份 + 擅长岗位 + 机制说明。
     const affTip = p
       ? (p.affinity === 'command'
-        ? `🎖️ ${p.name}：可晋升为领导者（★，全局 EP 产出 +1%），不占用生产岗位`
+        ? `🎖️ ${p.name}：可晋升为领导者（★，全局产出 +1%），不占用生产岗位`
         : p.affinity
           ? `${p.icon} ${p.name} · 擅长「${CONVERTERS[p.affinity] ? CONVERTERS[p.affinity].name : p.affinity}」岗位——绑定该岗位无产出/消耗惩罚；绑定其他岗位：产出 ×0.6、消耗 ×1.5`
           : `😪 ${p.name}：天生怠惰——绑定任何岗位产出 ×0.4、消耗 ×2.25（惩罚更重，建议保持空闲）`)
@@ -103,8 +103,8 @@ export function renderCrewPanel(container) {
     const lvHtml = ` <span class="crew-lv">Lv.${lvl}</span>`;
     // v4.3.13 反馈⑥：领导徽章去「领导」字样只留星标——双字徽章把身份行挤出两列栅格导致错位；
     //   领导身份完整语义仍在悬浮（stateTip「 · 领导」）。
-    // v4.3.23 反馈①：星标 title 口径更新——全局 EP 产出 +1%×等级乘数，无津贴
-    const leaderBadge = isLead ? ` <span style="color:var(--good,#3fb950)" title="领导（全局 EP 产出 +1% × 等级乘数；等级按普通线程在岗经验自动提升）">★</span>` : '';
+    // v4.3.25 反馈③：全局加成线性口径——Lv1 +1.00%，每级 +0.01 个百分点，无津贴
+    const leaderBadge = isLead ? ` <span style="color:var(--good,#3fb950)" title="领导（全局产出 +1% 起、每级 +0.01%；等级按普通线程在岗经验自动提升）">★</span>` : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     // v4.3.19 反馈②：满员岗位从下拉源头移除（不止标「已满」）——用户口径「岗位满了，下拉框就
@@ -139,7 +139,7 @@ export function renderCrewPanel(container) {
     //   ② 数值行：+X EP/s -Y EP/s（带符号同式）；
     //   ③ 操作行：岗位下拉 + 晋升领导按钮 同排。
     //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
-    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLead ? ` · 领导（全局 EP 产出 +${((leaderGlobalMult() - 1) * 100).toFixed(2)}%）` : ''} · 擅长：${escAttr(affinityName)}`;
+    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLead ? ` · 领导（全局产出 +${leaderGlobalPercent().toFixed(2)}%）` : ''} · 擅长：${escAttr(affinityName)}`;
     return `<div class="crew-card">
       <div class="crew-line crew-line-id">
         <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
@@ -148,7 +148,8 @@ export function renderCrewPanel(container) {
       </div>
       <div class="crew-line crew-line-num">
         ${isLead
-          ? `<span class="crew-num">全局产出 +<b class="c-out">${((leaderGlobalMult() - 1) * 100).toFixed(2)}%</b></span>`
+          ? `<span class="crew-num">全局产出 +<b class="c-out">${leaderGlobalPercent().toFixed(2)}%</b></span>
+        <span class="crew-num">-<b class="c-sal">0</b> EP/s</span>`
           : `<span class="crew-num">+<b class="c-out">0</b> EP/s</span>
         <span class="crew-num">-<b class="c-sal">0</b> EP/s</span>`}
       </div>
@@ -245,7 +246,7 @@ export function renderCrewPanel(container) {
             // v3.7.1 反馈①：领导者只提供全局加成，不能同时占用岗位
             if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位`); }
             const pct = (leaderGlobalMult() - 1) * 100;
-            crewPush(`【${c.name}】就任领导（Lv.${threadLevel(c)}，全局 EP 产出 +${pct.toFixed(2)}%，随等级提升）`, 'good');
+            crewPush(`【${c.name}】就任领导（Lv.${threadLevel(c)}，全局产出 +${pct.toFixed(2)}%，随等级提升）`, 'good');
           } else {
             // v4.3.23 反馈①：卸任保留等级（等级是线程自身属性）
             c.leader = false;

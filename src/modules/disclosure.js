@@ -149,6 +149,7 @@ export function renderChainedGroups(container, split, groups, makeItem, onItem, 
     const h = document.createElement('div');
     h.className = 'group-title';
     // v4.3.23 反馈③：支持 badge 字段——组标题旁挂小徽章（如博物馆「馆藏认证」）。
+    //   v4.3.25 反馈①：徽章改挂标题**右侧**（原实现插在标题文字之前）。
     //   createTextNode 兜底：纯 Node 单测环境（mock document 无 createTextNode）回落 textContent。
     const canBadge = g.badge && typeof document.createTextNode === 'function';
     if (canBadge) {
@@ -156,10 +157,10 @@ export function renderChainedGroups(container, split, groups, makeItem, onItem, 
       b.className = 'group-title-badge';
       b.textContent = g.badge;
       b.title = g.badgeTip || g.badge;
-      h.appendChild(b);
       h.appendChild(document.createTextNode(g.title));
+      h.appendChild(b);
     } else {
-      h.textContent = (canBadge ? '' : (g.badge ? `${g.badge} ` : '')) + g.title;
+      h.textContent = (g.badge ? `${g.badge} ` : '') + g.title;
     }
     container.appendChild(h);
     for (const { it, i } of active) {

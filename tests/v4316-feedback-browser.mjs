@@ -74,8 +74,8 @@ console.log('[1] 领导固定消耗 + 卡面无等级');
     ok(/Lv\.\d/.test(r.cardText), '领导卡面显示领导等级 Lv.X（v4.3.21 等级制）');
     // v4.3.21 反转：领导产出行 toFixed(2)（不再是整数「1%」）
     ok(r.cOut === '1.00%', `领导卡面产出行显示「1.00%」（实际「${r.cOut}」）`);
-    // v4.3.23 反转：津贴下线后领导卡面只渲染「全局产出 +X%」，不再有 .c-sal 消耗行
-    ok(r.cSal === null && /全局产出 \+/.test(r.cardText), `领导卡面无独立消耗行，显示「全局产出 +X%」（实际 cSal=${r.cSal}）`);
+    // v4.3.25 反馈③：领导卡恢复 -EP/s 消耗行（与普通线程同构），并显示「全局产出 +X%」
+    ok(r.cSal !== null && /全局产出 \+/.test(r.cardText), `领导卡恢复 -EP/s 消耗行 + 「全局产出 +X%」（实际 cSal=${r.cSal}）`);
     ok(salAfter > salBefore - 1e-9 && Math.abs(salAfter - salBefore) < 1e-9 || salAfter >= salBefore,
       `晋升前后顶栏薪资不变（Lv1 空闲同口径；bug 口径是下降：${salBefore.toFixed(3)} → ${salAfter.toFixed(3)}）`);
   }

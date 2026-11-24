@@ -12,17 +12,23 @@
 // 这样「先产出、再扣费、后结算」的顺序完全不变，重构不引入任何数值漂移。
 //
 // 新增玩法若要影响资源，只需在 core 注册修饰器并给流声明 modKey —— 不必改这里、也不必改主循环。
-import { registerFlow, flowMultiplier, bookFlow, FLOW_PHASES as P } from '../core/flowEngine.js';
+import { registerFlow, flowMultiplier, registerModifier, bookFlow, FLOW_PHASES as P } from '../core/flowEngine.js';
 import { BALANCE } from '../data/balance.js';
 import { UPGRADES } from '../data/upgrades.js';
 import {
   computeCps, epStorageCap, addEp, addRp, addPt, clickMult, isLazy,
   hasTech, rpCap, rpEffScale, ptCap, researchMult, gainRes, spendRes,
 } from '../modules/economy.js';
-import { converterEnabled, converterThreadBoost } from '../modules/threadBinding.js';
+import { converterEnabled, converterThreadBoost, leaderGlobalMult } from '../modules/threadBinding.js';
 import { petUpkeepTotalPerSec, petStarving } from '../modules/pets.js';
 
 const { EP_PRODUCE, EP_AUX, PRODUCERS, CONVERTERS } = P;
+
+// v4.3.25 反馈④：领导加成改为**全局**产出加成——RP / PT 的声明式流统一挂修饰器。
+//   EP 已由 economy.globalMult 内乘 leaderGlobalMult；这里补齐 RP/PT，避免「只有 EP 吃加成」。
+//   修饰器在流内读取 leaderGlobalMult()，领导升级后下一帧即生效，无需重建流。
+registerModifier('rp', (mult) => mult * leaderGlobalMult());
+registerModifier('pt', (mult) => mult * leaderGlobalMult());
 
 // ========== ① EP 主产出 ==========
 // 挂机产出走「先加后截」：S.ep 先全额入账，溢出由 tickCorruption 累积腐化并截断到上限；

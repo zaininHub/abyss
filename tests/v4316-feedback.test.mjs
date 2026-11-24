@@ -36,7 +36,7 @@ test('R1b crew 卡面：产出行「+X%」直出 + 消耗平均摊派（v4.3.23 
   // v4.3.23 反转：卡面统一 Lv 显示（领导等级 = 普通等级 c.level）
   assert.ok(/const\s+lvHtml\s*=\s*` <span class="crew-lv">Lv\.\$\{lvl\}<\/span>`;/.test(crew), '卡面应统一 Lv 显示（不分领导/普通）');
   // 产出行直出「全局产出 +X.XX%」；津贴消耗行已下线
-  assert.ok(/isLead\s*\?\s*`<span class="crew-num">全局产出 \+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b>/.test(crew), '领导产出行应直出「全局产出 +等级实算百分比」');
+  assert.ok(/isLead\s*\?\s*`<span class="crew-num">全局产出 \+<b class="c-out">\$\{leaderGlobalPercent\(\)\.toFixed\(2\)\}%<\/b>/.test(crew), '领导产出行应直出「全局产出 +等级实算百分比」');
   assert.ok(!/津贴 -</.test(crew), '领导津贴消耗行应已下线（v4.3.23）');
   assert.ok(/if\s*\(c\.leader !== true\)\s*\{/.test(crew), '动态刷新应只跳领导产出行');
   assert.ok(!/leaderSalaryPerSec/.test(crew), 'crew.js 不应再引用 leaderSalaryPerSec（v4.3.23）');

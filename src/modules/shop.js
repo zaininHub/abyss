@@ -18,6 +18,7 @@ import { autoBuildUnlocked, autoBuildActivateCost, autoBuildActivable, activateA
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
+import { museumStationProgress } from './progression.js'; // v4.3.25 反馈①：馆藏认证按当前工位实时复核
 
 // v2.3.1 ⑥（rev18 9.4）：倍率交互整节移除——bulkN / setBulk / getBulk 删除，
 // 所有购买固定按 ×1 执行；bulkCostCalc 签名保留，n 固定传 1（最小化改动）。
@@ -237,9 +238,12 @@ export function renderShop(container) {
   // v2.3.1 ⑤（rev18 9.3 分组表）：工位在前、仓储区在后；分组纯显示不拆链
   // v2.8.18 ③：已购终态项（满级/一次性）收各组最下侧「已升级」折叠区
   // v4.3.23 反馈③：完成「博物馆的访客」后，工位标题挂「馆藏认证」徽章
-  const museumCertified = !!((S._specialTasksDone || {}).sp1_museum);
+  // v4.3.25 反馈①：徽章 = 已完成任务 + **当前仍达标**（晋升清零 upgrades 后不再误挂）
+  const museumDone = !!((S._specialTasksDone || {}).sp1_museum);
+  const museumNow = museumStationProgress(S);
+  const museumCertified = museumDone && museumNow.kinds >= 3 && museumNow.sum >= 50;
   renderChainedGroups(container, split, [
-    { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat, badge: museumCertified ? '馆藏认证' : '', badgeTip: '完成特殊任务「博物馆的访客」——同时拥有 3 种工位且等级之和 ≥50' },
+    { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat, badge: museumCertified ? '馆藏认证' : '', badgeTip: `当前工位 ${museumNow.kinds} 种 / 等级和 ${museumNow.sum}，需同时拥有 3 种工位且等级之和 ≥50（达成期间佩戴）` },
     { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
     { title: '仓储区', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });

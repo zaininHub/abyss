@@ -68,7 +68,7 @@ test('R5 领导等级走普通线程等级（v4.3.23 反转：独立制下线）
   // v4.3.23 反转：leaderLvOf 委托 threadLevel（等级真源统一）
   assert.ok(/export function leaderLvOf\(c\)\s*\{\s*return threadLevel\(c\);\s*\}/.test(tb), 'leaderLvOf 应委托 threadLevel（v4.3.23）');
   assert.ok(/export function leaderGlobalMult\(\)/.test(tb), 'threadBinding 应导出 leaderGlobalMult');
-  assert.ok(/1 \+ B\(\)\.leaderGlobalPerLeader \* threadLevelMult/.test(tb), '公式 1 + 1% × 等级乘数（v4.3.23）');
+  assert.ok(/1 \+ B\(\)\.leaderGlobalPerLeader \+ B\(\)\.leaderGlobalPerLevel \* \(lv - 1\)/.test(tb), '公式 1 + 1% + 每级 0.01 个百分点（v4.3.25 线性）');
   // v4.3.23 反转：手动升级函数应删除（等级自动提升）
   assert.ok(!/export function levelUpLeader/.test(tb), 'levelUpLeader 应已删除（v4.3.23）');
   assert.ok(!/canLevelUpLeader/.test(tb), 'canLevelUpLeader 应已删除（v4.3.23）');

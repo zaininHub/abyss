@@ -2,7 +2,7 @@
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { epStorageCap, fmt, echoLv, faithTechMult, researchMult, spendRes, gainRes, buyRes } from './economy.js';
-import { converterEnabled, converterThreadBoost, setConverterEnabled } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径） // v4.3.20 反馈②：圣所关闭线程下岗
+import { converterEnabled, converterThreadBoost, setConverterEnabled, leaderGlobalMult } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径） // v4.3.20 反馈②：圣所关闭线程下岗 // v4.3.25 反馈④：领导全局加成接入 FP
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
@@ -260,6 +260,8 @@ export function tickReligion(dt) {
     mult *= (1 + 0.10 * secretSanctumLv('star_hall')); // v2.8.6 B1a：星辰回廊——信仰产出 +10%/座
     mult *= researchMult('faith'); // v3.4.2：信徒训导（RP）——信仰产出 +12%/级
     if (S.storyline === 'line_faith') mult *= 2; // v2.8.30 ③：神权协议——信仰 ×2（产出与消耗同步）
+    // v4.3.25 反馈④：领导全局加成同样作用于圣所 FP 产出（消耗侧不乘，只放大产出）
+    mult *= leaderGlobalMult();
     const boost = converterThreadBoost('temple'); // v3.3.3 反馈⑦：绑定线程参与圣所生产（祭司匹配岗位加成更高，增产出不增耗）
     // v3.3.9 反馈⑦：信仰满仓即停——不产出也不消耗 EP（开关保持开启，赞颂腾空后自动恢复）
     if ((S.faith || 0) >= faithCap() - 1e-9) { S._templeEpShortSec = 0; return; }

@@ -7,6 +7,7 @@ import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共�
 import { fmtLongDuration, fmtMultDelta } from '../core/format.js';
 import { starChartUnlocked } from './disclosure.js'; // v3.12.9：深空殖民与星图 tab 同源（宠物在前） // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：深空殖民绑第 12 章
+import { leaderGlobalMult } from './threadBinding.js'; // v4.3.25 反馈④：领导全局加成接入殖民 RP 产出
 export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改动
 
 // v3.6.0 方向⑤⑧：星际探索重构——
@@ -129,7 +130,8 @@ export function starColoniesUnlocked() { return gateOpen('expedition', S) && sta
 export function colonyRpPerSec() {
   let rp = 0;
   for (const g of GALAXIES) if (isColonized(g.id)) rp += g.colonyRp * researchMult('colony'); // v3.6.0 方向⑤：rp_colony2（星殖民拓）提升殖民 RP 产出 +8%/级
-  return rp;
+  // v4.3.25 反馈④：领导全局加成作用于殖民 RP 持续产出（与手动蒸馏/任务奖励区分开）
+  return rp * leaderGlobalMult();
 }
 export function tickColonies(dt) {
   const rp = colonyRpPerSec();

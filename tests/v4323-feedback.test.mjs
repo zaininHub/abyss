@@ -41,14 +41,14 @@ test('F3 等级走普通 XP 路径：tickThreads 不跳领导 + threadXpGainPerS
   assert.ok(!/isLeader/.test(tt[0]), 'tickThreads 不应有领导特判（普通 XP 路径）');
   assert.ok(/isLeader\(c\)\)\s*return\s*B\(\)\.xpPerSec\s*\*\s*B\(\)\.xpSuitableMult/.test(tb), 'threadXpGainPerSec 领导恒按合适口径积 XP');
   assert.match(tb, /export function leaderLvOf\(c\)\s*\{\s*return threadLevel\(c\);\s*\}/, 'leaderLvOf 应委托 threadLevel');
-  assert.match(tb, /1 \+ B\(\)\.leaderGlobalPerLeader \* threadLevelMult/, 'leaderGlobalMult = 1 + 1% × 等级乘数');
+  assert.match(tb, /1 \+ B\(\)\.leaderGlobalPerLeader \+ B\(\)\.leaderGlobalPerLevel \* \(lv - 1\)/, 'leaderGlobalMult = 1 + 1% + 每级 0.01 个百分点（v4.3.25 线性）');
 });
 
 test('F4 任命/卸任不动等级：crew.js 无重置 + 日志「经验保留」+ state.js leaderLv 迁移', () => {
   const crew = strip(read('src/modules/crew.js'));
   assert.ok(!/c\.level = 1; c\.xp = 0/.test(crew), '任命不应重置等级');
   assert.ok(!/c\.leaderLv\s*=/.test(crew), '不应写 leaderLv');
-  assert.match(crew, /就任领导（Lv\.\$\{threadLevel\(c\)\}，全局 EP 产出 \+/, '就任日志口径');
+  assert.match(crew, /就任领导（Lv\.\$\{threadLevel\(c\)\}，全局产出 \+/, '就任日志口径（全局产出，v4.3.25 全局化）');
   assert.ok((crew.match(/经验保留，回归普通线程/g) || []).length >= 2, '卸任/替换日志写「经验保留」');
   const state = read('src/state.js');
   assert.match(state, /delete c\.leaderLv;/, 'normalizeCrew 应删除旧档 leaderLv 字段');
@@ -61,7 +61,7 @@ test('F5 staffOutputParts 等级统一：one/oneSal 统一吃 lvMult + wiki 领�
   assert.match(eco, /const\s+one\s*=\s*\(c\.output \|\| 3\) \* 0\.8 \* mood \* outMult \* lvMult;/, 'one 统一吃 lvMult');
   assert.match(eco, /const\s+oneSal\s*=\s*\(c\.output \|\| 3\) \* 0\.8 \* mood \* salaryOutMult \* lvMult;/, 'oneSal 统一吃 lvMult');
   const wiki = read('src/data/wiki.js');
-  assert.match(wiki, /等级乘数/, 'wiki 领导段写等级乘数口径');
+  assert.match(wiki, /每级再 \+0\.01 个百分点/, 'wiki 领导段写每级 +0.01 个百分点线性口径');
   assert.ok(!/领导津贴/.test(wiki), 'wiki 不应再有「领导津贴」');
 });
 

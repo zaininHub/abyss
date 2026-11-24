@@ -918,9 +918,9 @@ function bindDistillTipPop() {
 }
 
 // v4.3.24 反馈①：裂隙等级升级需求悬浮气泡——行内价格胶囊/深入消耗副标题改悬浮，
-//   复用 wage-tip-pop 范式（即时显示 + rect 定位 + 上下翻转 + 左右钳制）。文案来源
-//   data-rift-level-tip（riftLevelRowHtml 每次重建写入，需求与下一级效果实时），
-//   事件委托挂稳定宿主 #rift-tab-panel（面板重建不丢监听）。
+//   复用 wage-tip-pop 范式（即时显示 + rect 定位 + 上下翻转 + 左右钳制）。
+// v4.3.25 反馈②：拆成两个气泡源——等级名块 data-rift-level-tip 只讲下一级效果，
+//   升级按钮 data-rift-buy-tip 只讲升级需求/可支付态；事件委托挂稳定宿主 #rift-tab-panel。
 function bindRiftLevelTipPop() {
   if (typeof document === 'undefined') return;
   const zone = document.getElementById('rift-tab-panel');
@@ -945,13 +945,13 @@ function bindRiftLevelTipPop() {
     p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
     p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
   };
-  const anchorOf = (e) => e.target.closest ? e.target.closest('[data-rift-level-tip]') : null;
+  const anchorOf = (e) => e.target.closest ? e.target.closest('[data-rift-level-tip],[data-rift-buy-tip]') : null;
   const show = (e) => {
     const anchor = anchorOf(e);
     if (!anchor) return;
     const p = pop();
     if (!p) return;
-    p.textContent = anchor.dataset.riftLevelTip || '';
+    p.textContent = anchor.dataset.riftLevelTip || anchor.dataset.riftBuyTip || '';
     place(anchor);
     p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
   };

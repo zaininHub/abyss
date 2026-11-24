@@ -90,9 +90,12 @@ export const BALANCE = {
       leaderBonus: 0.08,        // 领导者绑定额外 +8%（旧档残留绑定兼容兜底，正常路径不可达）
       // v4.3.23 反馈①：领导升级改革——废除独立 leaderLv/手动升级按钮/领导津贴三键
       //  （leaderLevelBonusPerLv/leaderEpPerSecPerLv/leaderLevelCap 下线）。领导等级走
-      //   普通线程等级路径（c.level，在岗积 XP 自动升级），全局加成 = leaderGlobalPerLeader
-      //   × threadLevelMult（Lv1 = +1.00%，Lv10 = +1.72%），消耗回归普通薪资口径。
-      leaderGlobalPerLeader: 0.01, // Lv1 基础全局产出 +1%（固定，不吃研究点放大；随领导等级乘数放大）
+      //   普通线程等级路径（c.level，在岗积 XP 自动升级）。
+      // v4.3.25 反馈③：全局加成改为线性——Lv1 = +1.00%，每级 +0.01 个百分点
+      //  （Lv2 = +1.01%，Lv10 = +1.09%）；不再乘 levelMultPerLevel（+8%/级 只放大
+      //   普通线程个人产出与薪资，不能顺带把全局加成放大到 1.72%）。
+      leaderGlobalPerLeader: 0.01,   // Lv1 基础全局产出 +1%（固定，不吃研究点放大）
+      leaderGlobalPerLevel: 0.0001,  // 每级额外 +0.01 个百分点（0.0001 = 0.01%）
       xpPerSec: 1,              // 在岗每秒 XP 基础
       xpSuitableMult: 2.5,      // 匹配/领导岗位 XP ×2.5（合适岗位等级涨得多）
       xpCap: 6000,              // XP 上限（封顶等级用）

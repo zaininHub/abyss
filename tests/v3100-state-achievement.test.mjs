@@ -462,7 +462,7 @@ test('F1 Wiki 两节都写明「编排调倍率 / 班组调人头 / 分层相乘
     assert.ok(!/undefined|NaN|Infinity/.test(body), `${name} 渲染出非法数值`);
   }
   assert.ok(orch.includes('不是全部加成的总和'), '编排节需明确卡面倍率不是总倍率');
-  assert.ok(thread.includes('DM 探采只看编排'), '班组节需说明 DM 不吃班组加成');
+  assert.ok(thread.includes('DM 探采不吃线程绑定乘区'), '班组节需说明 DM 不吃线程绑定乘区（吃领导全局加成与编排）');
 });
 
 test('F2 编排卡倍率行标注口径，四条倍率仍由统一读侧驱动', () => {

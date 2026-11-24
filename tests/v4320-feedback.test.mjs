@@ -18,8 +18,8 @@ test('R1 multBreakdown 补领导全局乘区（语义「全局产出」，非 EP
   const eco = stripComments(read('src/modules/economy.js'));
   // leaderGlobalMult 进 multBreakdown（!==1 才列，无领导不占行）
   assert.ok(/const lead = leaderGlobalMult\(\);/.test(eco), 'multBreakdown 应取 leaderGlobalMult');
-  // v4.3.21 反转：toFixed(0)→toFixed(2)（等级制 +0.01%/级 需两位小数）；v4.3.22 消歧：全局产出→全局 EP 产出
-  assert.ok(/领导 \+\$\{\(\(lead - 1\) \* 100\)\.toFixed\(2\)\}%（全局 EP 产出）/.test(eco), '应列「领导 +N%（全局 EP 产出）」');
+  // v4.3.25 反馈④：领导加成已全局化（EP/RP/PT/FP/DM），括号后缀删除
+  assert.ok(/领导 \+\$\{\(\(lead - 1\) \* 100\)\.toFixed\(2\)\}%/.test(eco), '应列「领导 +N%」');
   // 真源核对：globalMult 内确有 m *= leaderGlobalMult()（乘区真实性）
   assert.ok(/m \*= leaderGlobalMult\(\);/.test(eco), 'globalMult 内应含领导乘区');
   // v4.3.21 反馈③：消耗弹窗拆分——drainMultBreakdown 只列消耗减少类

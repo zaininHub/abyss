@@ -48,8 +48,9 @@ console.log('[1] 领导乘区进产出弹窗');
     // textContent 或 innerHTML 任一含「领导 +1%（全局产出）」；弹窗可能 display:none（hover 才显示），
     // 但内容已随 hover 更新——用 textContent 判定
     const blob = (r.text || '') + (r.html || '');
-    // v4.3.21 反转：领导行 toFixed(2)（Lv1 → +1.00%）
-    ok(/领导 \+1\.00%（全局 EP 产出）/.test(blob), '产出弹窗应含「领导 +1.00%（全局 EP 产出）」（v4.3.22 消歧）');
+    // v4.3.25 反馈④：领导加成已全局化，去「（全局 EP 产出）」括号
+    ok(/领导 \+1\.00%/.test(blob), '产出弹窗应含「领导 +1.00%」（v4.3.25 去括号）');
+    ok(!/（全局 EP 产出）/.test(blob), '产出弹窗领导行不再带「（全局 EP 产出）」');
     ok(!/领导 \+1\.00% EP\/s/.test(blob), '语义是全局 EP 产出百分比而非 EP/s 流量');
   }
 }

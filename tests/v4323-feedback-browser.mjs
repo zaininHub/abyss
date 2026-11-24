@@ -54,9 +54,9 @@ console.log('[1] 领导卡面改革（v4.3.23）');
   if (r.err) { ok(false, r.err); }
   else {
     ok(!r.hasUpBtn, '领导卡不应再有手动升级按钮（v4.3.23）');
-    ok(r.out === '1.16%', `Lv3 全局加成 = 1%×1.16 = +1.16%（实际「${r.out}」）`);
+    ok(r.out === '1.02%', `Lv3 全局加成 = 1.00% + 2×0.01 = +1.02%（实际「${r.out}」）`);
     ok(r.lv === 'Lv.3', `卡面统一 Lv 显示 = 普通等级（实际「${r.lv}」）`);
-    ok(r.sal === null, `领导卡无独立津贴消耗行（实际「${r.sal}」）`);
+    ok(r.sal !== null, `领导卡恢复 -EP/s 消耗行（实际「${r.sal}」）`);
   }
 }
 
@@ -77,7 +77,7 @@ console.log('[2] 领导 XP 自动升级联动');
       await new Promise(r2 => setTimeout(r2, 100));
       const card = document.querySelector('.crew-card');
       out = card && card.querySelector('.c-out') ? card.querySelector('.c-out').textContent : '';
-      if (out === '1.24%') break;
+      if (out === '1.03%') break;
     }
     return {
       level: lead.level,
@@ -86,8 +86,8 @@ console.log('[2] 领导 XP 自动升级联动');
     };
   });
   ok(r.level >= 4, `领导 XP 达阈值自动升级 Lv4（实际 Lv.${r.level}）`);
-  ok(r.gqa !== null && Math.abs(r.gqa - (1 + 0.01 * (1 + (Math.min(r.level, 10) - 1) * 0.08))) < 1e-9, `leaderGlobalMult = 1+1%×等级乘数（实际 ${r.gqa}）`);
-  ok(r.out === '1.24%', `卡面联动 +1.24%（实际「${r.out}」）`);
+  ok(r.gqa !== null && Math.abs(r.gqa - (1 + 0.01 + 0.0001 * (Math.min(r.level, 10) - 1))) < 1e-9, `leaderGlobalMult = 1+1%+每级 0.01 个百分点（实际 ${r.gqa}）`);
+  ok(r.out === '1.03%', `卡面联动 +1.03%（实际「${r.out}」）`);
 }
 
 // ===== ③ 任命不重置等级 + 卸任保留 =====
@@ -127,7 +127,7 @@ console.log('[3] 任命/卸任等级保留');
     ok(r.w1Leader, 'W1 晋升成功');
     ok(r.w1Level === 7, `任命不重置等级：W1 仍 Lv7（实际 Lv.${r.w1Level}）`);
     ok(r.l0Level === 5, `卸任保留等级：L0 仍 Lv5（实际 Lv.${r.l0Level}）`);
-    ok(/就任领导（Lv\.7，全局 EP 产出 \+1\.48%，随等级提升）/.test(r.feed), `就任日志写等级与加成（实际「${(r.feed.match(/【W1】就任领导[^|]*/) || [''])[0]}」）`);
+    ok(/就任领导（Lv\.7，全局产出 \+1\.06%，随等级提升）/.test(r.feed), `就任日志写等级与加成（实际「${(r.feed.match(/【W1】就任领导[^|]*/) || [''])[0]}」）`);
     ok(/经验保留，回归普通线程/.test(r.feed), '卸任日志写「经验保留，回归普通线程」');
   }
 }

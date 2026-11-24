@@ -39,8 +39,9 @@ test('R2a 领导固定 +1%：balance 值与 leaderGlobalMult 不再乘研究点'
   assert.ok(!/leaderLevelCap/.test(bal), 'leaderLevelCap 应已下线（等级上限走 levelCap=10）');
   const tb = stripComments(read('src/modules/threadBinding.js'));
   assert.ok(!/researchMult\('crew'\)/.test(tb), 'leaderGlobalMult 不应再乘 researchMult(crew)');
-  // v4.3.23 反转：公式改「1 + 基础 × threadLevelMult(领导Lv)」
-  assert.ok(/1\s*\+\s*B\(\)\.leaderGlobalPerLeader\s*\*\s*threadLevelMult/.test(tb), 'leaderGlobalMult 公式应为 1+基础×等级乘数');
+  // v4.3.25 反馈③：线性口径——基础 +1%，每级 +0.01 个百分点（不再乘 threadLevelMult）
+  assert.ok(/leaderGlobalPerLevel:\s*0\.0001/.test(bal), 'leaderGlobalPerLevel 应为 0.0001（+0.01%/级）');
+  assert.ok(/1\s*\+\s*B\(\)\.leaderGlobalPerLeader\s*\+\s*B\(\)\.leaderGlobalPerLevel\s*\*\s*\(lv - 1\)/.test(tb), 'leaderGlobalMult 公式应为 1+基础+每级增量');
 });
 
 test('R2b 班组扩编乘区改挂 economy.globalMult（无死数据红线）', () => {
@@ -82,12 +83,12 @@ test('R2d 领导走普通 XP 路径：tickThreads 不跳 leader + 任命不重�
 
 test('R2e 领导文案「+1%」：卡片悬浮 + wiki + 晋升日志', () => {
   const crew = read('src/modules/crew.js');
-  // v4.3.23 反转：等级制文案——星标悬浮写「+1% × 等级乘数」
-  assert.ok(/领导（全局 EP 产出 \+1% × 等级乘数/.test(crew), '卡片星标悬浮应写「全局 EP 产出 +1% × 等级乘数」（v4.3.23）');
+  // v4.3.25 反馈③：线性文案——星标悬浮写「全局产出 +1% 起、每级 +0.01%」（全局化）
+  assert.ok(/领导（全局产出 \+1% 起、每级 \+0\.01%/.test(crew), '卡片星标悬浮应写「全局产出 +1% 起、每级 +0.01%」（v4.3.25）');
   const wiki = read('src/data/wiki.js');
   // v4.3.23 反转：wiki 文案改普通升级口径（无津贴、无手动升级、任命不重置）
   assert.ok(/领导是全局加成位/.test(wiki), 'wiki 应写「领导是全局加成位」');
-  assert.ok(/等级乘数/.test(wiki), 'wiki 应写等级乘数口径');
+  assert.ok(/每级再 \+0\.01 个百分点/.test(wiki), 'wiki 应写每级 +0.01 个百分点线性口径');
   assert.ok(!/领导津贴/.test(wiki), 'wiki 不应再出现「领导津贴」（机制下线）');
   assert.ok(!/升级★/.test(wiki.split('领导是全局加成位')[1] || ''), 'wiki 领导段不应再写手动「升级★」（v4.3.23）');
 });

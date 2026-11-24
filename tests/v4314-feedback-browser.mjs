@@ -103,10 +103,10 @@ await sleep(600);
   ok(r.leader === true, '领导标记生效');
   // v4.3.23 反转：任命不重置等级（等级是线程自身属性，XP 跨任命保留）
   ok(r.level === 5, `任命不重置等级（实际 Lv.${r.level}）`);
-  ok(r.starText === '★' && /全局 EP 产出 \+1% × 等级乘数/.test(r.starTip), `星标「★」+悬浮「全局 EP 产出 +1% × 等级乘数」（v4.3.23；实际「${r.starTip}」）`);
+  ok(r.starText === '★' && /全局产出 \+1% 起、每级 \+0\.01%/.test(r.starTip), `星标「★」+悬浮「全局产出 +1% 起、每级 +0.01%」（v4.3.25；实际「${r.starTip}」）`);
   ok(r.noSelect, '领导卡无岗位下拉');
-  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.5，全局 EP 产出 \+1\.32%，随等级提升）/.test(e.msg)));
-  ok(feedOk, '晋升班组流水 v4.3.23 口径「就任领导（Lv.5，全局 EP 产出 +1.32%，随等级提升）」');
+  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.5，全局产出 \+1\.04%，随等级提升）/.test(e.msg)));
+  ok(feedOk, '晋升班组流水 v4.3.25 口径「就任领导（Lv.5，全局产出 +1.04%，随等级提升）」');
 }
 
 // ===== ③ 裂隙面板 =====

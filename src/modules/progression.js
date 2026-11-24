@@ -8,6 +8,19 @@ import { dirty } from '../core/runtime.js'; // v4.3.24 缺陷修复：静态引�
 // v4.3.23 反馈③：工位分类升级 id 集（与 shop.js「工位」组谓词同口径：cps>0 且非资源建筑/集市）
 export const MUSEUM_STATION_IDS = UPGRADES.filter(u => u.cps > 0 && !u.produces && !u.cat).map(u => u.id);
 
+// v4.3.25 反馈①：馆藏认证的「当前是否达标」实时口径。
+//   徽章不再只读 _specialTasksDone（该标记跨晋升保留，而 upgrades 晋升清零，
+//   会导致工位归零后仍佩戴认证），改为显示时用本函数复核当前档位。
+export function museumStationProgress(state) {
+  let kinds = 0, sum = 0;
+  for (const u of MUSEUM_STATION_IDS) {
+    const lv = Number((state.upgrades || {})[u]) || 0;
+    if (lv > 0) kinds++;
+    sum += lv;
+  }
+  return { kinds, sum };
+}
+
 // ========== 特殊任务定义（6个：3通用 + 3线专属） ==========
 export const SPECIAL_TASKS = [
   // 通用特殊任务
@@ -20,15 +33,10 @@ export const SPECIAL_TASKS = [
     //   desc 保持「无时间限制/限时…；{要求}」两段式约定（完成日志按「；」拆行）。
     desc: '无时间限制；同时拥有 3 种工位，且工位等级之和达到 50 级',
     condition: (S) => {
-      let kinds = 0, sum = 0;
-      for (const u of MUSEUM_STATION_IDS) {
-        const lv = (S.upgrades || {})[u] || 0;
-        if (lv > 0) kinds++;
-        sum += lv;
-      }
+      const { kinds, sum } = museumStationProgress(S);
       return kinds >= 3 && sum >= 50;
     },
-    reward: { type: 'museum_mode', msg: '你的工作台获得博物馆「馆藏认证」——商店工位分类将永久佩戴徽章' },
+    reward: { type: 'museum_mode', msg: '你的工作台获得博物馆「馆藏认证」——工位分类达标期间佩戴徽章（未达 3 种或等级和不足 50 时自动隐藏）' },
     triggered: false,
     line: 'any',
     // v4.3.23 反馈③：触发后未完成前，每 60s 打一条进度提醒日志（「每个消失都打日志」按
@@ -167,11 +175,23 @@ let _abandonCooldownUntil = 0;
 // ========== 特殊任务检查 ==========
 // 上次进度提醒时间（v4.3.23 反馈③：博物馆任务触发后未完成的周期日志）
 let _lastMuseumHint = 0;
+// v4.3.25 反馈①：上一次的工位达标态——翻转时置脏商店，让认证徽章即时出现/隐藏
+let _museumQualified = null;
 export function checkSpecialTasks(S, log, toast) {
   if (!S._specialTasksDone) S._specialTasksDone = {};
 
   // 检查已完成条件
   for (const task of SPECIAL_TASKS) {
+    // v4.3.25 反馈①：认证徽章是「当前达标」状态而非只读历史标记。
+    //   跨晋升保留的 _specialTasksDone 让工位归零后仍挂徽章；这里每帧比对达标态，
+    //   翻转时置脏商店；徽章渲染处（shop.js）同样用 museumStationProgress 实时复核。
+    if (task.id === 'sp1_museum') {
+      const qualified = task.condition(S);
+      if (_museumQualified !== qualified) {
+        _museumQualified = qualified;
+        dirty.shop = true;
+      }
+    }
     if (S._specialTasksDone[task.id]) continue;
     if (task.line !== 'any' && task.line !== S.storyline) continue;
     try {
@@ -208,16 +228,11 @@ export function checkSpecialTasks(S, log, toast) {
         if (task.id === 'sp3_farewell') S.achievements = Object.assign({}, S.achievements, { farewell_gift: true });
         // v4.3.23 反馈③：博物馆任务完成后打提示日志（徽章已挂到商店工位分类标题）
         if (task.id === 'sp1_museum' && !silentBackfill && log) {
-          log('博物馆的访客 · 馆藏认证已颁发——商店「工位」分类标题现在佩戴着徽章', 'good');
+          log('博物馆的访客 · 馆藏认证已颁发——商店「工位」分类标题现在佩戴着徽章（保持 3 种 / 等级和 ≥50 期间有效）', 'good');
         }
       } else if (task.id === 'sp1_museum' && task.hintEverySec) {
         // v4.3.23 反馈③：触发（已有工位）且未完成前，每 hintEverySec 秒打一条进度提醒
-        let kinds = 0, sum = 0;
-        for (const u of MUSEUM_STATION_IDS) {
-          const lv = (S.upgrades || {})[u] || 0;
-          if (lv > 0) kinds++;
-          sum += lv;
-        }
+        const { kinds, sum } = museumStationProgress(S);
         if (kinds > 0) { // 「触发」= 至少拥有 1 种工位（访客已上门）
           const now = Date.now();
           if (now - _lastMuseumHint >= (task.hintEverySec || 60) * 1000) {

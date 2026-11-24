@@ -175,16 +175,20 @@ export function leaderCount() { return (S.cultists || []).filter(isLeader).lengt
 //   移除 researchMult('crew') 乘区（rp_crew 语义改为按 desc 直接生效，见 balance.js）。
 // v4.3.23 反馈①：领导升级改革——废除独立 leaderLv/手动升级按钮/领导津贴，领导等级完全
 //   走普通线程 XP 路径（c.level，threadLevel 真源）：任命不重置等级、在岗持续积 XP。
-//   leaderLvOf 保留为兼容门面（委托 threadLevel），全局加成 = 1% × 等级乘数
-//  （Lv1 = +1.00%，Lv10 = +1.72%）。
+//   leaderLvOf 保留为兼容门面（委托 threadLevel）。
+// v4.3.25 反馈③：全局加成改线性——Lv1 = +1.00%，每级 +0.01 个百分点
+//  （Lv2 = +1.01%，Lv10 = +1.09%）。旧口径 1% × threadLevelMult 在 Lv2 就跳到 1.08%。
 export function leaderLvOf(c) { return threadLevel(c); }
 export function leaderGlobalMult() {
   const n = leaderCount();
   if (n <= 0) return 1;
   // 领导唯一（state.js 归一化保证），取现任领导的等级
   const lead = (S.cultists || []).find(isLeader);
-  return 1 + B().leaderGlobalPerLeader * threadLevelMult(leaderLvOf(lead));
+  const lv = Math.max(1, leaderLvOf(lead));
+  return 1 + B().leaderGlobalPerLeader + B().leaderGlobalPerLevel * (lv - 1);
 }
+// v4.3.25 反馈③：领导全局加成的百分点文案（供班组卡 / 产出悬浮窗共用同一口径）
+export function leaderGlobalPercent() { return (leaderGlobalMult() - 1) * 100; }
 
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
 // 每个生效绑定的线程按等级/职业/领导叠加；转化器关闭或无绑定 → 1

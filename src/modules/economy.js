@@ -286,7 +286,7 @@ export function globalMult() {
   m *= devotionMult();
   m *= policyMult('ep');
   m *= policyMult('global'); // v2.8.6 B2a：牺牲——全局 -10%
-  m *= leaderGlobalMult(); // v4.3.14 反馈②：领导固定 +1% 全局加成（不再被班组扩编放大）
+  m *= leaderGlobalMult(); // v4.3.25 反馈③：领导全局加成线性口径——Lv1 +1%，每级 +0.01 个百分点
   m *= researchMult('crew'); // v4.3.14 反馈②：班组扩编（rp_crew）乘区改挂全局——原只放大领导加成
   // v3.4.6 反馈③：星际燃料模式——持续燃烧 CPS 加速全局产出（星图页开关，CPS 耗尽自动熄火）
   if (S.fuelMode && (S.starCps || 0) > 0) m *= 1.5;
@@ -558,6 +558,8 @@ export function vehicleRateMult() {
   if (S.upgrades.dmprotocol) m *= BALANCE.vehicles.protocolMult; // v3.7.3 ⑥：载具协议的 +50% 语义落到此乘区
   // v3.3.8 反馈①：探采不吃班组乘区——线程加成曾让 27 辆×18 条线程把产出放大到 6600×（274 DM/s），
   // 与「消耗 100K 级 / 产出 10 DM 级」的目标口径差两个数量级，且超出 DM 容量后收益归零
+  // v4.3.25 反馈④：领导加成是**全局**加成，DM 采集同样受益（只乘 1% 级别，不破 v3.3.8 量级约束）
+  m *= leaderGlobalMult();
   return m;
 }
 export function vehicleDmPerMin() {
@@ -687,7 +689,7 @@ function staffOutputParts() {
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
-    // v4.3.14 反馈②：领导零个人产出——改为全局 +1%×等级乘数 加成位（globalMult 内 leaderGlobalMult），
+    // v4.3.25 反馈③：领导零个人产出——改为全局线性加成位（globalMult 内 leaderGlobalMult），
     //   不再按 (output×0.8×…) 计入线程产出。
     // v4.3.18 反馈①：领导消耗按「Lv1 空闲线程同口径」计薪——吃 mood/outMult（随产线水涨，
     //   与全员一致），不吃岗位系数（boundTo 恒 null）/超线程 +10%。
@@ -922,9 +924,10 @@ export function multBreakdown() {
   if (tome !== 1) parts.push(`遗物·古卷 ×${tome.toFixed(2)}`);
   // v4.3.20 反馈①：领导全局加成进产出弹窗——领导 +1%/位是 globalMult 内的真实乘区
   //   （economy.globalMult: m *= leaderGlobalMult()），此前悬浮明细漏列，玩家不知 1% 去哪了。
-  //   语义口径：全局 EP 产出 +1%（不是 EP +1%）；与班组扩编（researchMult('crew')）同属班组系乘区。
+  // v4.3.25 反馈④：去掉「（全局 EP 产出）」括号——领导加成是全局的（EP/RP/PT/FP/DM 全接），
+  //   不是 EP 专属，括号内容既冗余又会误导。
   const lead = leaderGlobalMult();
-  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(2)}%（全局 EP 产出）`);
+  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(2)}%`);
   // v3.7.0：线专属乘区（与 globalMult 同源），悬浮明细不再漏列
   const lineG = lineRule(K.GLOBAL_MULT, 1, S);
   if (lineG !== 1) parts.push(`线专属全局 ×${lineG.toFixed(2)}`);

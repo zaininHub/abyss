@@ -159,10 +159,12 @@ test('方向③：领导者提供全局加成（v4.3.23 等级走普通线程等
   assert.equal(leaderCount(), 1);
   // v4.3.23 反馈①：领导等级 = 普通线程等级——Lv1 = +1%×1 = +1.00%
   assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader);
-  // 等级乘数口径：Lv.n = +1% × threadLevelMult(n)（Lv10 = 1%×1.72 = +1.72%）
+  // v4.3.25 反馈③：线性口径——每级固定 +0.01 个百分点（Lv2 = +1.01%，Lv10 = +1.09%）
+  S.cultists[0].level = 2;
+  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + BALANCE.thread.binding.leaderGlobalPerLevel);
   S.cultists[0].level = 10;
-  const lvlMult = 1 + 9 * BALANCE.thread.binding.levelMultPerLevel;
-  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader * lvlMult);
+  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + 9 * BALANCE.thread.binding.leaderGlobalPerLevel);
+  assert.equal(Math.round((leaderGlobalMult() - 1) * 10000) / 100, 1.09);
 });
 
 test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.3.8 口径），关闭后归 0', () => {
