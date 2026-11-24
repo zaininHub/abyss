@@ -76,7 +76,7 @@ function riftTechAfford(cost) {
 }
 // v4.3.24 反馈①：原 riftTechTip（原生 title 悬浮文案）下线——升级需求/效果改 DOM 气泡。
 // v4.3.25 反馈②：需求与效果拆成两个气泡源——等级名块悬浮只讲「下一级效果」，
-//   「升级」按钮悬浮只讲「升级需求/消耗」；行内副标题「悬浮查看升级需求」同步删除。
+//   「升级」按钮悬浮只讲升级消耗；行内副标题「悬浮查看升级需求」同步删除。
 function escTip(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
@@ -86,11 +86,10 @@ export function riftLevelTipText() {
   const next = Math.min(riftMaxLevel(), cur + 1);
   return `下一级效果：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP）\n深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM`;
 }
-/** 升级按钮悬浮：只讲升级需求与可支付态（v4.3.25 反馈②）。 */
+/** 升级按钮悬浮：只讲升级需求；不可购买已由灰显按钮表达（v4.3.25 反馈①）。 */
 export function riftLevelCostTipText() {
   const cost = riftLevelTechCost();
-  const afford = riftTechAfford(cost);
-  return `升级需求：${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM（${afford ? '✓ 可支付' : '✗ 余额不足'}）`;
+  return `升级需求：${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM`;
 }
 /**
  * 裂隙等级行（v4.3.14 反馈③）：由 renderRiftPanel 在「裂隙科技」标题上方调用。

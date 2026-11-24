@@ -78,6 +78,10 @@ export function renderCrewPanel(container) {
   // v4.3.23 反馈①：领导等级 = 普通等级（c.level 已入 detail），独立 leadlv 段下线
   const hasLeaderNow = (S.cultists || []).some(c => isLeader(c));
   const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}|lead:${hasLeaderNow ? 1 : 0}`;
+  // 原生 <select> 展开期间绝不能改写其所在 DOM：无论重渲染来自 1s shop-unlock
+  // 还是外部 dirty，innerHTML 重建都会让浏览器立刻关闭下拉。动态数字在 refreshCrewDyn
+  // 仍会更新；待 focusout 后下一帧再允许按签名重建。
+  if (container._crewSelectOpen) { refreshCrewDyn(container, start, pageCultists); return; }
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   // v4.3.14 反馈①：卡片 HTML 生成提取为局部函数——主循环与「自动填充」共用（消除两份拷贝漂移）。
@@ -281,10 +285,32 @@ export function renderCrewPanel(container) {
         return;
       }
     });
-    // 原先职位选择仅监听 change；部分浏览器会在鼠标按下时因卡片重渲染而收起原生下拉。
-    // 在交互期间阻止事件冒泡到卡片/面板委托层，选择仍统一由 change 提交。
+    // 职位 select 是原生弹层：pointerdown 的 stopPropagation 只能挡事件，却挡不住
+    // frameSystems 每秒调用 renderCrewPanel() 的 innerHTML 重建；一重建浏览器就强制收起。
+    // 捕获焦点期作为 DOM 冻结窗口：focusin 打开锁，change/focusout 解锁并只在真正变更后重绘。
+    const isBindSelect = (target) => target && target.closest && target.closest('select[data-bind]');
+    const releaseBindSelectLock = () => {
+      if (!container._crewSelectOpen) return;
+      container._crewSelectOpen = false;
+      // 下一帧才重绘，先让浏览器完成原生 select 的关闭与 change 派发。
+      requestAnimationFrame(() => {
+        if (container._crewSelectNeedsRender) {
+          container._crewSelectNeedsRender = false;
+          renderCrewPanel(container);
+        }
+      });
+    };
     container.addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest && ev.target.closest('[data-bind]')) ev.stopPropagation();
+      if (isBindSelect(ev.target)) {
+        container._crewSelectOpen = true;
+        ev.stopPropagation();
+      }
+    });
+    container.addEventListener('focusin', (ev) => {
+      if (isBindSelect(ev.target)) container._crewSelectOpen = true;
+    });
+    container.addEventListener('focusout', (ev) => {
+      if (isBindSelect(ev.target)) releaseBindSelectLock();
     });
     container.addEventListener('change', (ev) => {
       // v3.12.13 反馈#172：线程类型筛选下拉框
@@ -311,7 +337,9 @@ export function renderCrewPanel(container) {
         const match = threadProfession(c) && threadProfession(c).affinity === v;
         crewPush(`【${c.name}】分配至${CONVERTERS[v].name}${match ? '（擅长岗位，无 EP/消耗惩罚）' : ''}`, 'good');
       } else { unbindThread(c); crewPush(`【${c.name}】从岗位撤离（消耗恢复）`, ''); }
-      renderCrewPanel(container);
+      // 原生下拉仍持有焦点时延迟重绘；否则立即反映岗位和按钮状态。
+      if (container._crewSelectOpen) container._crewSelectNeedsRender = true;
+      else renderCrewPanel(container);
     });
     // v4.3.3 反馈②：滚动触底自动翻页。判定用当前筛选后的总条数。
     // v4.3.6b：累积式加载——触底「追加」下一组（旧卡保留），重建后恢复滚动位置（不跳顶）。

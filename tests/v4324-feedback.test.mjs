@@ -1,6 +1,6 @@
 // v4.3.24 反馈①：裂隙等级升级需求改悬浮窗——行内常驻价格胶囊与「深入消耗」副标题移除。
 // v4.3.25 反馈②（本文件同步）：悬浮再拆分——等级名块只讲「下一级效果」，升级按钮只讲
-//   「升级需求/可支付态」；行内固定副标题「裂隙等级 +1 · 悬浮查看升级需求」删除。
+//   「升级需求」；行内固定副标题「裂隙等级 +1 · 悬浮查看升级需求」删除。
 // 源码锁 + 纯 Node 行为验证。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -29,7 +29,7 @@ test('F1 riftLevelRowHtml 行内无常驻价格胶囊、无「悬浮查看升级
   assert.ok(/data-rift-buy-tip=/.test(rowFn), '升级按钮缺 data-rift-buy-tip 锚点');
 });
 
-test('F2 双文案函数：等级=下一级效果；按钮=升级需求 + 可支付态', () => {
+test('F2 双文案函数：等级=下一级效果；按钮=仅升级需求', () => {
   const rift = stripComments(read('src/modules/rift.js'));
   assert.ok(/export function riftLevelTipText\(\)/.test(rift), 'riftLevelTipText 导出缺失');
   assert.ok(/export function riftLevelCostTipText\(\)/.test(rift), 'riftLevelCostTipText 导出缺失');
@@ -38,7 +38,7 @@ test('F2 双文案函数：等级=下一级效果；按钮=升级需求 + 可支
   assert.ok(effectFn.includes('下一级效果：'), '等级气泡缺下一级效果段');
   assert.ok(!effectFn.includes('升级需求：'), '等级气泡不应再包含升级需求（应移到按钮气泡）');
   assert.ok(costFn.includes('升级需求：'), '按钮气泡缺升级需求段');
-  assert.ok(/可支付|余额不足/.test(costFn), '按钮气泡缺可支付态文案');
+  assert.ok(!/可支付|余额不足/.test(costFn), '按钮灰显已表达不可购买，气泡不应重复可支付态');
   assert.ok(!costFn.includes('下一级效果：'), '按钮气泡不应包含下一级效果');
   // 旧 riftTechTip 原生 title 文案函数已下线（无死数据红线）
   assert.ok(!/function riftTechTip/.test(rift), 'riftTechTip 死函数残留');
@@ -88,11 +88,11 @@ test('F5 双文案行为：效果/需求实时正确且互不混入', async () =
   assert.ok(!effect.includes('升级需求：'), '等级气泡混入了升级需求');
   assert.ok(effect.includes('深入消耗'), '等级气泡缺深入消耗数值');
   assert.ok(cost.includes('升级需求：'), '按钮气泡缺「升级需求：」');
-  assert.ok(cost.includes('✓ 可支付'), '足额资源时按钮气泡缺「✓ 可支付」');
+  assert.ok(!/可支付|余额不足/.test(cost), '足额资源时按钮气泡不应显示可支付态');
   assert.ok(!cost.includes('下一级效果：'), '按钮气泡混入了下一级效果');
-  // 不足额 → 余额不足
+  // 资源状态只控制灰显，不改变气泡的纯需求文案
   S.ep = 0; S.dm = 0;
-  assert.ok(mod.riftLevelCostTipText().includes('✗ 余额不足'), '零资源时缺「✗ 余额不足」');
+  assert.equal(mod.riftLevelCostTipText(), cost, '零资源时按钮气泡仍只显示同一份升级需求');
   // 行内 html：两个锚点 + 无固定副标题
   const row = mod.riftLevelRowHtml();
   assert.ok(/data-rift-level-tip="/.test(row), '行 html 缺 data-rift-level-tip');

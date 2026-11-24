@@ -164,11 +164,12 @@ test('B2 结构：产出/s 与 消耗/s 位于 topbar 最左，警告标志存�
   assert.ok(readSrc('style.css').includes('.drain-warn'), '警告标志有样式');
 });
 
-test('B3 接线：renderTop 用同一组展示值算净流，ETA 由消耗侧感叹号独立承载', () => {
-  assert.ok(MAIN.includes('const drain = totalDrainPerSec();'));
-  assert.ok(MAIN.includes('const drainWarn = drain > cps;'));
-  assert.ok(MAIN.includes('const etaSec = epDepletionSec(S.ep, cps, drain);'));
-  assert.ok(MAIN.includes('hSalary.textContent = fmt(drain) + \'/s\''), '消耗显示与告警同口径');
+test('B3 接线：顶栏显示应付消耗；净流/ETA 保持实际扣款口径', () => {
+  assert.ok(MAIN.includes('const actualDrain = totalDrainPerSec();'));
+  assert.ok(MAIN.includes('const drain = displayedDrainPerSec();'));
+  assert.ok(MAIN.includes('const drainWarn = actualDrain > cps;'));
+  assert.ok(MAIN.includes('const etaSec = epDepletionSec(S.ep, cps, actualDrain);'));
+  assert.ok(MAIN.includes('hSalary.textContent = fmt(drain) + \'/s\''), '顶栏消耗应使用应付展示口径');
   assert.ok(MAIN.includes("hDrainWarn.style.display = drainWarn ? '' : 'none'"));
   // v3.12.3 反馈⑧：耗尽预估不再写进产出/消耗两项气泡，改由 ❗ 自己的 data-tip 承载
   // v4.3.3 反馈⑦：❗ 的 data-tip 气泡删除（与 #flow-tip-pop 双弹）——耗尽预估由 flowTipHtml 统一承载，

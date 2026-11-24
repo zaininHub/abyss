@@ -1,8 +1,8 @@
 // v4.3.24 反馈①：裂隙等级升级需求悬浮窗——浏览器验收。
-// v4.3.25 反馈②：悬浮拆分——等级名块只讲「下一级效果」，升级按钮只讲「升级需求/可支付态」。
+// v4.3.25 反馈② / v4.3.26 反馈①：悬浮拆分——等级名块只讲「下一级效果」，升级按钮只讲「升级需求」，可购性只由灰显按钮表达。
 // ①行内常驻需求移除（无价格胶囊/无深入消耗副标题/无固定「悬浮查看升级需求」副标题/无原生 title）
-// ②等级块 hover → 气泡只含下一级效果；按钮 hover → 气泡只含升级需求 + 可支付态
-// ③资源变化后按钮气泡可支付态实时刷新（affordability 帧写 data-rift-buy-tip）
+// ②等级块 hover → 气泡只含下一级效果；按钮 hover → 气泡只含升级需求
+// ③资源变化后按钮 disabled 状态实时刷新
 // ④升级按钮购买链路不受影响
 import { launchBrowser, gotoAndSettle } from './chapters/_boot.mjs';
 import { readFileSync } from 'node:fs';
@@ -79,7 +79,7 @@ console.log('[1] 行内常驻需求与固定副标题移除');
 // ===== [2] 双气泡：等级块只讲效果，按钮只讲需求 =====
 console.log('[2] 双气泡文案拆分');
 {
-  // 先种足额资源（cap 内 90%）→ affordability 帧刷新 tip 为「✓ 可支付」→ 再 hover
+  // 先种足额资源（cap 内 90%）并等待 affordability 帧点亮按钮，再 hover
   await page.evaluate(async () => {
     window.S.ep = Math.floor(window.__qa.epStorageCap() * 0.9);
     window.S.dm = 500;
@@ -114,25 +114,23 @@ console.log('[2] 双气泡文案拆分');
   else {
     ok(buy.shown, '升级按钮 mouseover 即时显示气泡');
     ok(/升级需求：[\d,.KMB]+ EP \+ [\d,.KMB]+ DM/.test(buy.text), `按钮气泡含升级需求（「${(buy.text || '').split('\n')[0].slice(0, 50)}」）`);
-    ok(/✓ 可支付/.test(buy.text), '足额资源时按钮气泡显示「✓ 可支付」');
+    ok(!/可支付|余额不足/.test(buy.text), '按钮气泡不含可支付/余额不足状态字样');
     ok(!/下一级效果：/.test(buy.text), '按钮气泡不含下一级效果');
   }
 }
 
-// ===== [3] 资源变化后按钮气泡可支付态实时刷新 =====
-console.log('[3] 按钮气泡可支付态随资源实时刷新');
+// ===== [3] 资源变化后按钮灰显态实时刷新 =====
+console.log('[3] 按钮灰显状态随资源实时刷新');
 {
   const r = await page.evaluate(async () => {
-    const btn = document.querySelector('[data-rift-buy-tip]');
-    const before = btn?.getAttribute('data-rift-buy-tip') || '';
-    // 清空资源 → affordability 帧（300ms）同步 tip 属性 → 可支付态应翻转（无需等面板重建）
+    const btn = document.querySelector('[data-rift-level-buy]');
+    const before = !!btn && !btn.disabled;
     window.S.ep = 0; window.S.dm = 0;
     await new Promise(r2 => setTimeout(r2, 800));
-    const btn2 = document.querySelector('[data-rift-buy-tip]');
-    const after = btn2?.getAttribute('data-rift-buy-tip') || '';
-    return { flipped: before.includes('✓ 可支付') && after.includes('✗ 余额不足'), before, after };
+    const btn2 = document.querySelector('[data-rift-level-buy]');
+    return { disabled: !!btn2?.disabled, before };
   });
-  ok(r.flipped, `清空资源后按钮气泡可支付态翻转（「${(r.before || '').split('\n')[0].slice(0, 30)}」→「${(r.after || '').split('\n')[0].slice(0, 30)}」）`);
+  ok(r.before && r.disabled, '清空资源后升级按钮由可点变为灰显 disabled');
 }
 
 // ===== [4] 购买链路不受影响 =====

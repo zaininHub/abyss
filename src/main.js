@@ -2,7 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import { daysSince } from './core/time.js';
-import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
+import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, displayedDrainBreakdown, displayedDrainPerSec, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain, bulkCostCalc, // v3.6.4 ④：两条购买路径同口径 QA 钩子（unitCost 已在下方导入）
   staffCost, focusCost, costMult, hasTech, petCount, elv, totalOwned, techCount,
@@ -551,9 +551,12 @@ function renderTop() {
   const cps = computeCps();
   // v3.10.2 ②：净流为负（产出 < 消耗）时给警告标志与「预期 EP 耗尽时间」。
   // 口径与顶栏展示值严格一致：computeCps() 与 totalDrainPerSec()，ETA = 当前 EP / 每秒净亏空。
-  const drain = totalDrainPerSec();
-  const drainWarn = drain > cps;
-  const etaSec = epDepletionSec(S.ep, cps, drain);
+  // 顶栏展示应付消耗：招聘刚好耗尽 EP 后，仍即时显示新线程新增的薪资。
+  // 净流警告/耗尽预估仍使用 actualDrain（余额钳制后的真实扣款），避免把显示理论值误当实扣。
+  const actualDrain = totalDrainPerSec();
+  const drain = displayedDrainPerSec();
+  const drainWarn = actualDrain > cps;
+  const etaSec = epDepletionSec(S.ep, cps, actualDrain);
   // v3.12.3 反馈⑧：EP 耗尽预警不再并入「产出 / 消耗」两处气泡文案——
   // 改由消耗侧独立的 ❗ 承载（自带悬浮），气泡只陈述各自的来源与加成。
   const now = Date.now();
@@ -1053,7 +1056,7 @@ function bindAiTipPop() {
 let _flowTipKind = null;
 function flowTipHtml(kind) {
   const isOut = kind === 'output';
-  const parts = isOut ? cpsBreakdown() : drainBreakdown();
+  const parts = isOut ? cpsBreakdown() : displayedDrainBreakdown();
   // v4.3.21 反馈③：消耗弹窗只显示「消耗减少」类乘区（drainMultBreakdown），不再复读产出侧全局加成
   const mults = isOut ? multBreakdown() : drainMultBreakdown();
   // v4.3.14 反馈⑥：专注已是产出来源里的独立行（+X/s 绝对量），「加成与说明」组不再重复列百分比
@@ -1061,7 +1064,7 @@ function flowTipHtml(kind) {
   const wageNote = (wSt === 'dormant' || wSt === 'losing') ? `休眠期仅扣保命成本 ×${wageKeepCostMult()}` : '';
   const title = isOut
     ? `<b>产出/s <span class="w-good">${fmt(computeCps())}/s</span></b>`
-    : `<b>消耗/s <span class="w-bad">${fmt(totalDrainPerSec())}/s</span></b>`;
+    : `<b>消耗/s <span class="w-bad">${fmt(displayedDrainPerSec())}/s</span></b>`;
   let html = title;
   html += `<div class="ft-group"><span class="ft-label">${isOut ? '产出来源' : '消耗来源'}</span>`;
   if (!parts.length) html += `<div class="w-dim">· 无</div>`;

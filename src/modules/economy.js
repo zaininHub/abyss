@@ -965,9 +965,20 @@ export function cpsBreakdown() {
   if (focusPart > 0.005) parts.push(`线程·专注加成 +${fmt(focusPart)}/s`);
   return parts;
 }
-export function drainBreakdown() {
+// 顶栏/明细展示「应付消耗」而非本帧余额钳制后的实际扣款：EP 被招募刚好扣空时，
+// 玩家仍能立即看见新线程带来的薪资负担；真实净流/实际扣款继续使用 totalDrainPerSec。
+export function displayedSalaryDrainPerSec() {
+  const sal = staffSalaryPerSec();
+  const st = (S.wageState || {}).state;
+  return (st === 'dormant' || st === 'losing') ? sal * wageKeepCostMult() : sal;
+}
+export function displayedDrainPerSec() {
+  // 其它消耗器在 EP 为 0 时无法实际运行；这里仅把线程薪资换成应付口径，避免重复制造理论值。
+  return displayedSalaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
+}
+export function displayedDrainBreakdown() {
   const parts = [];
-  const sal = salaryDrainPerSec();
+  const sal = displayedSalaryDrainPerSec();
   if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
   // v4.3.23 反馈①：领导津贴行删除（津贴机制整体下线，领导消耗并入普通薪资）
   const probe = probeDrainPerSec();
@@ -980,6 +991,25 @@ export function drainBreakdown() {
   if (atrium > 0.005) parts.push(`灵感工坊 -${fmt(atrium)}/s`);
   // v4.1.2：RP 满仓时工坊转满仓涓流（每 5s -5万 EP，非连续速率），不进连续消耗数值，
   //   但在明细里单独说明，避免玩家疑惑「工坊开着怎么消耗没变」。
+  if ((S.upgrades && S.upgrades.atrium) > 0 && (S.rp || 0) >= rpCap()
+    && S.atriumOn !== false && !(S.converterOn && S.converterOn.atrium === false)) {
+    parts.push('灵感工坊·RP满仓涓流（每 5s -5万 EP，非连续）');
+  }
+  return parts;
+}
+// 兼容既有消费方：drainBreakdown 是实际扣款明细；顶栏/浮窗显式使用 displayedDrainBreakdown。
+export function drainBreakdown() {
+  const parts = [];
+  const sal = salaryDrainPerSec();
+  if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
+  const probe = probeDrainPerSec();
+  if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
+  const faith = faithDrainNow();
+  if (faith > 0.005) parts.push(`信仰生产 -${fmt(faith)}/s`);
+  const hatch = hatchDrainPerSec();
+  if (hatch > 0.005) parts.push(`异兽孵化 -${fmt(hatch)}/s`);
+  const atrium = atriumDrainPerSec();
+  if (atrium > 0.005) parts.push(`灵感工坊 -${fmt(atrium)}/s`);
   if ((S.upgrades && S.upgrades.atrium) > 0 && (S.rp || 0) >= rpCap()
     && S.atriumOn !== false && !(S.converterOn && S.converterOn.atrium === false)) {
     parts.push('灵感工坊·RP满仓涓流（每 5s -5万 EP，非连续）');
