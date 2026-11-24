@@ -102,10 +102,10 @@ await sleep(600);
   });
   ok(r.leader === true, '领导标记生效');
   ok(r.level === 1 && r.xp === 0, `提拔后等级重置（Lv.${r.level} xp=${r.xp}）`);
-  ok(r.starText === '★' && /全局产出 \+1%/.test(r.starTip), `星标「★」+悬浮「全局产出 +1%」（实际「${r.starTip}」）`);
+  ok(r.starText === '★' && /全局 EP 产出 \+1%/.test(r.starTip), `星标「★」+悬浮「全局 EP 产出 +1%」（v4.3.22 消歧；实际「${r.starTip}」）`);
   ok(r.noSelect, '领导卡无岗位下拉');
-  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.1，全局产出 \+1\.00%，消耗 10 EP\/s）/.test(e.msg)));
-  ok(feedOk, '晋升班组流水改等级制口径「就任领导（Lv.1，全局产出 +1.00%，消耗 10 EP/s）」');
+  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.1，全局 EP 产出 \+1\.00%，领导津贴 10 EP\/s）/.test(e.msg)));
+  ok(feedOk, '晋升班组流水改消歧口径「就任领导（Lv.1，全局 EP 产出 +1.00%，领导津贴 10 EP/s）」');
 }
 
 // ===== ③ 裂隙面板 =====

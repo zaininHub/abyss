@@ -2044,6 +2044,11 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .wiki-tbl th { background: rgba(163,113,247,.1); color: var(--purple); text-align: left; padding: 4px 6px; border: 1px solid var(--border); }
 .wiki-tbl td { padding: 4px 6px; border: 1px solid var(--border); color: var(--text-2); }
 .wiki-locked { color: var(--text-3); font-size: 12px; padding: 24px; text-align: center; }
+/* v4.3.22 反馈③（kg 化）：章尾「相关章节」互链行 + intro「按问题找答案」速查表 */
+.wiki-related { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.wiki-related-label { color: var(--text-3); font-size: 11.5px; margin-right: 2px; }
+.wiki-related-btn { font-size: 11px; padding: 2px 8px; }
+.wiki-tbl.wiki-qa th:nth-child(1), .wiki-tbl.wiki-qa td:nth-child(1) { width: 46%; }
 @media (max-width: 720px) {
   .wiki-wrap { flex-direction: column; }
   .wiki-nav { flex: none; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 6px; max-height: none; }

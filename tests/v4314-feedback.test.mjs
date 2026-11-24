@@ -76,11 +76,11 @@ test('R2d 领导等级制：tickThreads 跳过 leader + 任命重置 worker 等�
 test('R2e 领导文案「+1%」：卡片悬浮 + wiki + 晋升日志', () => {
   const crew = read('src/modules/crew.js');
   // v4.3.21 反转：等级制文案——星标悬浮写「+1% 基础，每级 +0.01%」
-  assert.ok(/领导（全局产出 \+1% 基础，每级 \+0\.01%/.test(crew), '卡片星标悬浮应写「全局产出 +1% 基础，每级 +0.01%」');
+  assert.ok(/领导（全局 EP 产出 \+1% 基础，每级 \+0\.01%/.test(crew), '卡片星标悬浮应写「全局 EP 产出 +1% 基础，每级 +0.01%」（v4.3.22 消歧）');
   const wiki = read('src/data/wiki.js');
   // v4.3.21 反转：wiki 文案改等级制口径（+1% 基础 Lv1 + 升级按钮 + 卸任保留）
   assert.ok(/领导是全局加成位/.test(wiki), 'wiki 应写「领导是全局加成位」');
-  assert.ok(/每级 \+0\.01%、每秒消耗 \+\$\{D\.thread\.binding\.leaderEpPerSecPerLv\} EP\/s/.test(wiki), 'wiki 应写明每级加成与消耗');
+  assert.ok(/每级 \+0\.01%、领导津贴每秒 \$\{D\.thread\.binding\.leaderEpPerSecPerLv\} EP\/s/.test(wiki), 'wiki 应写明每级加成与津贴（v4.3.22 消歧口径）');
   assert.ok(/卸任后领导等级保留/.test(wiki), 'wiki 应写明卸任保留等级');
 });
 

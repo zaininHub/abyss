@@ -9,9 +9,13 @@ export const SPECIAL_TASKS = [
   {
     id: 'sp1_museum',
     name: '博物馆的访客',
-    desc: '判定：同时拥有 ≥2 种建筑 且 建筑总级数 ≥3（每级建筑即一件已参观展品）',
+    // v4.3.22 反馈②：desc 改玩家视角白话（原「判定：同时拥有 ≥2 种建筑 且 建筑总级数 ≥3」是程序员
+    //   口径，完成日志读不懂）；「每级建筑即一件已参观展品」改为「建筑等级就是展品数」直述。
+    //   reward.msg 同步改诚实口径——museum_mode 特效从未实装（type 无消费点），旧 msg「解锁博物馆模式」
+    //   会让玩家去找不存在的功能；改为「成就式收录」并预告玩法。
+    desc: '无时间限制；名下建筑买够 2 种、且全部建筑的总级数到 3 级（买了就达成，等级就是展品）',
     condition: (S) => Object.keys(S.buildings || {}).length >= 2 && Object.values(S.buildings || {}).reduce((a, b) => a + b, 0) >= 3,
-    reward: { type: 'museum_mode', msg: '解锁"博物馆模式"（所有建筑特效同时播放，持续 30 秒）' },
+    reward: { type: 'museum_mode', msg: '你的工作台被博物馆收录为展品（纪念性特殊任务，无资源奖励；建筑等级就是你的展品数）' },
     triggered: false,
     line: 'any',
   },

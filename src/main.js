@@ -1986,7 +1986,24 @@ function bindEvents() {
     let html = `<h4 class="wiki-title">${s.name}</h4><div class="wiki-content">${s.body()}</div>`;
     // 故事线/章节讲解并入对应章节（intro/ach 已含；此处保留故事线图鉴入口在 ach 章末）
     if (s.id === 'ach') html += renderStorylineAppendix();
+    // v4.3.22 反馈③（kg 化）：章尾「相关章节」互链——按卷级 related 关系跳转（跨卷迷路兜底）。
+    //   同卷章节走左栏导航即可，只列其他卷的关联章节；点击复用 data-wiki 跳转逻辑。
+    const grp = WIKI_GROUPS.find(g => g.ids.includes(s.id));
+    if (grp && Array.isArray(grp.related) && grp.related.length) {
+      const links = grp.related
+        .map(id => WIKI_SECTIONS.find(x => x.id === id))
+        .filter(Boolean)
+        .map(x => `<button class="btn wiki-related-btn" data-wiki="${x.id}">${x.name}</button>`)
+        .join('');
+      if (links) html += `<div class="wiki-related"><span class="wiki-related-label">相关章节</span>${links}</div>`;
+    }
     body.innerHTML = html;
+    // 相关章节按钮复用导航跳转（与左栏同一条 data-wiki 路径）
+    body.querySelectorAll('.wiki-related-btn[data-wiki]').forEach(b => b.addEventListener('click', () => {
+      wikiActiveId = b.dataset.wiki;
+      renderWikiNav();
+      renderWikiBody();
+    }));
     body.scrollTop = 0;
   }
   function hintFor(key) {
