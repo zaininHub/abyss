@@ -5,15 +5,15 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { fmt, isLazy, staffSalaryPerSec, leaderSalaryPerSec, threadOutMult } from './economy.js'; // v4.2.7：个人消耗显示复用薪资真源（函数提升使 crew↔economy 循环 import 安全）；v4.3.18 反馈②：产线乘数补齐卡面产出口径；v4.3.21 反馈⑥：领导津贴显示
+import { fmt, isLazy, staffSalaryPerSec, threadOutMult } from './economy.js'; // v4.2.7：个人消耗显示复用薪资真源（函数提升使 crew↔economy 循环 import 安全）；v4.3.18 反馈②：产线乘数补齐卡面产出口径；v4.3.23 反馈①：领导津贴下线
 import { MOOD_MULT, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
   unlockedConverterIds, converterLoad, converterCapacity, converterEnabled,
-  leaderLvOf, leaderGlobalMult, levelUpLeader, canLevelUpLeader,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页） // v4.3.20 反馈②：未开启岗位灰显 // v4.3.21 反馈⑥：领导等级制
+  leaderLvOf, leaderGlobalMult,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页） // v4.3.20 反馈②：未开启岗位灰显 // v4.3.23 反馈①：领导等级走普通 XP 路径（levelUpLeader/canLevelUpLeader 下线）
 // v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
@@ -68,17 +68,16 @@ export function renderCrewPanel(container) {
   if (crewPage > pageCount) crewPage = pageCount;
   const start = 0, end = Math.min(crewPage * PAGE_SIZE, n); // v4.3.6b：累积渲染 0..end（旧卡保留）
   const pageCultists = filtered.slice(start, end);
-  const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.boundTo || ''}:${c.leader ? 1 : 0}:${c.leader ? (c.leaderLv || 1) : ''}`).join(',');
+  const detail = pageCultists.map(c => `${c.name}:${c.mood}:${c.profession}:${c.level}:${c.xp ? Math.floor(c.xp) : 0}:${c.boundTo || ''}:${c.leader ? 1 : 0}`).join(',');
   // v3.6.3 ③：可见岗位列表必须进签名——否则模块解锁后线程数据没变，面板会走增量刷新而不重建下拉
   // v4.0.0 反馈④：状态行已下线，签名不再因全局状态变化触发整卡重建；
   //   crewStateMeta() 仍保留导出（供其它模块/QA 读取），但面板不再渲染其文案与颜色。
   // v4.2.7 反馈③：fold 态入签名——否则点击标题时数据未变走增量刷新，折叠标题/内容体不重建（点了没反应）
   // v4.3.18 反馈①：有领导态入签名——智能分配按钮 disabled 随领导存在性切换，不入签名则
   //   晋升/卸任后 detail 未变走增量刷新，灰显不解除
-  // v4.3.21 反馈⑥：领导等级入签名——升级按钮后 Lv 文案/产出行/消耗行随重建刷新
+  // v4.3.23 反馈①：领导等级 = 普通等级（c.level 已入 detail），独立 leadlv 段下线
   const hasLeaderNow = (S.cultists || []).some(c => isLeader(c));
-  const leadLvNow = hasLeaderNow ? leaderLvOf((S.cultists || []).find(isLeader)) : 0;
-  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}|lead:${hasLeaderNow ? 1 : 0}|leadlv:${leadLvNow}`;
+  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}|lead:${hasLeaderNow ? 1 : 0}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   // v4.3.14 反馈①：卡片 HTML 生成提取为局部函数——主循环与「自动填充」共用（消除两份拷贝漂移）。
@@ -99,15 +98,13 @@ export function renderCrewPanel(container) {
       ? `<span class="crew-affinity" data-aff-tip="${escAttr(affTip)}" style="font-size:13px;cursor:help" aria-label="${escAttr(affTip)}">${p.icon}</span>`
       : `<span class="crew-affinity" data-aff-tip="${escAttr(affTip)}" style="font-size:13px;cursor:help" aria-label="${escAttr(affTip)}">·</span>`;
     const lvl = threadLevel(c);
-    // v4.3.21 反馈⑥：领导等级制——卡面显示领导等级 Lv（+1% 基础 +0.01%/级，可升级）；
-    //   普通线程显示 worker 等级（任命领导时该线程等级已置 Lv1）。
+    // v4.3.23 反馈①：领导等级 = 普通线程等级（c.level 真源，XP 自动升级）——卡面统一 Lv 显示
     const isLead = isLeader(c);
-    const leadLv = isLead ? leaderLvOf(c) : 0;
-    const lvHtml = isLead ? ` <span class="crew-lv">Lv.${leadLv}</span>` : ` <span class="crew-lv">Lv.${lvl}</span>`;
+    const lvHtml = ` <span class="crew-lv">Lv.${lvl}</span>`;
     // v4.3.13 反馈⑥：领导徽章去「领导」字样只留星标——双字徽章把身份行挤出两列栅格导致错位；
     //   领导身份完整语义仍在悬浮（stateTip「 · 领导」）。
-    // v4.3.21：星标 title 同步等级制口径（+1% 基础 +0.01%/级 + 10 EP/s×级）
-    const leaderBadge = isLead ? ' <span style="color:var(--good,#3fb950)" title="领导（全局 EP 产出 +1% 基础，每级 +0.01%；领导津贴 10 EP/s×级）">★</span>' : '';
+    // v4.3.23 反馈①：星标 title 口径更新——全局 EP 产出 +1%×等级乘数，无津贴
+    const leaderBadge = isLead ? ` <span style="color:var(--good,#3fb950)" title="领导（全局 EP 产出 +1% × 等级乘数；等级按普通线程在岗经验自动提升）">★</span>` : '';
     // v4.0.0 反馈④：成员卡不再展示「😪怠惰」等状态文字（心情倍率仍有数值意义，保留）。
     // 下拉：空闲 + 已解锁岗位；旧档绑定到已隐藏岗位时仅为该线程保留一项，避免状态显示错乱
     // v4.3.19 反馈②：满员岗位从下拉源头移除（不止标「已满」）——用户口径「岗位满了，下拉框就
@@ -133,17 +130,16 @@ export function renderCrewPanel(container) {
       : `<select data-bind="${c.id}" style="font-size:11px;max-width:110px">${bindOpts}</select>`;
     // v4.3.15 反馈③：已有领导时其他线程不显示晋升按钮（领导唯一），卸任后恢复——
     //   「换领导」入口统一收敛到现任领导的「卸任★」，避免玩家误点直接顶替。
-    // v4.3.21 反馈⑥：领导卡补「升级★」按钮（Lv1 起步，+0.01%/级，消耗随级 10 EP/s×级）。
+    // v4.3.23 反馈①：手动「升级★」按钮下线——领导等级走普通 XP 自动升级。
     const hasLeader = (S.cultists || []).some(x => isLeader(x) && x !== c);
     const leaderBtn = isLazyProfession(c) || (!isLead && hasLeader) ? '' :
-      `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLead ? '卸任★' : '晋升★'}</button>` + // v4.3.13 反馈⑥：去「领导」字样防错位
-      (isLead ? `<button class="btn" data-lead-up="${c.id}" title="领导升级：全局 EP 产出 +0.01%/级，领导津贴 +10 EP/s（现有 ${10 * leadLv} EP/s）" style="font-size:11px;padding:2px 6px;margin-left:4px">${canLevelUpLeader(c) ? `升级★ Lv.${leadLv}→${leadLv + 1}` : `Lv.${leadLv} 已满级`}</button>` : '');
+      `<button class="btn" data-leader="${c.id}" style="font-size:11px;padding:2px 6px;margin-left:6px">${isLead ? '卸任★' : '晋升★'}</button>`; // v4.3.13 反馈⑥：去「领导」字样防错位
     // v4.2.8 反馈①②③：卡片三行紧凑栅格——
     //   ① 身份行：⚡心情图标（悬浮显示 岗位/超线程/心情/领导 完整状态）+ 线程名 + Lv + 擅长岗位图标（去文字，悬浮读名）；
     //   ② 数值行：+X EP/s -Y EP/s（带符号同式）；
     //   ③ 操作行：岗位下拉 + 晋升领导按钮 同排。
     //   保留 data-bind / data-leader / .c-out / .crew-avatar / .crew-affinity 全部既有钩子。
-    const stateTip = `${c.name} · Lv.${isLead ? leadLv : lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLead ? ` · 领导（全局 EP 产出 +${(1 + (leadLv - 1) * 0.0001).toFixed(4).slice(1)}%，津贴 ${10 * leadLv} EP/s）` : ''} · 擅长：${escAttr(affinityName)}`;
+    const stateTip = `${c.name} · Lv.${lvl} · ${escAttr(c.boundTo ? (CONVERTERS[c.boundTo] ? CONVERTERS[c.boundTo].name : c.boundTo) : '空闲')}${c.mood ? ' · ' + c.mood : ''}${isLead ? ` · 领导（全局 EP 产出 +${((leaderGlobalMult() - 1) * 100).toFixed(2)}%）` : ''} · 擅长：${escAttr(affinityName)}`;
     return `<div class="crew-card">
       <div class="crew-line crew-line-id">
         <span class="crew-avatar" title="${stateTip}" aria-label="${stateTip}">${MOOD_ICON[c.mood] || '🙂'}</span>
@@ -152,7 +148,7 @@ export function renderCrewPanel(container) {
       </div>
       <div class="crew-line crew-line-num">
         ${isLead
-          ? `<span class="crew-num">全局产出 +<b class="c-out">${((leaderGlobalMult() - 1) * 100).toFixed(2)}%</b></span><span class="crew-num">津贴 -<b class="c-sal">${fmt(leaderSalaryPerSec())}</b> EP/s</span>`
+          ? `<span class="crew-num">全局产出 +<b class="c-out">${((leaderGlobalMult() - 1) * 100).toFixed(2)}%</b></span>`
           : `<span class="crew-num">+<b class="c-out">0</b> EP/s</span>
         <span class="crew-num">-<b class="c-sal">0</b> EP/s</span>`}
       </div>
@@ -240,39 +236,26 @@ export function renderCrewPanel(container) {
             const prev = S.cultists.find(x => x.leader && x !== c);
             if (prev) {
               prev.leader = false;
-              // v4.3.21 反馈⑥：卸任后领导等级保留（leaderLv 不动），线程恢复为普通线程；
-              //   worker 等级已在其上任时重置过，这里不再动 level/xp（保留其在岗经验语义反转回普通线）。
-              crewPush(`【${prev.name}】卸任领导者（领导等级 ${leaderLvOf(prev)} 保留，再任命时恢复）`);
+              // v4.3.23 反馈①：卸任/任命都不动 level/xp——等级是线程自身属性，跨任命保留
+              crewPush(`【${prev.name}】卸任领导者（Lv.${threadLevel(prev)} 经验保留，回归普通线程）`);
             }
             c.leader = true;
-            // v4.3.21 反馈⑥：任命领导时该线程等级置为 1 级（worker 等级重置）；领导等级
-            //   c.leaderLv：首次任命从 Lv1 起步；同一线程再次任命恢复保留的 leaderLv。
-            c.level = 1; c.xp = 0;
-            c.leaderLv = Math.max(1, Math.floor(Number(c.leaderLv) || 1));
+            // v4.3.23 反馈①：任命不再重置 worker 等级——领导等级 = 普通线程等级，
+            //   在岗持续积 XP 自动升级（tickThreads），晋升高等级线程当领导加成更高。
             // v3.7.1 反馈①：领导者只提供全局加成，不能同时占用岗位
             if (c.boundTo) { unbindThread(c); crewPush(`【${c.name}】撤离原岗位`); }
             const pct = (leaderGlobalMult() - 1) * 100;
-            crewPush(`【${c.name}】就任领导（Lv.${leaderLvOf(c)}，全局 EP 产出 +${pct.toFixed(2)}%，领导津贴 ${10 * leaderLvOf(c)} EP/s）`, 'good');
+            crewPush(`【${c.name}】就任领导（Lv.${threadLevel(c)}，全局 EP 产出 +${pct.toFixed(2)}%，随等级提升）`, 'good');
           } else {
-            // v4.3.21 反馈⑥：卸任保留领导等级（再任命时恢复该等级加成与消耗）
+            // v4.3.23 反馈①：卸任保留等级（等级是线程自身属性）
             c.leader = false;
-            crewPush(`【${c.name}】卸任领导者（领导等级 Lv.${leaderLvOf(c)} 保留）`);
+            crewPush(`【${c.name}】卸任领导者（Lv.${threadLevel(c)} 经验保留，回归普通线程）`);
           }
           renderCrewPanel(container);
         }
         return;
       }
-      // v4.3.21 反馈⑥：领导升级按钮——全局加成 +0.01%/级、每秒消耗 +10 EP/s×级
-      const ub = ev.target.closest ? ev.target.closest('[data-lead-up]') : null;
-      if (ub) {
-        const c = S.cultists.find(x => String(x.id) === String(ub.dataset.leadUp));
-        const r = c ? levelUpLeader(c) : { ok: false };
-        if (r.ok) {
-          crewPush(`【${c.name}】领导升至 Lv.${r.level}（全局 EP 产出 +${((leaderGlobalMult() - 1) * 100).toFixed(2)}%，领导津贴 ${10 * r.level} EP/s）`, 'good');
-        }
-        renderCrewPanel(container);
-        return;
-      }
+      // v4.3.23 反馈①：手动「升级★」按钮下线——领导等级走普通 XP 自动升级，data-lead-up 处理段删除
       const ab = ev.target.closest ? ev.target.closest('[data-autobind]') : null;
       if (ab) {
         // v4.3.13 反馈⑥：智能分配前置要求已设置领导——领导是全局加成位、恒空闲，
@@ -376,7 +359,7 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
   const outLine = threadOutMult();
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
-    // v4.3.21 反馈⑥：领导卡产出行/消耗行由 crewCardHtml 模板直出（+X% 全局 / -10×Lv EP/s），
+    // v4.3.21 反馈⑥：领导卡产出行由 crewCardHtml 模板直出（+X% 全局），
     //   动态刷新只跳产出行；普通线程产出行照刷（同 staffOutputParts 口径）。
     if (c.leader !== true) {
       // v4.3.18 反馈②：与 staffOutputParts 的 one×factor 同式（outMult 口径对齐），显示=实扣
@@ -384,8 +367,8 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
       outEls[i].textContent = fmt(out);
     }
     // v4.2.7 反馈①：个人消耗 = 平均薪资 × 岗位系数（与 staffSalaryPerSec 的 bindAvg 口径同源）
-    // v4.3.21 反馈⑥：领导消耗走独立津贴真源（10 EP/s×级，不吃薪资平均摊派——与 tickWages 实扣一致）
-    if (salEls[i]) salEls[i].textContent = c.leader === true ? fmt(leaderSalaryPerSec()) : fmt(salPer * salaryFactorOf(c));
+    // v4.3.23 反馈①：领导津贴下线——领导消耗回归普通平均摊派口径（卡面显示与实扣一致）
+    if (salEls[i]) salEls[i].textContent = fmt(salPer * salaryFactorOf(c));
   }
 }
 

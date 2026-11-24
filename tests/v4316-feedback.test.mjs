@@ -16,31 +16,31 @@ const stripComments = (s) => s.replace(/\/\/[^\n]*/g, '');
 
 // ============ 反馈① 领导全局 +1% / 消耗 Lv1 空闲同口径 ============
 
-test('R1a economy.staffOutputParts：领导产出 0、薪资按 Lv1 空闲同口径计入', () => {
+test('R1a economy.staffOutputParts：领导产出 0、薪资同口径计入（v4.3.23 等级统一）', () => {
   const eco = stripComments(read('src/modules/economy.js'));
   // 领导判定保留
   assert.ok(/const\s+isLead\s*=\s*c\.leader\s*===\s*true/.test(eco), 'staffOutputParts 未判定领导');
   // v4.3.16 的 bare 固定裸基数应已移除（v4.3.18 反转为 Lv1 空闲同口径）
   //   精确锁旧式：economy 别处合法 bare 变量（产出悬浮窗 thread-focusPart）不受影响
   assert.ok(!/bare\s*=\s*\(c\.output/.test(eco), 'bare 固定裸基数应已移除（v4.3.18 反转）');
-  // one 定义：普通线程吃等级；领导不吃等级（Lv1 空闲同口径）但吃 mood/outMult
-  const m = eco.match(/const\s+one\s*=\s*\(c\.output\s*\|\|\s*3\)\s*\*\s*0\.8\s*\*\s*mood\s*\*\s*outMult\s*\*\s*\(isLead\s*\?\s*1\s*:\s*threadLevelMult\(threadLevel\(c\)\)\);/);
-  assert.ok(m, 'one 应为 Lv1 空闲同口径（领导不吃等级，普通线程吃等级）');
+  // v4.3.23 反转：one/oneSal 统一吃 lvMult（领导与普通线程同一等级口径）
+  const m = eco.match(/const\s+lvMult\s*=\s*threadLevelMult\(threadLevel\(c\)\);[\s\S]{0,200}?const\s+one\s*=\s*\(c\.output\s*\|\|\s*3\)\s*\*\s*0\.8\s*\*\s*mood\s*\*\s*outMult\s*\*\s*lvMult;/);
+  assert.ok(m, 'one 应为统一 lvMult 口径（v4.3.23 领导等级统一）');
   // 产出：领导 0（total 累加跳过）；薪资：领导按 oneSal 计入（factor 恒 1，boundTo 恒 null）
   assert.ok(/total\s*\+=\s*isLead\s*\?\s*0\s*:\s*one\s*\*\s*factor;/.test(eco), '领导个人产出应跳过');
-  // v4.3.21 反转：薪资基数行改 oneSal（#390 薪资解耦专注后按 salaryOutMult 口径计薪）
   assert.ok(/salaryBase\s*\+=\s*oneSal\s*\*\s*\(c\.boundTo\s*===\s*HYPER_CONVERTER_ID\s*\?\s*1\s*:\s*factor\);/.test(eco), '薪资基数应计入领导份额');
 });
 
-test('R1b crew 卡面：领导不显示 Lv + 产出行「+1%」+ 消耗平均摊派', () => {
+test('R1b crew 卡面：产出行「+X%」直出 + 消耗平均摊派（v4.3.23 津贴下线）', () => {
   const crew = stripComments(read('src/modules/crew.js'));
-  // v4.3.21 反转：领导等级制——卡面显示领导 Lv（leaderLvOf），普通线程显示 worker Lv；
-  //   产出行直出「+X% 全局」与独立津贴消耗行；动态刷新跳领导产出行、消耗行走津贴真源
-  assert.ok(/const\s+lvHtml\s*=\s*isLead\s*\?\s*` <span class="crew-lv">Lv\.\$\{leadLv\}<\/span>`\s*:\s*` <span class="crew-lv">Lv\.\$\{lvl\}<\/span>`/.test(crew), '领导卡面应显示领导等级 Lv');
-  // v4.3.22 消歧：产出行改「全局产出 +X.XX%」+「津贴 -Y EP/s」
+  // v4.3.23 反转：卡面统一 Lv 显示（领导等级 = 普通等级 c.level）
+  assert.ok(/const\s+lvHtml\s*=\s*` <span class="crew-lv">Lv\.\$\{lvl\}<\/span>`;/.test(crew), '卡面应统一 Lv 显示（不分领导/普通）');
+  // 产出行直出「全局产出 +X.XX%」；津贴消耗行已下线
   assert.ok(/isLead\s*\?\s*`<span class="crew-num">全局产出 \+<b class="c-out">\$\{\(\(leaderGlobalMult\(\) - 1\) \* 100\)\.toFixed\(2\)\}%<\/b>/.test(crew), '领导产出行应直出「全局产出 +等级实算百分比」');
+  assert.ok(!/津贴 -</.test(crew), '领导津贴消耗行应已下线（v4.3.23）');
   assert.ok(/if\s*\(c\.leader !== true\)\s*\{/.test(crew), '动态刷新应只跳领导产出行');
-  assert.ok(/c\.leader === true \? fmt\(leaderSalaryPerSec\(\)\) : fmt\(salPer \* salaryFactorOf\(c\)\)/.test(crew), '领导消耗行应走津贴真源（10 EP/s×级）');
+  assert.ok(!/leaderSalaryPerSec/.test(crew), 'crew.js 不应再引用 leaderSalaryPerSec（v4.3.23）');
+  assert.ok(/if \(salEls\[i\]\) salEls\[i\]\.textContent = fmt\(salPer \* salaryFactorOf\(c\)\);/.test(crew), '消耗行应统一走平均摊派口径');
 });
 
 // ============ v4.3.18 反馈② 卡面产出口径补齐 outMult ============

@@ -21,7 +21,7 @@ import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
 import {
   threadBindOutputFactor, threadBindSalaryFactor, converterThreadBoost,
-  leaderGlobalMult, leaderLvOf, threadLevel, threadLevelMult, converterEnabled,
+  leaderGlobalMult, threadLevel, threadLevelMult, converterEnabled,
 } from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈③：工坊消耗与开关同口径 // v4.3.21 反馈⑥：领导等级消耗
 
 const B = BALANCE;
@@ -609,15 +609,8 @@ function staffCostBase() {
   return geomCostRaw({ base: BALANCE.thread.firstCost, growth: 1.25, owned: n, qty: 0, mult: earlyDiscount });
 }
 
-// v4.3.21 反馈⑥：领导每秒消耗 = 10 EP/s × 领导等级（独立于薪资口径的「领导津贴」）。
-//   显示=实扣：顶栏消耗、班组卡面、tickWages 实扣三处同源本函数。
-export function leaderSalaryPerSec() {
-  if ((S.ep || 0) <= 0) return 0; // EP 已空：与薪资同口径钳 0
-  const lead = (S.cultists || []).find(c => c && c.leader === true);
-  if (!lead) return 0;
-  return 10 * leaderLvOf(lead);
-}
-
+// v4.3.23 反馈①：领导津贴下线——领导消耗回归普通薪资口径（staffSalaryPerSec 内按
+//   同产出同口径计薪，oneSal 已含 mood/outMult），不再有独立 EP/s 实扣。
 export function staffSalaryPerSec() {
   let m = 1;
   // v3.4.8 反馈⑦：能量合剂/循环供氧/生物打印餐/内存扩容/缓存优化（消耗优化整组）已删除——
@@ -694,15 +687,16 @@ function staffOutputParts() {
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
-    // v4.3.14 反馈②：领导零个人产出——改为全局 +1% 加成位（globalMult 内 leaderGlobalMult），
+    // v4.3.14 反馈②：领导零个人产出——改为全局 +1%×等级乘数 加成位（globalMult 内 leaderGlobalMult），
     //   不再按 (output×0.8×…) 计入线程产出。
     // v4.3.18 反馈①：领导消耗按「Lv1 空闲线程同口径」计薪——吃 mood/outMult（随产线水涨，
-    //   与全员一致），不吃岗位系数（boundTo 恒 null）/超线程 +10%/等级加成。
-    //   v4.3.16 的 bare 实扣口径数学上 = 2/3×m×bindAvg×bare，比同 output 普通线程低 ~40%，
-    //   玩家感知「固定消耗少了」；且卡面显示 salPer 平均摊派与实扣不符。同口径后显示=实扣。
+    //   与全员一致），不吃岗位系数（boundTo 恒 null）/超线程 +10%。
+    // v4.3.23 反馈①：领导等级走普通线程等级（threadLevelMult）——薪资基数里领导分支
+    //   恢复吃等级乘数（与产出侧对称），晋升高等级线程当领导薪资也会涨，口径自洽。
     const isLead = c.leader === true;
-    const one = (c.output || 3) * 0.8 * mood * outMult * (isLead ? 1 : threadLevelMult(threadLevel(c)));
-    const oneSal = (c.output || 3) * 0.8 * mood * salaryOutMult * (isLead ? 1 : threadLevelMult(threadLevel(c)));
+    const lvMult = threadLevelMult(threadLevel(c));
+    const one = (c.output || 3) * 0.8 * mood * outMult * lvMult;
+    const oneSal = (c.output || 3) * 0.8 * mood * salaryOutMult * lvMult;
     const factor = isLead ? 1 : threadBindOutputFactor(c);
     total += isLead ? 0 : one * factor;
     salaryBase += oneSal * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);
@@ -973,9 +967,7 @@ export function drainBreakdown() {
   const parts = [];
   const sal = salaryDrainPerSec();
   if (sal > 0.005) parts.push(`线程薪资 -${fmt(sal)}/s`);
-  // v4.3.21 反馈⑥：领导津贴单独一行（10 EP/s × 等级，独立于薪资口径）
-  const lead = leaderSalaryPerSec();
-  if (lead > 0.005) parts.push(`领导津贴 -${fmt(lead)}/s（10×Lv）`);
+  // v4.3.23 反馈①：领导津贴行删除（津贴机制整体下线，领导消耗并入普通薪资）
   const probe = probeDrainPerSec();
   if (probe > 0.005) parts.push(`载具探采 -${fmt(probe)}/s`);
   const faith = faithDrainNow(); // v2.8.30 ③：信仰生产消耗（圣所产出时）
@@ -1060,7 +1052,7 @@ export function atriumDrainPerSec() {
   return (BALANCE.atrium.epRate || 150) * n * n;
 }
 export function totalDrainPerSec() {
-  return salaryDrainPerSec() + leaderSalaryPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
+  return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
 }
 // v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 resourceFlows pt:hatch 流实扣同口径）
 // v4.3.20 反馈③：口径统一到实扣——旧式 5000×lv² 与实扣 15000×lv×绑定加成矛盾（lv=3 顶栏虚高 3 倍），

@@ -423,9 +423,16 @@ function normalizeCrew(raw) {
     if (c.profession === undefined) c.profession = normals[Math.floor(Math.random() * normals.length)].id;
     if (c.level === undefined) c.level = 1;
     if (c.xp === undefined) c.xp = 0;
-    if (c.leader === undefined) c.leader = false;
-    // v4.3.21 反馈⑥：领导等级（Lv1 起步，+0.01%/级）——旧档缺省补 Lv1（+1% 与 v4.3.20 行为一致）
-    if (c.leaderLv === undefined) c.leaderLv = 1;
+    // v4.3.23 反馈①：独立 leaderLv 字段下线——领导等级走普通 c.level。旧档迁移：
+    //   取 max(level, leaderLv-1) 合并（Lv10 领导旧档 → 普通等级至少 9 级；levelCap=10，
+    //   薪资随等级涨、全局加成不倒退；XP 置该级阈值，后续按普通路径继续积累）。
+    if (c.leaderLv !== undefined && Number(c.leaderLv) > 1) {
+      const mergedLv = Math.max(c.level || 1, Math.min(9, (Math.floor(Number(c.leaderLv)) || 1) - 1));
+      c.level = mergedLv;
+      // XP 阈值内联计算（100×lv^1.8，与 threadBinding.xpThreshold 同式；state.js 不 import 模块层防成环）
+      c.xp = mergedLv <= 1 ? 0 : Math.floor(100 * Math.pow(mergedLv, 1.8));
+    }
+    delete c.leaderLv;
     if (c.boundTo !== undefined && c.boundTo !== null && raw.converterOn && raw.converterOn[c.boundTo] === false) c.boundTo = null;
   }
   // v3.3.1 反馈⑤：领导者唯一——旧档若存在多位领导者，只保留第一位

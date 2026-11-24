@@ -151,21 +151,18 @@ test('v4.2.4 反馈①：班组未解锁（<10 线程）不获取 XP——面板
   assert.ok(threadXpGainPerSec(c) > 0, '达标 10 条线程后 XP 恢复');
 });
 
-test('方向③：领导者提供全局加成，且封顶', () => {
+test('方向③：领导者提供全局加成（v4.3.23 等级走普通线程等级）', () => {
   resetState();
   assert.equal(leaderCount(), 0);
   assert.equal(leaderGlobalMult(), 1);
   S.cultists.push(mkCultist({ leader: true }));
   assert.equal(leaderCount(), 1);
-  // v4.3.21 反馈⑥：领导等级制——Lv1 = +1% 基础；多位领导只会取现任（state 归一化唯一）
+  // v4.3.23 反馈①：领导等级 = 普通线程等级——Lv1 = +1%×1 = +1.00%
   assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader);
-  // 等级加成：Lv.n = +1% + (n-1)×0.01%
-  S.cultists[0].leaderLv = 10;
-  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + 9 * BALANCE.thread.binding.leaderLevelBonusPerLv);
-  // 超过等级上限仍被钳制
-  S.cultists[0].leaderLv = 999;
-  const cap = BALANCE.thread.binding.leaderLevelCap || 50;
-  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader + (cap - 1) * BALANCE.thread.binding.leaderLevelBonusPerLv);
+  // 等级乘数口径：Lv.n = +1% × threadLevelMult(n)（Lv10 = 1%×1.72 = +1.72%）
+  S.cultists[0].level = 10;
+  const lvlMult = 1 + 9 * BALANCE.thread.binding.levelMultPerLevel;
+  assert.equal(leaderGlobalMult(), 1 + BALANCE.thread.binding.leaderGlobalPerLeader * lvlMult);
 });
 
 test('方向①/②：绑定线程 boost 生效但探采不吃班组加成（v3.3.8 口径），关闭后归 0', () => {

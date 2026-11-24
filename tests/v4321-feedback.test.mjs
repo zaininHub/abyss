@@ -62,46 +62,52 @@ test('R4 快捷开关全部静默——main/shop/pets/religions 原位置开关�
 
 // ============ 反馈⑥ 领导等级制 ============
 
-test('R5 领导等级制真源：leaderLvOf 钳制 + leaderGlobalMult 公式 + 升级函数', () => {
+test('R5 领导等级走普通线程等级（v4.3.23 反转：独立制下线）', () => {
   const tb = stripComments(read('src/modules/threadBinding.js'));
-  assert.ok(/export function leaderLvOf/.test(tb), 'threadBinding 应导出 leaderLvOf');
-  assert.ok(/leaderLevelCap/.test(tb), 'leaderLvOf 应按 leaderLevelCap 钳制');
+  assert.ok(/export function leaderLvOf/.test(tb), 'threadBinding 应导出 leaderLvOf（兼容门面）');
+  // v4.3.23 反转：leaderLvOf 委托 threadLevel（等级真源统一）
+  assert.ok(/export function leaderLvOf\(c\)\s*\{\s*return threadLevel\(c\);\s*\}/.test(tb), 'leaderLvOf 应委托 threadLevel（v4.3.23）');
   assert.ok(/export function leaderGlobalMult\(\)/.test(tb), 'threadBinding 应导出 leaderGlobalMult');
-  assert.ok(/1 \+ B\(\)\.leaderGlobalPerLeader \+ \(lv - 1\) \* B\(\)\.leaderLevelBonusPerLv/.test(tb), '公式 1 + 1% + (Lv-1)×0.01%');
-  assert.ok(/export function levelUpLeader/.test(tb), '应有升级函数');
-  const bal = read('src/data/balance.js');
-  assert.ok(/leaderLevelBonusPerLv: 0\.0001/.test(bal), 'balance 应有 leaderLevelBonusPerLv: 0.0001');
-  assert.ok(/leaderEpPerSecPerLv: 10/.test(bal), 'balance 应有 leaderEpPerSecPerLv: 10');
-  assert.ok(!/leaderGlobalCap/.test(stripComments(bal)), 'leaderGlobalCap 键应下线（无死数据红线，注释残留可忽略）');
+  assert.ok(/1 \+ B\(\)\.leaderGlobalPerLeader \* threadLevelMult/.test(tb), '公式 1 + 1% × 等级乘数（v4.3.23）');
+  // v4.3.23 反转：手动升级函数应删除（等级自动提升）
+  assert.ok(!/export function levelUpLeader/.test(tb), 'levelUpLeader 应已删除（v4.3.23）');
+  assert.ok(!/canLevelUpLeader/.test(tb), 'canLevelUpLeader 应已删除（v4.3.23）');
+  const bal = stripComments(read('src/data/balance.js'));
+  assert.ok(/leaderGlobalPerLeader: 0\.01/.test(bal), 'balance 保留 leaderGlobalPerLeader: 0.01');
+  assert.ok(!/leaderLevelBonusPerLv/.test(bal), 'leaderLevelBonusPerLv 应下线（v4.3.23）');
+  assert.ok(!/leaderEpPerSecPerLv/.test(bal), 'leaderEpPerSecPerLv 应下线（v4.3.23）');
+  assert.ok(!/leaderLevelCap/.test(bal), 'leaderLevelCap 应下线（v4.3.23）');
+  assert.ok(!/leaderGlobalCap/.test(bal), 'leaderGlobalCap 键应下线');
 });
 
-test('R6 领导津贴真源与独立实扣：leaderSalaryPerSec + tickWages 独立扣 + 消耗弹窗行', () => {
+test('R6 领导津贴下线（v4.3.23 反转：消耗回归普通薪资口径）', () => {
   const eco = stripComments(read('src/modules/economy.js'));
-  assert.ok(/export function leaderSalaryPerSec/.test(eco), 'economy 应导出 leaderSalaryPerSec');
-  assert.ok(/return 10 \* leaderLvOf\(lead\)/.test(eco), '津贴 = 10×Lv');
-  assert.ok(/totalDrainPerSec\(\) \{[\s\S]{0,400}leaderSalaryPerSec\(\)/.test(eco), 'totalDrainPerSec 挂领导津贴');
+  assert.ok(!/export function leaderSalaryPerSec/.test(eco), 'leaderSalaryPerSec 应已删除（v4.3.23）');
+  assert.ok(!/leaderSalaryPerSec\(\)/.test(eco.match(/export function totalDrainPerSec[\s\S]{0,300}/)?.[0] || ''), 'totalDrainPerSec 不再挂领导津贴');
   const wages = stripComments(read('src/modules/wages.js'));
-  assert.ok(/const leadSal = leaderSalaryPerSec\(\);[\s\S]{0,300}S\.ep/.test(wages), 'tickWages 独立实扣领导津贴');
-  assert.ok(/领导津贴 -\$\{fmt\(lead\)\}\/s（10×Lv）/.test(eco), '消耗 breakdown 应有领导津贴行');
+  assert.ok(!/leaderSalaryPerSec/.test(wages), 'tickWages 不应再有独立实扣段（v4.3.23）');
+  assert.ok(!/领导津贴/.test(eco), '消耗 breakdown 领导津贴行应删除');
   const crew = stripComments(read('src/modules/crew.js'));
-  assert.ok(/leaderSalaryPerSec\(\)/.test(crew), '领导卡面显津贴消耗');
+  assert.ok(!/leaderSalaryPerSec/.test(crew), '领导卡面不应再显津贴消耗');
 });
 
-test('R7 任命重置线程等级 + 卸任保留 leaderLv（crew.js + state.js）', () => {
+test('R7 任命不重置等级 + state.js leaderLv 迁移（v4.3.23 反转）', () => {
   const crew = stripComments(read('src/modules/crew.js'));
-  assert.ok(/c\.level = 1; c\.xp = 0/.test(crew), '任命重置该线程等级 Lv1');
-  assert.ok(/c\.leaderLv = Math\.max\(1,/.test(crew), '任命恢复保留的 leaderLv');
+  assert.ok(!/c\.level = 1; c\.xp = 0/.test(crew), '任命不应重置等级（v4.3.23）');
+  assert.ok(!/c\.leaderLv\s*=/.test(crew), 'crew.js 不应再写 leaderLv');
   assert.ok(/c\.leader = false/.test(crew), '卸任分支存在');
-  assert.ok(/保留，再任命时恢复/.test(crew), '卸任日志写「保留」');
+  assert.ok(/经验保留，回归普通线程/.test(crew), '卸任日志写「经验保留」（v4.3.23）');
   const state = read('src/state.js');
-  assert.ok(/c\.leaderLv === undefined/.test(state), 'normalizeCrew 补旧档 leaderLv 默认值');
+  // v4.3.23 反转：旧档 leaderLv 合并进 c.level 后删除字段
+  assert.ok(/delete c\.leaderLv;/.test(state), 'normalizeCrew 应迁移并删除旧档 leaderLv 字段');
+  assert.ok(/Math\.min\(9, \(Math\.floor\(Number\(c\.leaderLv\)\) \|\| 1\) - 1\)/.test(state), '旧档 leaderLv 迁移口径（Lv-1 钳 9 级）');
 });
 
-test('R8 领导卡面升级按钮 + 消耗行 toFixed(2) + 渲染签名含 leadlv', () => {
+test('R8 手动升级按钮下线 + 消耗行 toFixed(2) 保留（v4.3.23 反转）', () => {
   const crew = stripComments(read('src/modules/crew.js'));
-  assert.ok(/data-lead-up/.test(crew), '领导升级按钮存在');
-  assert.ok(/升级★ Lv\.\$\{leadLv\}→\$\{leadLv \+ 1\}/.test(crew), '升级按钮文案 Lv.X→X+1');
-  assert.ok(/已满级/.test(crew), '满级文案存在');
+  assert.ok(!/data-lead-up/.test(crew), '领导手动升级按钮应已删除（v4.3.23）');
+  assert.ok(!/升级★ Lv\./.test(crew), '升级按钮文案应删除（v4.3.23）');
+  assert.ok(!/已满级/.test(crew), '满级文案应删除（v4.3.23）');
   assert.ok(/toFixed\(2\)/.test(crew), '领导全局加成显示 toFixed(2)');
-  assert.ok(/leadlv:\$\{leadLvNow\}/.test(crew), '渲染签名含 leadlv 段');
+  assert.ok(!/leadlv:/.test(crew), '渲染签名 leadlv 段应删除（v4.3.23）');
 });

@@ -157,8 +157,11 @@ function crewGateOpen() {
   return (S.cultists || []).length >= (BALANCE.thread.crewUnlockThreads || 10);
 }
 // 在岗每秒 XP 获取（合适岗位更快）—— 方向④「合适岗位增加的多」
+// v4.3.23 反馈①：领导走普通 XP 路径——领导不绑岗位（bindingActive 恒 false），
+//   此前会因「不在岗」拿 0 XP 卡死在 Lv1；特判领导恒按合适岗位口径（×2.5）积 XP。
 export function threadXpGainPerSec(c) {
   if (!crewGateOpen()) return 0; // v4.2.4 反馈①：班组未解锁不积 XP
+  if (isLeader(c)) return B().xpPerSec * B().xpSuitableMult;
   if (!bindingActive(c)) return 0;
   let g = B().xpPerSec;
   if (isSuitable(c)) g *= B().xpSuitableMult;
@@ -170,31 +173,17 @@ export function leaderCount() { return (S.cultists || []).filter(isLeader).lengt
 // v4.3.14 反馈②：领导全局加成改「固定 +1%/位」（原 +10%/位且被班组扩编放大）。
 //   用户口径：领导是全局 1% 产出加成位，文案「+1%」，数值恒定不吃研究点放大——
 //   移除 researchMult('crew') 乘区（rp_crew 语义改为按 desc 直接生效，见 balance.js）。
-// v4.3.21 反馈⑥：领导等级制——+1% 基础（Lv1）+ 0.01%/级，leaderGlobalCap 下线（上限改由
-//   leaderLevelCap 控制曲线）；领导等级存 c.leaderLv（旧档缺省按 1）。
-export function leaderLvOf(c) {
-  const lv = Math.max(1, Math.floor(Number(c && c.leaderLv) || 1));
-  return Math.min(lv, B().leaderLevelCap || 50);
-}
+// v4.3.23 反馈①：领导升级改革——废除独立 leaderLv/手动升级按钮/领导津贴，领导等级完全
+//   走普通线程 XP 路径（c.level，threadLevel 真源）：任命不重置等级、在岗持续积 XP。
+//   leaderLvOf 保留为兼容门面（委托 threadLevel），全局加成 = 1% × 等级乘数
+//  （Lv1 = +1.00%，Lv10 = +1.72%）。
+export function leaderLvOf(c) { return threadLevel(c); }
 export function leaderGlobalMult() {
   const n = leaderCount();
   if (n <= 0) return 1;
   // 领导唯一（state.js 归一化保证），取现任领导的等级
   const lead = (S.cultists || []).find(isLeader);
-  const lv = leaderLvOf(lead);
-  return 1 + B().leaderGlobalPerLeader + (lv - 1) * B().leaderLevelBonusPerLv;
-}
-// v4.3.21 反馈⑥：领导升级（手动按钮）——全局加成 +0.01%/级、每秒消耗 +10 EP/s×级。
-// 升级不耗资源（消耗体现在每秒 EP 支出），代价是持续的额外 EP 支出。
-export function leaderUpgradeCost() { return 0; } // 升级本身免费（曲线靠每秒消耗平衡），保留钩子供 UI
-export function canLevelUpLeader(c) {
-  return !!(c && isLeader(c) && leaderLvOf(c) < (B().leaderLevelCap || 50));
-}
-export function levelUpLeader(c) {
-  if (!c || !isLeader(c)) return { ok: false, reason: '该线程不是领导' };
-  if (!canLevelUpLeader(c)) return { ok: false, reason: '已达领导等级上限' };
-  c.leaderLv = leaderLvOf(c) + 1;
-  return { ok: true, level: c.leaderLv };
+  return 1 + B().leaderGlobalPerLeader * threadLevelMult(leaderLvOf(lead));
 }
 
 // ---- 方向①/②：绑定对「转化器产出」的加成（乘区，≥1）----
@@ -305,11 +294,14 @@ export function autoAssignThreads(only = null) {
     if (i < 0) continue;
     place(idle.splice(i, 1)[0], t);
   }
-  // 阶段 A2：优先保证每个模块都有人
+  // 阶段 A2：优先保证每个模块都有人——只派擅长者占坑（v4.3.23 反馈②：
+  //   旧行为 i<0 时取 idle[0] 硬塞不擅长者占坑，导致 B 阶段「擅长岗位优先」反被挤占，
+  //   玩家观察「智能分配没把线程分到擅长岗位」。无匹配者跳过，留给 B 阶段按擅长安置。）
   for (const t of types) {
     if (load[t] > 0 || load[t] >= cap[t] || !idle.length) continue;
     const i = idle.findIndex(c => affinityMatches(c, t));
-    place(idle.splice(i < 0 ? 0 : i, 1)[0], t);
+    if (i < 0) continue; // v4.3.23 反馈②：无擅长者不硬塞
+    place(idle.splice(i, 1)[0], t);
   }
   // 阶段 B：剩余线程填满槽位（擅长岗位优先，其次剩余槽位最多的岗位）
   for (const c of idle.slice()) {
@@ -363,9 +355,8 @@ export function rollProfession(suggested) {
 export function tickThreads(dt) {
   const leveled = [];
   for (const c of (S.cultists || [])) {
-    // v4.3.21 反馈⑥：领导等级走手动升级按钮（levelUpLeader），不积 XP；worker 等级在
-    //   任命时已重置 Lv1，卸任恢复普通线程后按普通规则重新积累 XP。
-    if (isLeader(c)) continue;
+    // v4.3.23 反馈①：领导也走普通 XP 升级路径（v4.3.21 的「跳过领导、手动升级」反转）；
+    //   worker 等级在任命时不再重置，全部线程共用同一套 level/xp 状态。
     const g = threadXpGainPerSec(c);
     if (g <= 0) continue;
     c.xp = (c.xp || 0) + g * dt;

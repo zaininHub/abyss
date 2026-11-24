@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) { pass++; console.log('  ok -', name); } else { fail++; console.log('  NOT OK -', name); } };
 
-const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--allow-file-access-from-files'] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1600, height: 1000 });
 const pageErrors = [];
@@ -101,11 +101,12 @@ await sleep(600);
     };
   });
   ok(r.leader === true, '领导标记生效');
-  ok(r.level === 1 && r.xp === 0, `提拔后等级重置（Lv.${r.level} xp=${r.xp}）`);
-  ok(r.starText === '★' && /全局 EP 产出 \+1%/.test(r.starTip), `星标「★」+悬浮「全局 EP 产出 +1%」（v4.3.22 消歧；实际「${r.starTip}」）`);
+  // v4.3.23 反转：任命不重置等级（等级是线程自身属性，XP 跨任命保留）
+  ok(r.level === 5, `任命不重置等级（实际 Lv.${r.level}）`);
+  ok(r.starText === '★' && /全局 EP 产出 \+1% × 等级乘数/.test(r.starTip), `星标「★」+悬浮「全局 EP 产出 +1% × 等级乘数」（v4.3.23；实际「${r.starTip}」）`);
   ok(r.noSelect, '领导卡无岗位下拉');
-  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.1，全局 EP 产出 \+1\.00%，领导津贴 10 EP\/s）/.test(e.msg)));
-  ok(feedOk, '晋升班组流水改消歧口径「就任领导（Lv.1，全局 EP 产出 +1.00%，领导津贴 10 EP/s）」');
+  const feedOk = await page.evaluate(() => (window.S.crewFeed || []).some(e => /就任领导（Lv\.5，全局 EP 产出 \+1\.32%，随等级提升）/.test(e.msg)));
+  ok(feedOk, '晋升班组流水 v4.3.23 口径「就任领导（Lv.5，全局 EP 产出 +1.32%，随等级提升）」');
 }
 
 // ===== ③ 裂隙面板 =====
