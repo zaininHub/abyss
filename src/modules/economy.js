@@ -645,12 +645,11 @@ export function focusTotalBonus(lv) {
   return t;
 }
 
-// v3.6.3 ②：一次算出「实际产出」与「薪资基数」两份，避免两处各自重算导致口径漂移。
-//   差异只在超线程岗位：它 +10% 产出，但该加成不进薪资基数（消耗侧由 bindAvg 单独 +10%）。
-function staffOutputParts() {
-  // v2.1 R1 修复：这里只应用线程专属乘数（团队协作/CPU/GPU）。
-  // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
-  // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
+// v4.3.18 反馈②：产线乘数（专注/建筑/研究/CPU/GPU）真源独立导出——班组卡面产出行
+// 与 staffOutputParts 的 one 同口径。此前卡面是裸口径、消耗侧 salPer 是全局实扣口径
+//（salaryBase 已含 outMult），产线越强两侧偏差越大，10 级超线程出现「+8.9/-14」
+// 收支倒挂观感。补齐后产出/消耗同口径可比；纯显示层，不动真值（EP 生产速度不变）。
+export function threadOutMult() {
   let outMult = 1;
   // v2.8.30：专注每级加成从少到多（8%/12%/20% 分段递增），达到上限后固定 20%/级
   outMult *= (1 + focusTotalBonus(S.focusLevel));
@@ -658,18 +657,28 @@ function staffOutputParts() {
   // v3.4.7 反馈①：CPU/GPU 限购（cpu 3 级 / gpu 2 级），加成随级数乘算叠加（+50%/级、×2/级）
   if (S.upgrades.cpu) outMult *= Math.pow(1.5, S.upgrades.cpu || 0);
   if (S.upgrades.gpu) outMult *= Math.pow(2, S.upgrades.gpu || 0);
+  return outMult;
+}
+
+// v3.6.3 ②：一次算出「实际产出」与「薪资基数」两份，避免两处各自重算导致口径漂移。
+//   差异只在超线程岗位：它 +10% 产出，但该加成不进薪资基数（消耗侧由 bindAvg 单独 +10%）。
+function staffOutputParts() {
+  // v2.1 R1 修复：这里只应用线程专属乘数（团队协作/CPU/GPU）。
+  // globalMult / corruptionPenalty / tideMult 全部由 computeCps 对所有产出源统一单次应用，
+  // 消除旧版 globalMult² 双重计数（「一个线程瞬间满 1K」的根因）。
+  const outMult = threadOutMult(); // v4.3.18 反馈②：真源收敛到 threadOutMult（消除两处口径漂移）
   let total = 0, salaryBase = 0;
   for (const c of S.cultists) {
     const mood = MOOD_MULT[c.mood] || 1;
     // v3.3.0：线程等级加成（高等级加成高）+ 绑定到转化器后自由 EP 产出可能下降（产出被抽调）
     // v4.3.14 反馈②：领导零个人产出——改为全局 +1% 加成位（globalMult 内 leaderGlobalMult），
     //   不再按 (output×0.8×…) 计入线程产出。
-    // v4.3.16 反馈①：领导消耗固定 EP——薪资基数计入领导固定份额（裸基数 = output×0.8，
-    //   不吃 mood/outMult/等级/岗位放大，「固定」指不随后期乘区水涨船高）。
-    //   领导 boundTo 恒 null（bindThread/智能分配/晋升三处钳制），factor 恒 1。
+    // v4.3.18 反馈①：领导消耗按「Lv1 空闲线程同口径」计薪——吃 mood/outMult（随产线水涨，
+    //   与全员一致），不吃岗位系数（boundTo 恒 null）/超线程 +10%/等级加成。
+    //   v4.3.16 的 bare 实扣口径数学上 = 2/3×m×bindAvg×bare，比同 output 普通线程低 ~40%，
+    //   玩家感知「固定消耗少了」；且卡面显示 salPer 平均摊派与实扣不符。同口径后显示=实扣。
     const isLead = c.leader === true;
-    const bare = (c.output || 3) * 0.8;
-    const one = isLead ? bare : (c.output || 3) * 0.8 * mood * outMult * threadLevelMult(threadLevel(c));
+    const one = (c.output || 3) * 0.8 * mood * outMult * (isLead ? 1 : threadLevelMult(threadLevel(c)));
     const factor = isLead ? 1 : threadBindOutputFactor(c);
     total += isLead ? 0 : one * factor;
     salaryBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : factor);

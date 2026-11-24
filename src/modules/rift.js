@@ -563,7 +563,7 @@ export function renderRift(container) {
       <div style="display:flex;gap:6px">
         <button class="btn" id="seal-rift" style="flex:1;font-size:12px">封印</button>
         <button class="btn" id="embrace-rift" style="flex:1;font-size:12px;background:rgba(163,113,247,.15);border-color:var(--purple)">拥抱</button>
-        <button class="btn" id="delve-rift" ${dmUnlock ? '' : 'disabled'} title="${dmUnlock ? '深入裂隙：60 秒探索（需消耗 EP 与 DM）' : '需先发现深渊之力（DM）——购入首辆载具或封印裂隙获得'}" style="flex:1;font-size:12px;background:rgba(248,81,73,.12);border-color:var(--red, #f85149)">深入</button>
+        <button class="btn" id="delve-rift" ${dmUnlock ? '' : 'disabled'} title="${dmUnlock ? `深入裂隙：60 秒探索 · 消耗 启动 ${fmt(Math.ceil(r.sealCost * 0.5))} EP + 探索期约 ${fmt(riftDelveTotalEp(r.level))} EP` : '需先发现深渊之力（DM）——购入首辆载具或封印裂隙获得'}" style="flex:1;font-size:12px;background:rgba(248,81,73,.12);border-color:var(--red, #f85149)">深入</button>
       </div>`;
     if (!delegateBound) {
       container.addEventListener('click', (e) => {
