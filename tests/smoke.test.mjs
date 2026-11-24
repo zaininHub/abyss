@@ -331,7 +331,7 @@ t('v2.1.2→v4.2.2：潮汐加成标签已迁入 tideTipHtml 气泡且带属性�
   assert.ok(src.includes('function tideTipHtml()'), '气泡内容函数应存在');
   assert.ok(src.includes("row('产出', pct(epMult)"), '产出行应带属性名');
   assert.ok(src.includes("row('薪资', pct(salMult)"), '薪资行应带属性名');
-  assert.ok(src.includes("row('科技成本', pct(techMult)"), '科技成本行应带属性名');
+  assert.ok(src.includes("row('科技树价格', pct(techMult)"), '科技树价格行应带属性名（v4.3.19 反馈④：科技成本→科技树价格）');
   // 旧内联标签写法（tide-buff">产出${pct}）应已从顶栏渲染移除
   assert.ok(!src.includes('tide-buff'), '顶栏不应再内联加成标签');
 });

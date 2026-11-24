@@ -56,7 +56,8 @@ console.log('[1] 晋升两态宽度恒定');
 console.log('[2] 长选项恒宽不溢出');
 {
   const r = await page.evaluate(async () => {
-    // 种多岗位解锁 + 满员标注场景（选项文案最长：「灵感工坊（已满）」）
+    // 种多岗位解锁场景（v4.3.19：满员岗位从下拉移除——长选项文案改为「（未解锁）」标注路径，
+    // 用未解锁岗位项验证长文案下恒宽；满员标注已随 v4.3.15 ② 反转删除）
     window.S.upgrades = { ...(window.S.upgrades || {}), atrium: 2, scooter: 1 };
     window.S.cultists = Array.from({ length: 5 }, (_, i) => ({
       id: i + 10, name: 'X' + i, profession: 'worker', level: 1, xp: 0,
@@ -65,8 +66,8 @@ console.log('[2] 长选项恒宽不溢出');
     }));
     window.__gameDirty && (window.__gameDirty.orchestration = true);
     await new Promise(r2 => setTimeout(r2, 800));
-    // 轮询等重建——查一条**空闲**线程的卡（id=13 X3 未绑岗）：满员标注只对
-    // 「非本岗位」线程显示（原地重选没占新坑，自己岗位不标已满——v4.3.15 ② 口径）
+    // 轮询等重建——查一条**空闲**线程的卡（id=13 X3 未绑岗）：满员岗位（atrium 已 2/2）
+    // 不应出现在其下拉里（v4.3.19 ② 口径）
     let sel = null;
     for (let i = 0; i < 30 && !sel; i++) {
       await new Promise(r2 => setTimeout(r2, 100));
@@ -79,14 +80,15 @@ console.log('[2] 长选项恒宽不溢出');
     return {
       w: sr.width,
       overflow: sr.right > cr.right + 0.5,
-      hasFullMark: [...sel.options].some(o => /（已满）/.test(o.textContent)),
+      hasAtrium: [...sel.options].some(o => o.value === 'atrium'),
+      optCount: sel.options.length,
     };
   });
   if (r.err) ok(false, r.err);
   else {
     ok(Math.abs(r.w - 78) < 1, `长选项下仍恒 78px（实际 ${r.w}）`);
     ok(!r.overflow, '下拉不溢出卡片');
-    ok(r.hasFullMark, '满员标注选项保留（宽度收窄不影响语义）');
+    ok(!r.hasAtrium, '满员岗位已从空闲线程下拉移除（v4.3.19 反转）');
     // 按钮不换行（★ 不掉第二行）：按钮高度应 ~19px 而非 32px
     const btnH = await page.evaluate(() =>
       document.querySelector('.crew-card [data-leader]')?.getBoundingClientRect().height ?? 0);

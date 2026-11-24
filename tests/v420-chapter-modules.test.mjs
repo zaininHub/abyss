@@ -101,8 +101,9 @@ test('E2 allUnlockedUpTo 单调累积', () => {
   assert.ok(allUnlockedUpTo(1).length < allUnlockedUpTo(12).length);
   assert.ok(allUnlockedUpTo(12).includes('religion'));
 });
-test('E3 章节推进帧接线 🔓 公告', () => {
+test('E3 章节推进帧接线（v4.3.19 反馈⑧反转：解锁改日志悬念句，不再 toast）', () => {
   const fs = src('src/systems/frameSystems.js');
   assert.ok(fs.includes('unlocksAtChapter(nNow)'), '帧系统调用解锁公告');
-  assert.ok(fs.includes('🔓 第 ${nNow} 章 · 新模块'), 'toast 文案接线');
+  assert.ok(fs.includes('深渊里透出一道光...'), '日志悬念句接线');
+  assert.ok(!fs.includes('🔓'), '解锁 toast 弹窗已移除');
 });

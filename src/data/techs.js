@@ -9,7 +9,10 @@ export const TECHS = [
   {id:'entropy_reduce',col:3,cost:{rp:75,ep:2e6},name:'熵减协议',desc:'解锁「净化节点」族',req:[],unlocks:{buildings:[],purifiers:true}},
   // v4.3.2 反馈④：DM 1000→50——原口径基础 DM 上限恰 1000 且低 CPS 阶段封裂仅 ~6 DM/天（需 158 天），
   //   致 ch4「expeditionsDone>=8」星图链断（deep_space 是首次远征唯一钥匙）。50 DM ≈8 天可达，留余量跑远征。
-  {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:50},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],unlocks:{buildings:[],system:'expedition2'}},
+  // v4.3.19 反馈⑦：minChapter:3——原 req:[] 且 techVisible 恒 true，第一章即整卡可见（用户反馈「不符合章节解锁」）。
+  //   取 3 与章节解锁注册表 ch3「星图接入」公告对齐；不可取 5（ch5 条件 expeditionsDone>=8，
+  //   而首次远征唯一钥匙 = 本科技 → 锁 5 即死锁）；ch3~4 校准玩家购买点（DM 50 约封裂 8 天）不受影响。
+  {id:'deep_space',col:4,cost:{rp:180,ep:5e6,dm:50},name:'深空探测',desc:'解锁第二路星际探索与深空殖民',req:[],minChapter:3,unlocks:{buildings:[],system:'expedition2'}},
   {id:'ai_core',col:4,cost:{rp:50,ep:1e6},name:'AI 管理核心',desc:'解锁 AI 助手',req:[],unlocks:{buildings:[],system:'ai'}},
   {id:'chaos_shield',col:2,cost:{rp:90,ep:1.5e6},name:'混沌护盾',desc:'解锁「护盾协议」：线程流失概率减半',req:[],unlocks:{system:'chaos_shield'}}, // v2.8.10：补齐第 6 把钥匙
 ];

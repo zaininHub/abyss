@@ -449,7 +449,7 @@ export const BALANCE = {
     phases: [
       { id: 0, name: '涨潮', icon: '🌊', epMult: 1.3, salaryMult: 1.5, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1.5, cssClass: 'tide-flood' },
       { id: 1, name: '平潮', icon: '🌀', epMult: 1, salaryMult: 1, techCostMult: 1, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-calm' },
-      { id: 2, name: '退潮', icon: '⛰️', epMult: 0.7, salaryMult: 0.8, techCostMult: 0.8, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-ebb' }, // techCostMult：科技树研究成本 ×0.8（退潮期研究 -20%，非升级/建筑成本）
+      { id: 2, name: '退潮', icon: '⛰️', epMult: 0.7, salaryMult: 0.8, techCostMult: 0.8, eventBadWeight: 1, eventGoodDur: 1, cssClass: 'tide-ebb' }, // techCostMult：科技树价格 ×0.8（退潮期科技树研究价 -20%；v4.3.19 反馈④文案统一「科技树价格」——仅科技树 RP 项吃乘数，升级/建筑不打折）
       { id: 3, name: '乱流', icon: '⚡', epMult: 1, salaryMult: 1.3, techCostMult: 1, eventBadWeight: 2, eventGoodDur: 1, cssClass: 'tide-chaos' },
     ],
   },

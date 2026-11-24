@@ -229,6 +229,7 @@ export function registerFrameSystems(deps = {}) {
         S.chapter = chNowStr;
         S.chapterEnteredAt = Date.now();
         ctx.dirty.story = true;
+        ctx.dirty.tech = true; // v4.3.19 反馈⑦：跨章即时显现 minChapter 科技（如 ch3 的「深空探测」），无需等面板切换
         S.chaptersUnlocked = S.chaptersUnlocked || {};
         const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
         S.chaptersUnlocked[slId] = S.chaptersUnlocked[slId] || [];
@@ -240,11 +241,12 @@ export function registerFrameSystems(deps = {}) {
         const chName = chNow.name || `第 ${chId} 章`;
         if (toast) toast(`📖 进入${chName}：章节馈赠 +${gift} RP`);
         log(`章节推进：${chName}——时间线向前折叠，+${gift} RP 馈赠`, 'good');
-        // v4.2.0：「一章一个新模块」时刻感——本章若有登记解锁项，紧跟章节馈赠发 🔓 公告。
+        // v4.2.0：「一章一个新模块」时刻感——本章若有登记解锁项，紧跟章节馈赠公告。
         //   推进本身只发生一次（一次一章 + S.chapter 不回退），故公告天然一次性、无需额外持久化键。
+        // v4.3.19 反馈⑧：解锁不再 toast 弹窗（玩家反馈弹窗打断），改系统日志悬念句
+        //   「深渊里透出一道光...」——具体模块名仍由对应面板首次显现时自解释。
         for (const u of unlocksAtChapter(nNow)) {
-          if (toast) toast(`🔓 第 ${nNow} 章 · 新模块：${u.name}`);
-          log(`新模块解锁：${u.name}——${u.announce}`, 'good');
+          log('深渊里透出一道光...', 'good');
         }
         ctx.dirty.top = true;
       }

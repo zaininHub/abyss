@@ -59,9 +59,10 @@ test('A1 crew.js 不再计算或拼接容量数字', () => {
 });
 
 test('A2 下拉选项与筛选按钮只拼岗位名', () => {
-  // v4.3.15 反馈②：下拉选项在岗位名后可附「（已满）」标注（容量钳制的视觉提示）——
-  //   反转 v3.7.3「只拼岗位名」为「岗位名 + 未解锁标记 + 可选已满标注」。
-  assert.match(CREW, /CONVERTERS\[t\] \? CONVERTERS\[t\]\.name : t\}\$\{visibleTypes\.includes\(t\) \? '' : '（未解锁）'\}\$\{full \? '（已满）' : ''\}/, '下拉保留岗位名 + 未解锁标记 + 已满标注');
+  // v4.3.19 反馈②：满员岗位直接从下拉 opts 源头移除——反转 v4.3.15「岗位名 + 未解锁标记 +
+  //   可选已满标注」为「岗位名 + 未解锁标记」（已满的岗位根本不出现在选项里）。
+  assert.match(CREW, /CONVERTERS\[t\] \? CONVERTERS\[t\]\.name : t\}\$\{visibleTypes\.includes\(t\) \? '' : '（未解锁）'\}/, '下拉保留岗位名 + 未解锁标记');
+  assert.ok(!CREW.includes('（已满）'), '旧「（已满）」标注残留');
   assert.ok(!CREW.includes('${CONVERTERS[t].name}${slotText(t)}'), '筛选按钮不再附容量');
 });
 
