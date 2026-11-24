@@ -1129,6 +1129,9 @@ body.log-resizing, body.log-resizing * { cursor: ns-resize !important; user-sele
 }
 
 /* ========== 模态框 ========== */
+/* 暂停弹框必须高于 #code-rain (z-index:999) 与说明气泡 (z-index:1200)。
+   否则暂停虽已触发，但被全屏画布覆盖，视觉上像弹框消失。 */
+#pause-modal { z-index: 1300; }
 .modal {
   display: none;
   position: fixed;
@@ -1433,6 +1436,26 @@ body.paused .pet-grid .pet-card {
 .ai-build-box .ai-build-title { font-size: 11.5px; color: var(--accent); margin-bottom: 3px; }
 .ai-build-locked { opacity: 0.85; }
 .ai-build-box .btn.disabled { opacity: 0.45; cursor: not-allowed; }
+/* 研究点页：自动蒸馏使用真正的滑块开关，手动蒸馏按钮保持在它的左侧。 */
+.atrium-auto-switch {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 24px;
+  padding: 3px 6px 3px 8px; border: 1px solid var(--border); border-radius: 999px;
+  background: rgba(255,255,255,.05); color: var(--text-3); cursor: pointer;
+  font-size: 11px; line-height: 1; transition: border-color .15s, background .15s, color .15s;
+}
+.atrium-auto-switch:hover { border-color: var(--accent); }
+.atrium-auto-switch i {
+  position: relative; display: inline-block; width: 26px; height: 14px; border-radius: 999px;
+  background: rgba(255,255,255,.14); transition: background .15s;
+}
+.atrium-auto-switch i::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--text-3); transition: transform .15s, background .15s;
+}
+.atrium-auto-switch.on { border-color: rgba(63,185,80,.55); background: rgba(63,185,80,.12); color: var(--good, #3fb950); }
+.atrium-auto-switch.on i { background: rgba(63,185,80,.45); }
+.atrium-auto-switch.on i::after { transform: translateX(12px); background: var(--good, #3fb950); }
+
 .ai-switch {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 8px; margin-bottom: 4px;

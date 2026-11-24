@@ -154,12 +154,14 @@ try {
     const txt = host?.textContent.replace(/\s+/g, ' ').trim() || '';
     const sw = host?.querySelector('[data-atrium-switch]');
     const distill = host?.querySelector('#rp-distill-btn');
-    return { txt, autoWord: sw?.textContent === '自动', aria: sw?.getAttribute('aria-pressed'),
+    return { txt, autoWord: sw?.textContent === '自动', aria: sw?.getAttribute('aria-checked'), role: sw?.getAttribute('role'),
       distillInHost: !!distill, noOldTitle: !txt.includes('自动蒸馏') };
   });
   d4.noOldTitle ? ok('标题已去「· 自动蒸馏」', d4.txt.slice(0, 50)) : bad('「自动蒸馏」文案残留', d4.txt.slice(0, 50));
   d4.autoWord ? ok('开关文案为「自动」') : bad('开关文案非「自动」', d4.txt.slice(0, 50));
-  ['true', 'false'].includes(d4.aria) ? ok('开关带 aria-pressed', d4.aria) : bad('aria-pressed 缺失', d4.aria);
+  (d4.role === 'switch' && ['true', 'false'].includes(d4.aria))
+    ? ok('自动开关带滑块语义', `${d4.role}/${d4.aria}`)
+    : bad('自动开关缺 role=switch 或 aria-checked', JSON.stringify(d4));
   d4.distillInHost && d4.txt.includes('蒸馏') ? ok('蒸馏按钮并入开关行（v4.3.13 文案精简为「蒸馏」）') : bad('蒸馏按钮不在开关行内或文案异常', d4.txt.slice(0, 50));
   // 工坊未购（atrium=0）时蒸馏按钮仍存在
   await page.evaluate(() => {

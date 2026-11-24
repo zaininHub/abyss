@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v4.3.26</title>
+<title>深渊效能工作台 v4.3.27</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-B5kETNca.js"></script>
-  <link rel="stylesheet" href="./assets/index-BeflB_P0.css">
+  <script defer src="./assets/index-BIIcAb-S.js"></script>
+  <link rel="stylesheet" href="./assets/index-Du74ujtE.css">
 </head>
 <body>
 <div id="app">
@@ -429,9 +429,9 @@
   </div>
 
   <!-- v2.5 ⑥：暂停 / 离线恢复模态框（v3.2.1 反馈⑤：离线管理并入暂停界面） -->
-  <div id="pause-modal" class="modal">
+  <div id="pause-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pause-modal-title" aria-hidden="true">
     <div class="modal-box">
-      <h3 style="margin-top:0;color:var(--red)">系统暂停 · 模拟离线</h3>
+      <h3 id="pause-modal-title" style="margin-top:0;color:var(--red)">系统暂停 · 模拟离线</h3>
       <div id="pause-info" style="font-size:13px;line-height:2;margin:8px 0 14px"></div>
       <button class="btn" id="pause-resume" style="width:100%">恢复并结算</button>
       <div id="tab-offline" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">

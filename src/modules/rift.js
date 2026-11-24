@@ -258,20 +258,52 @@ export function delveRift() {
   return { ok: true };
 }
 
+// 深入状态会同时出现在主卡和裂隙页；所有退出路径必须使两处都重渲染，不能只依赖下一帧。
+function clearRiftExpedition() {
+  S.riftExpedition = null;
+  save(S);
+  dirty.rift = true;
+  dirty.riftTab = true;
+  dirty.hero = true;
+}
+
 export function abortRiftExpedition() {
   if (!S.riftExpedition) return { ok: false, reason: '未在深入' };
   // v2.8.12：紧急脱出不结算任何奖励（已消耗的 EP/DM 不退，已获产出丢弃）——提前退出 = 白费，鼓励完整探索
   log(`[裂隙] 紧急脱出：探索中止，未获得任何奖励（提前退出无结算）`, 'bad');
-  S.riftExpedition = null;
-  save(S);
-  dirty.rift = true;
+  clearRiftExpedition();
   return { ok: true };
+}
+
+function finishRiftExpedition(ex) {
+  const lv = ex.level;
+  const rewardMul = riftRewardMult(lv);
+  // 终局：腐化 > 阈值 → 损失；否则结算奖励
+  const fail = S.corruption > BALANCE.rift.delveFailCorrupt;
+  if (fail) {
+    const loss = Math.ceil(ex.sealCost * BALANCE.rift.delveFailLoss);
+    S.ep = Math.max(0, S.ep - loss);
+    log(`[裂隙] 深入终局：腐化 ${S.corruption.toFixed(0)}% 吞噬了探索——损失 ${fmt(loss)} EP`, 'bad');
+    if (toast) toast('🌊 腐化吞噬：深入探索失败，损失 EP');
+  } else {
+    const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * rewardMul;
+    addDm(dmTotal); // v2.8.27 ②：DM 上限
+    if (dmTotal > 0) discoverDm();
+    if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
+    const emberGain = Math.round(BALANCE.rift.emberDelve * rewardMul * emberMul()); // v3.3.8 反馈②：整数化
+    S.riftEmber = Math.round((S.riftEmber || 0) + emberGain);
+    log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${emberGain} 余烬`, 'good');
+    if (toast) toast('🌌 深入完成：裂隙深处之物已带回');
+  }
+  clearRiftExpedition();
 }
 
 // 深入探索逐帧结算：产出 + 腐化；到时终局（腐化超阈值损失）
 function settleRiftExpedition(dt) {
   const ex = S.riftExpedition;
   if (!ex) return;
+  // 终局取绝对截止时间为准：面板即使已显示 0s，也不能再因没有资源流帧而永久卡在深入态。
+  if (Date.now() >= Number(ex.until)) { finishRiftExpedition(ex); return; }
   const lv = ex.level;
   // v2.8.12：深入期间消耗 EP 换取 DM——EP 耗尽则探索立即失败（无奖励）
   // v3.4.8 反馈①：深入消耗随裂隙等级指数陡增（原线性 ×lv）
@@ -282,9 +314,7 @@ function settleRiftExpedition(dt) {
   if (actualEp < epUse - 1e-9) {
     log(`[裂隙] 深入失败：EP 耗尽（探索中止，无奖励）`, 'bad');
     if (toast) toast('⚠️ EP 耗尽：深入探索失败，无奖励');
-    S.riftExpedition = null;
-    dirty.rift = true;
-    save(S);
+    clearRiftExpedition();
     return;
   }
   // 产出（DM 恒定 + VS 深潜解锁后）——v3.4.9 反馈④：奖励随等级只 +15%/级（原 ×lv 过快）
@@ -294,29 +324,7 @@ function settleRiftExpedition(dt) {
   if (S.delve && S.delve.unlocked) ex.gainedVs += BALANCE.rift.delveVsPerLevel * rewardMul * dt;
   // v3.5.0 反馈①：腐化按「单次深入 = 33%~50%」摊到每秒，等级越高单次腐化越多（净化成本同步抬升）
   S.corruption = Math.min(corruptionCap(), (S.corruption || 0) + riftDelveCorruptPerSec(lv) * dt);
-  if (Date.now() >= ex.until) {
-    // 终局：腐化 > 阈值 → 损失；否则结算奖励
-    const fail = S.corruption > BALANCE.rift.delveFailCorrupt;
-    if (fail) {
-      const loss = Math.ceil(ex.sealCost * BALANCE.rift.delveFailLoss);
-      S.ep = Math.max(0, S.ep - loss);
-      log(`[裂隙] 深入终局：腐化 ${S.corruption.toFixed(0)}% 吞噬了探索——损失 ${fmt(loss)} EP`, 'bad');
-      if (toast) toast('🌊 腐化吞噬：深入探索失败，损失 EP');
-    } else {
-      const dmTotal = ex.gainedDm + BALANCE.rift.delveBonusDm * rewardMul;
-      addDm(dmTotal); // v2.8.27 ②：DM 上限
-      if (dmTotal > 0) discoverDm();
-      if (ex.gainedVs > 0) S.vs = (S.vs || 0) + ex.gainedVs;
-      const emberGain = Math.round(BALANCE.rift.emberDelve * rewardMul * emberMul()); // v3.3.8 反馈②：整数化
-      S.riftEmber = Math.round((S.riftEmber || 0) + emberGain);
-      log(`[裂隙] 深入完成（${riftLevelName(lv)}）：+${dmTotal.toFixed(1)} DM${ex.gainedVs > 0 ? `、${ex.gainedVs.toFixed(1)} VS` : ''}、+${emberGain} 余烬`, 'good');
-      if (toast) toast('🌌 深入完成：裂隙深处之物已带回');
-    }
-    S.riftExpedition = null;
-    save(S);
-    dirty.rift = true;
-    dirty.hero = true; // v2.6.4 ②：顶部深入状态即时清除
-  }
+  if (Date.now() >= ex.until) finishRiftExpedition(ex);
   dirty.hero = true; // v2.6.4 ②：探索中顶部状态实时刷新
 }
 
@@ -616,11 +624,7 @@ export function renderRiftPanel(container) {
       <div class="off-stat"><span>已获 DM</span><b style="color:var(--green)">+${ex.gainedDm.toFixed(1)}</b></div>
       <div class="off-stat"><span>已获 VS（深潜联动）</span><b style="color:var(--cyan)">+${ex.gainedVs.toFixed(2)}</b></div>
       <div class="off-stat"><span>当前腐化</span><b style="color:${S.corruption > BALANCE.rift.delveFailCorrupt ? 'var(--red,#f85149)' : 'var(--text-2)'}">${S.corruption.toFixed(1)}% ${S.corruption > BALANCE.rift.delveFailCorrupt ? '⚠ 超阈值将损失' : '安全'}</b></div>
-      <div style="font-size:11px;color:var(--text-3);margin:6px 0">腐化超 ${BALANCE.rift.delveFailCorrupt}% 结算时将损失 ${Math.round(BALANCE.rift.delveFailLoss * 100)}% 封印成本 EP；可提前脱出保留已获产出。</div>`;
-    container.querySelector('#abort-rift-ex')?.addEventListener('click', () => {
-      abortRiftExpedition(); // 保留（若旧档渲染缓存仍含按钮则兜底）
-      renderRiftPanel(container);
-    });
+      <div style="font-size:11px;color:var(--text-3);margin:6px 0">腐化超 ${BALANCE.rift.delveFailCorrupt}% 结算时将损失 ${Math.round(BALANCE.rift.delveFailLoss * 100)}% 封印成本 EP；紧急脱出会放弃所有未结算产出。</div>`;
     return;
   }
   // v3.4.0 反馈①：裂隙已在场时不展示「下次裂隙 X 后出现」——此时 riftEtaSec() 恒为 0，

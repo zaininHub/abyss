@@ -468,7 +468,7 @@ export function renderAtriumSwitch(host) {
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n}</span>
     ${distillBtn()} <!-- v4.3.13 反馈⑦：蒸馏在左（高频手动操作靠前），自动开关移到右侧 -->
     <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
-    <button class="mini-btn" data-atrium-switch aria-pressed="${on}" style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:4px 16px;font-size:12px;background:${on ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">自动</button>
+    <button class="atrium-auto-switch${on ? ' on' : ''}" data-atrium-switch role="switch" aria-checked="${on}" aria-label="自动蒸馏" style="margin-left:auto"><span>自动</span><i aria-hidden="true"></i></button>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {

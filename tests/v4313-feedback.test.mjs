@@ -131,5 +131,7 @@ test('R7b 蒸馏在左、自动在右', () => {
   const distillPos = seg.indexOf('${distillBtn()}');
   const autoPos = seg.indexOf('data-atrium-switch');
   assert.ok(distillPos >= 0 && autoPos > distillPos, '蒸馏未排在自动开关之前');
-  assert.ok(/margin-left:auto;cursor:pointer/.test(seg), '自动开关未靠右');
+  assert.ok(/class="atrium-auto-switch\$\{on \? ' on' : ''\}"/.test(seg), '自动开关未使用滑块样式');
+  assert.ok(/role="switch"[\s\S]*aria-checked="\$\{on\}"/.test(seg), '自动开关缺失无障碍状态');
+  assert.ok(/style="margin-left:auto"/.test(seg), '自动开关未靠右');
 });

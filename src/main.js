@@ -2845,6 +2845,7 @@ function showPauseModal() {
   const modal = document.getElementById('pause-modal');
   if (!modal) return;
   modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
   const offPanel = document.getElementById('offline-panel');
   if (offPanel) renderOfflinePanel(offPanel);
   renderOfflineUpgrades(document.getElementById('offline-upg-list'));
@@ -2860,7 +2861,10 @@ function showPauseModal() {
 
 function hidePauseModal() {
   const modal = document.getElementById('pause-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
 }
 
 // 每秒刷新暂停时长与预计收入（tick 暂停分支调用；未暂停或弹框关闭时静默返回）
