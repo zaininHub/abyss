@@ -61,7 +61,7 @@ import { lineRule, lineFlag, allLineRuleKeys, LINE_RULE_LABELS } from './core/li
 import { maybeTriggerEvent, peekNextEvent, eventPool } from './modules/events.js';
 import { applyOffline, renderOfflinePanel } from './modules/offline.js';
 import { renderStoryBar, currentChapter } from './modules/story.js';
-import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（v4.3.14 反馈③迁入裂隙模块）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛
+import { tickRift, renderRift, renderRiftPanel, refreshRiftAffordability, buyRiftUpgrade, abortRiftExpedition, discoverDm, riftEtaSec, riftNextSec, fmtEta, riftUpgradeLevel, riftPurgeCostMult, riftThreadsReady, riftLevelOf, riftLevelTech, buyRiftLevelTech } from './modules/rift.js'; // v3.6.4 ①：裂隙等级 QA 钩子 // v3.3.9 反馈⑤：裂隙等级科技（v4.3.14 反馈③迁入裂隙模块）// v3.4.9：自动净化/净化成本倍率 // v3.6.2 反馈②：线程解锁门槛 // v4.3.24 反馈①：升级需求悬浮气泡
 import { ensureAbyssGaze, setGazeInteract } from './modules/abyssGaze.js'; // v3.4.2：凝视深渊彩蛋——重载后常驻裂开
 import { ensureWishWell, initWishWell, ensureFarewellGift, initFarewellGift, tickFarewellRecall } from './modules/wishDock.js';
 import { tickExpeditions, tickColonies, renderExpeditions, refreshExpeditionAffordability } from './modules/expedition.js'; // v3.0.5 反馈②：星图/宇宙可购态快刷
@@ -906,6 +906,52 @@ function bindDistillTipPop() {
     const p = pop();
     if (!p) return;
     p.textContent = anchor.dataset.distillTip || '';
+    place(anchor);
+    p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
+  };
+  const hide = () => { const p = pop(); if (p) { p.classList.remove('show'); p.setAttribute('aria-hidden', 'true'); } };
+  zone.addEventListener('mouseover', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('mouseout', (e) => { if (anchorOf(e)) hide(); });
+  zone.addEventListener('focusin', (e) => { if (anchorOf(e)) show(e); });
+  zone.addEventListener('focusout', hide);
+  window.addEventListener('scroll', () => { if (pop() && pop().classList.contains('show')) hide(); }, true);
+}
+
+// v4.3.24 反馈①：裂隙等级升级需求悬浮气泡——行内价格胶囊/深入消耗副标题改悬浮，
+//   复用 wage-tip-pop 范式（即时显示 + rect 定位 + 上下翻转 + 左右钳制）。文案来源
+//   data-rift-level-tip（riftLevelRowHtml 每次重建写入，需求与下一级效果实时），
+//   事件委托挂稳定宿主 #rift-tab-panel（面板重建不丢监听）。
+function bindRiftLevelTipPop() {
+  if (typeof document === 'undefined') return;
+  const zone = document.getElementById('rift-tab-panel');
+  if (!zone || zone._riftLevelTipBound) return;
+  zone._riftLevelTipBound = true;
+  if (!document.getElementById('rift-level-tip-pop')) {
+    const popEl = document.createElement('div');
+    popEl.id = 'rift-level-tip-pop';
+    popEl.className = 'wage-tip-pop rift-level-tip-pop';
+    popEl.setAttribute('role', 'tooltip');
+    popEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(popEl);
+  }
+  const pop = () => document.getElementById('rift-level-tip-pop');
+  const place = (anchor) => {
+    const p = pop();
+    if (!p || !anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const tipW = Math.min(340, window.innerWidth * 0.88);
+    const below = r.top < 260;
+    p.classList.toggle('tip-below', below);
+    p.style.setProperty('--tip-x', Math.max(8, Math.min(r.left, window.innerWidth - tipW - 8)) + 'px');
+    p.style.setProperty('--tip-y', (below ? r.bottom + 8 : r.top - 8) + 'px');
+  };
+  const anchorOf = (e) => e.target.closest ? e.target.closest('[data-rift-level-tip]') : null;
+  const show = (e) => {
+    const anchor = anchorOf(e);
+    if (!anchor) return;
+    const p = pop();
+    if (!p) return;
+    p.textContent = anchor.dataset.riftLevelTip || '';
     place(anchor);
     p.classList.add('show'); p.setAttribute('aria-hidden', 'false');
   };
@@ -1792,6 +1838,7 @@ function bindEvents() {
   bindTideTipPop(); // v4.2.2 反馈④：潮汐加成明细改真实 DOM 悬浮气泡（顶栏只留状态+时间）
   bindAiTipPop(); // v4.3.2 反馈①：AI 台账悬浮改 fixed DOM 气泡（原 data-tip::after 在窄锚点下竖排）
   bindDistillTipPop(); // v4.3.15 反馈①：蒸馏按钮悬浮改 DOM 气泡（原生 title ~1s 延迟）
+  bindRiftLevelTipPop(); // v4.3.24 反馈①：裂隙等级升级需求改 DOM 气泡（行内常驻价格/消耗移除）
   bindAffTipPop(); // v4.3.19 反馈①：班组擅长岗位图标悬浮改 DOM 气泡（同款延迟问题）
   document.getElementById('pauseBtn')?.addEventListener('click', togglePause);
   bindKeepAwake(); // v4.3.1 反馈⑥：浏览器保活开关（Wake Lock）

@@ -14,7 +14,13 @@ const src = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 test('U1 时间常数单一真源：三处消费 MS_PER_DAY / daysSince，不再内联 86400000', () => {
   assert.equal(MS_PER_DAY, 86400000);
-  assert.equal(daysSince(Date.now() - MS_PER_DAY), 1);
+  // v4.3.24 修正：daysSince 内部重取 now=Date.now()，两次取时跨毫秒边界会得到
+  //   1.0000000231…（约 1/43.2M 相对误差）——严格 equal 偶发失败（8 连跑 2 次）。
+  //   改容差断言：结果应等于 1 天的毫秒差换算（±1ms 容忍时钟前跳）。
+  const ts = Date.now() - MS_PER_DAY;
+  const d = daysSince(ts);
+  assert.ok(Math.abs(d - (Date.now() - ts) / MS_PER_DAY) < 1e-9, `daysSince 与毫秒差换算一致（d=${d}）`);
+  assert.ok(Math.abs(d - 1) < 2 / MS_PER_DAY, `差值 ≈1 天（±1ms 容差；d=${d}）`);
   for (const p of ['src/core/progressive.js', 'src/data/chapters.js', 'src/modules/prestige.js']) {
     const s = src(p);
     if (p.includes('prestige')) assert.ok(s.includes('MS_PER_DAY'), `${p} 应走真源`);

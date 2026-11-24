@@ -74,11 +74,21 @@ export function buyRiftLevelTech() {
 function riftTechAfford(cost) {
   return (S.ep || 0) >= cost.ep && (S.dm || 0) >= cost.dm;
 }
-function riftTechTip(lv, cur) {
-  // v3.4.6 反馈④：悬浮提示同样展示下一级具体数值
-  // v3.4.8 反馈①：深入消耗改指数曲线后，直接给「下一级裂隙」的每秒消耗与 60s 总消耗
+// v4.3.24 反馈①：原 riftTechTip（原生 title 悬浮文案）下线——升级需求/效果全量并入
+//   riftLevelTipText（data-rift-level-tip DOM 气泡），原生 title 与常驻价格胶囊同批移除。
+/**
+ * v4.3.24 反馈①：升级需求改悬浮窗——行内不再常驻价格胶囊与「深入消耗」副标题，
+ *   需求（EP + DM）与下一级效果全量收进 data-rift-level-tip 气泡（wage-tip-pop 范式，
+ *   委托挂 #rift-tab-panel）。行内只留名称 + 升级按钮（可购态仍由 refreshRiftAffordability 驱动）。
+ */
+export function riftLevelTipText() {
+  const cur = Math.min(riftMaxLevel(), riftLevelOf(computeCps()));
+  const cost = riftLevelTechCost();
+  const afford = riftTechAfford(cost);
   const next = Math.min(riftMaxLevel(), cur + 1);
-  return `裂隙等级 Lv.${lv} → Lv.${next}（无限升级）\n下一级：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP） · 深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM\n当前裂隙 Lv.${cur}`;
+  const head = `升级需求：${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM（${afford ? '✓ 可支付' : '✗ 余额不足'}）`;
+  const effect = `下一级效果：深入消耗 ${fmt(riftDelveEpPerSec(next))} EP/s（60s ≈ ${fmt(riftDelveTotalEp(next))} EP）\n深入产出 +${fmt((BALANCE.rift.delveDmPerLevel || 0.5) * next)} DM/s · 封印奖励 +${cur} DM`;
+  return `${head}\n${effect}`;
 }
 /**
  * 裂隙等级行（v4.3.14 反馈③）：由 renderRiftPanel 在「裂隙科技」标题上方调用。
@@ -91,15 +101,13 @@ export function riftLevelRowHtml() {
   const lv = riftLevelTech();
   const cost = riftLevelTechCost();
   const afford = riftTechAfford(cost);
-  const pricePill = `<span style="flex-shrink:0;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;background:${afford ? 'rgba(63,185,80,.15)' : 'rgba(248,81,73,.12)'};color:${afford ? 'var(--green,#3fb950)' : 'var(--red,#f85149)'}">${fmt(cost.ep)} EP + ${fmt(cost.dm)} DM</span>`;
   return `
-      <div class="rift-upg-row" data-rift-level title="${riftTechTip(lv, Math.min(riftMaxLevel(), riftLevelOf(computeCps())))}">
-        <div style="flex:1">
+      <div class="rift-upg-row rift-level-row" data-rift-level data-rift-level-tip="${String(riftLevelTipText()).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}">
+        <div style="flex:1;cursor:help">
           <div style="font-size:13px;color:var(--text-1)">裂隙等级 <span style="color:var(--text-3);font-size:11px">Lv.${lv}</span></div>
-          <div style="font-size:11px;color:var(--text-3)">裂隙等级 +1（深入消耗 ${fmt(riftDelveEpPerSec(Math.min(riftMaxLevel(), riftLevelOf(computeCps())) + 1))} EP/s）</div>
+          <div style="font-size:11px;color:var(--text-3)">裂隙等级 +1 · 悬浮查看升级需求</div>
         </div>
         <button class="btn ${afford ? '' : 'disabled'}" data-rift-level-buy ${afford ? '' : 'disabled'}>升级</button>
-        ${pricePill}
       </div>`;
 }
 // ---- v3.4.8 反馈①：深入消耗陡增（原线性 ×lv → 指数） ----
@@ -496,6 +504,8 @@ export function refreshRiftAffordability() {
   }
   // v4.3.14 反馈③：裂隙等级行可购态每秒同步（EP/DM 变化即时灰显/点亮——
   //   自科技树迁入后原 refreshRiftLevelTechAfford 下线，能力并入本函数）
+  // v4.3.24 反馈①：data-rift-level-tip 同步刷新——需求/可支付态随资源实时变
+  //   （纯属性写，不动 DOM 结构，与 300ms affordability 帧纪律一致）
   const lvRow = document.querySelector('[data-rift-level]');
   if (lvRow) {
     const cost = riftLevelTechCost();
@@ -503,6 +513,7 @@ export function refreshRiftAffordability() {
     const btn = lvRow.querySelector('button[data-rift-level-buy]');
     if (btn) { btn.disabled = !afford; btn.classList.toggle('disabled', !afford); }
     lvRow.classList.toggle('cant', !afford);
+    lvRow.setAttribute('data-rift-level-tip', riftLevelTipText());
   }
 }
 
