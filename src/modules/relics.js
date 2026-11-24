@@ -24,7 +24,6 @@ export function buyRelic(id) {
   S.relics = S.relics || {};
   S.relics[id] = lv + 1;
   save(S);
-  rlog(`深渊遗物「${r.name}」升至 Lv.${lv + 1}/${r.cap}（-${fmt(cost)} DM）：${r.desc.replace('%','×' + (1 + (r.id === 'tentacle' ? -1 : 1) * r.effect * (lv + 1)).toFixed(2))}`, 'good');
   if (toastFn) toastFn(`🌀 遗物「${r.name}」苏醒 Lv.${lv + 1}`);
   return { ok: true, level: lv + 1 };
 }

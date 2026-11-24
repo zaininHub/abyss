@@ -87,7 +87,6 @@ export function upgradeSeal() {
   spendRes('fp', cost); buyRes('fp');
   S.religion.seal = lv + 1;
   save(S);
-  rlog(`圣印升至 Lv.${lv + 1}（-${fmt(cost)} FP）——全局产出 +${8 * (lv + 1)}%`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -101,7 +100,6 @@ export function buyTemple() {
   S.ep -= cost;
   S.religion.temple = lv + 1;
   save(S);
-  rlog(`信仰圣所升至 Lv.${lv + 1}（-${fmt(cost)} EP）：FP 产出 +${TEMPLE.faithPerSec.toFixed(3)}/s（当前合计 ${templeFaithPerSec().toFixed(3)}/s）`, 'good');
   return { ok: true };
 }
 
@@ -152,7 +150,6 @@ export function buyOracle() {
   spendRes('fp', cost); buyRes('fp');
   S.religion.oracle = lv + 1;
   save(S);
-  rlog(`神谕塔升至 Lv.${lv + 1}（-${cost} FP）：FP 产出 ×${(1 + ORACLE.effect * (lv + 1)).toFixed(2)}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -168,7 +165,6 @@ export function buyCrusade() {
   spendRes('fp', cost); buyRes('fp');
   S.religion.crusade = lv + 1;
   save(S);
-  rlog(`圣战军升至 Lv.${lv + 1}（-${cost} FP）：全局产出 ×${(1 + CRUSADE.effect * (lv + 1)).toFixed(2)}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -214,7 +210,6 @@ export function buySecretSanctum(id) {
   S.secretSanctums = S.secretSanctums || {};
   S.secretSanctums[id] = (S.secretSanctums[id] || 0) + 1;
   save(S);
-  rlog(`兴建「${d.name}」（-${cost} 余烬）：${d.desc}`, 'good');
   if (toastFn) toastFn(`${d.icon ? d.icon + ' ' : ''}${d.name} 建成：${d.desc}`);
   return { ok: true, level: S.secretSanctums[id] };
 }

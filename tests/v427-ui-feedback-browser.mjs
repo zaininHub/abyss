@@ -4,7 +4,7 @@
 //   ① 班组线程卡片重设计：2 行结构（身份行 + 数值/操作行）、产出/消耗同显、无错位
 //   ② 线程绿点移除（is-dot display:none）+ 数字颜色随四态状态色
 //   ③ 班组产出/薪资概要行删除 → 「▼ 班组」可折叠类目标题（点击真折叠/恢复）
-//   ④ 存档摘要 EP 显示本局总量 runEarned（非当前余额 ep）
+//   ④ 存档摘要只显示保存时的 x.y 天，不显示 EP 总量
 //   ⑤ 自动蒸馏文案去前缀/箭头（-150 EP/s +0.2 RP/s）
 //   ⑥ 成就/班组翻页去尖括号（「上一页」「下一页」）
 //   ⑦ 设施类目标题 13px/cyan/▼ 箭头（含未解锁首渲染也绑定的回归点）
@@ -22,15 +22,16 @@ let pass = 0, fail = 0;
 const ok = (m, d = '') => { pass++; console.log(`  ✓ ${m}${d ? ' — ' + d : ''}`); };
 const bad = (m, d = '') => { fail++; console.log(`  ✗ ${m}${d ? ' — ' + d : ''}`); };
 
+const NOW = Date.now();
 const seed = {
-  _version: 6, chapter: '7', storyline: 'default',
+  _version: 6, chapter: '7', storyline: 'default', startedAt: NOW - 1234000,
   ep: 2e6, rp: 5000, es: 60, dm: 3000, pt: 100, faith: 20,
   upgrades: { canteen: 1, heater: 1, datacenter: 1, atrium: 1, cpu: 1, gpu: 1 },
   buildings: {}, tech: { ai_core: true, click_up: true, offline1: true, focus_opt: true, entropy_reduce: true, deep_space: true },
   cultists: [], prestige: 10, prestigePoints: 10, _crewUnlocked: true,
   milesDone: { 100: true, 1000: true, 10000: true, 100000: true },
   resDiscovered: { ep: true, cps: true, run: true, tide: true, rp: true, es: true, dm: true, pt: true, faith: true },
-  lastSeen: Date.now(), startTime: Date.now(),
+  lastSeen: NOW, startTime: NOW,
 };
 for (let i = 0; i < 15; i++) {
   seed.cultists.push({ id: 'c' + i, name: '线程' + String.fromCharCode(65 + i), mood: ['超频', '优化', '高效', '正常'][i % 4],
@@ -43,13 +44,13 @@ const pageErrors = [];
 const page = await browser.newPage();
 await page.setViewport({ width: 1600, height: 1000 });
 page.on('pageerror', e => pageErrors.push(String(e)));
-await page.evaluateOnNewDocument((raw) => {
+await page.evaluateOnNewDocument((raw, now) => {
   localStorage.setItem('abyss_idle_v2', raw);
   const snapData = { ...JSON.parse(raw), ep: 777, runEarned: 123456789, prestige: 42, chapter: '9' };
   localStorage.setItem('abyss_idle_v2_snapshots', JSON.stringify([
-    { id: 'diag1', name: '诊断档', time: Date.now(), data: JSON.stringify(snapData) },
+    { id: 'diag1', name: '诊断档', time: now, data: JSON.stringify(snapData) },
   ]));
-}, JSON.stringify(seed));
+}, JSON.stringify(seed), NOW);
 await page.goto(GAME_URL, { waitUntil: 'load' });
 await sleep(1600);
 await page.evaluate(() => { window.__qa && window.__qa.sim && window.__qa.sim.render(); });
@@ -101,7 +102,7 @@ try {
   await page.click('[data-crew-fold]');
   await sleep(120);
 
-  // ④ 存档摘要本局总量
+  // ④ 存档摘要只记录保存时的 x.y 天
   await page.hover('#sys-menu-btn'); // v4.3.3 反馈③：先展开选项下拉
   await page.hover('#save-menu-btn');
   await sleep(300);
@@ -109,8 +110,8 @@ try {
     const r = document.querySelector('#save-list [data-snap] .snap-sub');
     return r && r.textContent.trim();
   });
-  snapSub && /本局 123\.46M EP/.test(snapSub) && !/[^本局]EP 777/.test(snapSub)
-    ? ok('④ 存档摘要显示本局总量', snapSub) : bad('④ 存档 EP 口径错误', snapSub);
+  snapSub && /^2\.1 天 ·/.test(snapSub) && !/EP|123\.46M|777/.test(snapSub)
+    ? ok('④ 存档摘要仅显示 x.y 天', snapSub) : bad('④ 存档天数口径错误', snapSub);
 
   // ⑤ 自动蒸馏文案（v4.3.5 ⑤口径修正：满仓走涓流，连续速率文案仅在非满仓出现）
   const atrium = await page.evaluate(() => {

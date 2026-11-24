@@ -1,6 +1,7 @@
 // v3.6.0 扩充内容单元测试：研究点接线 / 剧情 3-7 天/章 / 星际缩放 / AI 按类型分配
 import test from 'node:test';
 import assert from 'node:assert';
+import { MS_PER_DAY } from '../src/core/time.js';
 
 // Node 环境无 localStorage，save() 需要 → 注入最小桩
 globalThis.localStorage = {
@@ -71,7 +72,7 @@ test('v3.6.0 ② 新研究键经 researchMult 生效（lv8）', () => {
 // ===== T3 剧情 5-7 天/章（minDays 门控；v4.1.0 F5 一次只推进一章）=====
 function chS(chapter, daysAgo) {
   return {
-    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * 86400000,
+    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * MS_PER_DAY,
     tech: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['t' + i, true])),
     unlockedBuildings: {}, es: 100, expeditionsDone: 100, faith: 100, prestige: 100,
     religion: {}, riftsSealed: 10, dm: 1000, upgrades: {}, buildings: {},

@@ -1,6 +1,7 @@
 // v2.5.4 ①：快照存档系统——最多 3 个快照，可覆盖当前本地游戏（二级确认由 UI 层负责）
 // 快照 = 当前完整存档 JSON 字符串（与导出/导入同源，经 SAVE_KEY 落盘），存于独立 key
 import { SAVE_KEY, defaultState } from '../state.js';
+import { daysSince } from '../core/time.js';
 
 export const SNAP_KEY = 'abyss_idle_v2_snapshots';
 export const SNAP_MAX = 3;
@@ -75,13 +76,11 @@ export function coverOldest(newSnap) {
 // 快照列表（含槽位号、时间与进度摘要——解析存档关键字段，供 UI 展示）
 export function listSnapshots() {
   return read().map((s, i) => {
-    let summary = { ep: 0, runEarned: 0, prestige: 0, chapter: 1, storyline: '', name: s.name };
+    let summary = { days: 0, prestige: 0, chapter: 1, storyline: '', name: s.name };
     try {
       const d = JSON.parse(s.data || '{}');
-      summary.ep = d.ep || 0;
-      // v4.2.7 反馈④：存档摘要的「EP」改显「本局总量」= runEarned（本局 EP 产出全量，晋升清零）。
-      //   保留 ep 字段（当前余额）供旧档/其它读侧兼容，UI 只展示 runEarned。
-      summary.runEarned = d.runEarned || 0;
+      // 快照摘要固定在保存时刻计算，读取旧档不会让已归档的游玩天数继续增长。
+      summary.days = daysSince(d.startedAt, s.time);
       summary.prestige = d.prestige || 0;
       summary.chapter = d.chapter || 1;
       summary.storyline = d.storyline && d.storyline !== 'default' ? d.storyline : '';

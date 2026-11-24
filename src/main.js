@@ -1,6 +1,7 @@
 import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤：SAVE_KEY/SAVE_VERSION 供存档导出/导入
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
+import { daysSince } from './core/time.js';
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, drainBreakdown, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain, bulkCostCalc, // v3.6.4 ④：两条购买路径同口径 QA 钩子（unitCost 已在下方导入）
@@ -666,13 +667,14 @@ function renderTop() {
 
 // ========== v2.0 潮汐卡片 ==========
 // v4.2.2 反馈④：加成明细（产出/薪资/科技成本/事件权重）改为真实 DOM 悬浮气泡，
-//   顶栏只留「图标 + 相位名 + 倒计时」——原内联 epTag/salTag/techTag 三段把顶栏挤满，
+//   顶栏保留「天数 + 图标 + 相位名 + 倒计时」——原内联 epTag/salTag/techTag 三段把顶栏挤满，
 //   悬浮说明走 v4.1.2 flow-tip-pop 同款范式（fixed + JS rect 写坐标 + 语义色浅色主题覆盖）。
 function renderTide() {
   const el = document.getElementById('h-tide');
   if (!el) return;
   const info = tidePhaseInfo(S.tidePhase);
-  el.innerHTML = `<span class="tide-icon ${info.cssClass}">${info.icon}</span><span>${info.name}</span><span class="tide-time mono">${fmtTime(S.tideTimer)}</span>`;
+  const day = Math.floor(daysSince(S.startedAt));
+  el.innerHTML = `<span class="tide-day mono">${day}天</span><span class="tide-icon ${info.cssClass}">${info.icon}</span><span>${info.name}</span><span class="tide-time mono">${fmtTime(S.tideTimer)}</span>`;
   updateTideTip();
   document.body.classList.remove('tide-flood', 'tide-calm', 'tide-ebb', 'tide-chaos');
   document.body.classList.add(info.cssClass);
@@ -2416,7 +2418,6 @@ function bindEvents() {
     if (dmGain > 0) { addDm(dmGain); discoverDm(); }
     let rescued = false;
     if (S._collapseAt && S.corruption < (BALANCE.corruption.max || 100)) rescued = cancelCollapse();
-    log(`主动净化：-${fmt(cost)} EP，清除 ${cut.toFixed(1)}% 腐化，析出 +${dmGain} DM${rescued ? '——吞噬倒计时已解除' : ''}`, 'good');
     toast(rescued ? `净化成功：-${cut.toFixed(1)}% 腐化，吞噬倒计时解除！` : `净化 -${cut.toFixed(1)}% 腐化 · +${dmGain} DM`);
     save(S);
     dirty.corruption = true; dirty.top = true; dirty.hero = true;
@@ -2593,7 +2594,7 @@ function renderSaveList(force = false) {
   const box = document.getElementById('save-list');
   if (!box) return;
   const snaps = listSnapshots();
-  const sig = snaps.map(s => `${s.id}|${s.time}|${s.name}|${(s.summary && s.summary.runEarned) || 0}`).join(',') || 'empty'; // v4.2.3：name 入签名；v4.2.7：ep→runEarned（本局总量入签名）
+  const sig = snaps.map(s => `${s.id}|${s.time}|${s.name}|${(s.summary && s.summary.days) || 0}`).join(',') || 'empty'; // name 与归档天数均入签名
   // 同一份数据且列表已在位：跳过重建，保证按下与松开落在同一个按钮节点上（click 才会派发）
   if (!force && sig === saveListSig && box.childElementCount > 0) return;
   saveListSig = sig;
@@ -2621,7 +2622,7 @@ function renderSaveList(force = false) {
     const lineName = sm.storyline === 'line_abyss' ? '深渊线' : sm.storyline === 'line_order' ? '秩序线' : sm.storyline === 'line_faith' ? '信仰线' : '默认线';
     row.innerHTML = `<div class="snap-main">
         <div class="name"><span>${sn.slot}. <span class="snap-name" title="点击重命名" tabindex="0" role="button">${escHtml(sn.name)}</span></span><span class="count mono">${sn.timeText}</span></div>
-        <div class="snap-sub">本局 ${fmt(sm.runEarned || 0)} EP · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
+        <div class="snap-sub">${(Number(sm.days) || 0).toFixed(1)} 天 · 职级 ${sm.prestige || 0} · 第 ${sm.chapter || 1} 章 · ${lineName}</div>
       </div>
       <div class="snap-btns">
         <button class="btn snap-use" title="用此存档覆盖当前进度">读取</button>

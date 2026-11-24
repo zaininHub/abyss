@@ -67,7 +67,6 @@ export function buyRiftLevelTech() {
   S.riftLevelTech = riftLevelTech() + 1;
   // 已存在的裂隙不追加强度（下一次裂隙按新等级生成）
   save(S);
-  log(`[裂隙] 裂隙等级科技升至 Lv.${S.riftLevelTech}（-${fmt(cost.ep)} EP / -${fmt(cost.dm)} DM）：裂隙等级与奖励 +1 级`, 'good');
   return { ok: true, level: S.riftLevelTech };
 }
 // v4.3.14 反馈③：裂隙等级升级从科技树独立分类迁入裂隙模块——渲染为「裂隙科技」上方的
@@ -234,7 +233,6 @@ export function buyRiftUpgrade(id) {
   if (id === 'sentinel') S._riftNextSec = 0; // v3.3.5 反馈③：升级后立即按新间隔重算倒计时
   if (id === 'gaze') { S.abyssGazeUnlocked = true; showAbyssGaze(); } // v3.4.2：凝视深渊彩蛋——首购常驻 + 触发裂开动画
   save(S);
-  log(`[裂隙] 「${u.name}」升至 Lv.${lv + 1}（-${cost} 余烬）：${u.desc}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 
@@ -257,7 +255,7 @@ export function delveRift() {
   S.activeRift = null;
   dirty.rift = true;
   save(S);
-  log(`[裂隙] 你深入了${riftLevelName(r.level)}…… 60 秒探索开始（产出递增，腐化累积）`, 'bad');
+  // 主动开始探索只用界面状态/提示反馈，不写入日志。
   return { ok: true };
 }
 
@@ -578,7 +576,7 @@ export function renderRift(container) {
       当前 DM: <b id="rift-dm-balance">${(S.dm || 0).toFixed(2)}</b> → 奖励 <b style="color:var(--purple)">+<span id="rift-dm">${sealDmReward(r)}</span> DM</b><br>
       封印消耗 <b>${fmt(r.sealCost)} EP</b><br>
       拥抱 → <span id="rift-dur">${Math.round(embraceDurMs() / 1000)}</span> 秒 ×5 爆发，但损失 20% EP<br>
-      深入 → 60 秒探索（约 <b>${fmt(riftDelveTotalEp(r.level))} EP</b> · 腐化 <b>+${riftDelveCorruptPerRun(r.level).toFixed(0)}%</b> · 超 ${BALANCE.rift.delveFailCorrupt}% 结算损失）</div>
+      60 秒探索（约 <b>${fmt(riftDelveTotalEp(r.level))} EP</b> · 腐化 <b>+${riftDelveCorruptPerRun(r.level).toFixed(0)}%</b> · 超 ${BALANCE.rift.delveFailCorrupt}% 结算损失）</div>
       <div style="display:flex;gap:6px">
         <button class="btn" id="seal-rift" style="flex:1;font-size:12px">封印</button>
         <button class="btn" id="embrace-rift" style="flex:1;font-size:12px;background:rgba(163,113,247,.15);border-color:var(--purple)">拥抱</button>

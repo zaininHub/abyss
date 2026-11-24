@@ -2098,7 +2098,7 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 .crew-num b.c-out { color: var(--cyan, var(--accent)); }
 .crew-num b.c-sal { color: var(--bad); }
 .crew-line-num { flex-wrap: nowrap; } /* v4.2.8 反馈②：+X/-Y 同式单行不换行 */
-.crew-line-act { gap: 6px; }
+.crew-line-act { gap: 6px; margin-top: 4px; } /* 岗位选择与上一行产出/消耗留出呼吸空间 */
 /* v4.3.17 反馈：岗位下拉固定窄宽——原 flex:1 1 auto 让它吃掉操作行剩余宽度，
    晋升按钮出现/消失时两态跳变（无按钮弹到 max-width 110px、有按钮被挤到 ~78px），
    且卡内过宽。固定 78px 后所有卡一致；超长选中项（已满/未解锁标注）由下拉弹层承载。

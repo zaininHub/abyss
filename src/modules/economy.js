@@ -226,7 +226,6 @@ export function cancelCollapse() {
   if (!S._collapseAt) return false;
   S._collapseAt = null;
   S._collapseTimer = 0;
-  if (collapseLogFn) collapseLogFn('深渊吞噬倒计时已解除：腐化被主动净化压至满额以下，深渊暂时退去', 'good');
   return true;
 }
 
@@ -901,7 +900,7 @@ export function multBreakdown() {
   const parts = [];
   if (S.prestigePoints > 0) parts.push(`职级 ×${prestigeBoost().toFixed(2)}`); // v4.2.X：明细与真实乘区同源（软递减）
   const ga = fxValue('globalAdd');
-  if (ga > 0.001) parts.push(`全局加成 +${(ga * 100).toFixed(0)}%`);
+  if (ga > 0.001) parts.push(`全局产出 +${(ga * 100).toFixed(0)}%`);
   const pol = policyMult('collab');
   if (pol !== 1) parts.push(`协作政策 ×${pol.toFixed(2)}`);
   const gm = fxValue('globalMul');
@@ -939,13 +938,13 @@ export function multBreakdown() {
 //   不再复读产出侧全局加成（职级/全局加成/宠物/遗物等）。
 export function drainMultBreakdown() {
   const parts = [];
-  if (S.upgrades.dmmind) parts.push('深渊心智 ×0.60 薪资');
+  if (S.upgrades.dmmind) parts.push('深渊心智 消耗 -40%');
   const fuel = fxValue('fuelMul');
-  if (fuel < 0.999) parts.push(`节能建筑 ×${fuel.toFixed(2)} 薪资`);
+  if (fuel < 0.999) parts.push(`节能建筑 消耗 -${((1 - fuel) * 100).toFixed(0)}%`);
   const wageTech = researchMult('wage');
-  if (wageTech < 0.999) parts.push(`薪酬协商 ×${wageTech.toFixed(2)}`);
+  if (wageTech < 0.999) parts.push(`薪酬协商 消耗 -${((1 - wageTech) * 100).toFixed(0)}%`);
   const echo = echoWageMult();
-  if (echo < 0.999) parts.push(`回响·薪酬共鸣 ×${echo.toFixed(2)}`);
+  if (echo < 0.999) parts.push(`回响·薪酬共鸣 消耗 -${((1 - echo) * 100).toFixed(0)}%`);
   return parts;
 }
 

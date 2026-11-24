@@ -8,6 +8,7 @@
 // 本测试同时覆盖：① 纯函数 data/chapters.js；② 真实调用链 modules/story.js + provider。
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { MS_PER_DAY } from '../src/core/time.js';
 
 globalThis.document = { getElementById: () => null, createElement: () => ({ style: {}, classList: { add() {}, remove() {} } }), body: { classList: { add() {}, remove() {} } }, addEventListener() {} };
 globalThis.window = { addEventListener() {} };
@@ -21,7 +22,7 @@ const { currentChapter: storyChapter } = await import('../src/modules/story.js')
 // 富状态：让主线 2~6 章的 cond 全部成立（tech 造 30 项假钥匙，仅用于 techCount 计数）
 function rich(chapter, daysAgo) {
   return {
-    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * 86400000,
+    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * MS_PER_DAY,
     tech: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['t' + i, true])),
     unlockedBuildings: {}, prestige: 999, prestigePoints: 999, es: 1e6, faith: 1e6,
     expeditionsDone: 999, riftsSealed: 999, riftEmber: 1e9, dm: 1e9,

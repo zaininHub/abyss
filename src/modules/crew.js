@@ -281,6 +281,11 @@ export function renderCrewPanel(container) {
         return;
       }
     });
+    // 原先职位选择仅监听 change；部分浏览器会在鼠标按下时因卡片重渲染而收起原生下拉。
+    // 在交互期间阻止事件冒泡到卡片/面板委托层，选择仍统一由 change 提交。
+    container.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest && ev.target.closest('[data-bind]')) ev.stopPropagation();
+    });
     container.addEventListener('change', (ev) => {
       // v3.12.13 反馈#172：线程类型筛选下拉框
       const fsel = ev.target.closest ? ev.target.closest('[data-crew-filter-select]') : null;
@@ -292,6 +297,7 @@ export function renderCrewPanel(container) {
       }
       const sel = ev.target.closest ? ev.target.closest('[data-bind]') : null;
       if (!sel) return;
+      // 下拉点击不触发班组折叠/重建；仅 change 时更新绑定，避免原生选择器被立即收起
       const c = S.cultists.find(x => String(x.id) === String(sel.dataset.bind));
       if (!c) return;
       const v = sel.value;

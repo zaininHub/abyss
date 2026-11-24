@@ -100,6 +100,7 @@ try {
   !/产出|薪资|科技成本/.test(tide0.txt)
     ? ok('顶栏潮汐不再内联加成文本', tide0.txt)
     : bad('顶栏仍内联加成文本', tide0.txt);
+  /^0天/.test(tide0.txt) ? ok('潮汐左侧从 0 显示整数天数', tide0.txt) : bad('潮汐天数不在左侧或非整数', tide0.txt);
   /涨潮|平潮|退潮|乱流/.test(tide0.txt) ? ok('相位名保留', tide0.txt) : bad('相位名丢失', tide0.txt);
   /\d/.test(tide0.txt) ? ok('倒计时保留', tide0.txt) : bad('倒计时丢失', tide0.txt);
 

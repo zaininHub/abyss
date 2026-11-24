@@ -223,7 +223,6 @@ export function buyDelveUpgrade(id) {
   S.delve.up = S.delve.up || {};
   S.delve.up[id] = lv + 1;
   save(S);
-  dlog(`「${u.name}」升至 Lv.${lv + 1}（-${fmt(cost)} VS）：${u.desc}`, 'good');
   return { ok: true, level: lv + 1 };
 }
 

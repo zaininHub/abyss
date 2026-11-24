@@ -12,8 +12,11 @@ import { BALANCE } from '../src/data/balance.js';
 
 const src = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
-test('U1 时间常数单一真源：三处消费 MS_PER_DAY / daysSince，不再内联 86400000', () => {
-  assert.equal(MS_PER_DAY, 86400000);
+test('U1 时间常数单一真源：四相位一日（10 分钟），三处消费 MS_PER_DAY / daysSince', () => {
+  assert.equal(MS_PER_DAY, 600000, '四个 150 秒潮汐相位 = 1 个 10 分钟游戏日');
+  assert.equal(BALANCE.tide.phaseDuration * BALANCE.tide.phases.length * 1000, MS_PER_DAY, '潮汐完整轮转与游戏日严格同长');
+  assert.equal(60 * 60 * 1000 / MS_PER_DAY, 6, '1 小时 = 6 天');
+  assert.equal(MS_PER_DAY * 300, 180000000, '300 天 = 1 年');
   // v4.3.24 修正：daysSince 内部重取 now=Date.now()，两次取时跨毫秒边界会得到
   //   1.0000000231…（约 1/43.2M 相对误差）——严格 equal 偶发失败（8 连跑 2 次）。
   //   改容差断言：结果应等于 1 天的毫秒差换算（±1ms 容忍时钟前跳）。

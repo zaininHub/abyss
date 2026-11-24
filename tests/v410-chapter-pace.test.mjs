@@ -12,12 +12,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CHAPTERS, currentChapter } from '../src/data/chapters.js';
+import { MS_PER_DAY } from '../src/core/time.js';
 
 const MAIN = CHAPTERS.filter(c => typeof c.id === 'number' && c.id >= 1 && c.id <= 18);
 
 function rich(chapter, daysAgo) {
   return {
-    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * 86400000,
+    chapter: String(chapter), chapterEnteredAt: Date.now() - daysAgo * MS_PER_DAY,
     tech: Object.fromEntries(Array.from({ length: 60 }, (_, i) => ['t' + i, true])),
     unlockedBuildings: {}, prestige: 999, prestigePoints: 999, es: 1e9, faith: 999,
     expeditionsDone: 999, riftsSealed: 999, riftEmber: 1e9, dm: 1e9,

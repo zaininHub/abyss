@@ -10,6 +10,7 @@ global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 
 const { S, load } = await import('../src/state.js');
 const { BALANCE } = await import('../src/data/balance.js');
+const { MS_PER_DAY } = await import('../src/core/time.js');
 const { computeCps, tideMult, tidePhaseInfo, corruptionPenalty, purifierCleanRate, esCost, epStorageCap, staffCost, staffOutputPerSec, focusCost, addEp, tickCorruption, unitCost } = await import('../src/modules/economy.js');
 const { tickProjects, spawnProject, claimProject, normalizeProjectGoals } = await import('../src/modules/projects.js');
 const { applyOffline } = await import('../src/modules/offline.js');
@@ -657,9 +658,9 @@ t('Gates：registerGate + checkGate 门控生效', () => {
 t('Progressive：P0 始终解锁，P9 需游玩 4.5 天（按天数而非章节）', () => {
   const saved = S.startedAt;
   assert.equal(isStageUnlocked('P0', S), true, 'P0 始终解锁');
-  S.startedAt = Date.now() - 4.4 * 86400000;
+  S.startedAt = Date.now() - 4.4 * MS_PER_DAY;
   assert.equal(isStageUnlocked('P9', S), false, '4.4 天时 P9 未解锁');
-  S.startedAt = Date.now() - 4.6 * 86400000;
+  S.startedAt = Date.now() - 4.6 * MS_PER_DAY;
   assert.equal(isStageUnlocked('P9', S), true, '4.6 天时 P9 解锁');
   S.startedAt = saved;
 });
