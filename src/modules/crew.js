@@ -5,7 +5,7 @@
 // 流水 S.crewFeed 持久化（cap 40，随存档落盘），跨刷新保留——流失的线程不会被遗忘。
 import { S } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { fmt, isLazy, staffSalaryPerSec } from './economy.js'; // v4.2.7：个人消耗显示复用薪资真源（函数提升使 crew↔economy 循环 import 安全）
+import { fmt, isLazy, staffSalaryPerSec, threadOutMult } from './economy.js'; // v4.2.7：个人消耗显示复用薪资真源（函数提升使 crew↔economy 循环 import 安全）；v4.3.18 反馈②：产线乘数补齐卡面产出口径
 import { MOOD_MULT, CONVERTERS, HYPER_CONVERTER_ID } from '../data/threads.js';
 import { BALANCE } from '../data/balance.js';
 import {
@@ -72,7 +72,10 @@ export function renderCrewPanel(container) {
   // v4.0.0 反馈④：状态行已下线，签名不再因全局状态变化触发整卡重建；
   //   crewStateMeta() 仍保留导出（供其它模块/QA 读取），但面板不再渲染其文案与颜色。
   // v4.2.7 反馈③：fold 态入签名——否则点击标题时数据未变走增量刷新，折叠标题/内容体不重建（点了没反应）
-  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}`;
+  // v4.3.18 反馈①：有领导态入签名——智能分配按钮 disabled 随领导存在性切换，不入签名则
+  //   晋升/卸任后 detail 未变走增量刷新，灰显不解除
+  const hasLeaderNow = (S.cultists || []).some(c => isLeader(c));
+  const sig = `${n}|${crewPage}|${detail}|${crewFilter}|${visibleTypes.join(',')}|fold:${container.dataset.crewFold || '0'}|lead:${hasLeaderNow ? 1 : 0}`;
   if (container._lastSig === sig) { refreshCrewDyn(container, start, pageCultists); return; } // 增量：内容未变只刷新动态数值
   container._lastSig = sig;
   // v4.3.14 反馈①：卡片 HTML 生成提取为局部函数——主循环与「自动填充」共用（消除两份拷贝漂移）。
@@ -124,7 +127,9 @@ export function renderCrewPanel(container) {
         <span class="crew-aff-wrap">${affinityIcon}</span>${leaderBadge}
       </div>
       <div class="crew-line crew-line-num">
-        <span class="crew-num">+<b class="c-out">0</b> EP/s</span>
+        ${isLeader(c)
+          ? `<span class="crew-num">+<b class="c-out">1%</b> EP/s</span>`
+          : `<span class="crew-num">+<b class="c-out">0</b> EP/s</span>`}
         <span class="crew-num">-<b class="c-sal">0</b> EP/s</span>
       </div>
       <div class="crew-line crew-line-act">${bindCtrl}${leaderBtn}</div>
@@ -148,7 +153,7 @@ export function renderCrewPanel(container) {
     <div class="orch-block-title crew-block-title" data-crew-fold role="button" tabindex="0" aria-expanded="${container.dataset.crewFold === '1' ? 'false' : 'true'}"><span class="rp-fold-arrow">${foldArrow}</span> 班组</div>
     <div class="crew-fold-body" style="${container.dataset.crewFold === '1' ? 'display:none' : ''}">
     <div class="crew-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <button class="btn" data-autobind="1" title="按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位">智能分配</button>
+      <button class="btn" data-autobind="1" ${(S.cultists || []).some(c => isLeader(c)) ? '' : 'disabled'} title="${(S.cultists || []).some(c => isLeader(c)) ? '按设施容量分配：先把所有已解锁且开启的资源岗位按容量填满，放不下的才转入超线程；优先安排空闲线程，再纠正错位岗位；原本手动设定的超线程也会被拉回来优先补资源岗位' : '需先晋升一名领导（★）——领导是全局加成位、恒空闲，没有领导时全班组都在岗位上，没有可调配的全局位'}">智能分配</button>
       <button class="btn" data-release-all="1" title="把所有线程从岗位撤离，全部置为空闲（消耗恢复）">一键收回</button>
       <select data-crew-filter-select title="按线程类型（在岗岗位）筛选" style="font-size:12px;padding:3px 8px;margin-left:4px;max-width:180px">
         <option value="" ${crewFilter === '' ? 'selected' : ''}>全部</option>
@@ -327,29 +332,23 @@ function refreshCrewDyn(container, start = 0, pageCultists = S.cultists.slice(0,
   const outEls = container.querySelectorAll('.c-out');
   const salEls = container.querySelectorAll('.c-sal');
   const n = S.cultists.length || 1;
-  const salTotal = staffSalaryPerSec();
-  const salPer = salTotal / n; // 全局平均薪资 ÷ 人数 = 单人消耗基数
-  // v4.3.16 反馈①：全员薪资基数（staffOutputParts.salaryBase 同构）——领导实扣份额分母。
-  let salBase = 0;
-  for (const c of S.cultists) {
-    const isLead = c.leader === true;
-    const one = (c.output || 3) * 0.8 * (isLead ? 1 : (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)));
-    salBase += one * (c.boundTo === HYPER_CONVERTER_ID ? 1 : threadBindOutputFactor(c));
-  }
+  const salPer = staffSalaryPerSec() / n; // 全局平均薪资 ÷ 人数 = 单人消耗基数
+  // v4.3.18 反馈②：产线放大（专注/建筑/研究/CPU/GPU）真源——消耗侧 salPer 已含该放大
+  //（salaryBase 按 outMult 后口径计薪），产出行不吃就会在产线成型后倒挂（10 级超线程
+  // 「+8.9/-14」观感根因）。补齐后产出/消耗同口径可比；纯显示层，EP 生产速度不变。
+  const outLine = threadOutMult();
   for (let i = 0; i < outEls.length && i < pageCultists.length; i++) {
     const c = pageCultists[i];
-    // v4.3.16 反馈①：领导零个人产出（全局 +1% 加成位）——卡面产出显示 0；
-    //   消耗显示实扣份额 = staffSalaryPerSec × (领导裸基数 / 全员薪资基数)，与
-    //   staffOutputParts salaryBase 内领导份额同口径（不吃 mood/等级/岗位/产线放大 →「固定 EP」）。
-    const isLead = c.leader === true;
-    const out = isLead ? 0
-      : (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
-    outEls[i].textContent = fmt(out);
+    // v4.3.18 反馈①：领导产出行显示「1%」（crewCardHtml 模板直出，动态刷新只跳产出行）；
+    //   消耗行必须照刷（v4.3.18 首版 continue 连消耗一起跳过，卡面恒「-0 EP/s」假象）——
+    //   平均摊派口径（领导与普通线程同一 salPer×系数，与核对顶栏总消耗一致）。
+    if (c.leader !== true) {
+      // v4.3.18 反馈②：与 staffOutputParts 的 one×factor 同式（outMult 口径对齐），显示=实扣
+      const out = (c.output || 3) * 0.8 * (MOOD_MULT[c.mood] || 1) * outLine * threadLevelMult(threadLevel(c)) * threadBindOutputFactor(c);
+      outEls[i].textContent = fmt(out);
+    }
     // v4.2.7 反馈①：个人消耗 = 平均薪资 × 岗位系数（与 staffSalaryPerSec 的 bindAvg 口径同源）
-    const sal = isLead
-      ? (salBase > 0 ? salTotal * ((c.output || 3) * 0.8) / salBase : 0)
-      : salPer * salaryFactorOf(c);
-    if (salEls[i]) salEls[i].textContent = fmt(sal);
+    if (salEls[i]) salEls[i].textContent = fmt(salPer * salaryFactorOf(c));
   }
 }
 

@@ -1707,8 +1707,23 @@ function bindEvents() {
       if (ind) ind.textContent = c ? '▸' : '▾';
     };
     achH3.addEventListener('click', () => {
-      localStorage.setItem('abyss_ach_collapsed', achPanel.classList.contains('sl-collapsed') ? '0' : '1');
+      const willCollapse = !achPanel.classList.contains('sl-collapsed');
+      localStorage.setItem('abyss_ach_collapsed', willCollapse ? '1' : '0');
       applyAch();
+      // v4.3.18 反馈④：收起即重置浏览游标——收起只切 class 不重渲染，快速收展（无周期重建
+      //   介入）时已加载的累积组与滚动位置原样保留，展开后视口停在半空而非顶部。
+      //   收起瞬间把 achPage 归 1、清 _keepScroll 并在隐藏态重建一次列表，保证「复原能复原
+      //   到第一个在顶部」；收起中重建不可见，无闪烁代价。同时清掉 10s 回缩计时避免展开后
+      //   被旧计时器突然拉回顶部。
+      if (willCollapse) {
+        achPage = 1;
+        const list = document.getElementById('achievement-panel');
+        if (list) {
+          clearTimeout(list._achIdleTimer);
+          list._keepScroll = null;
+          renderAchievementPanel(list); // display:none 中重建，prevScroll 读 0 不触发恢复
+        }
+      }
     });
     applyAch();
   }

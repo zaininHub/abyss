@@ -70,10 +70,11 @@ console.log('[1] 领导固定消耗 + 卡面无等级');
     const salAfter = await page.evaluate(() => window.__qa.staffSalaryPerSec());
     ok(r.leader, 'T0 晋升为领导');
     ok(!r.hasLv, '领导卡面不显示 Lv');
-    ok(r.cOut === '0', `领导卡面产出显示 0（实际「${r.cOut}」）`);
-    ok(r.cSal && parseFloat(r.cSal.replace(/,/g, '')) > 0, `领导卡面消耗显示固定份额 >0（实际「${r.cSal}」）`);
+    // v4.3.18 反馈①反转：领导产出行直出「1%」（不再是 0）
+    ok(r.cOut === '1%', `领导卡面产出行显示「1%」（实际「${r.cOut}」）`);
+    ok(r.cSal && parseFloat(r.cSal.replace(/,/g, '')) > 0, `领导卡面消耗显示 >0（实际「${r.cSal}」）`);
     ok(salAfter > salBefore - 1e-9 && Math.abs(salAfter - salBefore) < 1e-9 || salAfter >= salBefore,
-      `晋升前后顶栏薪资不变（消耗固定 EP；bug 口径是下降：${salBefore.toFixed(3)} → ${salAfter.toFixed(3)}）`);
+      `晋升前后顶栏薪资不变（Lv1 空闲同口径；bug 口径是下降：${salBefore.toFixed(3)} → ${salAfter.toFixed(3)}）`);
   }
 
   // 普通线程卡仍有 Lv + 产出 >0（对照，确保只改领导）
