@@ -11,8 +11,8 @@ import { BALANCE } from '../data/balance.js';
 import {
   threadProfession, isLeader, isLazyProfession, threadLevel,
   autoAssignThreads, bindThread, unbindThread, releaseAllThreads, threadLevelMult, threadBindOutputFactor,
-  unlockedConverterIds, converterLoad, converterCapacity,
-} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页）
+  unlockedConverterIds, converterLoad, converterCapacity, converterEnabled,
+} from './threadBinding.js'; // v3.3.0 线程绑定系统 // v3.3.2 反馈②：班组不再展示转化器开关（统一在快捷开关/研究点/异兽页） // v4.3.20 反馈②：未开启岗位灰显
 // v3.7.3 反馈①：班组下拉与筛选按钮只列岗位名，不再附「在岗/容量」数字。
 
 const MOOD_ICON = { '超频': '⚡', '优化': '🔧', '高效': '✨', '正常': '🙂', '阻塞': '⏸️', '死锁': '💀', '虔诚': '🙏', '传奇': '🌟' };
@@ -109,13 +109,19 @@ export function renderCrewPanel(container) {
     //   应该没这个岗位」（超线程恒无上限除外）。容量 = 设施数量（灵感工坊 2 座 → 2 坑）；
     //   自身在岗岗位保留（原地重选不占新坑，bindThread 放行）；旧档隐藏岗位绑定项同保留。
     //   智能分配 / 招募增量安置本就容量感知，此处补齐手动路径的最后缺口（v4.3.15 只做了标注+拒绝）。
+    // v4.3.20 反馈②：未开启转化的岗位不进 opts（灰显口径反转）——用户 v4.3.20 口径「转化开启
+    //   才可以分配线程到岗，没开启转化下拉框该岗位灰显」：满员=移除，未开启=灰显 disabled，
+    //   玩家仍能看见该岗位存在（知道开了开关就能分）。超线程恒可选（无转化开关）。
     const opts = visibleTypes.filter(t =>
       t === HYPER_CONVERTER_ID
       || t === c.boundTo
       || converterLoad(t) < converterCapacity(t));
     if (c.boundTo && !opts.includes(c.boundTo)) opts.push(c.boundTo);
     const bindOpts = ['<option value="">空闲</option>'].concat(
-      opts.map(t => `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}</option>`)).join('');
+      opts.map(t => {
+        const off = t !== HYPER_CONVERTER_ID && t !== c.boundTo && !converterEnabled(t);
+        return `<option value="${t}" ${c.boundTo === t ? 'selected' : ''}${off ? ' disabled' : ''}>${CONVERTERS[t] ? CONVERTERS[t].name : t}${visibleTypes.includes(t) ? '' : '（未解锁）'}${off ? '（未开启）' : ''}</option>`;
+      })).join('');
     // v3.7.1 反馈①：领导者是全局加成位，不给岗位下拉；v3.7.3 反馈③：卡面不再写领导岗位说明文字
     const bindCtrl = isLeader(c)
       ? ''

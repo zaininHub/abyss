@@ -251,6 +251,7 @@ export const WIKI_SECTIONS = [
       <li>扩容类：无限升级 + 30% 防死锁钳制（价格 ≤ 当前上限 ×30%）</li>
       <li>线程招募：firstCost × 1.25^线程数</li>
       <li>专注：30 × 1.6^级（指数涨价换「每级 +8% → +12% → +20%」的递增加成；专注优化 -25%、专注心核再 -25% 降价）</li>
+      <li>手动蒸馏：10,000 ÷ 1.12^蒸馏塔级 ÷ (1 + 罗盘×10%) × 效率递增 EP/RP（v4.3.20：基准 30K→10K 收敛与灵感工坊自动蒸馏 ~1K EP/RP 的悬殊差距）</li>
       <li>探采平台：载具价 ×1.30^已购数；载具 cps = 0（不产 EP，只扣 EP 换 DM）；EP→DM 汇率 = ${fmt(D.vehicles.epPerDm)} × ${D.vehicles.epPerDmGrowth}^总载具数；载具协议使 DM 采集速率 ×${D.vehicles.protocolMult}</li>
     </ul>
     <h4>效能建筑 · 全局产出（「锅炉房」组）</h4>
