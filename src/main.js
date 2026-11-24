@@ -1540,10 +1540,15 @@ function bindQuickSwitches() {
     const b = e.target.closest('[data-qs]');
     if (!b) return;
     const k = b.dataset.qs;
-    if (k === 'atrium') setConverterEnabled('atrium', !converterEnabled('atrium'));
-    else if (k === 'probe') setConverterEnabled('vehicles', !converterEnabled('vehicles'));
-    else if (k === 'hatch') setConverterEnabled('hatch', !converterEnabled('hatch'));
-    else if (k === 'temple') setConverterEnabled('temple', !converterEnabled('temple'));
+    // v4.3.20 反馈②：关闭转化 → 岗位线程下岗（setConverterEnabled 返回下岗数），日志汇总
+    const offIds = { atrium: 'atrium', probe: 'vehicles', hatch: 'hatch', temple: 'temple' };
+    const convKey = offIds[k];
+    const turningOff = convKey ? converterEnabled(convKey) : false;
+    let offN = 0;
+    if (k === 'atrium') offN = setConverterEnabled('atrium', !converterEnabled('atrium'));
+    else if (k === 'probe') offN = setConverterEnabled('vehicles', !converterEnabled('vehicles'));
+    else if (k === 'hatch') offN = setConverterEnabled('hatch', !converterEnabled('hatch'));
+    else if (k === 'temple') offN = setConverterEnabled('temple', !converterEnabled('temple'));
     // v3.4.9 反馈①：无限深入（与自动封印/自动拥抱互斥——同一 riftAuto 字段）
     else if (k === 'descent') {
       const on = S.riftAuto === 'auto_descent';
@@ -1560,8 +1565,10 @@ function bindQuickSwitches() {
     renderQuickSwitches();
     if (k === 'descent' || k === 'purify') return; // 上面已单独打日志（不走下方的转化器文案）
     const labels = { atrium: '灵感蒸馏', probe: '载具探采', hatch: '异兽孵化', temple: '圣所产出' };
-    const nowOn = converterEnabled(k);
+    const nowOn = converterEnabled(convKey);
     log(`快捷开关：${labels[k]}${nowOn ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, nowOn ? 'good' : 'bad');
+    // v4.3.20 反馈②：下岗汇总日志（N 条线程下岗了...）
+    if (turningOff && !nowOn && offN > 0) log(`${offN} 条线程下岗了（${labels[k]}停转，岗位收回）...`, 'bad');
   });
 }
 

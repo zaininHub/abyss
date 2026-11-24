@@ -331,7 +331,11 @@ export function rpDistillRate() {
   // v2.8.6：星渊罗盘「研究点转换效率 +10%/级」接线（v2.8.2 改 desc 后漏接，效率提升 = 所需 EP 减少）
   const compass = (S.relics && S.relics.compass) || 0;
   const eff = 1 + compass * 0.10;
-  return (30000 / Math.pow(1.12, lv) / eff) * rpEffScale(); // v2.8.24 ③：蒸馏 EP 消耗 ×2 // v3.3.3 反馈③：×效率递增
+  // v4.3.20 反馈③：基准 30000→10000（手动蒸馏与灵感工坊自动蒸馏换汇悬殊收敛）——
+  //   工坊 n=1 有效 1000 EP/RP（150 EP/s ÷ 0.15 RP/s），手动 30000 EP/RP 差 30 倍；
+  //   降到 10000 后差距缩到 10 倍（手动贵在「即时、不走编排倍率」，保留合理溢价）。
+  //   rp_distill 科技（÷1.12^lv）/罗盘（÷eff）/效率递增（×rpEffScale）三档口径不变。
+  return (10000 / Math.pow(1.12, lv) / eff) * rpEffScale();
 }
 export function echoLv(id) {
   return (S.echoUpgrades && S.echoUpgrades[id]) || 0;
@@ -899,6 +903,11 @@ export function multBreakdown() {
   if (S.religion && S.religion.crusade > 0) parts.push(`圣战军 ×${Math.pow(1.12, S.religion.crusade).toFixed(2)}`);
   const tome = relicMult('tome');
   if (tome !== 1) parts.push(`遗物·古卷 ×${tome.toFixed(2)}`);
+  // v4.3.20 反馈①：领导全局加成进产出弹窗——领导 +1%/位是 globalMult 内的真实乘区
+  //   （economy.globalMult: m *= leaderGlobalMult()），此前悬浮明细漏列，玩家不知 1% 去哪了。
+  //   语义口径：全局 EP 产出 +1%（不是 EP +1%）；与班组扩编（researchMult('crew')）同属班组系乘区。
+  const lead = leaderGlobalMult();
+  if (lead !== 1) parts.push(`领导 +${((lead - 1) * 100).toFixed(0)}%（全局产出）`);
   // v3.7.0：线专属乘区（与 globalMult 同源），悬浮明细不再漏列
   const lineG = lineRule(K.GLOBAL_MULT, 1, S);
   if (lineG !== 1) parts.push(`线专属全局 ×${lineG.toFixed(2)}`);
@@ -1013,11 +1022,12 @@ export function atriumDrainPerSec() {
 export function totalDrainPerSec() {
   return salaryDrainPerSec() + probeDrainPerSec() + faithDrainNow() + hatchDrainPerSec() + atriumDrainPerSec();
 }
-// v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 main.js tick 同口径：5000×级数 EP/s，解锁自动孵化且开关开启时生效）
+// v3.2.1 反馈⑥：异兽孵化 EP 消耗（与 resourceFlows pt:hatch 流实扣同口径）
+// v4.3.20 反馈③：口径统一到实扣——旧式 5000×lv² 与实扣 15000×lv×绑定加成矛盾（lv=3 顶栏虚高 3 倍），
+//   与 v4.3.8 修过的工坊 ×n² 同病（孵化漏修）。真值零变化：实扣本来就是这个数，只是显示对齐。
 export function ptHatchEpPerSec() {
   if (S.ptAutoHatch !== true || S.ptDistillOn !== true) return 0;
-  // v3.12.13 反馈⑫：EP 消耗随等级平方增长（×lv²），快于 PT 产出（×lv 线性）——消耗增长明显快于产出
-  return 5000 * (S.ptHatchLv || 1) * (S.ptHatchLv || 1);
+  return 15000 * (S.ptHatchLv || 1) * converterThreadBoost('hatch');
 }
 
 // ========== EP 存储上限 ==========

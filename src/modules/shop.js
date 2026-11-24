@@ -468,9 +468,11 @@ export function renderAtriumSwitch(host) {
   if (btn) btn.addEventListener('click', () => {
     // v4.3.19 反馈⑥：原位置开关与快捷开关同口径打日志（此前只有快捷开关记「快捷开关：灵感蒸馏…」，
     //   研究点页开关静默——日志里查不到谁关了蒸馏）
+    // v4.3.20 反馈②：关闭时线程下岗（setConverterEnabled 返回下岗数）+ 下岗日志
     const onAfter = !converterEnabled('atrium');
-    setConverterEnabled('atrium', onAfter);
+    const offN = setConverterEnabled('atrium', onAfter);
     log(`自动蒸馏${onAfter ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, onAfter ? 'good' : 'bad');
+    if (!onAfter && offN > 0) log(`${offN} 条线程下岗了（灵感蒸馏停转，岗位收回）...`, 'bad');
     save(S);
     dirty.shop = true;
     dirty.rp = true;
@@ -490,9 +492,11 @@ export function renderHatchUpgrade(container) {
   const lv = S.ptHatchLv || 1;
   const cost = ptHatchUpgCost(lv);
   const afford = (S.ep || 0) >= cost;
+  // v4.3.20 反馈③：卡面口径对齐实扣（15000×lv EP/s → 0.1×lv×绑定 PT/s，与 pt:hatch 流同式）——
+  //   旧式 5000×lv → 0.15×lv（EP/PT=33333）与实扣 EP/PT=150000 矛盾 4.5 倍
   const desc = unlocked
-    ? `自动孵化：-${fmt(5000 * lv)} EP/s → +${fmt(0.15 * lv)} PT/s`
-    : `自动孵化：-${fmt(5000)} EP/s → +${fmt(0.15)} PT/s`;
+    ? `自动孵化：-${fmt(15000 * lv)} EP/s → +${fmt(0.1 * lv)} PT/s`
+    : `自动孵化：-${fmt(15000)} EP/s → +${fmt(0.1)} PT/s`;
   if (!el) {
     el = document.createElement('div');
     el.className = 'hatch-upg item';
@@ -512,7 +516,7 @@ export function renderHatchUpgrade(container) {
         S.totalBuys = (S.totalBuys || 0) + 1;
         S.lazySince = null;
         save(S);
-        log(`异兽孵化工坊 ×${S.ptHatchLv}：-${fmt(5000 * S.ptHatchLv * S.ptHatchLv)} EP/s → +${fmt(0.15 * S.ptHatchLv)} PT/s`, 'good');
+        log(`异兽孵化工坊 ×${S.ptHatchLv}：-${fmt(15000 * S.ptHatchLv)} EP/s → +${fmt(0.1 * S.ptHatchLv)} PT/s`, 'good');
         dirty.pets = true;
         renderHatchUpgrade(container);
       });
@@ -833,9 +837,11 @@ function updateVehicleCollectHeader() {
       // v3.3.4 反馈①：统一走 setConverterEnabled（写 converterOn + _probeEnabled 镜像），
       // 避免「页头开关只改 _probeEnabled，而采购率读 converterOn」导致开启后仍不采集
       // v4.3.19 反馈⑥：补日志（与快捷开关同口径）
+      // v4.3.20 反馈②：关闭时线程下岗 + 下岗日志
       const onAfter = !converterEnabled('vehicles');
-      setConverterEnabled('vehicles', onAfter);
+      const offN = setConverterEnabled('vehicles', onAfter);
       log(`载具探采${onAfter ? '开启（按秒结算消耗，EP 归零后自动暂停）' : '关闭'}`, onAfter ? 'good' : 'bad');
+      if (!onAfter && offN > 0) log(`${offN} 条线程下岗了（载具探采停转，岗位收回）...`, 'bad');
       save(S); // v2.8.30 ②：开关即时落盘（刷新保持状态）
       updateVehicleCollectHeader();
       dirty.top = true;

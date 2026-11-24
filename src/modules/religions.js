@@ -2,7 +2,7 @@
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { epStorageCap, fmt, echoLv, faithTechMult, researchMult, spendRes, gainRes, buyRes } from './economy.js';
-import { converterEnabled, converterThreadBoost } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径）
+import { converterEnabled, converterThreadBoost, setConverterEnabled } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径） // v4.3.20 反馈②：圣所关闭线程下岗
 import {
   RELIGIONS, sealMaxLevel, sealUpgradeCost, TEMPLE, templeCost, templeFaithPerSec,
   religionUnlocked, branchOf, sealLevel, visibleReligions,
@@ -119,6 +119,9 @@ export function toggleTemple() {
     S.faith = Math.max(0, (S.faith || 0) - faithLoss);
     S.devotion = Math.max(0, (S.devotion || 0) - devLoss);
     S.religion.templeOff = true;
+    // v4.3.20 反馈②：关闭圣所 → 信仰岗位线程下岗（与快捷开关/其他岗位同口径）
+    const offN = setConverterEnabled('temple', false);
+    if (offN > 0) rlog(`${offN} 条线程下岗了（圣所产出停转，岗位收回）...`, 'bad');
     save(S);
     const parts = [];
     if (faithLoss > 0) parts.push(`-${faithLoss.toFixed(2)} FP`);

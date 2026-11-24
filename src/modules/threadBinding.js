@@ -90,6 +90,16 @@ export function setConverterEnabled(type, on) {
     S.religion.templeOff = !on;
     if (on) { S.religion._templeAutoPaused = false; S._templeEpShortSec = 0; }
   }
+  // v4.3.20 反馈②：关闭转化 → 该岗位线程下岗（置空闲）。此前 boundTo 仍挂已关闭岗位，
+  //   玩家视角「线程被冻结在岗位上」（靠 bindingActive 隐性失效，卡面看不出）。四条调用路径
+  //   （快捷开关/蒸馏/探采/孵化原位置开关/圣所）经此单一入口全覆盖。下岗日志在调用侧打
+  //   （本模块无 runtime 依赖，避免反向 import log 成环）——返回下岗名单供调用侧 log。
+  if (!on && type !== HYPER_CONVERTER_ID) {
+    const off = (S.cultists || []).filter(c => c.boundTo === type && !isLeader(c));
+    for (const c of off) { c.boundTo = null; c.assignSince = null; }
+    return off.length;
+  }
+  return 0;
 }
 export function bindingActive(c) {
   if (!c || !c.boundTo) return false;
@@ -192,6 +202,9 @@ export function bindThread(c, type) {
   // v3.7.1 反馈①：领导者是全局加成位，任何岗位都不收；顺手纠正旧档残留绑定
   if (!canBind(c)) { c.boundTo = null; return false; }
   if (!CONVERTERS[type]) return false;
+  // v4.3.20 反馈②：未开启转化的岗位拒绝分配（超线程恒可选；自身在岗的原岗位例外——
+  //   原地重选不触发新分配）。与班组下拉灰显（disabled）同口径，兜住直调路径。
+  if (type !== HYPER_CONVERTER_ID && c.boundTo !== type && !converterEnabled(type)) return false;
   // v4.3.15 反馈②：容量钳制（超线程除外）——非本岗位线程进入已满岗位被拒绝
   if (type !== HYPER_CONVERTER_ID && c.boundTo !== type
     && converterLoad(type) >= converterCapacity(type)) return false;
