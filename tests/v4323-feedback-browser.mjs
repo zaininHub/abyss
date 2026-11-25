@@ -137,17 +137,27 @@ console.log('[4] 博物馆任务与馆藏认证徽章');
 {
   const r = await page.evaluate(async () => {
     const S = window.S;
-    // 清掉可能残留的完成态；种 3 种工位等级和 30 <50
+    // v4.3.32 反馈②（重做）：清掉完成态与剧情节奏，种 3 种工位、等级和 30 <50 → 只邀请不完成
     S._specialTasksDone = {};
+    S._museumInvited = false;
+    S._museumHintAt = 0;
     S.upgrades.scribble = 10; S.upgrades.script = 10; S.upgrades.parallel = 10;
-    // 等 special-tasks 帧系统打提醒（每 60s 一条——首次立即打）
     for (let i = 0; i < 30; i++) {
       await new Promise(r2 => setTimeout(r2, 100));
       const lt = (document.getElementById('log-content') || {}).textContent || '';
-      if (/博物馆的访客仍在参观/.test(lt)) break;
+      if (/馆长期待与您共进晚餐/.test(lt)) break;
     }
     const lt1 = (document.getElementById('log-content') || {}).textContent || '';
-    const hinted = /博物馆的访客仍在参观（工位 3\/3 种，等级和 30\/50）/.test(lt1);
+    const invited = /馆长期待与您共进晚餐，请携带3种共计50件宝物觐见\.\.\.\./.test(lt1);
+    // 把落档时间拨回 2 小时前 → 关注提醒
+    S._museumHintAt = Date.now() - 2 * 60 * 60 * 1000 - 1000;
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r2 => setTimeout(r2, 100));
+      const lt = (document.getElementById('log-content') || {}).textContent || '';
+      if (/馆长在关注您/.test(lt)) break;
+    }
+    const lt1b = (document.getElementById('log-content') || {}).textContent || '';
+    const hinted = /馆长在关注您\.\.\./.test(lt1b);
     // 补足 ≥50：intern +20 → 和 50
     S.upgrades.intern = 20;
     for (let i = 0; i < 30; i++) {
@@ -156,12 +166,13 @@ console.log('[4] 博物馆任务与馆藏认证徽章');
     }
     const done = !!S._specialTasksDone.sp1_museum;
     const lt2 = (document.getElementById('log-content') || {}).textContent || '';
-    const doneLog = /馆藏认证已颁发/.test(lt2);
-    return { hinted, done, doneLog };
+    const doneLog = /馆长十分满意与您的会晤，期待下次会面/.test(lt2);
+    return { invited, hinted, done, doneLog };
   });
-  ok(r.hinted, '触发且未完成：日志提醒「工位 3/3 种，等级和 30/50」');
+  ok(r.invited, '工位满 3 种：邀请日志「请携带3种共计50件宝物觐见....」');
+  ok(r.hinted, '完成前满 2 小时：关注日志「馆长在关注您...」');
   ok(r.done, '补足等级和 ≥50 后任务完成');
-  ok(r.doneLog, '完成日志「馆藏认证已颁发」');
+  ok(r.doneLog, '完成日志「馆长十分满意与您的会晤，期待下次会面」');
   // 打开商店看徽章
   const badge = await page.evaluate(async () => {
     const btn = document.getElementById('btn-shop') || [...document.querySelectorAll('button')].find(b => (b.textContent || '').trim() === '商店' || /商店/.test(b.textContent || ''));

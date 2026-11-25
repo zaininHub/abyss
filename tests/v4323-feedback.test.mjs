@@ -104,14 +104,18 @@ test('F8 博物馆条件改工位口径：condition 读 MUSEUM_STATION_IDS + des
   assert.match(prog, /kinds >= 3 && sum >= 50/, '条件 = 3 种工位 + 等级之和 ≥50');
   assert.match(prog, /同时拥有 3 种工位，且工位等级之和达到 50 级/, 'desc 白话新口径');
   assert.ok(!/S\.buildings/.test(prog.match(/id: 'sp1_museum'[\s\S]{0,900}?line: 'any'/)?.[0] || ''), '旧 buildings 条件应移除');
-  assert.match(prog, /hintEverySec: 60/, '触发后周期提醒字段');
+  // v4.3.32 反馈②：60 秒周期提醒废弃，改「馆长来信」节奏（邀请一次 + 每 2 小时关注）
+  assert.match(prog, /export const MUSEUM_HINT_INTERVAL_MS = 2 \* 60 \* 60 \* 1000;/, '完成前的关注提醒间隔 = 2 小时');
+  assert.ok(!/hintEverySec: 60/.test(prog), '旧的 60 秒周期提醒字段应移除');
 });
 
-test('F9 触发后未完成周期日志：checkSpecialTasks 有进度提醒分支 + 完成徽章日志', () => {
+test('F9 剧情日志节奏：3 种工位邀请 → 每 2 小时关注 → 完成会晤', () => {
   const prog = read('src/modules/progression.js');
-  assert.match(prog, /博物馆的访客仍在参观（工位 \$\{kinds\}\/3 种，等级和 \$\{sum\}\/50）/, '进度提醒日志');
-  assert.match(prog, /馆藏认证已颁发/, '完成徽章提示日志');
-  assert.match(prog, /_lastMuseumHint/, '提醒节流时间戳');
+  assert.match(prog, /馆长期待与您共进晚餐，请携带3种共计50件宝物觐见\.\.\.\./, '邀请日志（工位满 3 种时一次）');
+  assert.match(prog, /馆长在关注您\.\.\./, '完成前每 2 小时的关注提醒');
+  assert.match(prog, /馆长十分满意与您的会晤，期待下次会面/, '完成会晤日志');
+  assert.ok(!/博物馆的访客仍在参观/.test(prog), '旧 60 秒进度提醒应移除');
+  assert.ok(!/馆藏认证已颁发/.test(prog), '旧第二条颁发日志应移除');
 });
 
 test('F10 工位标题徽章：shop.js badge 字段 + disclosure.js group-title-badge + CSS', () => {

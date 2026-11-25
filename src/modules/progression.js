@@ -39,9 +39,7 @@ export const SPECIAL_TASKS = [
     reward: { type: 'museum_mode', msg: '你的工作台获得博物馆「馆藏认证」——工位分类达标期间佩戴徽章（未达 3 种或等级和不足 50 时自动隐藏）' },
     triggered: false,
     line: 'any',
-    // v4.3.23 反馈③：触发后未完成前，每 60s 打一条进度提醒日志（「每个消失都打日志」按
-    //   可读口径实现为周期提醒——每帧打日志会刷屏；进度 = 当前等级和/目标）。
-    hintEverySec: 60,
+    // v4.3.31 反馈②（重做）：日志节奏改由 checkSpecialTasks 统一处理（邀请一次 + 每 2 小时关注 + 完成会晤）。
   },
   {
     id: 'sp2_last_thread',
@@ -173,12 +171,11 @@ let _lastSpecialRoll = 0;
 let _abandonCooldownUntil = 0;
 
 // ========== 特殊任务检查 ==========
-// 上次进度提醒时间（v4.3.23 反馈③：博物馆任务触发后未完成的周期日志）
-let _lastMuseumHint = 0;
 // v4.3.25 反馈①：上一次的工位达标态——翻转时置脏商店，让认证徽章即时出现/隐藏
 let _museumQualified = null;
-// v4.3.31 反馈②：「触发」只打一次——本局首次拥有工位（访客上门）时留痕
-let _museumTriggered = false;
+// v4.3.31 反馈②（重做）：馆藏认证的剧情日志节奏。
+//   完成前每 2 小时一封「馆长在关注您...」——时间戳落档（S._museumHintAt），刷新/重开不重置节奏。
+export const MUSEUM_HINT_INTERVAL_MS = 2 * 60 * 60 * 1000;
 export function checkSpecialTasks(S, log, toast) {
   if (!S._specialTasksDone) S._specialTasksDone = {};
 
@@ -191,27 +188,28 @@ export function checkSpecialTasks(S, log, toast) {
       const qualified = task.condition(S);
       const done = !!S._specialTasksDone[task.id];
       if (_museumQualified !== qualified) {
-        const prev = _museumQualified;
         _museumQualified = qualified;
-        dirty.shop = true;
-        // v4.3.31 反馈②：徽章的「获取 / 失效」都要留痕。
-        //   首次完成（qualified 且未 done）由下方完成日志统一播报，这里只补
-        //   「已颁过证的老档重新达标 / 达标被打破」两类静默切换。
-        if (log && qualified && done) {
-          const { kinds, sum } = museumStationProgress(S);
-          log(`馆藏认证：已达标（工位 ${kinds} 种 / 等级和 ${sum}）——商店「工位」分类标题佩戴徽章`, 'good');
-        } else if (log && !qualified && prev === true && done) {
-          const { kinds, sum } = museumStationProgress(S);
-          log(`馆藏认证：当前未达标（工位 ${kinds} 种 / 等级和 ${sum}，需 3 种 / 50）——徽章已隐藏`, 'bad');
-        }
+        dirty.shop = true; // 徽章按「当前条件」实时佩戴/隐藏（shop.js 同口径复核）
       }
-      // v4.3.31 反馈②：任务「触发」日志——本局首次拥有工位（访客上门），此时给出目标与当前进度
-      if (!done && !_museumTriggered) {
-        const { kinds, sum } = museumStationProgress(S);
-        if (kinds > 0) {
-          _museumTriggered = true;
-          dirty.shop = true;
-          if (log) log(`特殊任务触发：博物馆的访客 —— 工位 3 种且等级和 ≥50 即获颁「馆藏认证」徽章（当前 ${kinds} 种 / 等级和 ${sum}）`, '');
+      // v4.3.31 反馈②（重做）：博物馆的访客改成「馆长来信」三段式，只打三条剧情文案：
+      //   ① 工位满 3 种 → 邀请（一次，落档 _museumInvited，刷新不重复）
+      //   ② 完成前每 2 小时 → 「馆长在关注您...」（落档 _museumHintAt 控节奏，刷新不重置）
+      //   ③ 完成 → 会晤结束文案（徽章同帧上店，见下方完成分支）
+      //   旧的「特殊任务触发 / 已达标 / 未达标隐藏 / 60s 进度提醒」全部移除（用户要求重做）。
+      if (!done) {
+        const { kinds } = museumStationProgress(S);
+        const now = Date.now();
+        // 落档：邀请/关注各只发生一次——刷新后不该重播。纯 Node 单测没有 localStorage，静默跳过。
+        const persist = () => { try { save(S); } catch { /* 无 localStorage 的测试环境 */ } };
+        if (kinds >= 3 && !S._museumInvited) {
+          S._museumInvited = true;
+          S._museumHintAt = now;
+          persist();
+          if (log) log('馆长期待与您共进晚餐，请携带3种共计50件宝物觐见....', '');
+        } else if (S._museumInvited && now - (Number(S._museumHintAt) || 0) >= MUSEUM_HINT_INTERVAL_MS) {
+          S._museumHintAt = now;
+          persist();
+          if (log) log('馆长在关注您...', '');
         }
       }
     }
@@ -234,10 +232,14 @@ export function checkSpecialTasks(S, log, toast) {
         if (!silentBackfill) {
           // v4.3.11 反馈②：完成日志两段式——「特殊任务：{名} - {时限}」换行「{要求}」。
           //   task.desc 约定「无时间限制/限时…；{要求}」格式，按第一个「；」拆两行。
+          // v4.3.31 反馈②（重做）：sp1 全程走「馆长来信」剧情线，不再套通用任务模板。
           const semi = task.desc.indexOf('；');
           const timeLimit = semi >= 0 ? task.desc.slice(0, semi) : task.desc;
           const requirement = semi >= 0 ? task.desc.slice(semi + 1) : '';
-          if (log) log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
+          if (log) {
+            if (task.id === 'sp1_museum') log('馆长十分满意与您的会晤，期待下次会面', 'good');
+            else log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
+          }
           if (toast) toast(`✓ ${task.name}`);
           // v4.3.23 反馈③：sp1_museum 完成后置脏商店（工位标题徽章即时出现）
           // v4.3.24 缺陷修复：改静态 import 调用——原 `import('../core/runtime.js')` 动态导入会让
@@ -249,20 +251,8 @@ export function checkSpecialTasks(S, log, toast) {
         // v4.3.11 反馈③：sp3 首次完成点亮成就「临别赠礼」（首购离职礼盒）
         //   _specialTasksDone 在晋升时保留（不在 RUN_RESET_KEYS），成就判定双路径兜底：点亮过就不再熄灭
         if (task.id === 'sp3_farewell') S.achievements = Object.assign({}, S.achievements, { farewell_gift: true });
-        // v4.3.23 反馈③：博物馆任务完成后打提示日志（徽章已挂到商店工位分类标题）
-        if (task.id === 'sp1_museum' && !silentBackfill && log) {
-          log('博物馆的访客 · 馆藏认证已颁发——商店「工位」分类标题现在佩戴着徽章（保持 3 种 / 等级和 ≥50 期间有效）', 'good');
-        }
-      } else if (task.id === 'sp1_museum' && task.hintEverySec) {
-        // v4.3.23 反馈③：触发（已有工位）且未完成前，每 hintEverySec 秒打一条进度提醒
-        const { kinds, sum } = museumStationProgress(S);
-        if (kinds > 0) { // 「触发」= 至少拥有 1 种工位（访客已上门）
-          const now = Date.now();
-          if (now - _lastMuseumHint >= (task.hintEverySec || 60) * 1000) {
-            _lastMuseumHint = now;
-            if (log) log(`博物馆的访客仍在参观（工位 ${kinds}/3 种，等级和 ${sum}/50）——完成后商店工位分类将获得「馆藏认证」徽章`, '');
-          }
-        }
+        // v4.3.31 反馈②（重做）：徽章就在完成同帧挂上（上方 dirty.shop=true），
+        //   日志只保留「馆长十分满意与您的会晤…」一条，不再追加第二条颁发说明。
       }
     } catch { /* silently skip */ }
   }

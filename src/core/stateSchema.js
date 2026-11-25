@@ -35,6 +35,7 @@ export const COMPAT_KEYS = Object.freeze([
   '_farewellBought', 'orderRewrites', 'orderCompileProgress', 'orderLogicGates',
   'abyssGazeCount', 'chaosIntuitionEnabled', 'chaosLogEnabled', 'bazaar', 'cosmos', 'moduleUnlocks',
   'faithTemples', 'miraclesTriggered', 'prophecyNext', '_prestigeSkips', '_idleSec',
+  '_museumInvited', '_museumHintAt', // v4.3.31 反馈②：馆藏认证剧情日志节奏（邀请一次 / 每 2 小时关注）
   '_catClicks', '_lastActionAt', 'resDiscovered', 'abyssGazeUnlocked',
   'keepAwake', // v4.3.1 反馈⑥：旧档无此键缺省补 false；不在 RUN_RESET_KEYS 即晋升不清（玩家偏好，不入章节快照）
   'achievementTimes', // v4.3.2 反馈②：成就解锁时间戳（与 achievements 同寿命，旧档缺省 {} 回落注册表序）

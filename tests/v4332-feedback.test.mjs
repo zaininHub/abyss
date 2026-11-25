@@ -1,6 +1,6 @@
 // v4.3.31 反馈（m02273 四项）：
 //   ① 日志保留最近 20 条，刷新后仍在（取消「1 小时窗口」）
-//   ② 馆藏认证的「触发 / 获取 / 失效」都要打日志
+//   ② 馆藏认证改成「馆长来信」三段式：3 种工位邀请 → 每 2 小时关注 → 完成会晤
 //   ③ 里程碑未达的效能建筑不进入链条窗口（第一章不该露出里程碑 5 的机会感知器）
 //   ④ 隐藏测试命令 __abyssCheat.fillChapter（模块实现见 tests/v4331-cheat-fill.test.mjs）
 import test from 'node:test';
@@ -73,50 +73,69 @@ test('①-3 startApp 启动时调用 paintLogs()，刷新后不必等下一条�
 
 // ---------- ② 馆藏认证日志 ----------
 
-test('②-1 任务「触发」打一次日志（本局首次拥有工位）', () => {
-  assert.match(PROG, /let _museumTriggered = false;/);
-  assert.match(PROG, /特殊任务触发：博物馆的访客/, '触发日志文案');
-  const block = PROG.slice(PROG.indexOf("if (task.id === 'sp1_museum')"));
-  assert.ok(block.indexOf('_museumTriggered = true;') < block.indexOf('特殊任务触发：博物馆的访客'),
-    '先置位再打日志（同帧不会重复触发）');
+test('②-1 工位满 3 种时打一条邀请日志（只一次，落档 _museumInvited）', () => {
+  assert.match(PROG, /export const MUSEUM_HINT_INTERVAL_MS = 2 \* 60 \* 60 \* 1000;/,
+    '完成前的关注提醒间隔 = 2 小时');
+  assert.match(PROG, /馆长期待与您共进晚餐，请携带3种共计50件宝物觐见\.\.\.\./, '邀请文案');
+  assert.match(PROG, /if \(kinds >= 3 && !S\._museumInvited\)/, '触发条件 = 工位 ≥3 种且尚未邀请过');
+  assert.match(PROG, /S\._museumInvited = true;/, '邀请必须落档，刷新不重复');
 });
 
-test('②-2 徽章的「获取 / 失效」都有日志', () => {
-  assert.match(PROG, /馆藏认证：已达标（工位 \$\{kinds\} 种 \/ 等级和 \$\{sum\}）/, '已颁证老档重新达标要留痕');
-  assert.match(PROG, /馆藏认证：当前未达标（工位 \$\{kinds\} 种 \/ 等级和 \$\{sum\}，需 3 种 \/ 50）——徽章已隐藏/,
-    '达标被打破要留痕');
+test('②-2 完成前每 2 小时一条「馆长在关注您...」，完成后打会晤收尾', () => {
+  assert.match(PROG, /馆长在关注您\.\.\./, '关注提醒文案');
+  assert.match(PROG, /now - \(Number\(S\._museumHintAt\) \|\| 0\) >= MUSEUM_HINT_INTERVAL_MS/,
+    '按落档时间戳控 2 小时节奏（刷新不重置）');
+  assert.match(PROG, /馆长十分满意与您的会晤，期待下次会面/, '完成会晤文案');
+  assert.doesNotMatch(PROG, /博物馆的访客仍在参观/, '旧的 60 秒进度提醒必须移除');
+  assert.doesNotMatch(PROG, /馆藏认证已颁发/, '旧的第二条颁发日志必须移除（改为单条会晤文案）');
+  assert.doesNotMatch(PROG, /馆藏认证：已达标|馆藏认证：当前未达标/, '旧的达标/失效日志必须移除');
 });
 
-test('②-3 行为：触发 → 完成 → 失效 → 重新达标，日志按顺序出现', async () => {
+test('②-3 行为：邀请一次 → 2 小时后再关注 → 完成只打会晤文案', async () => {
   const prog = await import('../src/modules/progression.js');
   const lines = [];
   const push = (m) => lines.push(String(m));
-  const S = {
-    _specialTasksDone: {},
-    upgrades: { storage: 300, scribble: 20, script: 20, parallel: 10 },
-    storyline: 'any',
-    tech: {}, buildings: {}, faith: 0, ep: 0, dm: 0, rp: 0,
-  };
-  prog.checkSpecialTasks(S, push, () => {});
-  assert.ok(lines.some((l) => /特殊任务触发：博物馆的访客/.test(l)), '首次拥有工位要有触发日志');
-  assert.ok(lines.some((l) => /馆藏认证已颁发/.test(l)), '完成时要有颁发日志');
-
-  // 已颁过证的老档：工位被清空 → 徽章失效要留痕
-  lines.length = 0;
-  const S2 = {
-    _specialTasksDone: { sp1_museum: true },
-    upgrades: {},
+  const mkS = (upgrades, done = {}) => ({
+    _specialTasksDone: done,
+    upgrades,
     storyline: 'any', tech: {}, buildings: {}, faith: 0, ep: 0, dm: 0, rp: 0,
-  };
-  prog.checkSpecialTasks(S2, push, () => {}); // 第一次：从上一次的达标态翻到不达标
-  assert.ok(lines.some((l) => /徽章已隐藏/.test(l)), '达标被打破要有失效日志');
+  });
+  const threeLow = { scribble: 10, script: 10, parallel: 10 }; // 3 种但等级和 30 < 50：只邀请、不完成
 
-  // 重新达标 → 「已达标」日志（不再重复颁发）
+  // 只有 2 种工位：不邀请
+  const s2 = mkS({ scribble: 20, script: 10 }); // 2 种工位，等级和 30
+  prog.checkSpecialTasks(s2, push, () => {});
+  assert.ok(!lines.some((l) => /馆长/.test(l)), '未满 3 种不应出现馆长日志');
+  assert.equal(s2._museumInvited, undefined);
+
+  // 满 3 种：邀请一次
+  const s3 = mkS(threeLow);
+  prog.checkSpecialTasks(s3, push, () => {});
+  assert.equal(lines.filter((l) => /馆长期待与您共进晚餐/.test(l)).length, 1, '邀请只打一条');
+  assert.equal(s3._museumInvited, true);
+
+  // 再跑两帧：不重复邀请、2 小时内不关注
+  prog.checkSpecialTasks(s3, push, () => {});
+  prog.checkSpecialTasks(s3, push, () => {});
+  assert.equal(lines.filter((l) => /馆长期待与您共进晚餐/.test(l)).length, 1, '刷新/多帧不重复邀请');
+  assert.equal(lines.filter((l) => /馆长在关注您/.test(l)).length, 0, '2 小时内不催');
+
+  // 把落档时间拨回 2 小时前 → 关注一次；再拨回 1 小时前 → 不再催
+  s3._museumHintAt = Date.now() - prog.MUSEUM_HINT_INTERVAL_MS - 1000;
+  prog.checkSpecialTasks(s3, push, () => {});
+  assert.equal(lines.filter((l) => /馆长在关注您/.test(l)).length, 1, '满 2 小时催一次');
+  s3._museumHintAt = Date.now() - 60 * 60 * 1000;
+  prog.checkSpecialTasks(s3, push, () => {});
+  assert.equal(lines.filter((l) => /馆长在关注您/.test(l)).length, 1, '不足 2 小时不催');
+
+  // 补满 50 级 → 完成：只打会晤文案，徽章同帧上店
   lines.length = 0;
-  S2.upgrades = { storage: 300, scribble: 20, script: 20, parallel: 10 };
-  prog.checkSpecialTasks(S2, push, () => {});
-  assert.ok(lines.some((l) => /馆藏认证：已达标/.test(l)), '重新达标要有获取日志');
-  assert.ok(!lines.some((l) => /馆藏认证已颁发/.test(l)), '已颁过证不应重复「颁发」日志');
+  s3.upgrades = { scribble: 20, script: 20, parallel: 10 }; // 3 种、等级和 50 → 完成
+  prog.checkSpecialTasks(s3, push, () => {});
+  assert.ok(lines.some((l) => /馆长十分满意与您的会晤，期待下次会面/.test(l)), '完成要打会晤文案');
+  assert.ok(!lines.some((l) => /特殊任务：博物馆的访客/.test(l)), '不再套通用任务模板');
+  assert.ok(!lines.some((l) => /馆藏认证已颁发/.test(l)), '不再有第二条颁发日志');
+  assert.equal(s3._specialTasksDone.sp1_museum, true);
 });
 
 // ---------- ③ 里程碑门控 ----------

@@ -135,6 +135,10 @@ export function defaultState() {
     _easterEggsFound: {},          // 已发现的彩蛋
     _pauseCycles: 0,               // 暂停/恢复循环次数
     _farewellBought: false,        // v2.9.2：sp3_farewell「离职礼盒」购买标记（每局可触发一次，转生重置）
+    // v4.3.31 反馈②：馆藏认证「馆长来信」节奏落档——邀请只打一次、完成前每 2 小时一条关注提醒；
+    //   不在 RUN_RESET_KEYS（= 跨晋升保留），避免晋升后剧情重播。
+    _museumInvited: false,
+    _museumHintAt: 0,
     // v2.0 线A 秩序重构者
     orderRewrites: {},             // 协议编辑器重写记录 {upgradeId: count}
     orderCompileProgress: 0,       // 编译进度

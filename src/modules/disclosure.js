@@ -127,6 +127,15 @@ export function chainSplit(mod, items, purchasedOf, S) {
 // 收进组最下侧「已×」折叠区，不影响未购/可叠加项展示；未传该参数时行为与旧版完全一致。
 import { S } from '../state.js';
 import { buildOwnedSection } from './listkit.js';
+
+// v4.3.31 反馈③：组标题徽章图形（绶带 + 星章，16 视窗，11px 渲染）。
+//   纯内联 SVG：跟着文字用 currentColor（各主题自动换金/深金），不引外部图片、不产生请求。
+export const BADGE_ICON = '<svg class="g-badge-ico" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">'
+  + '<path d="M6.05 1.5 8 5.1 6.35 5.1 5 1.5Z" fill="currentColor" opacity=".7"/>'
+  + '<path d="M9.95 1.5 8 5.1l1.65 0L11 1.5Z" fill="currentColor" opacity=".7"/>'
+  + '<circle cx="8" cy="9.9" r="4.35" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".95"/>'
+  + '<path d="M8 7.15l.86 1.74 1.92.28-1.39 1.36.33 1.91L8 11.54l-1.72.9.33-1.91-1.39-1.36 1.92-.28Z" fill="currentColor"/>'
+  + '</svg>';
 export function renderChainedGroups(container, split, groups, makeItem, onItem, ownedOpts) {
   const buckets = groups.map(() => []);
   split.visible.forEach((it, i) => {
@@ -155,7 +164,9 @@ export function renderChainedGroups(container, split, groups, makeItem, onItem, 
     if (canBadge) {
       const b = document.createElement('span');
       b.className = 'group-title-badge';
-      b.textContent = g.badge;
+      // v4.3.31 反馈③：徽章不只文字——左侧加一枚小徽章图形（纯内联 SVG，随文字色 currentColor，
+      //   无外部资源、无额外请求）。图形对读屏隐藏（aria-hidden），语义仍由右侧文字承担。
+      b.innerHTML = BADGE_ICON + g.badge;
       b.title = g.badgeTip || g.badge;
       h.appendChild(document.createTextNode(g.title));
       h.appendChild(b);
