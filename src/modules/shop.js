@@ -105,6 +105,11 @@ export function buyThreadUpgrade(u) {
 }
 
 export function buyVehicle(u) {
+  // v2.4.0 反馈②：探采基础载具（外勤摩托队）= 裂隙已触发即可买；后三档 = 星图（探采高级）。
+  //   两个门禁走访问层同一出口，渲染与购买同源。
+  const tierIdx = VEHICLE_IDS.indexOf(u.id);
+  const gate = tierIdx > 0 ? accessCheck('vehicle.advanced', S) : accessCheck('vehicle.buy', S);
+  if (!gate.ok) { if (toastFn) toastFn(gate.reason); return false; }
   const owned = S.upgrades[u.id] || 0;
   const cost = bulkCostCalc(u, 1); // v3.12.0 反馈⑨：单一售价真源
   if (S.ep < cost) return false;
@@ -115,6 +120,9 @@ export function buyVehicle(u) {
 }
 
 export function buyDmUpgrade(u) {
+  // v2.4.0 反馈②：深渊商店属于「探采高级内容」，随星图解锁（裂隙仍是基础前置）。
+  const gate = accessCheck('dm.shop', S);
+  if (!gate.ok) { if (toastFn) toastFn(gate.reason); return false; }
   if ((S.dm || 0) < u.dmCost) return false;
   S.dm -= u.dmCost; spendRes('dm', u.dmCost); buyRes('dm');
   S.upgrades[u.id] = 1;
@@ -921,11 +929,23 @@ export function renderVehicles(container) {
   // 修复取「与用户诉求最贴近、不引入死锁」方向：仅链内下一项解锁为可购卡，其余
   // 未购项仍 ??? 占位；链语义（K=p+1）不变。
   const split = chainSplit('vehicles', sorted, u => (S.upgrades[u.id] || 0) > 0, S);
+  // v2.4.0 反馈②：链内下一项若属于「探采高级」（后三档载具）而星图未开，渲染门禁占位卡并截断链——
+  //   让玩家在探采平台里就看到「后面还有，但要星图」，而不是莫名其妙买到一半没了。
+  let chainBlocked = false;
   split.visible.forEach((u, i) => {
+    if (chainBlocked) return;
     const owned = (S.upgrades[u.id] || 0) > 0;
     // B3 修复补充：可购判据 = 链内下一项（index === chainNextIdx，含链首 p=0）——
     // 链首必须可购否则链永不推进（v2.3.2 §5.2 链提示废除，本判据保留不动）。
     const isNext = i === split.chainNextIdx;
+    if (!owned && isNext) {
+      const gate = VEHICLE_IDS.indexOf(u.id) > 0 ? accessCheck('vehicle.advanced', S) : accessCheck('vehicle.buy', S);
+      if (!gate.ok) {
+        container.appendChild(makeVehicleGateCard(gate.reason));
+        chainBlocked = true;
+        return;
+      }
+    }
     const el = (owned || isNext) ? makeVehicleItem(u) : makeVehicleLockedCard(u);
     // v2.7.3：链内下一项未购可购卡也入 vehicleItemEls——否则 refreshShopAffordability
     // 灰态刷新覆盖不到它（EP 花掉后仍显示可点 → 点击才报 EP 不足）
@@ -953,6 +973,16 @@ function makeVehicleLockedCard(u) {
   div.className = 'item locked';
   div.innerHTML = `<div class="name"><span>???</span></div>
     <div class="desc">${CHAIN_PREVIEW}</div>
+    <div class="cost">—</div>`;
+  return div;
+}
+
+// v2.4.0：探采高级（星图）门禁占位卡——把原因写在卡上，不暴露后续载具名字（保持 ??? 的探索感）
+function makeVehicleGateCard(reason) {
+  const div = document.createElement('div');
+  div.className = 'item locked';
+  div.innerHTML = `<div class="name"><span>???</span></div>
+    <div class="desc">${reason}</div>
     <div class="cost">—</div>`;
   return div;
 }
@@ -1026,6 +1056,15 @@ export function renderDmShop(container) {
   if (!dmShown) { container.innerHTML = ''; return; }
   container.innerHTML = '';
   dmItemEls.clear();
+  // v2.4.0 反馈②：深渊商店 = 探采高级，随星图解锁；未到章时给一张门禁卡（标题保留，玩家知道它存在）
+  const dmGate = accessCheck('dm.shop', S);
+  if (!dmGate.ok) {
+    const div = document.createElement('div');
+    div.className = 'item locked';
+    div.innerHTML = `<div class="name"><span>???</span></div><div class="desc">${dmGate.reason}</div><div class="cost">—</div>`;
+    container.appendChild(div);
+    return;
+  }
   dmSection = buildOwnedSection('dm-shop', container, '解锁');
   const dmMods = UPGRADES.filter(u => u.cat === 'dm');
   // v2.3 渐进披露链：链序 = DM 价升序（原 avail 排序口径）；窗口内未购渲染，已购整表走折叠区永不隐藏

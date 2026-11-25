@@ -337,9 +337,10 @@ async function uiCheck(page) {
         try {
           S.upgrades = { rp_vault: 1 };
           S.tech = { deep_space: true };
-          // v3.12.11 ①：星图带「第 3 章」硬门控——夹具只考察 PT 维度，统一抬到第 3 章，
+          // v3.12.11 ①：星图带章节硬门控——夹具只考察 PT 维度，统一抬到已过线章节，
           //   否则 1 天灰度（章节=1）时 after.gate 恒 false 使矩阵失真。
-          S.chapter = String(Math.max(3, parseInt(String(S.chapter || '1'), 10) || 3));
+          // v2.4.0：星图从第 3 章后移到第 4 章（CHAPTER_GATES.starchart），这里同步抬到 4。
+          S.chapter = String(Math.max(4, parseInt(String(S.chapter || '1'), 10) || 4));
           S.pt = 0; S.expeditionsDone = 3; S.expeditions = []; S.starCps = 12;
           render();
           const before = read();

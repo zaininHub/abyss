@@ -16,6 +16,7 @@ import { CHAPTER_GATES, GATE_IDS, gateOpen, gateChapter, gateChapterText } from 
 import { S } from '../src/state.js';
 import { moduleVisible, moduleBuyState, moduleUnlockDef } from '../src/modules/moduleUnlocks.js';
 import { relicsUnlocked } from '../src/data/relics.js';
+import { relicsTabOpen } from '../src/core/unlocks.js';
 import { cosmosUnlocked } from '../src/modules/cosmos.js';
 import { delvePrereqOk, delvePrereqReason } from '../src/modules/delve.js';
 import { starColoniesUnlocked, launchExpedition } from '../src/modules/expedition.js';
@@ -109,7 +110,7 @@ test('C1 购买函数首行调用 accessCheck：门禁动作已接线', () => {
     'src/modules/ai.js': ['assistant.buy'],
     'src/modules/echoShop.js': ['echo.buy'],
     'src/modules/rift.js': ['rift.tech', 'rift.upgrade'],
-    'src/modules/shop.js': ['shop.offline', 'shop.crossroad'],
+    'src/modules/shop.js': ['shop.offline', 'shop.crossroad', 'vehicle.buy', 'vehicle.advanced', 'dm.shop'],
     'src/modules/religions.js': ['religion.unlock'],
     'src/data/policies.js': ['policy.open'],
     'src/core/resonance.js': ['resonance.open'],
@@ -212,4 +213,37 @@ test('E1 launchExpedition 是导出函数（不再藏在 DOM 监听器里），�
   }
   assert.ok(!/container\.querySelectorAll\('\[data-galaxy\]'\)[\s\S]{0,600}?S\.expeditions\.push/.test(src('src/modules/expedition.js')),
     '出发逻辑不应再直接写在 DOM 监听器里');
+});
+
+// ---------- F 探采分级（v2.4.0：基础随裂隙、高级随星图） ----------
+test('F1 探采：基础载具随裂隙（第 1 章即可），高级载具与深渊商店随星图（第 4 章）', () => {
+  const keep = { chapter: S.chapter, _riftSeen: S._riftSeen, tech: S.tech, upgrades: S.upgrades, expeditionsDone: S.expeditionsDone, expeditions: S.expeditions };
+  try {
+    Object.assign(S, { chapter: '1', _riftSeen: false, tech: {}, upgrades: {}, expeditionsDone: 0, expeditions: [] });
+    assert.equal(accessCheck('vehicle.buy', S).ok, false, '没裂隙时探采平台不该能买');
+    Object.assign(S, { _riftSeen: true });
+    assert.equal(accessCheck('vehicle.buy', S).ok, true, '裂隙一出现就能买基础载具（不再等 DM）');
+    assert.equal(accessCheck('vehicle.advanced', S).ok, false);
+    assert.match(accessCheck('vehicle.advanced', S).reason, /星图/, '高级载具的原因应指向星图');
+    assert.equal(accessCheck('dm.shop', S).ok, false, '深渊商店属于探采高级');
+    Object.assign(S, { chapter: '4', tech: { deep_space: true }, upgrades: { rp_vault: 1, pt_vault: 1 } });
+    assert.equal(accessCheck('vehicle.advanced', S).ok, true);
+    assert.equal(accessCheck('dm.shop', S).ok, true);
+  } finally {
+    Object.assign(S, keep);
+  }
+});
+
+test('F2 遗物 tab：章节 ∧ 裂隙即可进入（不再要求 DM）；遗物卡仍要求 DM 已发现', () => {
+  const keep = { chapter: S.chapter, _riftSeen: S._riftSeen, resDiscovered: S.resDiscovered, upgrades: S.upgrades };
+  try {
+    Object.assign(S, { chapter: '1', _riftSeen: true, resDiscovered: {}, upgrades: {} });
+    assert.equal(relicsTabOpen(S), true, '裂隙后 tab 就该进得去（探采平台住在里面）');
+    assert.equal(relicsUnlocked(), false, '没有 DM 时遗物本身仍然锁着');
+    assert.match(accessReason('relic.buy', S), /DM/);
+    Object.assign(S, { resDiscovered: { dm: true } });
+    assert.equal(relicsUnlocked(), true, '见过 DM 后遗物卡放开');
+  } finally {
+    Object.assign(S, keep);
+  }
 });

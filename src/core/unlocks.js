@@ -30,8 +30,9 @@ export function riftSeen(s) {
 }
 
 /**
- * 星图（远征）是否开启：异兽/PT → RP → 第 3 章（gate 'starchart'）→ 深空科技或已有远征记录。
+ * 星图（远征）是否开启：异兽/PT → RP → 第 4 章（gate 'starchart'）→ 深空科技或已有远征记录。
  * 顺序不可换：这是「入口早开、章节给实质」的既有节奏。
+ * v2.4.0：章节门禁 3 → 4（星图后移）；本函数本身不写章号，仍只读 gate。
  */
 export function starChartOpen(s) {
   if (!hasAnchor('pt', s)) return false;
@@ -43,4 +44,15 @@ export function starChartOpen(s) {
 /** 异兽模块：PT 锚点完成即开放（与顶栏 PT 完全同口径，本局制不读跨局标记）。 */
 export function petsModuleOpen(s) {
   return hasAnchor('pt', s);
+}
+
+/**
+ * 「遗物」tab 的可见性：章节（gate 'relics'）+ 裂隙已触发。
+ * v2.4.0 反馈②：**不再要求 DM 已发现**——探采平台与深渊商店都住在这个 tab 里，
+ *   而 DM 恰好只能靠探采平台（买载具）或封印裂隙获得；要求 DM 才开 tab = 先有鸡才有蛋。
+ *   遗物/净化节点本身仍由 accessCheck('relic.buy'/'purifier.buy') 要求 DM 已发现，
+ *   所以这里放开只影响「看得到探采平台」，不会白送遗物。
+ */
+export function relicsTabOpen(s) {
+  return gateOpen('relics', s) && riftSeen(s);
 }

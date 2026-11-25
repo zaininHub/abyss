@@ -72,7 +72,7 @@ export function petsModuleUnlocked(S) {
  */
 export function starChartUnlocked(S) {
   // v2.3.0：判定下沉到 core/unlocks.js 的 starChartOpen（章节门禁走 CHAPTER_GATES.starchart，
-  //   不再有 `< 3` 的字面章号）。异兽/PT → RP → 第 3 章 → 深空科技或已有远征，顺序不可换。
+  //   不再有 `< 3` 的字面章号）。异兽/PT → RP → 第 4 章（v2.4.0 后移）→ 深空科技或已有远征，顺序不可换。
   return starChartOpen(S);
 }
 

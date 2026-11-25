@@ -61,14 +61,15 @@ test('shop.buyThreadUpgrade：线程升级成功（cpu 0→1）', () => {
 });
 
 test('shop.buyVehicle：载具购买成功（合成 u）', () => {
-  baseState();
+  baseState({ _riftSeen: true }); // v2.4.0：基础载具要求「裂隙已触发」（探采平台随裂隙早开）
   const r = shop.buyVehicle({ id: 'scooter', base: 100 });
   assert.equal(r, true, `载具购买应成功，实际 ${r}`);
   assert.equal(S.upgrades.scooter, 1);
 });
 
 test('shop.buyDmUpgrade：DM 消耗升级成功（dmsight）', () => {
-  baseState();
+  // v2.4.0：深渊商店 = 探采高级，要求 裂隙 ∧ 星图（星图 = PT 锚点 + RP 锚点 + 第 4 章 + 深空探测）
+  baseState({ _riftSeen: true, chapter: '4', upgrades: { rp_vault: 1, pt_vault: 1 }, tech: { deep_space: 1 } });
   const dm0 = S.dm;
   const r = shop.buyDmUpgrade({ id: 'dmsight', dmCost: 5 });
   assert.equal(r, true, `DM 升级应成功，实际 ${r}`);

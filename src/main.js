@@ -53,6 +53,7 @@ import { AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_CREW_REQUIRED_IDS,
   ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleCrewDemand, crewSizeOf, groupRankOf } from './core/aiActionRegistry.js'; // v3.11.0：自动化动作声明层 QA 钩子；v3.11.2：消耗→常驻班组，重命名派生清单
 import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
+import { relicsTabOpen } from './core/unlocks.js'; // v2.4.0：遗物/探采 tab 只按「章节 ∧ 裂隙」开放（DM 不再是入口前置）
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderEchoShop } from './modules/echoShop.js'; // v4.2.X：轮回移除，回响商店并入晋升面板
@@ -1532,8 +1533,9 @@ function refreshTabVisibility() {
   // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
   // v3.12.3 反馈③：统一不再提示解锁条件——锁定态只保留「不可用」
   if (riftBtn && riftBtn.dataset.locked === '1') riftBtn.removeAttribute('title');
-  // v2.7.0：深渊遗物——裂隙触发 ∧ DM 已发现（与探采平台/深渊商店同门控链）
-  setTabLocked(document.getElementById('btn-relics'), !relicsUnlocked());
+  // v2.7.0：深渊遗物 tab = 章节 ∧ 裂隙（v2.4.0：去掉 DM 前置——探采平台住在这个 tab 里，
+  //   而 DM 只能靠探采平台挣，要求 DM 才开 tab 会让「探采」永远进不去；遗物卡仍要求 DM）
+  setTabLocked(document.getElementById('btn-relics'), !relicsTabOpen(S));
   // v2.8.6 B2a：政策——有开放政策组才开放
   const policyBtn = document.getElementById('btn-policy');
   setTabLocked(policyBtn, !(policyOpenGroups().length > 0));

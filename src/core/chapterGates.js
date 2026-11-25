@@ -23,22 +23,28 @@ export function chapterAtLeast(n, state) {
 //   第 1 章 遗物 + 裂隙、第 2 章 异兽、第 3 章 宗教 + 政策；集市移出第 2 章，改第 7 章开张。
 //   · relics 1：裂隙在第 1 章（8 线程 + 10 分钟）就会出现，遗物与裂隙同章解锁；
 //     relicsUnlocked() 仍要求「裂隙已触发 ∧ DM 已发现」双资产条件，不会开局白送遗物。
-//   · religion/policy 3：第 3 章是第一个系统爆发章（星图同时接入），信仰/政策在这里合流。
+//   · religion/policy 3：第 3 章是「信仰 + 立法」的合流章。
 //   · bazaar 7：集市是「富余资源换稀缺资源」的中局模块，第 7 章（晋升 ≥15）职级点已充足，
 //     5 PP 买断不再像第 2 章那样「卡片永远灰」（旧口径只看 prestige≥1，被误读成第 2 章内容）。
-//   · transcend 6 / eternals 8 / resonance 10 / delve 11 / expedition 12 保持 v4.2 节奏
+//   · transcend 6 / eternals 8 / delve 11 / expedition 12 保持 v4.2 节奏
 //     （深潜涉及 ES≥3 + 宗教长链 + 30 天推演重校准，本批不动）。
+//
+// v2.4.0 反馈②重排（用户定稿「一章最多两个内容」+「探采要大幅提前」+「相位共鸣提前」）：
+//   · starchart 3 → 4：星图整体后移一档，让第 3 章只留宗教 + 政策两项；探采的高级内容
+//     （深渊商店 4 项 + 后三档载具）随星图一起在第 4 章放开。
+//   · resonance 10 → 5：相位共鸣前置到岔路口同章——它的前置只是「项目 ≥12 或晋升 ≥2」，
+//     第 5 章自然满足，压到 10 章纯属排期浪费。
 export const CHAPTER_GATES = Object.freeze({
   religion: 3,
   transcend: 6,
   policy: 3,
   eternals: 8,
   relics: 1,  // v4.3.36：原 3——遗物与裂隙同属第 1 章（资产门控仍在）
-  resonance: 10,
+  resonance: 5, // v2.4.0：原 10——前置（项目 ≥12 或晋升 ≥2）第 5 章就满足，提前到岔路口同章
   delve: 11,
   expedition: 12,
   bazaar: 7,  // v4.3.36：新增——集市不再挂在第 2 章的「首次晋升」上
-  starchart: 3, // v2.3.0：从 disclosure.starChartUnlocked 的 `< 3` 硬编码收进来（章节号唯一真源）
+  starchart: 4, // v2.3.0 收进本章号真源；v2.4.0：3 → 4（星图后移，第 3 章留给宗教 + 政策）
   pets: 2,      // v2.3.0：从 shop.js 的 `parseInt(S.chapter) >= 2` 硬编码收进来（饵料仓库入口章）
 });
 

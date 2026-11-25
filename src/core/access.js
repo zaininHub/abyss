@@ -90,6 +90,24 @@ export const ACCESS = Object.freeze({
   'shop.crossroad': { label: '岔路口设施', chapter: null, requires: [rules.is('crossroad', 'open', '岔路口尚未开放')] },
   'shop.offline': { label: '离线升级', chapter: null, requires: [rules.tech('offline1', '需先研究「远程协作」')] },
 
+  // —— 探采平台（v2.4.0：基础载具随裂隙早开；高级载具 / 深渊商店随星图）——
+  // shop.vehicle / shop.dm 是「核心循环」登记（无门禁）；下面三条才是真实权限：
+  //   基础载具 = 裂隙已触发（第 1 章就能买到，DM 不再是入口前置）；
+  //   后三档载具与深渊商店 = 星图（第 4 章）——「探采的高级内容合并到星图解锁」。
+  'vehicle.buy': { label: '载具（基础）', chapter: null, requires: [rules.rift('需先触发裂隙')] },
+  'vehicle.advanced': {
+    label: '载具（高级）',
+    chapter: null,
+    requires: [rules.rift('需先触发裂隙'), rules.starChart('高级载具需先开启星图')],
+  },
+  'dm.shop': {
+    label: '深渊商店',
+    chapter: null,
+    requires: [rules.rift('需先触发裂隙'), rules.starChart('深渊商店需先开启星图')],
+  },
+  // 遗物 tab 自身的可见性：章节 + 裂隙，**不要 DM**（v2.4.0 拆掉「先有 DM 才看得到探采平台」的死锁）。
+  'relic.tab': { label: '遗物 / 探采入口', chapter: 'relics', requires: [rules.rift('需先触发裂隙')] },
+
   // —— 科技 / 遗物 / 裂隙 / 永恒矩阵 ——
   'tech.buy': { label: '科技', chapter: null, requires: [], note: '逐项 minChapter + req 由调用方经 ctx.chapter / ctx.requires 传入' },
   'eternal.buy': { label: '永恒矩阵', chapter: 'eternals', requires: [rules.anchor('es', '需完成首次晋升（ES 未发现）')] },

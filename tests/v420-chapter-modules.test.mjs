@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { S } from '../src/state.js';
 import { chapterNumOf, gateOpen, CHAPTER_GATES, runUpgrades, UPGRADE_VER } from '../src/core/chapterGates.js';
-import { CHAPTER_UNLOCKS, unlocksAtChapter, allUnlockedUpTo } from '../src/data/chapterUnlocks.js';
+import { CHAPTER_UNLOCKS, unlocksAtChapter, allUnlockedUpTo, UNLOCKS_PER_CHAPTER_MAX } from '../src/data/chapterUnlocks.js';
 import { canUnlockReligion } from '../src/modules/religions.js';
 import { policyOpenGroups, hasPendingPolicy, policyMult } from '../src/data/policies.js';
 import { resonanceUnlocked } from '../src/core/resonance.js';
@@ -23,11 +23,11 @@ test('A1 chapterNumOf 读 S.chapter 数字部分；变体章取数字', () => {
   assert.equal(chapterNumOf({ chapter: '6A' }), 6);
   assert.equal(chapterNumOf({}), 1);
 });
-test('A2 十一处章节门禁映射（v4.3.36 重排；v2.3.0 收进 starchart/pets 两个原硬编码章号）', () => {
+test('A2 十一处章节门禁映射（v2.4.0：星图后移到第 4 章、相位共鸣提前到第 5 章）', () => {
   assert.deepEqual({ ...CHAPTER_GATES }, {
     religion: 3, transcend: 6, policy: 3, eternals: 8, relics: 1,
-    resonance: 10, delve: 11, expedition: 12, bazaar: 7,
-    starchart: 3, pets: 2,
+    resonance: 5, delve: 11, expedition: 12, bazaar: 7,
+    starchart: 4, pets: 2,
   });
 });
 test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒拒绝（v2.3.0 fail-closed）', () => {
@@ -36,6 +36,11 @@ test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒拒绝�
   assert.equal(gateOpen('relics', { chapter: '1' }), true, '遗物第 1 章起放行');
   assert.equal(gateOpen('bazaar', { chapter: '6' }), false);
   assert.equal(gateOpen('bazaar', { chapter: '7' }), true);
+  // v2.4.0：星图 3→4、相位共鸣 10→5
+  assert.equal(gateOpen('starchart', { chapter: '3' }), false, '星图不再在第 3 章开');
+  assert.equal(gateOpen('starchart', { chapter: '4' }), true);
+  assert.equal(gateOpen('resonance', { chapter: '4' }), false, '相位共鸣第 4 章仍锁');
+  assert.equal(gateOpen('resonance', { chapter: '5' }), true);
   // v2.3.0：未知 gate id 由「恒放行」改为 fail-closed——拼错/已删 id 不再静默放行。
   assert.equal(gateOpen('unknown', { chapter: '18' }), false);
 });
@@ -125,14 +130,28 @@ test('D2 基础产出键恒生效（不受资源门禁误伤）', () => {
 });
 
 // ---------- E 注册表与公告 ----------
-test('E1 注册表：第 1/3 章各三条，第 9 章为远征积累章；13~17 未实装不登记；id 全局唯一', () => {
+test('E0 一章最多两个内容（base 开局基础设施不计）——v2.4.0 用户定稿', () => {
+  const byChapter = new Map();
+  for (const x of CHAPTER_UNLOCKS) {
+    if (x.base) continue;
+    byChapter.set(x.chapter, [...(byChapter.get(x.chapter) || []), x.id]);
+  }
+  for (const [n, list] of byChapter) {
+    assert.ok(list.length <= UNLOCKS_PER_CHAPTER_MAX, `第 ${n} 章登记了 ${list.length} 个内容（上限 ${UNLOCKS_PER_CHAPTER_MAX}）：${list.join('/')}`);
+  }
+  // 第 9 章（远征积累）/ 第 10 章（镜像留给 P2）本批不登记
+  for (const n of [9, 10]) assert.equal(byChapter.has(n), false, `第 ${n} 章不应登记内容`);
+});
+test('E1 注册表：第 1/4/5 章各两条，第 9/10 章留空；13~17 未实装不登记；id 全局唯一', () => {
   const chapters = [...new Set(CHAPTER_UNLOCKS.map(x => x.chapter))];
-  assert.deepEqual(chapters, [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 18]);
-  assert.deepEqual(unlocksAtChapter(1).map(x => x.id), ['workbench', 'rift', 'relics'], '第一章：工作台 + 裂隙 + 遗物');
-  assert.deepEqual(unlocksAtChapter(3).map(x => x.id), ['starchart', 'religion', 'policy'], '第三章：星图 + 宗教 + 政策');
-  assert.deepEqual(unlocksAtChapter(2).map(x => x.id), ['pets'], '第二章只登记异兽（集市已移出）');
+  assert.deepEqual(chapters, [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 18]);
+  assert.deepEqual(unlocksAtChapter(1).map(x => x.id), ['workbench', 'rift', 'relics'], '第一章：工作台 + 裂隙/探采 + 遗物');
+  assert.deepEqual(unlocksAtChapter(2).map(x => x.id), ['pets'], '第二章只登记异兽');
+  assert.deepEqual(unlocksAtChapter(3).map(x => x.id), ['religion', 'policy'], '第三章：宗教 + 政策（星图已后移）');
+  assert.deepEqual(unlocksAtChapter(4).map(x => x.id), ['starchart', 'es'], '第四章：星图/探采高级 + ES');
+  assert.deepEqual(unlocksAtChapter(5).map(x => x.id), ['crossroad', 'resonance'], '第五章：岔路口 + 相位共鸣');
   assert.equal(unlocksAtChapter(7).map(x => x.id).includes('bazaar'), true, '集市登记在第 7 章');
-  for (const n of [9, 13, 14, 15, 16, 17]) assert.equal(unlocksAtChapter(n).length, 0, `第 ${n} 章不发虚假公告`);
+  for (const n of [9, 10, 13, 14, 15, 16, 17]) assert.equal(unlocksAtChapter(n).length, 0, `第 ${n} 章不发虚假公告`);
   const ids = CHAPTER_UNLOCKS.map(x => x.id);
   assert.equal(new Set(ids).size, ids.length, '解锁 id 全局唯一（allUnlockedUpTo 不可重复）');
 });

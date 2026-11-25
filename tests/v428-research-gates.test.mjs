@@ -98,7 +98,7 @@ test('G4 渲染/购买/签名/分组标题多处消费同一谓词（沿用 v310
 test('G5 行为：门控状态变化当帧重建研究面板（远征返航后 rp_starres 出现）', () => {
   fresh();
   S.tech = { deep_space: true }; // 星图开启（starChartUnlocked 真实口径）
-  S.chapter = '3';
+  S.chapter = '4'; // v2.4.0：星图门禁从第 3 章后移到第 4 章
   S.upgrades = { atrium: 1 }; // RP 锚点
   S.pt = 5;                   // 宠物模块解锁
   S.rp = 1e9;

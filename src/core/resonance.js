@@ -4,7 +4,8 @@
 //       逐层堆叠共鸣（每 12 秒 +1 层，上限 20 层）；换相位时层数减半，逼玩家在「守一个相位」
 //       与「随潮汐轮转」之间做取舍。玩家从四条管线里选一条作焦点：焦点管线每层 +1.5%，
 //       其余三条每层 -0.2%（有增益必有代价，与编排策略的设计口径一致）。
-// v4.2.0：相位共鸣绑第 10 章，门禁读 chapterGates.js（无 state 依赖，不成环）。
+// v4.2.0：相位共鸣绑章节门禁，门禁读 chapterGates.js（无 state 依赖，不成环）。
+// v2.4.0：10 → 5（提前到岔路口同章）——前置只是「项目 ≥12 或晋升 ≥2」，第 5 章自然满足。
 import { accessCheck } from './access.js'; // v2.3.0：相位共鸣解锁走访问层（章节 resonance + 资产门槛）
 //
 // 接线纪律（与项目「无死数据」红线一致）：
@@ -54,7 +55,7 @@ export function resonanceState(S) {
 
 export function resonanceUnlocked(S) {
   if (!S) return false;
-  // v4.2.0：相位共鸣绑第 10 章「镜像」（另一条时间线的你=相位）——原资产条件保留，AND 章节门禁。
+  // v4.2.0：相位共鸣绑章节（另一条时间线的你=相位）——原资产条件保留，AND 章节门禁（v2.4.0 起第 5 章）。
   // v2.3.0：条件收敛到 access 的 'resonance.open'（章节 + 12 项目/2 晋升），与 UI 文案同源。
   return accessCheck('resonance.open', S).ok;
 }

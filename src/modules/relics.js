@@ -4,6 +4,7 @@ import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 
 import { fmt } from './economy.js';
 import { RELICS, relicLevel, relicCost, relicMult, relicsUnlocked } from '../data/relics.js';
 import { accessCheck } from '../core/access.js'; // v2.3.0：购买权限唯一出口
+import { relicsTabOpen } from '../core/unlocks.js'; // v2.4.0：tab 可见性（章节 ∧ 裂隙）与购买权限分离
 
 let logFn = null;
 let toastFn = null;
@@ -69,11 +70,21 @@ export function renderRelics(container) {
   // v4.2.5 反馈①：index.html 新增静态「深渊遗物」h3 在本面板之前——它是「深渊商店」
   // 折叠的边界（foldSiblings 遇 h3 即停），也统一了遗物分区的类目标题观感；
   // 标题恒显示（未解锁时面板渲染引导卡，标题与卡片语义一致），本函数不触碰其 display。
-  if (!relicsUnlocked()) {
+  // v2.4.0 反馈②：入口与购买权限分层——
+  //   tab 可见性 = 章节 ∧ 裂隙（探采平台住这里，必须早点进得来）；
+  //   遗物卡 = 额外要求 DM 已发现（accessCheck('relic.buy')），没 DM 时给「去哪挣 DM」的引导，不整块消失。
+  if (!relicsTabOpen(S)) {
     container.innerHTML = `<div class="panel" style="padding:14px">
       <h3 style="margin-top:0;color:var(--dim)">🌀 深渊遗物未苏醒</h3>
-      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">触发深渊裂隙并发现深渊物质（DM）后，尘封的遗物将在此苏醒。<br>
+      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">触发深渊裂隙后，尘封的遗物将在此苏醒。<br>
       遗物为跨转生长线强化：以 DM 购入，永久生效（转生保留）。</p></div>`;
+    return;
+  }
+  if (!relicsUnlocked()) {
+    container.innerHTML = `<div class="panel" style="padding:14px">
+      <h3 style="margin-top:0;color:var(--dim)">🌀 深渊遗物 · 待冥合</h3>
+      <p style="font-size:13px;line-height:1.9;color:var(--text-2)">遗物要吸收深渊物质（DM）才会醒来，而你还没有见过 DM。<br>
+      去上面的<b>探采平台</b>买入「外勤摩托队」开始采集 DM，或封印一次裂隙即可获得首笔深渊物质。</p></div>`;
     return;
   }
   let html = `<div class="panel" style="padding:14px">
