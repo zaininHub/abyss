@@ -153,7 +153,8 @@ test('A6 接线：乘区 / 帧结算 / 面板 / tab 四处都真的接上了', (
   assert.ok(fs.includes("'mirror',"), 'FRAME_SYSTEM_IDS 已登记');
   const main = src('src/main.js');
   assert.ok(main.includes("registerPanel({ key: 'mirror'"), '面板已注册');
-  assert.ok(/setTabLocked\(document\.getElementById\('btn-mirror'\)/.test(main), 'tab 锁定读 mirrorVisible');
+  // v2.6.0：tab 走三态（open / gated=??? / hidden）——镜像同样经 tabStage + accessStage 单源
+  assert.ok(/setTabStage\(document\.getElementById\('btn-mirror'\),\s*tabStage\(mirrorVisible\(\),\s*'mirror\.open'\)\)/.test(main), 'tab 三态读 mirrorVisible + accessStage');
   const html = src('index.html');
   assert.ok(html.includes('id="btn-mirror"') && html.includes('id="mirror-panel"'), 'DOM 挂载点存在');
   // 购买 / 选择入口统一走 accessCheck 策略表（与 v2.3.0 访问层同源）

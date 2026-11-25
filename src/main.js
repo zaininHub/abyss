@@ -55,6 +55,7 @@ import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, 
 import { renderMirror, handleMirrorClick, mirrorVisible } from './modules/mirror.js'; // v2.5.0：镜像协议（契约 / 算力战争 / 三方议会） // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { relicsTabOpen } from './core/unlocks.js'; // v2.4.0：遗物/探采 tab 只按「章节 ∧ 裂隙」开放（DM 不再是入口前置）
+import { accessStage } from './core/access.js'; // v2.6.0：解锁三态（open / gated=???灰显 / hidden=不显示）
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
 import { renderPrestige, renderTalentModal, doPrestige, canPrestige } from './modules/prestige.js';
 import { renderEchoShop } from './modules/echoShop.js'; // v4.2.X：轮回移除，回响商店并入晋升面板
@@ -1516,6 +1517,17 @@ function setTabLocked(btn, locked) {
     btn.style.display = '';
   }
 }
+// v2.6.0（用户口径）：顶栏 tab 也走同一套三态——「本章可解锁但前置未达」显示 ??? 灰显，
+//   「本章不可能解锁」（章节门禁还没走到）直接不显示。判定真源是 core/access.js 的 accessStage。
+function setTabStage(btn, stage) {
+  if (!btn) return;
+  if (stage === 'hidden') { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  setTabLocked(btn, stage === 'gated');
+}
+function tabStage(unlocked, policyId) {
+  return unlocked ? 'open' : accessStage(policyId, S);
+}
 function refreshTabVisibility() {
   // v2.8.7：研究点 tab 仅 RP 解锁后显示（保持可探索性，未解锁不展示入口）
   // v3.0.9 反馈②：解锁口径收紧为「购入矩阵存储库」（anchorShown('rp')）——溢出只开放仓库购买入口，
@@ -1526,25 +1538,25 @@ function refreshTabVisibility() {
   if (rpBtn) rpBtn.style.display = anchorDone('rp', S) ? '' : 'none';
   // 星图：v3.12.9 起唯一判定源 = starChartUnlocked(S)（宠物/PT 锚点 → RP 锚点 → 深空探测或远征记录）。
   //   未解锁仍是「???」锁定态；不再在此处另抄一份条件，避免顶栏 / tab / 研究分组口径分叉。
-  setTabLocked(document.getElementById('btn-expedition'), !starChartUnlocked(S));
+  setTabStage(document.getElementById('btn-expedition'), tabStage(starChartUnlocked(S), 'expedition.launch'));
   // v4.2.0 宗教：章节门禁（v4.3.36 起第 3 章）+ 真实解锁态。
   //   旧实现的 _religionHintSeen 持久标记会在首章就放行 tab（用户反馈①：宗教第一章就解锁），
   //   且 v4.2 load() 已一次性清除该标记；此处不再重写，避免脏标记复活。
-  setTabLocked(document.getElementById('btn-religion'), !(religionUnlocked() || canUnlockReligion()));
+  setTabStage(document.getElementById('btn-religion'), tabStage(religionUnlocked() || canUnlockReligion(), 'religion.unlock'));
   // v2.6.0 深潜：ES≥3 + DM 发现 + 宗教已信奉才开放
-  setTabLocked(document.getElementById('btn-delve'), !(delveUnlocked() || canUnlockDelve()));
+  setTabStage(document.getElementById('btn-delve'), tabStage(delveUnlocked() || canUnlockDelve(), 'delve.unlock'));
   // v2.6.1 裂隙：首次触发裂隙（或已封印/深入）后开放
   const riftBtn = document.getElementById('btn-rift-tab');
-  setTabLocked(riftBtn, !riftShown(S)); // v4.2.X：统一裂隙门控真源
+  setTabStage(riftBtn, tabStage(riftShown(S), 'rift.tech')); // v4.2.X：统一裂隙门控真源
   // v3.3.5 反馈③：未解锁时悬浮提示给出「还有多久首次出现」，让裂隙触发不再是黑箱
   // v3.12.3 反馈③：统一不再提示解锁条件——锁定态只保留「不可用」
   if (riftBtn && riftBtn.dataset.locked === '1') riftBtn.removeAttribute('title');
   // v2.7.0：深渊遗物 tab = 章节 ∧ 裂隙（v2.4.0：去掉 DM 前置——探采平台住在这个 tab 里，
   //   而 DM 只能靠探采平台挣，要求 DM 才开 tab 会让「探采」永远进不去；遗物卡仍要求 DM）
-  setTabLocked(document.getElementById('btn-relics'), !relicsTabOpen(S));
+  setTabStage(document.getElementById('btn-relics'), tabStage(relicsTabOpen(S), 'relic.tab'));
   // v2.8.6 B2a：政策——有开放政策组才开放
   const policyBtn = document.getElementById('btn-policy');
-  setTabLocked(policyBtn, !(policyOpenGroups().length > 0));
+  setTabStage(policyBtn, tabStage(policyOpenGroups().length > 0, 'policy.open'));
   // v4.2.0 反馈②：有「开放但尚未选定」的政策组 → tab 上挂感叹号（::after 伪元素，不碰 textContent）；
   //   全部选定后自动消失。锁定态不挂（??? 阶段无可选语义）。
   if (policyBtn) {
@@ -1553,9 +1565,9 @@ function refreshTabVisibility() {
   }
   // v3.12.0 反馈⑬：未买断也可点进去看「职级点开启」卡。
   // v4.3.36 反馈①：集市入口改由章节门禁决定（第 7 章）——第 2 章不再出现一个买不起的集市 tab。
-  setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
+  setTabStage(document.getElementById('btn-bazaar'), tabStage(moduleVisible('bazaar'), 'bazaar.unlock'));
   // v2.5.0：镜像协议第 7 章接入（契约随 tab 开放，算力战争/三方议会各自在第 8/9 章内解锁）
-  setTabLocked(document.getElementById('btn-mirror'), !mirrorVisible());
+  setTabStage(document.getElementById('btn-mirror'), tabStage(mirrorVisible(), 'mirror.open'));
 }
 
 // ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
@@ -1729,6 +1741,9 @@ function syncPrestigePanelVisibility() {
 
 // v2.0：渐进开放标签页锁定状态更新
 function updateTabLocks() {
+  // v2.6.0：异兽 tab 先按三态判——章节没到（第 2 章前）整项不显示；到了但 PT 未解锁 → ??? 灰显。
+  const petsBtnV26 = document.getElementById('btn-pets');
+  if (petsBtnV26) setTabStage(petsBtnV26, tabStage(petsModuleUnlocked(S), 'pets.buy'));
   const locks = [
     { id: 'btn-tech', stage: 'P1', label: '科技树' },
     { id: 'btn-pets', stage: 'P2', label: '异兽' },
@@ -1748,9 +1763,8 @@ function updateTabLocks() {
     const anchorKey = TAB_ANCHOR[id];
     // v3.0.4 反馈②：异兽回归 P2 章节门控（chapter≥3）——此前 petsPt 恒 true 导致开局即解锁
     // v3.7.2 反馈①：异兽再叠 PT 锚点（见 petsTabUnlocked），修复「PT 未解锁、异兽大模块却已开放」
-    const unlocked = id === 'btn-pets'
-      ? petsModuleUnlocked(S)
-      : isStageUnlocked(stage, S) && (!anchorKey || anchorDone(anchorKey, S));
+    if (id === 'btn-pets') continue; // v2.6.0：异兽已由上方 setTabStage 三态接管
+    const unlocked = isStageUnlocked(stage, S) && (!anchorKey || anchorDone(anchorKey, S));
     if (!unlocked) {
       if (btn.dataset.locked === '1') continue; // v3.3.9 反馈④：已由 setTabLocked 接管（保留「???」）
       btn.classList.add('tab-locked');

@@ -90,7 +90,7 @@ test('A4 对任意状态，模块解锁恒等于顶栏 PT 锚点', () => {
 
 test('A5 接线：tab 与 switchTab 都走同一判定源，锁定提示已同步', () => {
   assert.match(MAIN_SRC, /import\s*\{[^}]*petsModuleUnlocked[^}]*\}\s*from\s*'\.\/modules\/disclosure\.js'/, 'main.js 应导入判定源');
-  assert.match(MAIN_SRC, /\?\s*petsModuleUnlocked\(S\)/, 'updateTabLocks 应使用判定源');
+  assert.match(MAIN_SRC, /tabStage\(petsModuleUnlocked\(S\),\s*'pets\.buy'\)/, 'updateTabLocks 应使用判定源（v2.6.0 三态）');
   assert.match(MAIN_SRC, /id === 'pets' && !petsModuleUnlocked\(S\)/, 'switchTab 应有兜底');
   assert.match(MAIN_SRC, /异兽将在解锁 PT 后开放/, '锁定提示应说明 PT 条件');
   assert.match(DISC_SRC, /export function petsModuleUnlocked/, '判定源应是 disclosure.js 的纯函数');

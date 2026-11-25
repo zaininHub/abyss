@@ -12,7 +12,7 @@ import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW, BADGE_ICON_HOARD } from './disclosure.js'; // v2.0.0：囤囤鼠认证徽章图形 // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { gateOpen } from '../core/chapterGates.js'; // v4.3.35 反馈①：研究项章节门禁（政策研究绑第 7 章）
-import { accessCheck } from '../core/access.js'; // v2.3.0：购买权限唯一出口（离线升级 / 岔路口设施）
+import { accessCheck, accessStage } from '../core/access.js'; // v2.3.0：购买权限唯一出口（离线升级 / 岔路口设施）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js';
@@ -939,10 +939,13 @@ export function renderVehicles(container) {
     // 链首必须可购否则链永不推进（v2.3.2 §5.2 链提示废除，本判据保留不动）。
     const isNext = i === split.chainNextIdx;
     if (!owned && isNext) {
-      const gate = VEHICLE_IDS.indexOf(u.id) > 0 ? accessCheck('vehicle.advanced', S) : accessCheck('vehicle.buy', S);
+      const advanced = VEHICLE_IDS.indexOf(u.id) > 0;
+      const gate = advanced ? accessCheck('vehicle.advanced', S) : accessCheck('vehicle.buy', S);
       if (!gate.ok) {
-        container.appendChild(makeVehicleGateCard(gate.reason));
+        // v2.6.0（用户口径）：本章不可能解锁（星图之前）→ 链到此为止，不摆 ??? 占位；
+        //   本章可达但前置未达（星图未开）→ 摆 ??? 门禁卡，玩家知道后面还有东西。
         chainBlocked = true;
+        if (!advanced || accessStage('vehicle.advanced', S) !== 'hidden') container.appendChild(makeVehicleGateCard(gate.reason));
         return;
       }
     }
@@ -1056,7 +1059,16 @@ export function renderDmShop(container) {
   if (!dmShown) { container.innerHTML = ''; return; }
   container.innerHTML = '';
   dmItemEls.clear();
-  // v2.4.0 反馈②：深渊商店 = 探采高级，随星图解锁；未到章时给一张门禁卡（标题保留，玩家知道它存在）
+  // v2.6.0（用户口径）：三态——本章不可能解锁（星图之前）整块不显示，连标题一起收掉；
+  //   到了本章但前置未达（星图未开）才留一张 ??? 门禁卡。
+  const dmStage = accessStage('dm.shop', S);
+  if (dmStage === 'hidden') {
+    if (dmTitle) dmTitle.style.display = 'none';
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = foldDisplayFor(dmTitle);
+  // v2.4.0 反馈②：深渊商店 = 探采高级，随星图解锁；本章可达但前置未达时给一张门禁卡
   const dmGate = accessCheck('dm.shop', S);
   if (!dmGate.ok) {
     const div = document.createElement('div');

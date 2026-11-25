@@ -98,11 +98,13 @@ export const ACCESS = Object.freeze({
   'vehicle.advanced': {
     label: '载具（高级）',
     chapter: null,
+    stageChapter: 'starchart', // v2.6.0：本章不可能解锁时整项不显示（灰显/隐藏三态见 accessStage）
     requires: [rules.rift('需先触发裂隙'), rules.starChart('高级载具需先开启星图')],
   },
   'dm.shop': {
     label: '深渊商店',
     chapter: null,
+    stageChapter: 'starchart',
     requires: [rules.rift('需先触发裂隙'), rules.starChart('深渊商店需先开启星图')],
   },
   // 遗物 tab 自身的可见性：章节 + 裂隙，**不要 DM**（v2.4.0 拆掉「先有 DM 才看得到探采平台」的死锁）。
@@ -141,7 +143,7 @@ export const ACCESS = Object.freeze({
   },
 
   // —— 远征 / 殖民 ——
-  'expedition.launch': { label: '远征出发', chapter: null, requires: [rules.starChart('星图尚未开启')] },
+  'expedition.launch': { label: '远征出发', chapter: null, stageChapter: 'starchart', requires: [rules.starChart('星图尚未开启')] },
   'colony.claim': {
     label: '深空殖民',
     chapter: 'expedition',
@@ -152,7 +154,7 @@ export const ACCESS = Object.freeze({
   // —— 集市 / 异兽 / AI / 回响 ——
   'bazaar.unlock': { label: '深渊集市买断', chapter: 'bazaar', requires: [rules.prestige(1, '需先完成 1 次晋升')] },
   'bazaar.trade': { label: '集市交易', chapter: null, requires: [rules.flag('bazaar.unlocked', '集市尚未开张')] },
-  'pets.buy': { label: '异兽', chapter: null, requires: [rules.anchor('pt', '需先获得 PT（饵料仓库）')] },
+  'pets.buy': { label: '异兽', chapter: null, stageChapter: 'pets', requires: [rules.anchor('pt', '需先获得 PT（饵料仓库）')] },
   'assistant.buy': { label: 'AI 助手', chapter: null, requires: [rules.tech('ai_core', '需先研究「AI 管理核心」')] },
   'echo.buy': { label: '回响升级', chapter: null, requires: [rules.prestige(1, '需完成首次晋升')] },
 
@@ -200,6 +202,21 @@ export function accessCheck(id, s, ctx) {
 }
 
 /** 只要原因（UI 锁定卡用）；可买时返回空串。 */
+// v2.6.0（用户口径）：解锁三态——规则表已答「能不能」，这里再答「该不该露脸」。
+//   · open   ：条件全过 → 正常展示；
+//   · gated  ：本章内可以解锁，但前置还没达成 → 展示「???」并灰显（有盼头）；
+//   · hidden ：本章根本不可能解锁（章节门禁还没走到）→ 整项不显示（不留占位）。
+// 判据只看策略自带的章节门禁（policy.chapter / policy.stageChapter）：
+//   无章节门禁的动作（锚点 / 资源 / 科技）永远只可能是 open 或 gated——它们任何章节都可能达成。
+export function accessStage(id, s, ctx) {
+  const policy = Object.prototype.hasOwnProperty.call(ACCESS, id) ? ACCESS[id] : null;
+  if (!policy) return 'hidden';
+  if (accessCheck(id, s, ctx).ok) return 'open';
+  const gateId = (ctx && ctx.stageChapter) || policy.stageChapter || policy.chapter || null;
+  if (!gateId) return 'gated';
+  return gateOpen(gateId, s) ? 'gated' : 'hidden';
+}
+
 export function accessReason(id, s, ctx) {
   const r = accessCheck(id, s, ctx);
   return r.ok ? '' : r.reason;

@@ -91,7 +91,7 @@ test('H5 来信三段式：邀请落档一次 / 2 小时关注 / 完成钢印', 
   assert.match(PROG, /S\._hoarderInvited = true;/);
   assert.match(PROG, /S\._hoarderHintAt = now;/);
   assert.match(PROG, /now - \(Number\(S\._hoarderHintAt\) \|\| 0\) >= MUSEUM_HINT_INTERVAL_MS/);
-  assert.match(PROG, /仓管员递来一张清单：4 种仓储、等级合计 30/);
+  assert.match(PROG, /仓管员递来一张清单：为避免深渊侵袭带来的粮食危机，建造累计4种30座仓储/);
   assert.match(PROG, /仓管员又来看了一眼你的库房\.\.\./);
   assert.match(PROG, /仓管员盖下钢印：囤囤鼠认证——仓廪充实，一粒不落。/);
   // 新增键落档且跨晋升保留

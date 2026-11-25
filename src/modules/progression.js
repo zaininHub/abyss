@@ -263,7 +263,7 @@ export function checkSpecialTasks(S, log, toast) {
           S._hoarderInvited = true;
           S._hoarderHintAt = now;
           persist();
-          if (log) log('仓管员递来一张清单：4 种仓储、等级合计 30，攒齐就给你盖「囤囤鼠认证」。', '');
+          if (log) log('仓管员递来一张清单：为避免深渊侵袭带来的粮食危机，建造累计4种30座仓储。', '');
         } else if (S._hoarderInvited && now - (Number(S._hoarderHintAt) || 0) >= MUSEUM_HINT_INTERVAL_MS) {
           S._hoarderHintAt = now;
           persist();
