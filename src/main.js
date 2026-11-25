@@ -1559,7 +1559,7 @@ function refreshTabVisibility() {
 //   真正的 <button role="switch"> 由 switchHtml 产出并只包住滑块；事件委托仍走 [data-qs]。
 // v4.3.33 反馈①：行**不再复用 .btn 外观**。上一版行还带 btn 的边框 + 底色，看着仍像「一整块按钮」，
 //   但点空白处没反应（用户原话）。现在行是纯文本标签 + 右侧滑块，没有边框/卡片底色，
-//   相邻行之间只用一条发丝分隔线区分；弹层标题右侧补一句「点右侧滑块切换」提示操作位置。
+//   相邻行之间只用一条发丝分隔线区分。（v4.3.34：按要求去掉标题右侧的操作提示文案，标题恢复纯「自动转化」。）
 function qsOption(key, label, on, title) {
   return `<div class="qs-opt ${on ? 'on' : ''}" title="${title}">`
     + `<span class="qs-name">${label}</span>`

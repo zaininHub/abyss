@@ -2228,9 +2228,8 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 #quick-switches .qs-opt:not(.on) .qs-name { color: var(--text-2, #8b949e); }
 #quick-switches .qs-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 #quick-switches .qs-opt .ui-switch { cursor: pointer; }
-/* 弹层标题右侧的操作提示：行本身不可点，把「点哪里」写清楚 */
-.qs-fab-pop .qs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.qs-hint { font-size: 10px; font-weight: 400; color: var(--text-3); white-space: nowrap; }
+/* v4.3.34 反馈①：删掉标题右侧的「点右侧滑块切换」提示——按用户要求保持标题干净，
+   点击目标仍只在滑块（`.qs-opt` 行 cursor:default、标签 pointer-events:none 即可表达不可点）。 */
 /* 透明桥接伪元素：盖住「按钮 → 下拉」6px 断档，鼠标下移平滑进入弹层（与 .save-menu::after 同款思路） */
 .qs-fab::after {
   content: ''; position: absolute; right: 0; top: 100%;

@@ -1,6 +1,7 @@
 // v4.3.32 反馈（m02441 三项）：
 //   ① ⚡转化弹层：点击目标只在滑块（行本身不再可点）
 //      v4.3.33 追加：行不再套 .btn 外观——纯文本 + 右侧滑块 + 发丝分隔线（用户「还是一整块」）
+//      v4.3.34 追加：去掉标题右侧「点右侧滑块切换」提示文案
 //   ② 馆藏认证日志改成「馆长来信」三段式（详见 tests/v4332-feedback.test.mjs ②）
 //   ③ 馆藏认证徽章 = 图形 + 文字（内联 SVG 星章）
 import test from 'node:test';
@@ -54,10 +55,12 @@ test('①-4 行没有卡片外观：无边框/无底色/无 hover 高亮，只�
   assert.match(CSS, /#quick-switches \.qs-opt \+ \.qs-opt \{ box-shadow: inset 0 1px 0/, '相邻行用发丝线分隔');
 });
 
-test('①-5 弹层标题给出操作提示（行不可点，写清点哪里）', () => {
+test('①-5 弹层标题保持干净（v4.3.34：去掉「点右侧滑块切换」提示文案）', () => {
   const html = read('index.html');
-  assert.match(html, /class="save-list-label qs-head">自动转化<span class="qs-hint">点右侧滑块切换<\/span>/, '标题右侧提示点滑块切换');
-  assert.match(CSS, /\.qs-hint \{[^}]*font-size: 10px/, '提示为次级小字');
+  assert.match(html, /<div class="save-list-label">自动转化<\/div>/, '标题就是「自动转化」，无附加提示');
+  assert.doesNotMatch(html, /点右侧滑块切换/, '提示文案必须移除');
+  assert.doesNotMatch(html, /class="qs-hint"/, '提示节点必须移除');
+  assert.doesNotMatch(CSS, /\.qs-hint/, '提示样式必须移除（不留死代码）');
 });
 
 // ---------- ③ 徽章图形 ----------
