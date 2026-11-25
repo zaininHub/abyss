@@ -9,7 +9,7 @@
 export const PANEL_KEYS = Object.freeze([
   '__prelude', 'top', 'hero', 'ai', 'tide', 'corruption', '__peak', 'shop', 'rp', 'tech',
   'pets', '__tentacle', 'prestige', 'relics', 'projects', 'story', 'storyline',
-  'orchestration', 'achievements', 'religion', 'policy', 'delve', 'bazaar',
+  'orchestration', 'achievements', 'religion', 'policy', 'delve', 'bazaar', 'mirror',
   'rift', 'riftTab', 'expedition',
 ]);
 
@@ -26,7 +26,7 @@ export const DIRTY_FALSE_KEYS = Object.freeze(['relics', 'storyline', 'achieveme
 export const PANEL_DIRTY_ON_START = Object.freeze([
   'top', 'hero', 'shop', 'tech', 'relics', 'pets', 'prestige', 'projects', 'story',
   'rift', 'expedition', 'riftTab', 'tide', 'corruption', 'ai', 'religion', 'delve',
-  'bazaar', 'storyline', 'achievements', 'orchestration',
+  'bazaar', 'storyline', 'achievements', 'orchestration', 'mirror',
 ]);
 
 /** 由清单派生 runtime.dirty 初始键，消除幽灵键与缺键。 */

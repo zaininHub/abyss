@@ -25,15 +25,20 @@ export const CHAPTER_UNLOCKS = Object.freeze([
   { chapter: 5,  id: 'crossroad', name: '岔路口',              announce: '命运的岔路口出现——深渊已在低语中显形' },
   { chapter: 5,  id: 'resonance', name: '相位共鸣',            announce: '相位共鸣接入编排卡——另一个你开始共振' },
   { chapter: 6,  id: 'transcend', name: '超验 / 隐密圣学',     announce: '赞颂与超验开启，神格之路铺开' },
+  // v2.5.0：永恒矩阵提前到第 6 章与超验同章——「飞升」不再是一个空章，ES 有了当期的去处
+  { chapter: 6,  id: 'eternals',  name: '永恒矩阵',            announce: '永恒矩阵浮现，ES 可换成永久强化' },
   // 第 7 章：集市从「首发晋升」挪到中局——职级点已攒够，5 PP 买断不再卡死
   { chapter: 7,  id: 'bazaar',    name: '深渊集市',            announce: '深渊集市开张——富余资源可以换稀缺资源' },
-  { chapter: 8,  id: 'eternals',  name: '永恒矩阵',            announce: '永恒矩阵浮现，ES 可换成永久强化' },
+  // v2.5.0：镜像协议三件套（原设计稿 13/14/15 章）提前到 7/8/9 章，一个 tab 逐章放开
+  { chapter: 7,  id: 'mirror',        name: '镜像协议 / 镜像契约', announce: '另一条时间线的你发来通讯——可以签下第一份契约' },
+  { chapter: 8,  id: 'mirrorwar',     name: '算力战争',           announce: '镜像开始截取你的算力——战功可换永久军备' },
+  { chapter: 9,  id: 'mirrorcouncil', name: '三方议会',           announce: '三个你坐到同一张桌子前，开始分算力' },
   { chapter: 11, id: 'delve',     name: '深潜',                announce: '深潜开放，向虚空下潜' },
   { chapter: 12, id: 'expedition', name: '深空殖民',           announce: '深空殖民开启，可以在星系里写下自己的服务器' },
-  // 第 9 章（深渊）是「完成 20 次远征」的积累章；第 10 章（镜像）留给 P2 的镜像协议三件套，
-  //   二者本批都不新增模块（相位共鸣已提前到第 5 章）。
-  // 13~17 章（镜像契约/算力战争/三方议会/造物工坊/全知之眼）属设计稿 P2/P3 新玩法，
-  //   尚未实装——遵守「无死数据」红线，不在注册表登记、不发虚假公告；实装时补登记即可。
+  // v2.5.0：第 9 章被镜像第三块（三方议会）占用；第 10 章（镜像）成为纯积累章，
+  //   相位共鸣已提前到第 5 章，镜像契约/算力战争分别落在第 7/8 章。
+  // 13~17 章（造物工坊/全知之眼）属设计稿 P3 新玩法，尚未实装——遵守「无死数据」红线，
+  //   不在注册表登记、不发虚假公告；实装时补登记即可。
   { chapter: 18, id: 'finale',    name: '终局叙事',            announce: '终章——你成为了自己的服务器' },
 ]);
 

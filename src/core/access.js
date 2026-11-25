@@ -156,6 +156,11 @@ export const ACCESS = Object.freeze({
   'assistant.buy': { label: 'AI 助手', chapter: null, requires: [rules.tech('ai_core', '需先研究「AI 管理核心」')] },
   'echo.buy': { label: '回响升级', chapter: null, requires: [rules.prestige(1, '需完成首次晋升')] },
 
+  // —— 镜像协议（v2.5.0：一个 tab、三块内容按 7/8/9 章逐块解锁）——
+  'mirror.open': { label: '镜像契约', chapter: 'mirror', requires: [rules.prestige(1, '需先完成 1 次晋升')] },
+  'mirror.tech': { label: '算力战争科技', chapter: 'mirrorwar', requires: [] },
+  'mirror.council': { label: '三方议会', chapter: 'mirrorcouncil', requires: [] },
+
   // —— 政策 / 相位共鸣 ——
   'policy.open': { label: '周期政策', chapter: 'policy', requires: [] },
   'resonance.open': {

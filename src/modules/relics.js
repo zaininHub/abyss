@@ -87,9 +87,9 @@ export function renderRelics(container) {
       去上面的<b>探采平台</b>买入「外勤摩托队」开始采集 DM，或封印一次裂隙即可获得首笔深渊物质。</p></div>`;
     return;
   }
+  // v2.5.0 反馈②：去掉副标题与说明段——遗物卡本身写着等级/费用/效果，顶部两行复述只是噪音
   let html = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0;color:var(--purple)">🌀 深渊遗物 <span style="font-size:12px;font-weight:400;color:var(--text-2)">DM 购买 · 跨转生保留 · 裂隙触发后苏醒</span></h3>
-    <p style="font-size:12px;line-height:1.8;color:var(--text-2);margin:4px 0 10px">以深渊物质 DM 唤醒尘封遗物，每件 5 级，费用 ×1.8/级递增。深渊物质（DM）来自载具外勤与深潜，是超长线资产。</p>`;
+    <h3 style="margin-top:0;color:var(--purple)">🌀 深渊遗物</h3>`;
   // v2.8.22 ⑥：净化节点移入遗物（DM 区）——熵减协议解锁后显示，DM 购买、限购 3 级
   // v3.12.6 ⑤：熵减协议是「本局科技」，晋升/轮回会重置，但净化节点是 DM 计价、跨转生保留的资产。
   //   原判定只看 tech → 一晋升整块消失（用户实报「遗物的净化节点等升级还是没有」）。

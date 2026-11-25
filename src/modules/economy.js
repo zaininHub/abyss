@@ -19,6 +19,7 @@ export { researchMult };
 import { orchestrationMult } from '../core/orchestration.js'; // v3.8.0：效能编排读侧（ep / dm 标准乘区）
 import { V21_BUILDINGS, buildingCostV21 } from '../data/buildings.js';
 import { relicMult } from '../data/relics.js'; // v2.7.0：深渊遗物乘区（古卷/虚眼/罗盘）
+import { mirrorGlobalMult, mirrorOfflineMult } from './mirror.js'; // v2.5.0：镜像协议乘区（全局 / 离线）
 import {
   threadBindOutputFactor, threadBindSalaryFactor, converterThreadBoost,
   leaderGlobalMult, threadLevel, threadLevelMult, converterEnabled,
@@ -272,6 +273,8 @@ export function globalMult() {
   if (S.religion && S.religion.crusade > 0) m *= Math.pow(1 + 0.12, S.religion.crusade);
   // v2.7.0 遗物：深渊古卷——全局产出 +8%/级（DM 超长线消费）
   m *= relicMult('tome');
+  // v2.5.0：镜像协议——契约悬赏 / 算力回收 / 议席 / 三席齐永久加成
+  m *= mirrorGlobalMult();
   if (!isFinite(m)) m = 1;
   // v2.0 §1.3 软上限：m > 5000 → 5000 + sqrt(m - 5000) * 70
   // v2.7.4 ③：深渊之心实装——腐化峰值 >100% 后每 10% 转化 +5% 全局产出
@@ -404,7 +407,7 @@ export function offlineCap() {
 // v3.2.4 反馈⑤：离线效率统一口径 = 基础率（信号塔/天赋/离线升级/遗物等）× 离线协议研究（+12%/级）——
 // 原面板展示/暂停预览/暂停结算漏乘 researchMult('offline')，「离线协议」升级后当前离线效率不涨
 export function offlineEffRate() {
-  return offlineRate() * researchMult('offline');
+  return offlineRate() * researchMult('offline') * mirrorOfflineMult(); // v2.5.0：冷存储 + 静谧议席
 }
 
 export function rpMult() {

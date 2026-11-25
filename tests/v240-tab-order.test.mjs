@@ -23,6 +23,7 @@ const TAB_CHAPTER = {
   'btn-policy': CHAPTER_GATES.policy,
   'btn-expedition': CHAPTER_GATES.starchart,
   'btn-bazaar': CHAPTER_GATES.bazaar,
+  'btn-mirror': CHAPTER_GATES.mirror, // v2.5.0：镜像协议与集市同章（第 7 章）
   'btn-delve': CHAPTER_GATES.delve,
 };
 // 隐藏桩：switchTab 兼容用，display:none，不参与排序。
@@ -55,7 +56,7 @@ test('T3 当前顺序快照（重排需同步本条）', () => {
     'btn-shop', 'btn-tech', 'btn-rp',
     'btn-rift-tab', 'btn-relics', 'btn-pets',
     'btn-religion', 'btn-policy',
-    'btn-expedition', 'btn-bazaar', 'btn-delve',
+    'btn-expedition', 'btn-bazaar', 'btn-mirror', 'btn-delve',
   ]);
 });
 
@@ -63,7 +64,8 @@ test('T4 集市长在第 7 章、深潜之前；裂隙早于遗物（遗物 tab 
   const ids = tabIds();
   const at = id => ids.indexOf(id);
   assert.ok(at('btn-bazaar') > at('btn-expedition'), '集市（第 7 章）应排在星图（第 4 章）之后');
-  assert.ok(at('btn-bazaar') < at('btn-delve'), '集市（第 7 章）应排在深潜（第 11 章）之前');
+  assert.ok(at('btn-bazaar') < at('btn-mirror'), '集市与镜像同章：集市在前（先有钱，再谈交易）');
+  assert.ok(at('btn-mirror') < at('btn-delve'), '镜像（第 7 章）应排在深潜（第 11 章）之前');
   assert.ok(at('btn-rift-tab') < at('btn-relics'), '裂隙早于遗物（relicsTabOpen 依赖裂隙已触发）');
   assert.ok(at('btn-relics') < at('btn-pets'), '遗物（第 1 章）应排在异兽（第 2 章）之前');
 });

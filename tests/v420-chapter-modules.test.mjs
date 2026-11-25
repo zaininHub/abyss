@@ -23,11 +23,12 @@ test('A1 chapterNumOf 读 S.chapter 数字部分；变体章取数字', () => {
   assert.equal(chapterNumOf({ chapter: '6A' }), 6);
   assert.equal(chapterNumOf({}), 1);
 });
-test('A2 十一处章节门禁映射（v2.4.0：星图后移到第 4 章、相位共鸣提前到第 5 章）', () => {
+test('A2 十四处章节门禁映射（v2.5.0：永恒矩阵 8→6，镜像协议三件套 7/8/9 落地）', () => {
   assert.deepEqual({ ...CHAPTER_GATES }, {
-    religion: 3, transcend: 6, policy: 3, eternals: 8, relics: 1,
+    religion: 3, transcend: 6, policy: 3, eternals: 6, relics: 1,
     resonance: 5, delve: 11, expedition: 12, bazaar: 7,
     starchart: 4, pets: 2,
+    mirror: 7, mirrorwar: 8, mirrorcouncil: 9,
   });
 });
 test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒拒绝（v2.3.0 fail-closed）', () => {
@@ -41,6 +42,15 @@ test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒拒绝�
   assert.equal(gateOpen('starchart', { chapter: '4' }), true);
   assert.equal(gateOpen('resonance', { chapter: '4' }), false, '相位共鸣第 4 章仍锁');
   assert.equal(gateOpen('resonance', { chapter: '5' }), true);
+  // v2.5.0：永恒矩阵 8→6、镜像三件套 7/8/9
+  assert.equal(gateOpen('eternals', { chapter: '5' }), false, '永恒矩阵不再等到第 8 章');
+  assert.equal(gateOpen('eternals', { chapter: '6' }), true);
+  assert.equal(gateOpen('mirror', { chapter: '6' }), false);
+  assert.equal(gateOpen('mirror', { chapter: '7' }), true);
+  assert.equal(gateOpen('mirrorwar', { chapter: '7' }), false);
+  assert.equal(gateOpen('mirrorwar', { chapter: '8' }), true);
+  assert.equal(gateOpen('mirrorcouncil', { chapter: '8' }), false);
+  assert.equal(gateOpen('mirrorcouncil', { chapter: '9' }), true);
   // v2.3.0：未知 gate id 由「恒放行」改为 fail-closed——拼错/已删 id 不再静默放行。
   assert.equal(gateOpen('unknown', { chapter: '18' }), false);
 });
@@ -139,19 +149,22 @@ test('E0 一章最多两个内容（base 开局基础设施不计）——v2.4.0
   for (const [n, list] of byChapter) {
     assert.ok(list.length <= UNLOCKS_PER_CHAPTER_MAX, `第 ${n} 章登记了 ${list.length} 个内容（上限 ${UNLOCKS_PER_CHAPTER_MAX}）：${list.join('/')}`);
   }
-  // 第 9 章（远征积累）/ 第 10 章（镜像留给 P2）本批不登记
-  for (const n of [9, 10]) assert.equal(byChapter.has(n), false, `第 ${n} 章不应登记内容`);
+  // v2.5.0：第 9 章被三方议会占用，只剩第 10 章（镜像）是纯积累章
+  for (const n of [10]) assert.equal(byChapter.has(n), false, `第 ${n} 章不应登记内容`);
 });
-test('E1 注册表：第 1/4/5 章各两条，第 9/10 章留空；13~17 未实装不登记；id 全局唯一', () => {
+test('E1 注册表：第 1/3/4/5/6/7 章各两条，第 10 章留空；13~17 未实装不登记；id 全局唯一', () => {
   const chapters = [...new Set(CHAPTER_UNLOCKS.map(x => x.chapter))];
-  assert.deepEqual(chapters, [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 18]);
+  assert.deepEqual(chapters, [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 18]);
   assert.deepEqual(unlocksAtChapter(1).map(x => x.id), ['workbench', 'rift', 'relics'], '第一章：工作台 + 裂隙/探采 + 遗物');
   assert.deepEqual(unlocksAtChapter(2).map(x => x.id), ['pets'], '第二章只登记异兽');
   assert.deepEqual(unlocksAtChapter(3).map(x => x.id), ['religion', 'policy'], '第三章：宗教 + 政策（星图已后移）');
   assert.deepEqual(unlocksAtChapter(4).map(x => x.id), ['starchart', 'es'], '第四章：星图/探采高级 + ES');
   assert.deepEqual(unlocksAtChapter(5).map(x => x.id), ['crossroad', 'resonance'], '第五章：岔路口 + 相位共鸣');
-  assert.equal(unlocksAtChapter(7).map(x => x.id).includes('bazaar'), true, '集市登记在第 7 章');
-  for (const n of [9, 10, 13, 14, 15, 16, 17]) assert.equal(unlocksAtChapter(n).length, 0, `第 ${n} 章不发虚假公告`);
+  assert.deepEqual(unlocksAtChapter(6).map(x => x.id), ['transcend', 'eternals'], '第六章：超验 + 永恒矩阵（v2.5.0 提前）');
+  assert.deepEqual(unlocksAtChapter(7).map(x => x.id), ['bazaar', 'mirror'], '第七章：集市 + 镜像契约');
+  assert.deepEqual(unlocksAtChapter(8).map(x => x.id), ['mirrorwar'], '第八章：算力战争');
+  assert.deepEqual(unlocksAtChapter(9).map(x => x.id), ['mirrorcouncil'], '第九章：三方议会');
+  for (const n of [10, 13, 14, 15, 16, 17]) assert.equal(unlocksAtChapter(n).length, 0, `第 ${n} 章不发虚假公告`);
   const ids = CHAPTER_UNLOCKS.map(x => x.id);
   assert.equal(new Set(ids).size, ids.length, '解锁 id 全局唯一（allUnlockedUpTo 不可重复）');
 });
@@ -160,6 +173,9 @@ test('E2 allUnlockedUpTo 单调累积', () => {
   const up12 = allUnlockedUpTo(12);
   for (const id of ['religion', 'policy', 'relics', 'bazaar', 'eternals']) assert.ok(up12.includes(id), `≤12 章应含 ${id}`);
   assert.ok(!allUnlockedUpTo(6).includes('bazaar'), '集市不在第 6 章前');
+  assert.ok(allUnlockedUpTo(6).includes('eternals'), '永恒矩阵第 6 章已登记');
+  assert.ok(!allUnlockedUpTo(6).includes('mirror'), '镜像第 7 章才登记');
+  assert.ok(allUnlockedUpTo(9).includes('mirrorcouncil'), '三方议会第 9 章');
   assert.ok(allUnlockedUpTo(1).includes('relics'), '遗物第 1 章即登记');
 });
 test('E3 章节推进帧接线（v4.3.19 反馈⑧反转：解锁改日志悬念句，不再 toast）', () => {

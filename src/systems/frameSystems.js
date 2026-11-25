@@ -37,6 +37,7 @@ import { unlocksAtChapter } from '../data/chapterUnlocks.js'; // v4.2.0：章节
 import { orchestrationUnlocked, orchestrationState, effectiveModeId,
   TIDE_PHASE_NAMES, MODE_BY_ID } from '../core/orchestration.js';
 import { tickResonance } from '../core/resonance.js'; // v3.10.0：相位共鸣推进
+import { syncMirrorMerit } from '../modules/mirror.js'; // v2.5.0：镜像战功结算（本局产出 siphon）
 import { refreshShopAffordability, refreshShopChain } from '../modules/shop.js';
 import { refreshTechState } from '../modules/tech.js';
 import { refreshRelicAffordability } from '../modules/relics.js';
@@ -105,6 +106,10 @@ export function registerFrameSystems(deps = {}) {
   registerSystem({
     id: 'bazaar', phase: AFTER_PRODUCERS, order: 40,
     run: (ctx) => { tickBazaar(ctx.dt); },
+  });
+  registerSystem({
+    id: 'mirror', phase: AFTER_PRODUCERS, order: 50,
+    run: () => { syncMirrorMerit(); },
   });
 
   // ===== ③ FRAME：CONVERTERS 之后的全部模块与节流检查 =====
@@ -603,7 +608,7 @@ export function buildTideSchedulingHtml(ctx) {
 
 export const FRAME_SYSTEM_IDS = Object.freeze([
   'wages', 'threads', 'crew-earned',
-  'religion', 'policy-refresh', 'delve', 'bazaar',
+  'religion', 'policy-refresh', 'delve', 'bazaar', 'mirror',
   'tab-visibility', 'panel-check', 'rift', 'auto-purify', 'vehicle', 'projects',
   'project-progress', 'expeditions', 'chapter', 'gates', 'tide', 'corruption',
   'code-rain', 'tide-schedule', 'crossroad', 'events', 'prophecy', 'pet-exp', 'pet-ui',

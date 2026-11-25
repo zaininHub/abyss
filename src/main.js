@@ -51,7 +51,8 @@ import { tickAI, renderAiPanel, setAiLogFn, setAiUiRefreshFn, aiUnlocked, aiHire
   activateAutoBuild, autoBuildActivable } from './modules/ai.js'; // v1.3 A // v3.2.4 反馈④：自动购建区块显隐/EP 充足态检测 // v3.7.5：编队按钮可购态快刷 // v3.11.0：AI 自动化真实入口 QA 钩子
 import { AI_ACTIONS, AI_ACTION_IDS, AI_ACTION_SWITCH_KEYS, AI_CREW_REQUIRED_IDS,
   ALL_OFF_SWITCH_KEYS, AI_ACTION_GROUPS, maxCycleCrewDemand, crewSizeOf, groupRankOf } from './core/aiActionRegistry.js'; // v3.11.0：自动化动作声明层 QA 钩子；v3.11.2：消耗→常驻班组，重命名派生清单
-import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js'; // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
+import { renderRelics, buyRelic, buyPurifier, setRelicsLogFn, setRelicsToastFn, refreshRelicAffordability } from './modules/relics.js';
+import { renderMirror, handleMirrorClick, mirrorVisible } from './modules/mirror.js'; // v2.5.0：镜像协议（契约 / 算力战争 / 三方议会） // v2.7.0：深渊遗物；v2.8.22 ⑥：净化节点；v2.8.26：DM 灰态每秒刷新
 import { relicsUnlocked, RELICS, relicLevel } from './data/relics.js'; // v2.7.0：遗物入口门控；v3.3.7 反馈①：结构签名
 import { relicsTabOpen } from './core/unlocks.js'; // v2.4.0：遗物/探采 tab 只按「章节 ∧ 裂隙」开放（DM 不再是入口前置）
 import { renderPetGrid, renderPetFloat, gainPetExp, activePetIds, refreshPetsAffordability, petUpkeepTotalPerSec, petStarving } from './modules/pets.js'; // v2.8.26：PT 灰态每秒刷新 // v3.2.1 反馈⑨：出战维持 // v3.2.3 反馈⑥：休战过渡日志
@@ -501,6 +502,7 @@ function registerAllPanels() {
     const bzEl = document.getElementById('bazaar-panel');
     if (bzEl) renderBazaarPanel(bzEl);
   } });
+  registerPanel({ key: 'mirror', render: () => { const el = document.getElementById('mirror-panel'); if (el) renderMirror(el); } });
   registerPanel({ key: 'rift', render: () => {
     const riftEl = document.getElementById('rift-panel');
     if (riftEl) renderRift(riftEl);
@@ -1482,11 +1484,15 @@ function switchTab(id) {
     const bzPanel = document.getElementById('bazaar-panel');
     if (bzPanel) renderBazaarPanel(bzPanel);
   }
+  if (id === 'mirror') { // v2.5.0：镜像协议
+    const mPanel = document.getElementById('mirror-panel');
+    if (mPanel) renderMirror(mPanel);
+  }
 }
 
 // v3.3.3 反馈⑨：未开放大模块不再隐藏——以「??？」锁定态常驻展示（可发现性）
 // v3.12.3 反馈③：锁定态不再挂任何解锁条件文案（title / toast 全部移除，只表达「不可用」）
-const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市' };
+const TAB_LABELS = { 'btn-expedition': '星图', 'btn-relics': '遗物', 'btn-religion': '宗教', 'btn-policy': '政策', 'btn-delve': '深潜', 'btn-rift-tab': '裂隙', 'btn-bazaar': '集市', 'btn-mirror': '镜像' };
 function setTabLocked(btn, locked) {
   if (!btn) return;
   const base = TAB_LABELS[btn.id] || btn.textContent;
@@ -1548,6 +1554,8 @@ function refreshTabVisibility() {
   // v3.12.0 反馈⑬：未买断也可点进去看「职级点开启」卡。
   // v4.3.36 反馈①：集市入口改由章节门禁决定（第 7 章）——第 2 章不再出现一个买不起的集市 tab。
   setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
+  // v2.5.0：镜像协议第 7 章接入（契约随 tab 开放，算力战争/三方议会各自在第 8/9 章内解锁）
+  setTabLocked(document.getElementById('btn-mirror'), !mirrorVisible());
 }
 
 // ========== v3.2.2 反馈①：自动转化快捷开关（任务版上方） ==========
@@ -1977,6 +1985,7 @@ function bindEvents() {
   document.getElementById('btn-rift-tab')?.addEventListener('click', () => switchTab('rift-tab'));
   // v3.0.0：深渊集市
   document.getElementById('btn-bazaar')?.addEventListener('click', () => switchTab('bazaar'));
+  document.getElementById('btn-mirror')?.addEventListener('click', () => switchTab('mirror'));
   bindBazaarPanel(document.getElementById('bazaar-panel'));
   // v3.12.0 反馈⑬：模块购买卡（轮回页 / 集市页共用同一 data 属性与同一购买入口）
   document.addEventListener('click', (e) => {
@@ -2372,6 +2381,11 @@ function bindEvents() {
   bindLogResize();
 
   // v2.3.1 ⑥（rev18 9.4）：×1/×10/×100 倍率按钮与监听整节移除（bulk-bar 已从 index.html 删除）
+
+  // v2.5.0：镜像协议（契约 / 算力战争 / 三方议会）事件委托——处理完原地重绘
+  document.getElementById('mirror-panel')?.addEventListener('click', (e) => {
+    handleMirrorClick(e, document.getElementById('mirror-panel'));
+  });
 
   // v2.7.0：深渊遗物购买（事件委托）
   document.getElementById('relics-panel')?.addEventListener('click', (e) => {

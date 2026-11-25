@@ -64,7 +64,7 @@ async function readChapterState(page) {
       'allTimeEp','storylinesCompleted','storyline','crossroad','crossroadLockedBy',
       'familyUpgrades','resDiscovered','delve','vs','riftEmber','riftUpgrades',
       'riftLevelTech','_religionHintSeen','relics','bazaar','abyssGazeUnlocked',
-      'moduleUnlocks','_purifierSeen',
+      'moduleUnlocks','_purifierSeen','mirror',
       'prestige','chapter','chapterEnteredAt','expeditions','expeditionsDone',
       'milesDone','projectsDone','totalBuys','totalClicks'];
     for (const k of KEYS) {

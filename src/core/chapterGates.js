@@ -38,7 +38,7 @@ export const CHAPTER_GATES = Object.freeze({
   religion: 3,
   transcend: 6,
   policy: 3,
-  eternals: 8,
+  eternals: 6, // v2.5.0：8 → 6——ES 从第 4 章开始沉淀，到第 6 章已有可花的第一桶；与超验同章
   relics: 1,  // v4.3.36：原 3——遗物与裂隙同属第 1 章（资产门控仍在）
   resonance: 5, // v2.4.0：原 10——前置（项目 ≥12 或晋升 ≥2）第 5 章就满足，提前到岔路口同章
   delve: 11,
@@ -46,6 +46,10 @@ export const CHAPTER_GATES = Object.freeze({
   bazaar: 7,  // v4.3.36：新增——集市不再挂在第 2 章的「首次晋升」上
   starchart: 4, // v2.3.0 收进本章号真源；v2.4.0：3 → 4（星图后移，第 3 章留给宗教 + 政策）
   pets: 2,      // v2.3.0：从 shop.js 的 `parseInt(S.chapter) >= 2` 硬编码收进来（饵料仓库入口章）
+  // v2.5.0 镜像协议（设计稿 P2 三件套，由 13/14/15 章提前到 7/8/9 章）：一个 tab、三块内容各占一章
+  mirror: 7,        // 镜像契约——每局一份悬赏
+  mirrorwar: 8,     // 算力战争——战功换永久军备
+  mirrorcouncil: 9, // 三方议会——每局一席
 });
 
 // v2.3.0：门禁 id 白名单——供 access 策略表与测试校验「章节引用必须存在」。

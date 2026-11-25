@@ -832,7 +832,7 @@ function updateVehicleCollectHeader() {
   if (!el) return;
   const rate = vehicleDmPerMin();
   const enabled = converterEnabled('vehicles'); // v3.3.4 反馈①：与快捷开关/tick 同一状态源
-  const dmTxt = `当前 DM: ${(S.dm || 0).toFixed(2)}`;
+  // v2.5.0 反馈①：页头去掉「当前 DM」——DM 余额已在顶栏常驻，面板里再写一遍只是噪音
   const flow = probeFlowPerSec();
   let info, tip;
   if (rate > 0) {
@@ -842,7 +842,7 @@ function updateVehicleCollectHeader() {
     let reason = '';
     if (flow.dmFull) reason = '（DM 已满，暂停采集）';
     else if (flow.epEmpty) reason = '（EP 已耗尽，停止采集）';
-    info = `${dmTxt} · 探采 -${fmt(flow.epPerSec)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
+    info = `探采 -${fmt(flow.epPerSec)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
     tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(flow.epPerDm)} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增）\n`
       + `每辆摩托队/车队/轨道器/潜航器 6/12/30/60 DM/min；深渊鱼缸/集市/研究点可提升采集效率（不吃班组加成）\n`
       + `理论产能 ${fmtDmPerSec(flow.nominalDmPerSec)} DM/s = 基础 ${fmtDmPerSec(vehicleDmPerMin() / 60 / Math.max(1e-9, vehicleRateMult()))} × 加成 ${vehicleRateMult().toFixed(2)}×（研究/鱼缸/集市）\n`
@@ -851,7 +851,7 @@ function updateVehicleCollectHeader() {
         ? '⚠ 当前产能已超过 DM 存储上限：加成的边际收益为 0（只会更快满仓），可考虑少买载具或扩容星尘金库'
         : '');
   } else {
-    info = dmTxt; // v2.4.2：DM 精确到小数
+    info = ''; // v2.5.0 反馈①：无载具时不显示「当前 DM」，只留开关与说明
     tip = enabled ? '购买载具后自动采集深渊物质' : '探采已暂停：点击「已暂停」恢复采集（EP 消耗同步恢复）';
   }
   const dmFull = rate > 0 && S._dmFull && (S.dm || 0) >= dmCap() - 1e-9;

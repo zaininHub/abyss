@@ -27,8 +27,8 @@ import { policyOpenGroups } from '../src/data/policies.js';
 const src = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 // ---------- A 表完整性 ----------
-test('A1 章节门禁表：11 项、GateIds 与表键一一对应', () => {
-  assert.equal(GATE_IDS.length, 11);
+test('A1 章节门禁表：14 项、GateIds 与表键一一对应（v2.5.0 增镜像三件套、永恒矩阵 8→6）', () => {
+  assert.equal(GATE_IDS.length, 14);
   assert.deepEqual([...GATE_IDS].sort(), Object.keys(CHAPTER_GATES).sort());
   for (const id of GATE_IDS) {
     const n = gateChapter(id);

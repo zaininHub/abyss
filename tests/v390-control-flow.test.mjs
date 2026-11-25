@@ -3,7 +3,7 @@
 // 守住本次重构的五条红线：
 //   A. 帧系统调度器：预排序 / 三种节流 / 异常隔离 / 脏标记归一 / 统计台账；
 //   B. 面板注册表：注册顺序即渲染顺序 / always 每帧 / 单面板异常隔离；
-//   C. 静态接线：主循环只剩 7 次阶段调用、43 条系统声明双向对齐、dirty 键 ↔ 面板消费者一一对应；
+//   C. 静态接线：主循环只剩 7 次阶段调用、44 条系统声明双向对齐、dirty 键 ↔ 面板消费者一一对应；
 //   D. 潮汐预案读侧：默认映射零漂移、旧档兼容、非法写入拦截、逐相位改写即时生效；
 //   E. 存档版本不 bump、QA 暴露完整、暂停/弹窗/模态暂停等原有行为保留。
 import assert from 'node:assert/strict';
@@ -205,7 +205,7 @@ test('C2 43 条系统声明与 FRAME_SYSTEM_IDS 清单双向对齐', () => {
   const listed = [...idBlock.matchAll(/'([a-z0-9-]+)'/g)].map(m => m[1]);
   assert.equal(new Set(declared).size, declared.length, '系统 id 重复注册');
   assert.equal(new Set(listed).size, listed.length, '清单内有重复 id');
-  assert.equal(declared.length, 43);
+  assert.equal(declared.length, 44);
   assert.deepEqual(new Set(declared), new Set(listed), '声明与清单不一致（漏注册 / 幽灵 id）');
   assert.ok(listed.includes('tide-schedule'), '新玩法「潮汐预案同步」以新增一条系统注册落地');
   assert.ok(listed.includes('render') && listed.includes('affordability'));
@@ -221,7 +221,7 @@ test('C3 dirty 键 ↔ 面板消费者一一对应（无孤儿脏键、无死面
   for (const k of PANEL_DIRTY_ON_START) assigned.add(k);
   const consumers = new Set(panelKeys.filter(k => !alwaysKeys.has(k)));
   assert.equal(new Set(panelKeys).size, panelKeys.length, '面板 key 重复注册');
-  assert.equal(consumers.size, 23, 'v4.2.X 轮回面板移除后应有 23 个受脏标记控制的面板');
+  assert.equal(consumers.size, 24, 'v4.2.X 轮回面板移除后应有 24 个受脏标记控制的面板（v2.5.0 并入镜像）');
   for (const k of assigned) assert.ok(consumers.has(k), `dirty.${k} 无注册面板消费（幽灵脏键）`);
   for (const k of consumers) assert.ok(assigned.has(k), `面板 ${k} 无任何置脏点（死面板）`);
   assert.deepEqual([...consumers].sort(), [...assigned].sort());

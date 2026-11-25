@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.4.1</title>
+<title>深渊效能工作台 v2.5.0</title>
 <link rel="icon" href="data:,">
-  <script defer src="./assets/index-D0nVu_ll.js"></script>
+  <script defer src="./assets/index-ZWpfmwb3.js"></script>
   <link rel="stylesheet" href="./assets/style-UBzqp6yQ.css">
 </head>
 <body>
@@ -215,7 +215,8 @@
       <div class="tabs">
         <!-- 大模块 tab 按解锁顺序从左往右排列（= CHAPTER_GATES 的真实门控章序；tests/v240-tab-order 锁定）：
              商店/科技树（开局）→ 研究点 ch1 → 裂隙 ch1 → 遗物 ch1 → 异兽 ch2
-             → 宗教 ch3 → 政策 ch3 → 星图 ch4 → 集市 ch7 → 深潜 ch11。
+             → 宗教 ch3 → 政策 ch3 → 星图 ch4 → 集市 ch7 → 镜像 ch7（契约）→ 深潜 ch11。
+             v2.5.0：镜像协议（契约 ch7 / 算力战争 ch8 / 三方议会 ch9）接入，tab 与集市同章。
              v2.4.1：按重排后的门禁重新排序（遗物随裂隙回到第 1 章、星图第 4 章、集市第 7 章）。 -->
         <button class="btn on" id="btn-shop">商店</button>
         <button class="btn" id="btn-tech">科技树</button>
@@ -227,6 +228,7 @@
         <button class="btn" id="btn-policy">政策</button>
         <button class="btn" id="btn-expedition">星图</button>
         <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <button class="btn" id="btn-mirror">镜像</button>
         <button class="btn" id="btn-delve">深潜</button>
         <!-- v4.2.X：轮回 tab 已移除，回响商店并入晋升面板 -->
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
@@ -311,6 +313,10 @@
         <!-- v3.0.0：深渊集市 -->
         <div class="tab-pane" id="tab-bazaar">
           <div id="bazaar-panel"></div>
+        </div>
+        <!-- v2.5.0：镜像协议（契约 / 算力战争 / 三方议会，7/8/9 章逐块解锁） -->
+        <div class="tab-pane" id="tab-mirror">
+          <div id="mirror-panel"></div>
         </div>
       </div>
     </div>

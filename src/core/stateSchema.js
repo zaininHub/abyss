@@ -23,6 +23,7 @@ export const CROSS_RUN_KEYS = Object.freeze([
   'familyUpgrades', 'resDiscovered', 'delve', 'vs', 'riftEmber', 'riftUpgrades',
   'riftLevelTech', '_religionHintSeen', 'relics', 'bazaar', 'abyssGazeUnlocked',
   'moduleUnlocks', // v3.12.0 反馈⑬：职级点买断的大模块，跨局保留
+  'mirror', // v2.5.0：镜像协议跨转生层（战功 / 战争科技 / 已坐议席）
   '_purifierSeen', // v3.12.6 ⑤：净化节点族「见过就永久可见」——熵减协议是本局科技，晋升后重置
 ]);
 
@@ -48,10 +49,11 @@ export const COMPAT_KEYS = Object.freeze([
   // v3.12.13：资源增减 / 升级购买统计（与 RUN_RUNTIME_KEYS 同源，旧档兜底补齐）
   '_gainRes', '_spentRes', '_buyRes',
   'galaxyDone', // v3.12.7 ⑦：按星系的探索回数（与 colonies 同寿命，跨本局保留）
+  'mirrorRun', // v2.5.0：镜像本局层（契约 / 议席 / 战功基准），旧档兜底补齐
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）
-export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance', 'moduleUnlocks']);
+export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance', 'moduleUnlocks', 'mirror', 'mirrorRun']);
 
 // ④ 绝对时间戳：弹框暂停恢复时整体顺延，否则 Date.now() 型计时会在弹框期间暗中流逝。
 //    支持 'a.b' 路径；只对有限正数生效（与原 `if (S.x > 0)` 口径一致，且更安全）。
@@ -82,6 +84,8 @@ export const RUN_RESET_KEYS = Object.freeze([
   // 级数（ptHatchLv）是本局投入，随 upgrades 同寿命；裂隙自动动作（riftAuto）与自动
   // 净化开关（autoPurify）依赖的 riftUpgrades 跨局保留，但「本局开不开」是本局决策。
   'converterOn', 'atriumOn', '_probeEnabled', 'ptDistillOn', 'ptAutoHatch', 'ptHatchLv', 'riftAuto', 'autoPurify',
+  // v2.5.0：镜像契约与议席是本局承诺，晋升后重新谈——战功/科技留在 S.mirror（跨转生）
+  'mirrorRun',
 ]);
 
 // ⑤-b 本局运行时快照：EP 上限「时间基座」与满仓涓流计时器。

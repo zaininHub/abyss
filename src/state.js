@@ -58,6 +58,10 @@ export function defaultState() {
     bazaar: { unlocked: false, trades: 0, refreshCount: 0, marketTimer: 0, rates: {}, stock: {}, quality: {}, lineup: [] }, // v3.0.0：深渊集市（成交笔数跨周期，摊位/库存/汇率每轮重置）
     moduleUnlocks: { bazaar: false }, // v3.12.0 反馈⑬：首次晋升后用职级点买断的大模块（跨局保留）；v4.2.X 轮回项已移除
     religion: {}, faith: 0,
+    // v2.5.0：镜像协议——跨转生层（战功 / 战争科技 / 已坐议席），本局层见 mirrorRun
+    mirror: { merit: 0, techs: {}, seen: {}, allSeen: false },
+    // v2.5.0：镜像本局层（契约 / 议席 / 战功结算基准）——晋升清零，故不在 CROSS_RUN_KEYS
+    mirrorRun: { contract: null, base: 0, council: null, meritBasis: 0 },
     // 事件
     eventsSeen: 0, nextEventAt: Date.now() + 45000,
     // buff/debuff
