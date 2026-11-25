@@ -54,6 +54,9 @@ export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscove
 // ④ 绝对时间戳：弹框暂停恢复时整体顺延，否则 Date.now() 型计时会在弹框期间暗中流逝。
 //    支持 'a.b' 路径；只对有限正数生效（与原 `if (S.x > 0)` 口径一致，且更安全）。
 export const ABSOLUTE_CLOCK_PATHS = Object.freeze([
+  // v4.3.29 反馈①：暂停不推进游玩天数——本局开始时间同样是「游戏钟」，
+  //   暂停/弹框暂停期间必须与其它绝对时钟一起顺延，否则顶部天数与存档天数照走真实时间。
+  'startedAt',
   'riftExpedition.until', 'activeRift.expiresAt',
   'buffUntil', 'clickBuffUntil', '_collapseAt', 'nextEventAt', 'petXpUntil',
   'fuseLuckUntil', 'restBonusUntil', 'lazySince', 'pausedAt',

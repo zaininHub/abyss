@@ -91,7 +91,7 @@ import './style.css';
 import { ACHIEVEMENTS } from './data/achievements.js';
 import { ACHIEVEMENT_IDS, evaluateAchievements, unlockAchievement, achievementProgress } from './core/achievementRegistry.js';
 // v3.10.0：状态生命周期清单 / 面板键清单的单一真源
-import { RESOURCE_DISCOVERY, shiftAbsoluteClocks, shiftProjectClocks, RUN_RUNTIME_KEYS, clampCappedResources } from './core/stateSchema.js';
+import { RESOURCE_DISCOVERY, shiftAbsoluteClocks, RUN_RUNTIME_KEYS, clampCappedResources } from './core/stateSchema.js';
 import { PANEL_KEYS, PANEL_DIRTY_ON_START } from './core/panelKeys.js';
 import { FRAME_DEPS_KEYS } from './systems/frameSystems.js';
 // v3.10.0：新玩法「相位共鸣」
@@ -676,7 +676,8 @@ function renderTide() {
   const el = document.getElementById('h-tide');
   if (!el) return;
   const info = tidePhaseInfo(S.tidePhase);
-  const day = Math.floor(daysSince(S.startedAt));
+  // v4.3.29 反馈①：暂停期间用暂停起点作为「现在」，天数在暂停中也不推进（恢复时 startedAt 已顺延）。
+  const day = Math.floor(daysSince(S.startedAt, S.paused ? (S.pausedAt || Date.now()) : Date.now()));
   el.innerHTML = `<span class="tide-day mono">${day}天</span><span class="tide-icon ${info.cssClass}">${info.icon}</span><span>${info.name}</span><span class="tide-time mono">${fmtTime(S.tideTimer)}</span>`;
   updateTideTip();
   document.body.classList.remove('tide-flood', 'tide-calm', 'tide-ebb', 'tide-chaos');
@@ -2899,7 +2900,9 @@ function settlePause() {
   document.getElementById('pauseBtn').textContent = '暂停';
   document.body.classList.remove('paused');
   hidePauseModal();
-  shiftProjectClocks(S, nowMs - pausedAtMs); // 任务冻结：deadline / pendingAt / startsAt 整体顺延
+  // v4.3.29 反馈①：暂停期间整条游戏钟冻结——任务 deadline/时钟 + startedAt（游玩天数）一起顺延，
+  //   于是「暂停 10 分钟」不会让顶部天数与存档天数白涨；shiftAbsoluteClocks 内部已包含任务时钟。
+  shiftAbsoluteClocks(S, nowMs - pausedAtMs);
   const logPts = [];
   if (dt > 5) {
     const eff = Math.min(dt, offlineCap());

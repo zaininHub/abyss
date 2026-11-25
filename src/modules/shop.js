@@ -464,11 +464,15 @@ export function renderAtriumSwitch(host) {
   // v4.3.1 反馈⑤：速率文案改「总计 -X EP/s +Y RP/s」（与灵感工坊升级卡同款），去「EP 不足自动暂停，回升继续」括注
   // v4.3.7 反馈④：手动蒸馏按钮并入开关行尾（原先独占一行，研究点页显得空旷且层级混乱）；
   // 保留 id=rp-distill-btn（main.js 委托在 #rp-panel 容器级，click 冒泡可达，事件不需迁移）
+  // v4.3.29 反馈②：蒸馏按钮移到自动开关左侧、与开关紧邻成组右靠（原先夹在标题后、与开关隔着一整段速率文案）；
+  //   自动开关改用「异兽孵化」同款红/绿按钮（开=绿、关=红），不再是滑块。
   host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n}</span>
-    ${distillBtn()} <!-- v4.3.13 反馈⑦：蒸馏在左（高频手动操作靠前），自动开关移到右侧 -->
     <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
-    <button class="atrium-auto-switch${on ? ' on' : ''}" data-atrium-switch role="switch" aria-checked="${on}" aria-label="自动蒸馏" style="margin-left:auto"><span>自动</span><i aria-hidden="true"></i></button>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      ${distillBtn()}
+      <button class="atrium-auto-switch${on ? ' on' : ''}" data-atrium-switch role="switch" aria-checked="${on}" aria-label="自动蒸馏">${on ? '自动开' : '自动关'}</button>
+    </span>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
   if (btn) btn.addEventListener('click', () => {

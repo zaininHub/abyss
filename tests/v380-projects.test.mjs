@@ -60,8 +60,8 @@ test('P1 源码守卫：领取计数收敛到 finishProject，暂停回程不得
   const settleBody = settle.slice(0, settle.indexOf('\nfunction ', 1));
   assert.doesNotMatch(settleBody, /projectsDone/, '暂停回程不得再碰累计完成数');
   assert.doesNotMatch(settleBody, /addEp\(p\.reward|addRp\(p\.reward/, '暂停回程不得绕过领取入口发奖');
-  assert.match(settleBody, /shiftProjectClocks\(S,/, '暂停期间任务时钟必须整体顺延');
-  assert.match(MAIN_SRC, /shiftProjectClocks/, 'main.js 必须消费状态层的任务时钟顺延');
+  assert.match(settleBody, /shiftAbsoluteClocks\(S,/, '暂停期间时钟必须整体顺延（含任务 deadline 与 startedAt）');
+  assert.match(MAIN_SRC, /shiftAbsoluteClocks/, 'main.js 必须消费状态层的时钟顺延');
 });
 
 test('P2 真实调用：领取成功 +1，重复领取幂等不重复计数', () => {

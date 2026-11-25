@@ -104,12 +104,13 @@ test('A5 load() 真实旧档：无 resonance 字段也能安全加载', () => {
 
 test('A6 shiftAbsoluteClocks：顶层 / 嵌套 / 项目时间戳整体顺延', () => {
   const S = {
-    buffUntil: 1000, clickBuffUntil: 0, nextEventAt: 500, _collapseAt: 200,
+    startedAt: 300, buffUntil: 1000, clickBuffUntil: 0, nextEventAt: 500, _collapseAt: 200,
     petXpUntil: undefined, fuseLuckUntil: 300,
     riftExpedition: { until: 900 }, activeRift: { expiresAt: 1500 },
     projects: [{ deadline: 2000, pendingAt: 0, startsAt: 100 }, { deadline: 0 }],
   };
   const n = schema.shiftAbsoluteClocks(S, 500);
+  assert.equal(S.startedAt, 800, 'v4.3.29：游玩天数基准必须随暂停顺延（暂停不增加天数）');
   assert.equal(S.buffUntil, 1500);
   assert.equal(S.clickBuffUntil, 0, '零值不参与顺延');
   assert.equal(S.nextEventAt, 1000);
@@ -119,9 +120,9 @@ test('A6 shiftAbsoluteClocks：顶层 / 嵌套 / 项目时间戳整体顺延', (
   assert.equal(S.projects[0].deadline, 2500);
   assert.equal(S.projects[0].startsAt, 600);
   assert.equal(S.projects[0].pendingAt, 0);
-  // 8 个正数字段：buffUntil / nextEventAt / _collapseAt / fuseLuckUntil /
+  // 9 个正数字段：startedAt / buffUntil / nextEventAt / _collapseAt / fuseLuckUntil /
   // riftExpedition.until / activeRift.expiresAt / projects[0].deadline / projects[0].startsAt
-  assert.equal(n, 8, `实际顺延字段数 ${n}`);
+  assert.equal(n, 9, `实际顺延字段数 ${n}`);
   assert.equal(schema.shiftAbsoluteClocks(S, 0), 0, '非正位移不动作');
   assert.equal(S.buffUntil, 1500);
 });
@@ -394,7 +395,8 @@ test('E1 暂停只冻结任务时钟，不再绕过领取入口发奖或计数',
   assert.equal(S.projects[0].pendingAt, 0, '零值不参与顺延');
   assert.equal(schema.shiftProjectClocks(S, 0), 0);
   assert.ok(!MAIN.includes('S.projectsDone++'), '累计完成数唯一真源不得回归');
-  assert.match(MAIN, /shiftProjectClocks\(S, nowMs - pausedAtMs\)/);
+  assert.match(MAIN, /shiftAbsoluteClocks\(S, nowMs - pausedAtMs\)/,
+    'v4.3.29：暂停回程整体顺延绝对时钟（含 startedAt），任务时钟由内部 shiftProjectClocks 覆盖');
   assert.match(OFFLINE_SRC, /const projDone = 0/, '离线回程同口径');
 });
 

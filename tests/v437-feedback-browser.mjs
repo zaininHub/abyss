@@ -154,11 +154,14 @@ try {
     const txt = host?.textContent.replace(/\s+/g, ' ').trim() || '';
     const sw = host?.querySelector('[data-atrium-switch]');
     const distill = host?.querySelector('#rp-distill-btn');
-    return { txt, autoWord: sw?.textContent === '自动', aria: sw?.getAttribute('aria-checked'), role: sw?.getAttribute('role'),
-      distillInHost: !!distill, noOldTitle: !txt.includes('自动蒸馏') };
+    const swText = (sw?.textContent || '').trim();
+    return { txt, autoWord: swText === '自动开' || swText === '自动关', swText, aria: sw?.getAttribute('aria-checked'), role: sw?.getAttribute('role'),
+      distillInHost: !!distill, noOldTitle: !txt.includes('自动蒸馏'),
+      distillBeforeSwitch: !!(sw && distill && (distill.compareDocumentPosition(sw) & Node.DOCUMENT_POSITION_FOLLOWING)) };
   });
   d4.noOldTitle ? ok('标题已去「· 自动蒸馏」', d4.txt.slice(0, 50)) : bad('「自动蒸馏」文案残留', d4.txt.slice(0, 50));
-  d4.autoWord ? ok('开关文案为「自动」') : bad('开关文案非「自动」', d4.txt.slice(0, 50));
+  d4.autoWord ? ok('开关文案为「自动开 / 自动关」', d4.swText) : bad('开关文案异常', d4.txt.slice(0, 50));
+  d4.distillBeforeSwitch ? ok('蒸馏按钮位于自动开关左侧') : bad('蒸馏按钮不在自动开关左侧');
   (d4.role === 'switch' && ['true', 'false'].includes(d4.aria))
     ? ok('自动开关带滑块语义', `${d4.role}/${d4.aria}`)
     : bad('自动开关缺 role=switch 或 aria-checked', JSON.stringify(d4));
