@@ -122,7 +122,9 @@ test('R7 deep_space minChapter:3 + techChapterOk 章节判定（入口侧钳制�
   assert.ok(/function techChapterOk\(t, s\)/.test(tech), 'techChapterOk 定义缺失');
   assert.ok(/chapterAtLeast\(t\.minChapter/.test(tech), '章节判定应走 chapterAtLeast 真源');
   // 章节>前置：techReqOk 先章节后前置；buyTech 入口天然钳制（防校准玩家直调绕过）
-  assert.ok(/export function techReqOk\(t\) \{ return techChapterOk\(t\) && t\.req\.every/.test(tech), 'techReqOk 应先过章节门');
+  // v2.3.0：前置科技判定收敛到 access 策略（techGate），章节门仍在最外层——先章节后前置
+  assert.ok(/export function techReqOk\(t\) \{ return techChapterOk\(t\) && techGate\(t\)\.ok; \}/.test(tech), 'techReqOk 应先过章节门');
+  assert.ok(/accessCheck\('tech\.buy'/.test(tech), '前置科技门禁应走 access 策略');
   assert.ok(/if \(!techReqOk\(t\)\) return;/.test(tech), 'buyTech 入口应钳制');
   // 已研究恒可见（老档卡片不凭空消失）
   assert.ok(/if \(hasTech\(t\.id\)\) return true;/.test(tech), '已研究科技应恒可见');

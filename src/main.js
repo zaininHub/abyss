@@ -2,7 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import { daysSince } from './core/time.js';
-import { fillChapterResources } from './core/devCheat.js'; // v4.3.31 隐藏测试命令（控制台一键补齐章节资源）
+import { fillChapterResources, fillChapterPromotion } from './core/devCheat.js'; // v4.3.31 隐藏测试命令（控制台一键补齐章节资源）// v4.3.37：fillChapterPromotion 只备「晋升出去」的条件，不代写章节
 import { switchHtml } from './core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块（独立可点版）
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, displayedDrainBreakdown, displayedDrainPerSec, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
@@ -37,7 +37,7 @@ import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, 
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
 import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons, paintLogs } from './core/runtime.js';
-import { gateOpen, chapterAtLeast } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
+import { gateOpen, chapterAtLeast, CHAPTER_GATES } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块） // v2.3.0：提示文案章号取表
 import { renderTech, refreshTechState, renderEternal, buyTech, buyEternal } from './modules/tech.js';
 import { ETERNALS } from './data/eternals.js'; // v4.2.6：分章节推演自动玩家购买永恒矩阵（QA 钩子；esCost 走 economy 包装版）
 import { getTechs } from './core/provider.js'; // v3.11.0：30 天推演经产品真实入口购买「自动研究」
@@ -2075,10 +2075,10 @@ function bindEvents() {
     body.scrollTop = 0;
   }
   function hintFor(key) {
-    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 2 章后商店开放「饵料仓库」，购入即解锁 PT',
+    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:`第 ${CHAPTER_GATES.pets} 章后商店开放「饵料仓库」，购入即解锁 PT`,
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
       prestige:'完成首次晋升', policy:'开放任一政策组（晋升/深潜/信仰）',
-      bazaar:'第 7 章后，职级 ≥1 时用 5 PP 买断' }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链 // v4.3.36：集市提示同步章节门禁
+      bazaar:`第 ${CHAPTER_GATES.bazaar} 章后，职级 ≥1 时用 5 PP 买断` }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链 // v4.3.36：集市提示同步章节门禁
     return m[key] || '推进主线解锁';
   }
   function renderStorylineAppendix() {
@@ -3304,32 +3304,57 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
-  // v4.3.31 隐藏测试钩子：仅供开发者在控制台快速补齐到指定章节所需资源，不在 UI 暴露。
-  // 用法：__abyssCheat.fillChapter(5) —— 补齐第 1~5 章条件并回拨驻留计时，方便测试后续章节内容。
+  // v4.3.31 隐藏测试钩子：仅供开发者在控制台快速补齐章节相关资源，不在 UI 暴露。
+  // v4.3.37（本轮反馈）：默认不再代写 S.chapter —— 只把「从第 n 章晋升出去」的条件备齐，
+  //   晋升次数留最后一次给玩家自己点「晋升」，章节仍由游戏自己的 frameSystems 判定推进。
+  //   需求方原话：这样手动点晋升更贴近真实流程，也就更适合测试。
+  // 用法：
+  //   __abyssCheat.fillChapter(1)        —— 我在第 1 章：备齐「第 1 章 → 第 2 章」的晋升条件（不跳章）
+  //   __abyssCheat.fillChapter()         —— 同上，章节号取当前章
+  //   __abyssCheat.fillChapter(5, true)  —— 原行为：补齐第 1~5 章资源并把 S.chapter 落到第 5 章
+  //                                         （等价于 __abyssCheat.jumpChapter(5)，看后面章节内容时用）
   window.__abyssCheat = {
-    fillChapter(n) {
-      const r = fillChapterResources(S, n);
-      // v4.3.36 反馈①：console 推章必须「真的站在目标章」。
-      //   只补资源时 minDays 门控会让玩家停在原章节（章节推进一次一章、每次落章重置驻留计时），
-      //   于是日志说着「已补齐第 7 章」、顶栏还停在第 2~3 章，集市 tab 仍是 ???——正是本轮反馈的观感。
+    fillChapter(n, jump = false) {
       const cur = parseInt(S.chapter, 10) || 1;
-      if (r.chapter > cur) {
-        S.chapter = String(r.chapter);
-        S.chapterEnteredAt = Date.now(); // 落章即重新计驻留，避免下一帧被顺势连推
-        S.chaptersUnlocked = S.chaptersUnlocked || {};
-        const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
-        const seen = S.chaptersUnlocked[slId] || (S.chaptersUnlocked[slId] = []);
-        for (let i = 1; i <= r.chapter; i += 1) {
-          const code = chapterCode(String(i));
-          if (!seen.includes(code)) seen.push(code);
+      if (jump) {
+        const r = fillChapterResources(S, n);
+        // v4.3.36 反馈①：console 推章必须「真的站在目标章」。
+        //   只补资源时 minDays 门控会让玩家停在原章节（章节推进一次一章、每次落章重置驻留计时），
+        //   于是日志说着「已补齐第 7 章」、顶栏还停在第 2~3 章，集市 tab 仍是 ???——正是该轮反馈的观感。
+        if (r.chapter > cur) {
+          S.chapter = String(r.chapter);
+          S.chapterEnteredAt = Date.now(); // 落章即重新计驻留，避免下一帧被顺势连推
+          S.chaptersUnlocked = S.chaptersUnlocked || {};
+          const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
+          const seen = S.chaptersUnlocked[slId] || (S.chaptersUnlocked[slId] = []);
+          for (let i = 1; i <= r.chapter; i += 1) {
+            const code = chapterCode(String(i));
+            if (!seen.includes(code)) seen.push(code);
+          }
+          r.entered = S.chapter;
         }
-        r.entered = S.chapter;
+        save(S);
+        dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = dirty.story = dirty.prestige = true;
+        log(`[测试] 已补齐第 ${r.chapter} 章标准资源（驻留天数 ${r.days} 天）${r.entered ? '，并把章节推进到该章' : ''}`, 'good');
+        return r;
       }
+      // 默认：只备「晋升出去」的条件，章节一个字都不写（S.chapter / chaptersUnlocked 不动）。
+      const src = (n === undefined || n === null) ? cur : n;
+      const r = fillChapterPromotion(S, src);
       save(S);
-      dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = dirty.story = true;
-      log(`[测试] 已补齐第 ${r.chapter} 章标准资源（驻留天数 ${r.days} 天）${r.entered ? '，并把章节推进到该章' : ''}`, 'good');
+      dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = dirty.story = dirty.prestige = true;
+      if (r.chapter !== cur) {
+        log(`[测试] 注意：你当前在第 ${cur} 章，本次备的是第 ${r.chapter} 章的晋升条件`, '');
+      }
+      if (r.manualPrestige) {
+        log(`[测试] 已备齐第 ${r.chapter} 章${r.target ? ` → 第 ${r.target} 章` : ''}晋升条件（驻留 ${r.days} 天）：晋升次数留最后 1 次，请手动点「晋升」；点完若下一章没动，再执行一次 __abyssCheat.fillChapter()`, 'good');
+      } else {
+        log(`[测试] 已备齐第 ${r.chapter} 章${r.target ? ` → 第 ${r.target} 章` : ''}晋升条件（驻留 ${r.days} 天）：本章条件不需要晋升，落章由游戏自行推进`, 'good');
+      }
       return r;
     },
+    // 兼容旧用法：显式要求「落到第 N 章」（v4.3.36 行为）
+    jumpChapter(n) { return window.__abyssCheat.fillChapter(n, true); },
   };
   window.__qa = { doPrestige, canPrestige, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子

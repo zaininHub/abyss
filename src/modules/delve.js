@@ -5,7 +5,7 @@ import { policyMult } from '../data/policies.js';
 import { fmt, fmtTime, echoLv, delveTechMult, researchMult, epStorageCap, corruptionCap, computeCps } from './economy.js';
 import { religionUnlocked } from '../data/religions.js';
 import { relicMult } from '../data/relics.js';
-import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：深潜绑第 11 章
+import { accessCheck, accessReason } from '../core/access.js'; // v2.3.0：深潜入口判定与原因唯一出口
 import {
   DELVE, levelNeed, vsPerCycle, epPerCycle, corruptPerCycle, delveUpgradeCost, milestoneVs,
 } from '../data/delve.js';
@@ -46,21 +46,13 @@ export function delveNextSettleSec() {
 //   各写一份条件，且 canUnlockDelve 不接受「星尘金库 dm_vault 买入即算发现 DM」的兜底，
 //   导致买了金库的存档「底层可解锁但按钮永远灰」。两处统一读此函数，杜绝口径分叉。
 // 条件：第 11 章 ∧ ES ≥ 3 ∧ DM 已发现（或已购星尘金库）∧ 宗教已信奉。
+// v2.3.0：条件与文案都收敛到 core/access.js 的 'delve.unlock' 策略（面板/toast/购买同一真源）。
 export function delvePrereqOk(state = S) {
-  if (!gateOpen('delve', state)) return false;
-  if ((state.es || 0) < DELVE.unlockEs) return false;
-  if (!(state.resDiscovered && state.resDiscovered.dm)
-      && !(state.upgrades && (state.upgrades.dm_vault || 0) > 0)) return false;
-  return !!(state.religion && state.religion.unlocked);
+  return accessCheck('delve.unlock', state).ok;
 }
 // 未满足时的具体原因（面板提示与 toast 共用，避免两处文案漂移）。
 export function delvePrereqReason(state = S) {
-  if (!gateOpen('delve', state)) return '深潜需推进至第 11 章「虚空」';
-  if ((state.es || 0) < DELVE.unlockEs) return `需转生 ES ≥ ${DELVE.unlockEs}`;
-  if (!(state.resDiscovered && state.resDiscovered.dm)
-      && !(state.upgrades && (state.upgrades.dm_vault || 0) > 0)) return '需先发现深渊之力（DM）';
-  if (!(state.religion && state.religion.unlocked)) return '需先信奉一个宗教分支';
-  return '';
+  return accessReason('delve.unlock', state);
 }
 
 export function canUnlockDelve() {
@@ -212,7 +204,8 @@ export function tickDelve(dt) {
 
 // 升级树购买（VS 消耗）
 export function buyDelveUpgrade(id) {
-  if (!delveUnlocked()) return { ok: false, reason: '未解锁' };
+  const gate = accessCheck('delve.upgrade', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const u = DELVE.upgrades[id];
   if (!u) return { ok: false, reason: '未知升级' };
   const lv = delveUpgradeLv(id);

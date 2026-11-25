@@ -4,10 +4,10 @@
 // 克制：每项等级上限 4~5、成本 ×1.7~1.9/级陡峭增长、转化率劣于最优通道（集市/深潜）但不占库存不占队列。
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { fmt, epStorageCap, addRp, addDm, addPt, hasTech, ptCap, dmCap, rpCap, researchMult, gainRes } from './economy.js';
+import { fmt, epStorageCap, addRp, addDm, addPt, ptCap, dmCap, rpCap, researchMult, gainRes } from './economy.js'; // v2.3.0：hasTech 判定已移入 access 的 'cosmos.buy'
 import { faithCap } from '../data/religions.js';
 import { log, toast, dirty } from '../core/runtime.js';
-import { starChartUnlocked } from './disclosure.js'; // v3.12.9：宇宙探索与星图 tab 同源（宠物在前）
+import { accessCheck } from '../core/access.js'; // v2.3.0：宇宙探索权限唯一出口（星图 ∧ 深空探测 ∧ RP）
 
 // v3.4.6 反馈③：宇宙探索工程改消耗「星际燃料 CPS」（原巨量 EP）——CPS 由星图探索产出，
 // 呼应「CPS 用于升级星际探索的所有升级」。每项 baseCps 为 CPS 首价，growth 沿用；
@@ -32,7 +32,8 @@ export const COSMOS_RES_LABEL = { pt: '🍪 PT', dm: '🌀 DM', faith: '🙏 FP'
 
 export function cosmosUnlocked() {
   // v3.12.9：星图未开放（宠物/PT 未解锁）时，宇宙探索也不该由自动化绕过 tab 直接购买
-  return starChartUnlocked(S) && hasTech('deep_space') && !!(S.resDiscovered && S.resDiscovered.rp);
+  // v2.3.0：三条件收敛到 access 的 'cosmos.buy'（星图 / 深空探测 / RP），与购买路径同一出口。
+  return accessCheck('cosmos.buy', S).ok;
 }
 
 export function cosmosLv(id) {
@@ -70,7 +71,8 @@ function grantRes(key, n) {
 }
 
 export function buyCosmos(id) {
-  if (!cosmosUnlocked()) return { ok: false, reason: '未解锁（需科技「深空探测」+ RP 已发现）' };
+  const gate = accessCheck('cosmos.buy', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const p = COSMOS[id];
   if (!p) return { ok: false, reason: '未知工程' };
   const lv = cosmosLv(id);

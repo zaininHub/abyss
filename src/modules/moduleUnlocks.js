@@ -7,6 +7,7 @@
 // 跨局保留（S.bazaar.unlocked 在 CROSS_RUN_KEYS），买断后晋升不重复收费；已买断的老玩家不回退。
 import { S, save } from '../state.js';
 import { gateOpen, CHAPTER_GATES } from '../core/chapterGates.js';
+import { accessCheck, ACCESS } from '../core/access.js'; // v2.3.0：模块买断走访问层（章节 + 晋升 + 价格分离）
 
 export const MODULE_UNLOCKS = Object.freeze([
   { key: 'bazaar', name: '深渊集市', cost: 5, desc: '富余资源兑换稀缺资源，汇率随时间波动，成交笔数抬高集市等级。' },
@@ -26,11 +27,18 @@ export function moduleUnlocked(key) {
  * 大模块入口可见：章节门禁到点（集市=第 7 章）且已完成首次晋升。
  * v4.3.36：已买断的模块恒可见——章节门禁只负责「什么时候能买」，不能把老玩家已付款的模块再锁回去。
  */
+// v2.3.0：权限判定统一走 core/access.js 的 `<key>.unlock` 策略；未登记的模块回落到章节门禁
+//   （新增模块时应在 ACCESS 补一条，tests/v230-access.test.mjs 会检查买断动作已注册）。
+function moduleGate(key) {
+  const id = `${key}.unlock`;
+  if (ACCESS[id]) return accessCheck(id, S);
+  if (!gateOpen(key, S)) return { ok: false, reason: `需推进到第 ${CHAPTER_GATES[key]} 章` };
+  return (S.prestige || 0) >= 1 ? { ok: true } : { ok: false, reason: '需先完成 1 次晋升' };
+}
 export function moduleVisible(key) {
   if (moduleUnlockDef(key) === null) return false;
   if (moduleUnlocked(key)) return true;
-  if (!gateOpen(key, S)) return false;
-  return (S.prestige || 0) >= 1;
+  return moduleGate(key).ok;
 }
 
 /** 面板购买卡的单一状态源：按钮文案 / 灰态 / 点击结果全部读它。 */
@@ -38,11 +46,8 @@ export function moduleBuyState(key) {
   const m = moduleUnlockDef(key);
   if (!m) return { ok: false, reason: '未知模块' };
   if (moduleUnlocked(key)) return { ok: false, reason: '已开启', opened: true };
-  if (!gateOpen(key, S)) {
-    const ch = CHAPTER_GATES[key];
-    return { ok: false, reason: `需推进到第 ${ch} 章` };
-  }
-  if (!moduleVisible(key)) return { ok: false, reason: '需先完成 1 次晋升' };
+  const gate = moduleGate(key);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   // v4.0.5：职级点是整数资源——判定与展示都先取整，旧档残留小数不会出现「需 3 PP（当前 2.71）」
   const pp = Math.max(0, Math.round(S.prestigePoints || 0));
   if (pp < m.cost) return { ok: false, reason: `需 ${m.cost} PP（当前 ${pp}）`, cost: m.cost, pp };

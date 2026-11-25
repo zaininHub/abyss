@@ -4,7 +4,7 @@
 //       立誓（岔路口买建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。
 import { S } from '../state.js';
 import { researchMult } from '../core/research.js'; // v3.7.0：律令演绎走标准研究读侧，不再内联第二份公式
-import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：政策绑第 7 章
+import { accessCheck } from '../core/access.js'; // v2.3.0：政策可见性走访问层（章节 policy）
 
 export const POLICY_GROUPS = [
   {
@@ -203,7 +203,7 @@ export function policyMult(key, state = S) {
 // v4.2.0：周期政策绑第 7 章「叛乱」（集结分身=自主立法）——在开放入口统一 AND 章节门禁，
 //   不改 POLICY_GROUPS 各组既有资产门槛（原条件保留防跳过）。老玩家 S.chapter 已过 7 章恒放行。
 export function policyOpenGroups() {
-  if (!gateOpen('policy', S)) return [];
+  if (!accessCheck('policy.open', S).ok) return [];
   return POLICY_GROUPS.filter(g => { try { return !!g.unlock(S); } catch { return false; } });
 }
 

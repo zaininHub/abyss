@@ -17,6 +17,7 @@ import { researchMult, addDm, addRp, spendRes, gainRes } from './economy.js'; //
 import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解耦
 import { showAbyssGaze } from './abyssGaze.js'; // v3.4.2：凝视深渊彩蛋视觉层（独立模块，避免环形引用）
 import { leaderGlobalMult } from './threadBinding.js'; // v4.3.25 反馈④：领导全局加成接入裂隙 DM 产出
+import { accessCheck } from '../core/access.js'; // v2.3.0：裂隙购买走访问层（裂隙已触发）
 
 // v2.8.3：首次获得 DM 即点亮发现锚点（消除「有 DM 却未解锁」歧义）
 export function discoverDm() {
@@ -59,6 +60,9 @@ export function riftLevelName(lv) {
 }
 // v3.3.9 反馈⑤：科技树购买裂隙等级（EP + DM 双消耗，无限升级）
 export function buyRiftLevelTech() {
+  // v2.3.0 补齐缺口：裂隙科技此前只靠渲染层拦（tab 隐藏），直调可越过「裂隙已触发」。
+  const gate = accessCheck('rift.tech', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const cost = riftLevelTechCost();
   if ((S.ep || 0) < cost.ep) return { ok: false, reason: `EP 不足（需 ${fmt(cost.ep)}）` };
   if ((S.dm || 0) < cost.dm) return { ok: false, reason: `DM 不足（需 ${fmt(cost.dm)}）` };
@@ -218,6 +222,8 @@ export function riftVsMult() {
   return 1 + 0.5 * riftUpgradeLevel('echo') + 0.3 * riftUpgradeLevel('voidheart'); // v3.6.0：虚空之心
 }
 export function buyRiftUpgrade(id) {
+  const gate = accessCheck('rift.upgrade', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const u = BALANCE.rift.upgrades[id];
   if (!u) return { ok: false, reason: '未知升级' };
   const lv = riftUpgradeLevel(id);

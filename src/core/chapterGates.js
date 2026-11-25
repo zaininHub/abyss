@@ -38,12 +38,45 @@ export const CHAPTER_GATES = Object.freeze({
   delve: 11,
   expedition: 12,
   bazaar: 7,  // v4.3.36：新增——集市不再挂在第 2 章的「首次晋升」上
+  starchart: 3, // v2.3.0：从 disclosure.starChartUnlocked 的 `< 3` 硬编码收进来（章节号唯一真源）
+  pets: 2,      // v2.3.0：从 shop.js 的 `parseInt(S.chapter) >= 2` 硬编码收进来（饵料仓库入口章）
 });
 
-/** 按 id 判定门禁，未知 id 恒放行（防误伤）。 */
+// v2.3.0：门禁 id 白名单——供 access 策略表与测试校验「章节引用必须存在」。
+export const GATE_IDS = Object.freeze(Object.keys(CHAPTER_GATES));
+
+// 未知 id 的一次性告警（同一会话只报一次，避免每帧刷屏）。
+let _unknownGateWarned = null;
+
+/**
+ * 按 id 判定门禁。
+ * v2.3.0 起**未知 id 恒 false（fail-closed）**：旧实现返回 true，任何拼错/已删的 gate id
+ * 都会静默放行——正是「集市挂错轴」那类 bug 的温床。拼错现在会被立刻发现（并 console.warn 一次）。
+ */
 export function gateOpen(id, state) {
   const n = CHAPTER_GATES[id];
-  return n === undefined ? true : chapterAtLeast(n, state);
+  if (n === undefined) {
+    if (_unknownGateWarned !== id) {
+      _unknownGateWarned = id;
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn(`[chapterGates] 未知门禁 id「${id}」——按未开放处理（fail-closed）。请检查拼写或在 CHAPTER_GATES 注册。`);
+      }
+    }
+    return false;
+  }
+  return chapterAtLeast(n, state);
+}
+
+/** 门禁对应章节号；未注册返回 null（UI 文案用，避免 `第 undefined 章`）。 */
+export function gateChapter(id) {
+  const n = CHAPTER_GATES[id];
+  return n === undefined ? null : n;
+}
+
+/** 门禁的展示文案：`第 7 章`；未注册返回空串（调用方自行兜底）。 */
+export function gateChapterText(id) {
+  const n = gateChapter(id);
+  return n === null ? '' : `第 ${n} 章`;
 }
 
 // ---- v4.2 数据清洗（用户反馈①：宗教第一章就解锁 = 旧档 _religionHintSeen + 当前章 < 4）----

@@ -25,6 +25,7 @@ import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { policyMult } from '../data/policies.js';
 import { v21BuildingCost } from './economy.js';
 import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
+import { accessCheck } from '../core/access.js'; // v2.3.0：AI 助手购买走访问层（ai_core 科技）
 import { rollProfession, aiSuggestedProfession } from './threadBinding.js'; // v3.3.0 ⑤：AI 招募与线程职业联动
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
 import { pushBoughtOrder } from './listkit.js'; // v2.8.4：自动研究（已购顺序登记）
@@ -388,9 +389,10 @@ function chaosIntuitionTick(dt) {
 export function assistantBuyState() {
   const cost = assistantCost();
   const afford = (S.ep || 0) >= cost;
-  const disabled = !aiUnlocked() || !afford;
+  const gate = accessCheck('assistant.buy', S); // v2.3.0：ai_core 科技门禁与购买路径同源
+  const disabled = !gate.ok || !afford;
   const label = `购买助手（${fmt(cost)} EP）`;
-  const title = !aiUnlocked() ? '需先研究「AI 管理核心」'
+  const title = !gate.ok ? gate.reason
     : afford ? `消耗 ${fmt(cost)} EP 扩编 1 名 AI 助手（常驻班组，绑定到开启的自动化动作，不消耗）`
       : `EP 不足：还需 ${fmt(Math.max(0, cost - (S.ep || 0)))} EP`;
   return { cost, afford, disabled, label, title, sig: `${disabled}|${label}|${title}` };

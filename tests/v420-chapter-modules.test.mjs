@@ -23,19 +23,21 @@ test('A1 chapterNumOf 读 S.chapter 数字部分；变体章取数字', () => {
   assert.equal(chapterNumOf({ chapter: '6A' }), 6);
   assert.equal(chapterNumOf({}), 1);
 });
-test('A2 九处章节门禁映射（v4.3.36 重排：宗教3/政策3/遗物1/集市7；超验6/矩阵8/共鸣10/深潜11/殖民12 不动）', () => {
+test('A2 十一处章节门禁映射（v4.3.36 重排；v2.3.0 收进 starchart/pets 两个原硬编码章号）', () => {
   assert.deepEqual({ ...CHAPTER_GATES }, {
     religion: 3, transcend: 6, policy: 3, eternals: 8, relics: 1,
     resonance: 10, delve: 11, expedition: 12, bazaar: 7,
+    starchart: 3, pets: 2,
   });
 });
-test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒放行', () => {
+test('A3 老玩家零回退：chapter 已过线恒放行；未知 id 恒拒绝（v2.3.0 fail-closed）', () => {
   assert.equal(gateOpen('religion', { chapter: '3' }), true);
   assert.equal(gateOpen('religion', { chapter: '18' }), true);
   assert.equal(gateOpen('relics', { chapter: '1' }), true, '遗物第 1 章起放行');
   assert.equal(gateOpen('bazaar', { chapter: '6' }), false);
   assert.equal(gateOpen('bazaar', { chapter: '7' }), true);
-  assert.equal(gateOpen('unknown', { chapter: '1' }), true);
+  // v2.3.0：未知 gate id 由「恒放行」改为 fail-closed——拼错/已删 id 不再静默放行。
+  assert.equal(gateOpen('unknown', { chapter: '18' }), false);
 });
 test('A4 集市：第 2 章不出现入口（用户反馈），第 7 章买得起；已买断的老档不回退', () => {
   const keep = { chapter: S.chapter, prestige: S.prestige, prestigePoints: S.prestigePoints, bazaar: S.bazaar };

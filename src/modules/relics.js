@@ -3,6 +3,7 @@ import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { fmt } from './economy.js';
 import { RELICS, relicLevel, relicCost, relicMult, relicsUnlocked } from '../data/relics.js';
+import { accessCheck } from '../core/access.js'; // v2.3.0：购买权限唯一出口
 
 let logFn = null;
 let toastFn = null;
@@ -14,7 +15,9 @@ function rlog(msg, cls) { if (logFn) logFn(`[遗物] ${msg}`, cls); }
 export function buyRelic(id) {
   const r = RELICS.find(x => x.id === id);
   if (!r) return { ok: false, reason: '未知遗物' };
-  if (!relicsUnlocked()) return { ok: false, reason: '遗物未解锁（需触发深渊裂隙并发现 DM）' };
+  // v2.3.0：权限判定与 UI 锁定卡同源（core/access.js 的 'relic.buy'）。
+  const gate = accessCheck('relic.buy', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   if (!r.gate()) return { ok: false, reason: '该遗物尚未苏醒（进度不足）' };
   const lv = relicLevel(id);
   if (lv >= r.cap) return { ok: false, reason: '已达遗物上限' };
@@ -35,6 +38,9 @@ const PURIFIER_DEFS = [
   ['purifier3', '净化节点 III', 5000, 5],
 ];
 export function buyPurifier(id) {
+  // v2.3.0 补齐缺口：净化节点此前只靠渲染层拦（遗物面板隐藏），console/AI 可直调绕过。
+  const gate = accessCheck('purifier.buy', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const def = PURIFIER_DEFS.find(x => x[0] === id);
   if (!def) return { ok: false, reason: '未知节点' };
   const [, nm, base, rate] = def;

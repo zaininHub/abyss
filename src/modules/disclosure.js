@@ -40,20 +40,11 @@ export const CHAIN_PREVIEW = '沿链条逐步解锁';
 // 这是「锚点完成的即时谓词」；持久化显示态走 S.resDiscovered（锚点完成即写入，
 // 跨转生保留，旧档按 9.6 OR 语义迁移），顶栏显示与 ② 分区可见性统一读持久化标记。
 export function anchorDone(key, S) {
-  const up = (S && S.upgrades) || {};
-  switch (key) {
-    case 'rp':    return (up.rp_vault || 0) >= 1 || (up.atrium || 0) >= 1; // v3.0.9 反馈②：研究点解锁唯一入口 = 购入「矩阵存储库」（旧档「灵感工坊购入」兼容保留）；EP 溢出仅开放仓库购买入口，不再直接解锁研究点（修复：未购仓库 RP 已解锁）
-    case 'pt':    return (S && (S.pt || 0) > 0) || ((up.petland || 0) >= 1) || ((up.pt_vault || 0) >= 1); // v3.0.5 反馈①：PT 锚点 = 首次持有 PT；v3.1.1 反馈⑦：购入「饵料仓库」即开放 PT（与矩阵存储库→RP 同构：仓库是资源解锁入口，修复「买了饵料仓库顶栏/异兽仍不上」）
-    // v3.4.6 反馈⑩：路边神龛删除——信仰锚点改判「宗教已解锁 / 持有 FP / 旧档已购神龛」任一完成
-    case 'faith': return !!(S.religion && S.religion.unlocked) || (S.faith || 0) > 0 || (up.shrine || 0) >= 1;
-    case 'dm':    return (up.scooter || 0) >= 1 || (up.dm_vault || 0) >= 1; // DM ← 首辆载具（外勤摩托队）购入；v3.0.3 反馈⑪：星尘金库买入亦亮出
-    case 'es':    return ((S && S.prestige) || 0) >= 1; // ES 与职级 ← 完成首次晋升
-    default: return false;
-  }
+  // v2.3.0：判定下沉到 core/unlocks.js（access 权限层与 UI 共用同一份，杜绝第二份口径）。
+  return hasAnchor(key, S);
 }
 
-// 持久化锚点标记读取（② 分区可见性与 tab 锁定统一走这里：
-// 新档锚点未完成 → false；锚点完成过一次 → true 且跨转生保留，不回隐藏）
+// 锚点「已显示」：即时完成 或 持久化标记（resDiscovered，跨转生保留，旧档按 9.6 OR 语义迁移）。
 export function anchorShown(key, S) {
   if (anchorDone(key, S)) return true; // 即时完成当帧即视为已显示（discoverCheck 随后落档）
   return !!(S && S.resDiscovered && S.resDiscovered[key]);
@@ -80,24 +71,17 @@ export function petsModuleUnlocked(S) {
  * 不 import economy.hasTech，避免链层反向依赖经济模块（hasTech 等价于 !!S.tech[id]）。
  */
 export function starChartUnlocked(S) {
-  if (!petsModuleUnlocked(S)) return false;
-  if (!anchorDone('rp', S)) return false;
-  // v3.12.11 反馈①：星图显式章节门控——第 3 章（且宠物已解锁）后才开放。
-  // 沿用真实口径：默认新档 chapter=1，推进到第 3 章才解禁，与玩家进度一致。
-  if ((parseInt((S && S.chapter), 10) || 0) < 3) return false;
-  const exps = (S && S.expeditions) || [];
-  return !!((S && S.tech && S.tech.deep_space)
-    || (S && (S.expeditionsDone || 0) > 0) || exps.length > 0);
+  // v2.3.0：判定下沉到 core/unlocks.js 的 starChartOpen（章节门禁走 CHAPTER_GATES.starchart，
+  //   不再有 `< 3` 的字面章号）。异兽/PT → RP → 第 3 章 → 深空科技或已有远征，顺序不可换。
+  return starChartOpen(S);
 }
 
 // v2.5 ①：深渊裂隙触发门控——首次裂隙出现（S._riftSeen）后解锁探采平台与深渊商店；
 // v2.4 及以前旧档（S._v25Legacy，迁移时按 DM/RP 锚点进度自动打标）保持解锁不回退；
 // v2.5 起新档购入载具/灵感工坊不再解锁（解锁前提唯一 = 触发深渊裂隙）。
 export function riftShown(S) {
-  // v4.2.X：纳入「已封印裂隙」——旧实现 main.js 顶栏/tab 各内联一份 _riftSeen || riftsSealed>0，
-  //   与本函数的 _riftSeen || _v25Legacy 不一致。统一真源后三处同口径（老档 _v25Legacy 仍放行）。
-  if (!S) return false;
-  return S._riftSeen === true || S._v25Legacy === true || (S.riftsSealed || 0) > 0;
+  // v2.3.0：判定下沉到 core/unlocks.js 的 riftSeen（顶栏/tab/购买权限三处同口径）。
+  return riftSeen(S);
 }
 
 // 核心：链窗口切分（纯函数，基于 S 即时判定，无持久状态）
@@ -126,6 +110,7 @@ export function chainSplit(mod, items, purchasedOf, S) {
 // v2.8.18 ③：ownedOpts = { verb }（可选）——组内「已购终态」项（一次性已购 / 满级）
 // 收进组最下侧「已×」折叠区，不影响未购/可叠加项展示；未传该参数时行为与旧版完全一致。
 import { S } from '../state.js';
+import { hasAnchor, riftSeen, starChartOpen } from '../core/unlocks.js';
 import { buildOwnedSection } from './listkit.js';
 
 // v4.3.31 反馈③：组标题徽章图形（绶带 + 星章，16 视窗，11px 渲染）。

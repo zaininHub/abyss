@@ -18,6 +18,19 @@ import { RESONANCE_TUNING } from './resonance.js';
 import { TECHS } from '../data/techs.js';
 import { V21_BUILDINGS } from '../data/buildings.js';
 import { FP_BALANCE } from '../data/balance.js';
+import { powerScale } from './pricing.js';
+
+// 晋升门槛口径与 src/modules/economy.js 的 prestigeNeed() 同源：
+//   floor(powerScale({ base: 3e9, exponent: 1.5, index: S.prestige }))
+// 这里用纯函数复算而不是 import economy —— economy 直接 import 全局 state（会触发存档 load），
+// devCheat 必须保持「纯函数、可被 node --test 直接 import」的性质。
+// tests/v4337-cheat-promote.test.mjs 断言两侧数值一致，防止本表与 economy 漂移。
+const PRESTIGE_NEED_SCALE = Object.freeze({ base: 3e9, exponent: 1.5 });
+
+/** S.prestige 次晋升时的晋升需求（= 下一次「晋升」按钮的门槛）。 */
+function prestigeNeedOf(S) {
+  return Math.floor(powerScale({ ...PRESTIGE_NEED_SCALE, index: Number(S && S.prestige) || 0 }));
+}
 
 // 每章 cond 的数值门槛（与 src/data/chapters.js 的 cond 逐条对应）。
 // 新增/修改章节条件时必须同步本表；tests/v4331-cheat-fill.test.mjs 会遍历 1..CHAPTERS.length
@@ -132,24 +145,27 @@ function clampChapter(targetChapter) {
 }
 
 /**
- * 把 S 的资源一次性抬到「满足第 targetChapter 章条件」的水平，并回拨驻留计时。
- * 不抛异常；非法 S 原样返回（fields 为空）。返回值：
- *   { chapter, days, fields } —— fields 只含真正被改写的字段及其最终值。
+ * 内部：把 S 的资源抬到「满足第 uptoChapter 章及其之前所有章节条件」的水平。
+ *   opts.deferPrestige —— 晋升类条件（prestige / prestigePoints）只补到「差一次手动晋升」：
+ *     prestige 次数补到 门槛-1，职级点补到 max(0, 门槛-1) 且不低于本章模块买断价；
+ *     其余字段照旧直接抬足（含 1.01 余量）。
+ * 返回 { fields, gate }：fields 只含真正被改写的字段及最终值；gate 是本次参与判定的门槛聚合。
  */
-export function fillChapterResources(S, targetChapter) {
-  const chapter = clampChapter(targetChapter);
+function applyChapterReqs(S, uptoChapter, opts = {}) {
+  const deferPrestige = !!opts.deferPrestige;
+  // onlyTarget：只按「第 uptoChapter 章自己的 cond」补（升降级测试用），不再把前面章节的门槛
+  //   一起并进来 —— 否则第 3 章（科技 8）会因为第 2 章的 prestige 门槛而被判成「需要晋升」。
+  const onlyTarget = !!opts.onlyTarget;
   const fields = {};
-  if (!S || typeof S !== 'object') return { chapter, days: 0, fields };
-
-  const now = Date.now();
-  const need = Object.create(null);
+  const gate = Object.create(null);
   let needTech = 0;
   let needEndShrine = false;
   let needDmmind = false;
   let needFocus = false;
 
   for (const ch of CHAPTERS) {
-    if (!ch || typeof ch.id !== 'number' || ch.id > chapter) continue;
+    if (!ch || typeof ch.id !== 'number' || ch.id > uptoChapter) continue;
+    if (onlyTarget && ch.id !== uptoChapter) continue;
     const req = CHAPTER_REQS[ch.id];
     if (!req) continue;
     for (const [key, value] of Object.entries(req)) {
@@ -158,21 +174,27 @@ export function fillChapterResources(S, targetChapter) {
         case 'endShrine': needEndShrine = true; break;
         case 'dmmind': needDmmind = true; break;
         case 'resonanceFocus': needFocus = true; break;
-        case 'resonanceLayers': need.resonanceLayers = Math.max(need.resonanceLayers || 0, value); break;
-        default: need[key] = Math.max(need[key] || 0, value);
+        case 'resonanceLayers': gate.resonanceLayers = Math.max(gate.resonanceLayers || 0, value); break;
+        default: gate[key] = Math.max(gate[key] || 0, value);
       }
     }
   }
 
-  // 1) 顶层数值字段（只抬不降，天然兼容已有进度）
-  //    先并入「本章才开放的模块买断价」——否则推到第 7 章也买不起集市（见 MODULE_PP_BY_CHAPTER）。
+  // 本章才开放的模块买断价（集市 5 PP）：推进到该章必须买得起，否则「进了章却玩不了本章内容」。
+  let modulePP = 0;
   for (const [ch, pp] of Object.entries(MODULE_PP_BY_CHAPTER)) {
-    if (Number(ch) > chapter) continue;
-    need.prestigePoints = Math.max(need.prestigePoints || 0, pp);
+    if (Number(ch) > uptoChapter) continue;
+    modulePP = Math.max(modulePP, pp);
   }
+
+  // 1) 顶层数值字段（只抬不降，天然兼容已有进度）
   for (const key of NUMERIC_FIELDS) {
-    if (!(key in need)) continue;
-    const target = bump(need[key]);
+    if (key === 'prestigePoints') continue; // 与「模块买断价」共用同一字段，见 1b
+    if (!(key in gate)) continue;
+    // deferPrestige 下晋升次数只补到「门槛 - 1」：最后 1 次由玩家自己点「晋升」（+1）达成。
+    const target = (deferPrestige && key === 'prestige')
+      ? Math.max(0, Math.floor(gate[key]) - 1)
+      : bump(gate[key]);
     const current = Number(S[key]) || 0;
     if (target > current) {
       S[key] = target;
@@ -180,10 +202,24 @@ export function fillChapterResources(S, targetChapter) {
     }
   }
 
+  // 1b) 职级点：章节门槛与「本章模块买断价」共用同一个字段，取大者。
+  //     deferPrestige 下门槛同样只补到「门槛 - 1」（最后 1 个由玩家点晋升拿到），但买断价必须补足。
+  const ppGate = Number(gate.prestigePoints) || 0;
+  const ppTarget = deferPrestige
+    ? Math.max(Math.max(0, Math.floor(ppGate) - 1), modulePP)
+    : bump(Math.max(ppGate, modulePP));
+  if (ppTarget > 0) {
+    const current = Number(S.prestigePoints) || 0;
+    if (ppTarget > current) {
+      S.prestigePoints = ppTarget;
+      fields.prestigePoints = ppTarget;
+    }
+  }
+
   // 2) 共鸣层数（与 resonance.js 的 maxLayers 同源；ch37 的 20 层已到上限）
-  if (need.resonanceLayers) {
+  if (gate.resonanceLayers) {
     const resonance = ensureObj(S, 'resonance');
-    const target = Math.min(RESONANCE_TUNING.maxLayers, bump(need.resonanceLayers));
+    const target = Math.min(RESONANCE_TUNING.maxLayers, bump(gate.resonanceLayers));
     const current = Number(resonance.layers) || 0;
     if (target > current) {
       resonance.layers = target;
@@ -244,7 +280,7 @@ export function fillChapterResources(S, targetChapter) {
   }
 
   // 7) 信仰 / 深渊物质的上限支撑（否则下一帧 faithCap()/dmCap() 会把数值钳回门槛以下）
-  const faithTarget = need.faith ? bump(need.faith) : 0;
+  const faithTarget = gate.faith ? bump(gate.faith) : 0;
   if (faithTarget > 0) {
     const level = vaultLevelFor(FP_BALANCE.capBase, FP_BALANCE.capPerVaultLv, FP_BALANCE.capVaultGrowth, faithTarget);
     const upgrades = ensureObj(S, 'upgrades');
@@ -254,7 +290,7 @@ export function fillChapterResources(S, targetChapter) {
       fields['upgrades.faith_vault'] = level;
     }
   }
-  const dmTarget = need.dm ? bump(need.dm) : 0;
+  const dmTarget = gate.dm ? bump(gate.dm) : 0;
   if (dmTarget > 0) {
     const level = vaultLevelFor(DM_VAULT.base, DM_VAULT.per, DM_VAULT.growth, dmTarget);
     const upgrades = ensureObj(S, 'upgrades');
@@ -265,11 +301,78 @@ export function fillChapterResources(S, targetChapter) {
     }
   }
 
+  return { fields, gate };
+}
+
+/**
+ * 把 S 的资源一次性抬到「满足第 targetChapter 章条件」的水平，并回拨驻留计时。
+ * 不抛异常；非法 S 原样返回（fields 为空）。返回值：
+ *   { chapter, days, fields } —— fields 只含真正被改写的字段及其最终值。
+ */
+export function fillChapterResources(S, targetChapter) {
+  const chapter = clampChapter(targetChapter);
+  const fields = {};
+  if (!S || typeof S !== 'object') return { chapter, days: 0, fields };
+
+  const now = Date.now();
+  const applied = applyChapterReqs(S, chapter);
+
   // 8) 驻留天数：按「目标章节的 minDays」回拨，且必须用游戏日 MS_PER_DAY（10 分钟/日）。
   //    目标定义按 CHAPTERS[targetChapter-1] 取；取不到时按任务约定用 7 天兜底。
   const targetDef = CHAPTERS[chapter - 1];
   const days = targetDef && Number.isFinite(targetDef.minDays) ? targetDef.minDays : 7;
   if (days > 0) S.chapterEnteredAt = now - days * MS_PER_DAY;
 
-  return { chapter, days, fields };
+  return { chapter, days, fields: applied.fields };
+}
+
+/**
+ * 只备「从第 sourceChapter 章晋升出去」的条件，章节号不代写（v4.3.37 测试口径）。
+ *
+ * 与 fillChapterResources 的区别：后者补「站到第 N 章」的资源并由调用方落章；本函数补「在第 n 章
+ * 能晋升出去」的条件，S.chapter 一个字都不写，章节由游戏自己的 frameSystems 判定推进 ——
+ * 需求方原话：补齐后自己手动点「晋升」更贴近真实流程，也就更适合测试。
+ *
+ *   - 静态条件（科技/建筑/数值/共鸣/信仰/深渊物质…）：直接抬到「下一章 cond 成立」；
+ *   - 晋升类条件（prestige / prestigePoints）：补到「差一次」并把本局累计 EP 抬过晋升线，
+ *     #prestige-btn 因此可点；最后一步由玩家自己在 UI 点，prestige++ 后 cond 自动成立；
+ *   - 驻留天数：回拨到下一章 minDays。注意 doPrestige() 会把 chapterEnteredAt 回拨到「1 天前」
+ *     （v4.1.0 F5），所以点完晋升若下一章 minDays > 1，再调一次本函数即可立刻推进；
+ *   - 绝不写 S.chapter / S.chaptersUnlocked。
+ *
+ * 返回 { chapter, target, days, fields, manualPrestige }：
+ *   chapter = 入参章节（你所在的章）；target = 要晋升进入的章（末章为 null）；
+ *   manualPrestige = 本次是否真的留了「最后一次晋升」给玩家点（补完后下一章 cond 仍不成立才为 true）。
+ */
+export function fillChapterPromotion(S, sourceChapter) {
+  const chapter = clampChapter(sourceChapter);
+  if (!S || typeof S !== 'object') return { chapter, target: null, days: 0, fields: {}, manualPrestige: false };
+
+  const now = Date.now();
+  const next = CHAPTERS[chapter]; // 数组下标 = id - 1，所以 CHAPTERS[chapter] 就是「下一章」
+  const target = next && typeof next.id === 'number' ? next.id : null;
+  const applied = applyChapterReqs(S, target || chapter, { deferPrestige: true, onlyTarget: true });
+  const fields = applied.fields;
+
+  // 晋升门槛类条件：把「本局累计」抬过一档晋升线，让 #prestige-btn 可点
+  //   （prestigeGain() 仍由 economy 按 runEarned / prestigeNeed() 自己算，本函数不伪造 PP 结算）。
+  // 注意：只有当「补完之后下一章 cond 仍不成立」时，才真的还差一次晋升 —— 例如已经晋升到第 2 次
+  //   的人再调 fillChapter(1)，cond 本就成立，这时不该再提示去点晋升，也不该白抬 runEarned。
+  const gateHasPrestige = !!(applied.gate.prestige || applied.gate.prestigePoints);
+  const nextReady = !!(next && typeof next.cond === 'function' && next.cond(S));
+  const manualPrestige = !!next && gateHasPrestige && !nextReady;
+  if (manualPrestige) {
+    const want = Math.ceil(prestigeNeedOf(S) * 1.05);
+    const current = Number(S.runEarned) || 0;
+    if (current < want) {
+      S.runEarned = want;
+      fields.runEarned = want;
+    }
+  }
+
+  const def = next || CHAPTERS[chapter - 1];
+  const days = def && Number.isFinite(def.minDays) ? def.minDays : 0;
+  if (days > 0) S.chapterEnteredAt = now - days * MS_PER_DAY;
+
+  return { chapter, target, days, fields, manualPrestige };
 }

@@ -18,6 +18,7 @@ import { faithCap } from '../data/religions.js';
 import { delveUnlocked } from './delve.js';
 import { anchorDone, anchorShown } from './disclosure.js';
 import { moduleBuyState, buyModuleUnlock, moduleUnlockCard } from './moduleUnlocks.js'; // v3.12.0 反馈⑬：集市改为职级点买断
+import { accessCheck } from '../core/access.js'; // v2.3.0：交易权限唯一出口
 import {
   BAZAAR, QUALITY, qualityOf, RES_LABEL, RES_SHORT, dealerById, bazaarTier, bazaarNextTierNeed,
   rollRate, rollQuality, rollDealerCount, bazaarRefreshEpCost,
@@ -202,7 +203,8 @@ function gainRes(key, n) {
 
 // ========== 交易 ==========
 export function trade(id) {
-  if (!bazaarUnlocked()) return { ok: false, reason: '集市未解锁' };
+  const gate = accessCheck('bazaar.trade', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const d = dealerById(id);
   if (!d) return { ok: false, reason: '未知商人' };
   ensureBazaar();

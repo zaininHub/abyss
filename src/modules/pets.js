@@ -4,6 +4,7 @@ import { petBaseMult, petLevelMilestoneMult, petsStarving as _petsStarving } fro
 import { getStorylinePets } from '../core/storylineContent.js'; // v3.7.0：异兽表按当前故事线动态合并
 import { elv, fmt, ptCap, spendRes, buyRes } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
 import { BALANCE } from '../data/balance.js'; // v3.4.0 反馈③：孵化汇率与 tick 同源
+import { accessCheck } from '../core/access.js'; // v2.3.0：异兽购买走访问层（PT 锚点）
 import { converterThreadBoost, setConverterEnabled } from './threadBinding.js'; // v3.3.3 反馈⑦：孵化产出随绑定线程加成（显示与 tick 同口径） // v4.3.20 反馈②：孵化关闭线程下岗
 import { checkEasterEggs } from './progression.js';
 
@@ -102,6 +103,7 @@ export function isUnlocked(petDef) {
 }
 
 export function buyPet(petDef) {
+  if (!accessCheck('pets.buy', S).ok) return false; // v2.3.0：PT 未解锁时直调也被拦
   if (!isUnlocked(petDef)) return false; // 未解锁不可购买
   if ((S.pt || 0) < petDef.price) return false;
   S.pt -= petDef.price;

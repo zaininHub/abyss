@@ -106,6 +106,7 @@ test('researchMult：ep 线性 + global 复利', () => {
 
 // ============ ③ 裂隙凝视深渊升级购买链路 ============
 test('裂隙凝视升级：购买置位 abyssGazeUnlocked、扣 20 余烬、达 cap 后拦截', () => {
+  S._riftSeen = true; // v2.3.0：裂隙购买加了「裂隙已触发」门禁，种子需先见裂隙
   S.riftEmber = 100; S.riftUpgrades = {}; S.abyssGazeUnlocked = false;
   assert.equal(riftUpgradeCost('gaze'), 20, '凝视升级成本应为 20（取全局 upgBase）');
   const r = buyRiftUpgrade('gaze');
@@ -118,6 +119,7 @@ test('裂隙凝视升级：购买置位 abyssGazeUnlocked、扣 20 余烬、达 
 });
 
 test('裂隙凝视升级：余烬不足时拦截且不改变状态', () => {
+  S._riftSeen = true; // v2.3.0：同上
   S.riftEmber = 5; S.riftUpgrades = {}; S.abyssGazeUnlocked = false;
   const r = buyRiftUpgrade('gaze');
   assert.equal(r.ok, false, '余烬不足应失败');

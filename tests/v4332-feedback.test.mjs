@@ -166,9 +166,11 @@ test('③-2 语义：机会感知器门槛 = 里程碑 5，而第一章只到 m0
 
 test('④ 控制台隐藏命令已接线（__abyssCheat.fillChapter）', () => {
   assert.match(MAIN, /window\.__abyssCheat = \{/, '必须暴露 window.__abyssCheat');
-  assert.match(MAIN, /fillChapter\(n\) \{/, '必须有 fillChapter(n)');
+  assert.match(MAIN, /fillChapter\(n, jump = false\) \{/, '必须有 fillChapter(n, jump = false)');
+  assert.match(MAIN, /fillChapterPromotion\(S, src\)/, '默认路径必须走「只备晋升条件、不代写章节」的纯函数');
+  assert.match(MAIN, /jumpChapter\(n\)/, '必须保留显式落章入口 jumpChapter(n)');
   assert.match(MAIN, /const r = fillChapterResources\(S, n\);/, '必须复用纯函数实现');
-  assert.match(MAIN, /__abyssCheat\.fillChapter\(5\)/, '注释里给出控制台用法示例');
+  assert.match(MAIN, /__abyssCheat\.fillChapter\(5/, '注释里给出控制台用法示例');
   assert.match(MAIN, /来自 '\.\/core\/devCheat\.js'|from '\.\/core\/devCheat\.js'/,
     'main.js 必须 import devCheat');
 });

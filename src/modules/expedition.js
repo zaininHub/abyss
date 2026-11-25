@@ -5,8 +5,7 @@ import { log, toast, dirty } from '../core/runtime.js'; // v3.0.0 测试性解�
 import { renderCosmosHtml, buyCosmos, COSMOS, cosmosCost, cosmosLv } from './cosmos.js'; // v3.0.3 后续反馈④：宇宙探索大模块
 import { progressBar, panelShell } from '../ui/widgets.js'; // v3.6.1 抽出共性 UI 构件（进度条/面板壳）
 import { fmtLongDuration, fmtMultDelta } from '../core/format.js';
-import { starChartUnlocked } from './disclosure.js'; // v3.12.9：深空殖民与星图 tab 同源（宠物在前） // v3.12.0 反馈⑮：倍率 → 带符号百分比
-import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：深空殖民绑第 12 章
+import { accessCheck } from '../core/access.js'; // v2.3.0：出发/殖民权限唯一出口
 import { leaderGlobalMult } from './threadBinding.js'; // v4.3.25 反馈④：领导全局加成接入殖民 RP 产出
 export { fmtLongDuration }; // 保留原有导出路径，外部模块无需改动
 
@@ -112,6 +111,29 @@ export function warpExpedition(idx) {
 
 export function maxExpeditions() { return hasTech('deep_space') ? 2 : 1; }
 
+/**
+ * v2.3.0：远征「出发」从 renderExpeditions 的 DOM 监听器里抽成真实入口。
+ * 此前这段逻辑只存在于闭包里——30 天推演/AI/QA 无法复用，只能伪造 S 绕过（v4.2.X 已因此删掉
+ * aiBuyCheapestColony 那段死代码）。现在 UI 点击与自动化共用同一函数。
+ */
+export function launchExpedition(galaxyId) {
+  const gate = accessCheck('expedition.launch', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
+  const g = GALAXIES.find(x => x.id === galaxyId);
+  if (!g) return { ok: false, reason: '未知星系' };
+  if (S.expeditions.length >= maxExpeditions()) return { ok: false, reason: '探索队列已满' };
+  const c = galaxyCost(g);
+  if ((S.ep || 0) < c.ep) return { ok: false, reason: `EP 不足（需 ${fmt(c.ep)}）` };
+  if ((S.rp || 0) < c.rp) return { ok: false, reason: `RP 不足（需 ${fmt(c.rp)}）` };
+  if ((S.pt || 0) < c.pt) return { ok: false, reason: `PT 不足（需 ${fmt(c.pt)}）` };
+  S.ep -= c.ep; spendRes('ep', c.ep); S.rp -= c.rp; spendRes('rp', c.rp); S.pt -= c.pt; spendRes('pt', c.pt);
+  const pets = Math.min(3, (S.activePets || []).filter(id => S.pets && S.pets[id]).length);
+  S.expeditions.push({ galaxyId: g.id, startsAt: Date.now(), duration: galaxyDur(g) * 1000, pets });
+  log(`探索出发：${g.name}${pets > 0 ? `（携带 ${pets} 只出战异兽）` : ''}（-${fmt(c.ep)} EP${c.rp ? ` / -${fmt(c.rp)} RP` : ''}${c.pt ? ` / -${fmt(c.pt)} PT` : ''}）`, 'good');
+  save(S);
+  return { ok: true };
+}
+
 // v3.12.7 ⑦：深空殖民按星系逐级开放——必须「该星系探索回来过」才出现殖民项。
 //   计数落 S.galaxyDone（跨本局保留，与 S.colonies 同寿命），旧档缺失按 0 处理。
 export function galaxyDone(id) { return (S.galaxyDone && S.galaxyDone[id]) || 0; }
@@ -126,7 +148,8 @@ export function starColonyLevel() {
   return Object.values(S.colonies || {}).filter(Boolean).length;
 }
 // v4.2.0：深空殖民绑第 12 章「造物」（写自己的服务器=建殖民地）——原门控保留，AND 章节门禁。
-export function starColoniesUnlocked() { return gateOpen('expedition', S) && starChartUnlocked(S) && hasTech('deep_space'); }
+// v2.3.0：四条件收敛到 access 的 'colony.claim'（章节 / 星图 / 深空探测），与 colonize 同一出口。
+export function starColoniesUnlocked() { return accessCheck('colony.claim', S).ok; }
 export function colonyRpPerSec() {
   let rp = 0;
   for (const g of GALAXIES) if (isColonized(g.id)) rp += g.colonyRp * researchMult('colony'); // v3.6.0 方向⑤：rp_colony2（星殖民拓）提升殖民 RP 产出 +8%/级
@@ -138,7 +161,8 @@ export function tickColonies(dt) {
   if (rp > 0) addRp(rp * dt); // v2.8.27 ②：RP 上限
 }
 function colonize(g) {
-  if (!starColoniesUnlocked()) { toast('深空殖民未解锁（需科技「深空探测」）'); return; }
+  const gate = accessCheck('colony.claim', S);
+  if (!gate.ok) { toast(gate.reason); return; }
   if (isColonized(g.id)) return;
   const cost = g.colonyCps;
   if ((S.starCps || 0) < cost) { toast(`星际燃料 CPS 不足（需 ${fmt(cost)}）`); return; }
@@ -305,17 +329,8 @@ export function renderExpeditions(container) {
   });
   container.querySelectorAll('[data-galaxy]').forEach(div => {
     div.addEventListener('click', () => {
-      if (S.expeditions.length >= maxExpeditions()) { toast('探索队列已满'); return; }
-      const g = GALAXIES.find(x => x.id === div.dataset.galaxy);
-      const c = galaxyCost(g);
-      if ((S.ep || 0) < c.ep) { toast(`EP 不足（需 ${fmt(c.ep)}）`); return; }
-      if ((S.rp || 0) < c.rp) { toast(`RP 不足（需 ${fmt(c.rp)}）`); return; }
-      if ((S.pt || 0) < c.pt) { toast(`PT 不足（需 ${fmt(c.pt)}）`); return; }
-      S.ep -= c.ep; spendRes('ep', c.ep); S.rp -= c.rp; spendRes('rp', c.rp); S.pt -= c.pt; spendRes('pt', c.pt);
-      const pets = Math.min(3, (S.activePets || []).filter(id => S.pets && S.pets[id]).length);
-      S.expeditions.push({ galaxyId: g.id, startsAt: Date.now(), duration: galaxyDur(g) * 1000, pets });
-      log(`探索出发：${g.name}${pets > 0 ? `（携带 ${pets} 只出战异兽）` : ''}（-${fmt(c.ep)} EP${c.rp ? ` / -${fmt(c.rp)} RP` : ''}${c.pt ? ` / -${fmt(c.pt)} PT` : ''}）`, 'good');
-      save(S);
+      const r = launchExpedition(div.dataset.galaxy);
+      if (!r.ok) { toast(r.reason); return; }
       renderExpeditions(container);
     });
   });

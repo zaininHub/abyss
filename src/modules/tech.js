@@ -7,6 +7,7 @@ import { buildOwnedSection, partitionSort, pushBoughtOrder, scheduleMoveToOwned,
 import { checkEasterEggs } from './progression.js';
 import { chainSplit, CHAIN_PREVIEW } from './disclosure.js'; // v2.3.1 ⑤：makeExpandBtn 随展开交互移除；v2.3.2 §5.2：链提示废除
 import { chapterAtLeast } from '../core/chapterGates.js'; // v4.3.19 反馈⑦：科技卡片章节门禁（章节>前置）
+import { accessCheck, rules } from '../core/access.js'; // v2.3.0：购买权限唯一出口（科技前置 / 永恒矩阵章节门禁）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦
 
 let techContainer = null;
@@ -26,7 +27,14 @@ export function techVisible(t) {
   if (hasTech(t.id)) return true;
   return techChapterOk(t);
 }
-export function techReqOk(t) { return techChapterOk(t) && t.req.every(r => hasTech(r)); }
+// v2.3.0：前置科技判定走访问层（原因文案统一），章节门禁仍是逐项数据（minChapter）。
+function techGate(t) {
+  const names = getTechs();
+  return accessCheck('tech.buy', S, {
+    requires: (t.req || []).map(r => rules.tech(r, `需先研究「${(names.find(x => x.id === r) || {}).name || r}」`)),
+  });
+}
+export function techReqOk(t) { return techChapterOk(t) && techGate(t).ok; }
 
 export function renderTech(container) {
   techContainer = container;
@@ -110,7 +118,7 @@ function bindTechDelegate(container) {
 
 export function buyTech(t, el) {
   if (hasTech(t.id)) return;
-  if (!techReqOk(t)) return; // v4.3.19 反馈⑦：techReqOk 已含章节门禁（章节>前置），绕过 DOM 的直调入口（校准玩家/QA）同被钳制
+  if (!techReqOk(t)) return; // v4.3.19 反馈⑦：techReqOk 已含章节门 + 前置门（v2.3.0 起前置走 access 策略）：techReqOk 已含章节门禁（章节>前置），绕过 DOM 的直调入口（校准玩家/QA）同被钳制
   // v2.8.7：科技树多资源成本（RP + EP + DM + ES 综合消耗，退潮乘数作用于 RP）
   const cost = techCostOf(t);
   if (!techAfford(t)) return;
@@ -252,6 +260,10 @@ function bindEternalDelegate(container) {
 }
 
 export function buyEternal(e) {
+  // v2.3.0 补齐缺口：永恒矩阵此前只在 main.js 的渲染条件里挂了第 8 章门禁，
+  //   console / AI 直调 buyEternal 可越过章节提前买（用户审计的 ② 类问题）。
+  const gate = accessCheck('eternal.buy', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const cost = esCost(e);
   if (S.es < cost) return;
   // v3.12.13 ⑦：一次性解锁项（如皮肤）满级后不可重复购买

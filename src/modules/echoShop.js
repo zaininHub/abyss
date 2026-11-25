@@ -4,6 +4,7 @@
 import { S, save } from '../state.js';
 import { BALANCE } from '../data/balance.js';
 import { toast, dirty } from '../core/runtime.js';
+import { accessCheck } from '../core/access.js'; // v2.3.0：回响升级需已晋升（回响只在晋升结算产出）
 
 export function echoUpgradeCost(id) {
   const u = (BALANCE.reincarn.upgs || []).find(x => x.id === id);
@@ -12,6 +13,8 @@ export function echoUpgradeCost(id) {
   return Math.ceil(BALANCE.reincarn.upgBase * Math.pow(BALANCE.reincarn.upgGrowth, lv));
 }
 export function buyEchoUpgrade(id) {
+  const gate = accessCheck('echo.buy', S);
+  if (!gate.ok) return { ok: false, reason: gate.reason };
   const u = (BALANCE.reincarn.upgs || []).find(x => x.id === id);
   if (!u) return { ok: false, reason: '未知升级' };
   const lv = (S.echoUpgrades && S.echoUpgrades[id]) || 0;

@@ -12,6 +12,7 @@ import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW, BADGE_ICON_HOARD } from './disclosure.js'; // v2.0.0：囤囤鼠认证徽章图形 // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { gateOpen } from '../core/chapterGates.js'; // v4.3.35 反馈①：研究项章节门禁（政策研究绑第 7 章）
+import { accessCheck } from '../core/access.js'; // v2.3.0：购买权限唯一出口（离线升级 / 岔路口设施）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js';
@@ -126,7 +127,8 @@ export function buyOfflineUpgrade(o) {
   // v4.3.5 反馈⑩：加 offline1（远程协作）科技门禁——此前只查链内 req，
   //   未研究「远程协作」时离线升级仍可购买（用户反馈），渲染与购买双兜底。
   //   （economy.hasTech 单参闭包读 S，勿传双参）
-  if (!hasTech('offline1')) return false;
+  const gate = accessCheck('shop.offline', S); // v2.3.0：离线升级门禁（offline1 科技）走访问层
+  if (!gate.ok) return false;
   const epCost = o.epCost || 0;
   if (S.ep < epCost) return false;
   if (S.rp < o.cost) return false;
@@ -159,7 +161,8 @@ function vaultAnchorReady(u) {
   if (u.id === 'rp_vault') return !!(S._rpOverflowSeen || (S.resDiscovered && S.resDiscovered.rp));
   if (u.id === 'dm_vault') return !!((S.upgrades && S.upgrades.scooter) || (S.resDiscovered && S.resDiscovered.dm));
   if (u.id === 'faith_vault') return religionUnlocked(); // v3.5.0 ②：宗教解锁后才需要 FP 上限
-  if (u.id === 'pt_vault') return parseInt(S.chapter, 10) >= 2 || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构）；v3.12.11 反馈①：提前到第 2 章开放（增加第 2 章 EP 消耗口）；旧档标记兼容
+  // v2.3.0：原 `parseInt(S.chapter,10)>=2` 的字面章号收进 CHAPTER_GATES.pets（章节真源单一）
+  if (u.id === 'pt_vault') return gateOpen('pets', S) || (S.resDiscovered && S.resDiscovered.pt) || (S.upgrades && S.upgrades.petland); // v3.1.1 反馈⑦：饵料仓库 = PT 解锁入口（矩阵存储库→RP 同构）；v3.12.11 反馈①：提前到第 2 章开放（增加第 2 章 EP 消耗口）；旧档标记兼容
   return false;
 }
 // v3.0.7 反馈① / v3.0.8 修正：资源仓库要「EP 上限存得下全价」才摆出来——
@@ -1646,7 +1649,8 @@ let crossroadItemEls = new Map(); // id -> el（open 态可购三栋）
 // 落账字段集与 migrateSave v4→v5 迁移合成完全同源：buildings[id]=1 + storyline + crossroad='locked' + crossroadLockedBy。
 export function buyCrossroadBuilding(id) {
   const b = crossroadById(id);
-  if (!b || S.crossroad !== 'open') return false; // 状态机门控（唯一合法入口；inactive 隐藏 / locked 已立誓）
+  if (!b) return false;
+  if (!accessCheck('shop.crossroad', S).ok) return false; // v2.3.0：状态机门控（唯一合法入口；inactive 隐藏 / locked 已立誓）
   if (crossroadOwned(id, S)) return false;        // 1 级封顶
   const cost = 3e5;                                // 固定价（PM §2.2：不乘 costMult、不受 30% 钳制）
   if (S.ep < cost) return false; // v2.8.2 反馈⑪：EP 不足不弹框
