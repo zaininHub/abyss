@@ -2479,9 +2479,9 @@ function resumeGameClock() {
 }
 
 // v2.5.4 ①：通用二级确认弹框已下沉至 src/core/runtime.js（askConfirm / bindConfirmButtons / registerConfirmHooks）。
-// 浏览器启动时注入游戏时钟的暂停/恢复钩子并绑定确认框按钮（DOM 存在时才生效）：
+// 注入游戏时钟的暂停/恢复钩子；按钮监听须在 bindEvents/startApp 后绑定，
+// 否则模块求值时 DOM 尚未解析，#confirm-ok/#confirm-cancel 为 null，确认框会关闭却不会执行回调。
 registerConfirmHooks({ pause: pauseGameClock, resume: resumeGameClock });
-bindConfirmButtons();
 
 // ========== v2.9.0：深渊吞噬·命运抉择（倒计时终结触发；不可关闭，二选一） ==========
 function showCollapseChoice() {
@@ -3240,6 +3240,8 @@ function startApp() {
   }
 
   bindEvents();
+  // 这里 DOM 已完成解析；绑定通用确认框，确保紧急脱出等二次确认动作能真正执行。
+  bindConfirmButtons();
   render();
   // v2.9.0：旧档兼容——已崩溃/待抉择的存档重开时直接弹出命运抉择（不再走「转生脱离」旧路径）；
   // 已过期的 _collapseAt 由首帧 tickCollapse 触发抉择，无需在此处理

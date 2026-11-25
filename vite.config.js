@@ -31,5 +31,20 @@ export default defineConfig({
   base: './', // v2.0.2：产物资源改相对路径引用，任意子目录部署均可加载
   server: { port: 5173, open: true },
   plugins: [fileProtocolCompat()],
-  build: { outDir: 'dist', sourcemap: true }, // v2.0.1：附带 source map，便于质检与线上问题定位
+  build: {
+    outDir: 'dist',
+    sourcemap: true, // v2.0.1：附带 source map，便于质检与线上问题定位
+    // v4.3.28 P0 缺陷修复：产物必须包在 IIFE 里，禁止顶层声明泄漏到 window。
+    // 根因（已用浏览器实测复现）：fileProtocolCompat 会把 <script type="module"> 降级为经典
+    // <script defer>，于是产物所有顶层声明都成了全局：压缩后 src/core/runtime.js 的 log 恰好被
+    // 重命名为 `S`（`function S(e,t){...}`），而 src/main.js 顶层的 `window.S = S`（存档单例，
+    // 供浏览器测试/调试用）把它覆盖成一个普通对象。此后任何 import { log } 的模块（rift /
+    // shop / expedition / tech / progression / religions …）在升级、收集、建设等路径调用 log
+    // 都会抛 `TypeError: S is not a function`，整帧后续系统被中断：表现为「紧急脱出点了没反应」
+    // 「深渊倒计时到 0 不清除」「暂停弹框不出现」，刷新后因存档回滚而"看起来好了"。
+    // 包成 IIFE 后顶层声明是函数作用域，window.S 只是一个属性，不会再覆盖内部 log 绑定；
+    // 同时也避免其它短名（如 `top` / `name`）与浏览器全局同名互踩。
+    rollupOptions: { output: { format: 'iife' } },
+    cssCodeSplit: false,
+  },
 });

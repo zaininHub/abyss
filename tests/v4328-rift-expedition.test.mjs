@@ -31,6 +31,18 @@ test('rift expedition exit paths persist and redraw both rift surfaces', () => {
     '裂隙页不能绑定不存在于其容器内的紧急脱出按钮');
 });
 
+test('confirmation buttons bind after the document has been parsed', () => {
+  const main = read('src/main.js');
+  const runtime = read('src/core/runtime.js');
+  const bindAtStartup = main.indexOf('bindEvents();\n  // 这里 DOM 已完成解析；绑定通用确认框，确保紧急脱出等二次确认动作能真正执行。\n  bindConfirmButtons();');
+  assert.ok(bindAtStartup >= 0,
+    '确认框按钮必须在 startApp/bindEvents 后绑定，避免模块加载时 DOM 尚未解析而丢失监听器');
+  assert.equal(main.slice(0, bindAtStartup).split('bindConfirmButtons();').length - 1, 0,
+    '启动前不能绑定通用确认框按钮');
+  assert.match(runtime, /const fn = _confirmOk; _confirmOk = null; if \(fn\) fn\(\);/,
+    '确认按钮必须执行 askConfirm 保存的回调');
+});
+
 test('rift expedition panel accurately describes emergency exit reward loss', () => {
   const rift = read('src/modules/rift.js');
   assert.match(rift, /紧急脱出会放弃所有未结算产出/, '面板文案应与脱出规则一致');

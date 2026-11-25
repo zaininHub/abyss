@@ -270,7 +270,6 @@ function clearRiftExpedition() {
 export function abortRiftExpedition() {
   if (!S.riftExpedition) return { ok: false, reason: '未在深入' };
   // v2.8.12：紧急脱出不结算任何奖励（已消耗的 EP/DM 不退，已获产出丢弃）——提前退出 = 白费，鼓励完整探索
-  log(`[裂隙] 紧急脱出：探索中止，未获得任何奖励（提前退出无结算）`, 'bad');
   clearRiftExpedition();
   return { ok: true };
 }

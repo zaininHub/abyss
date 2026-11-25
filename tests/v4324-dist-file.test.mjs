@@ -68,7 +68,7 @@ test('D3 dist/index.html 处于 file:// 可加载形态（经典 script / 无 cr
   assert.ok(!/crossorigin/.test(html), 'dist/index.html 仍残留 crossorigin 属性');
   // 引用的 js / css 必须真实存在
   const js = html.match(/src="\.\/assets\/(index-[\w-]+\.js)"/)?.[1];
-  const css = html.match(/href="\.\/assets\/(index-[\w-]+\.css)"/)?.[1];
+  const css = html.match(/href="\.\/assets\/([\w-]+\.css)"/)?.[1];
   assert.ok(js && existsSync(join(ROOT, 'dist/assets', js)), `index.html 引用的 js 不存在：${js}`);
   assert.ok(css && existsSync(join(ROOT, 'dist/assets', css)), `index.html 引用的 css 不存在：${css}`);
 });
