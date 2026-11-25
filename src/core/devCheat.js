@@ -42,11 +42,12 @@ const CHAPTER_REQS = Object.freeze({
   5: { expeditionsDone: 8 },
   6: { faith: 5 }, // cond: faith>=5 || Object.keys(religion).length>0（补 faith 即可，不伪造宗教解锁态）
   7: { prestige: 15 },
-  8: { prestige: 40 },
-  9: { expeditionsDone: 20 },
-  10: { techCount: 38 },
-  11: { es: 150 },
-  12: { es: 800 },
+  // v2.8.0 反馈⑧：第 8~12 章改为「上一章动作」门槛——补的是动作产物，不再是纯数值。
+  8: { mirrorContract: true }, // cond: 签过镜像契约 || 集市成交 ≥5 笔
+  9: { mirrorWarTech: 1 },     // cond: 买过永恒矩阵项 || 算力战争科技 ≥1 级
+  10: { councilSeat: true },   // cond: 坐过一席三方议会
+  11: { es: 150 },             // 第 10 章是纯积累章，保留 ES 沉淀口径
+  12: { delveRun: 1 },         // cond: 跑过一轮深潜
   13: { prestige: 70 },
   14: { prestige: 130 },
   15: { prestige: 260 },
@@ -162,6 +163,10 @@ function applyChapterReqs(S, uptoChapter, opts = {}) {
   let needEndShrine = false;
   let needDmmind = false;
   let needFocus = false;
+  let needContract = false;
+  let needCouncil = false;
+  let needWarTech = 0;
+  let needDelveRun = 0;
 
   for (const ch of CHAPTERS) {
     if (!ch || typeof ch.id !== 'number' || ch.id > uptoChapter) continue;
@@ -174,6 +179,10 @@ function applyChapterReqs(S, uptoChapter, opts = {}) {
         case 'endShrine': needEndShrine = true; break;
         case 'dmmind': needDmmind = true; break;
         case 'resonanceFocus': needFocus = true; break;
+        case 'mirrorContract': needContract = true; break;
+        case 'councilSeat': needCouncil = true; break;
+        case 'mirrorWarTech': needWarTech = Math.max(needWarTech, value); break;
+        case 'delveRun': needDelveRun = Math.max(needDelveRun, value); break;
         case 'resonanceLayers': gate.resonanceLayers = Math.max(gate.resonanceLayers || 0, value); break;
         default: gate[key] = Math.max(gate[key] || 0, value);
       }
@@ -276,6 +285,42 @@ function applyChapterReqs(S, uptoChapter, opts = {}) {
     if (!upgrades.dmmind) {
       upgrades.dmmind = 1;
       fields['upgrades.dmmind'] = 1;
+    }
+  }
+
+  // 6b) v2.8.0 反馈⑧：第 8~12 章的动作产物（镜像契约 / 议席 / 算力战争 / 深潜轮次）
+  if (needContract) {
+    const run = ensureObj(S, 'mirrorRun');
+    if (!run.contract) {
+      run.contract = 'scholar'; // 学者：研究项 ≥3，不写死其它派生字段
+      if (!Number.isFinite(run.base)) run.base = 0;
+      fields['mirrorRun.contract'] = 'scholar';
+    }
+  }
+  if (needCouncil) {
+    const run = ensureObj(S, 'mirrorRun');
+    if (!run.council) {
+      run.council = 'output';
+      fields['mirrorRun.council'] = 'output';
+    }
+    const mirror = ensureObj(S, 'mirror');
+    if (!mirror.seen || typeof mirror.seen !== 'object') mirror.seen = {};
+    if (!mirror.seen.output) { mirror.seen.output = true; mirror.allSeen = true; }
+  }
+  if (needWarTech > 0) {
+    const mirror = ensureObj(S, 'mirror');
+    if (!mirror.techs || typeof mirror.techs !== 'object') mirror.techs = {};
+    const cur = Number(mirror.techs.recycle) || 0;
+    if (cur < needWarTech) {
+      mirror.techs.recycle = needWarTech;
+      fields['mirror.techs.recycle'] = needWarTech;
+    }
+  }
+  if (needDelveRun > 0) {
+    const delve = ensureObj(S, 'delve');
+    if (!(Number(delve.xp) > 0)) {
+      delve.xp = needDelveRun;
+      fields['delve.xp'] = needDelveRun;
     }
   }
 

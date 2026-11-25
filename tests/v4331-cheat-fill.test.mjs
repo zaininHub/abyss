@@ -52,14 +52,14 @@ test('连续调用 1→51（同一状态）：不抛错且每章 cond 都成立'
   }
 });
 
-test('techCount 用真实 tech/建筑 id 补足（ch10 需 38）', () => {
+test('techCount 用真实 tech/建筑 id 补足（ch3 需 8；v2.8.0 起 ch10 改为议席动作门槛）', () => {
   const S = defaultState();
-  const r = fillChapterResources(S, 10);
+  const r = fillChapterResources(S, 3);
   const techIds = new Set(TECHS.map(t => t.id));
   const buildingIds = new Set(V21_BUILDINGS.filter(b => b.via !== 'upgrade').map(b => b.id));
   const count = Object.keys(S.tech).length + Object.keys(S.unlockedBuildings).length;
-  assert.ok(count >= 38, `techCount 应 ≥38，实际 ${count}`);
-  assert.ok(r.fields.techCount >= 38, '返回值应记录最终 techCount');
+  assert.ok(count >= 8, `techCount 应 ≥8，实际 ${count}`);
+  assert.ok(r.fields.techCount >= 8, '返回值应记录最终 techCount');
   assert.ok(!r.fields.techCountCapped, '当前数据（6 科技 + 34 建筑）足够，不应标记上限不足');
   for (const id of Object.keys(S.tech)) assert.ok(techIds.has(id), `科技 id 必须真实：${id}`);
   for (const id of Object.keys(S.unlockedBuildings)) assert.ok(buildingIds.has(id), `建筑 id 必须真实：${id}`);

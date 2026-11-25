@@ -53,7 +53,8 @@ function resRatePerSec(key, metric) {
 }
 
 // 枚举当前已解锁资源可衍生的所有（资源, 类型）组合
-function availableResKinds() {
+export function availableResKinds() { // v2.8.0：导出供反馈测试断言「一次性 kind」
+
   const out = [];
   for (const [key, def] of Object.entries(RES_PROJECTS)) {
     if (def.anchor && !anchorDone(def.anchor, S)) continue; // 资源未解锁 → 不刷该类任务
@@ -64,7 +65,9 @@ function availableResKinds() {
     const kindGate = kind => !(key === 'dm' && kind.metric !== 'gain') || relicsUnlocked();
     for (const kind of Object.values(def.kinds)) {
       if (!kindGate(kind)) continue;
-      out.push({ key, metric: kind.metric, name: kind.name, desc: kind.desc, resLabel: def.label });
+      // v2.8.0 反馈⑥：一次性 kind 一旦刷过就不再进候选池
+      if (kind.once && S._projOnce && S._projOnce[`${key}.${kind.metric}`]) continue;
+      out.push({ key, metric: kind.metric, name: kind.name, desc: kind.desc, resLabel: def.label, once: !!kind.once });
     }
   }
   return out;
@@ -107,6 +110,20 @@ function rollReward(now) {
   return reward;
 }
 
+// v2.8.0 反馈⑥：异兽等级总和（进度口径 = 当前值 − 刷出时快照，等级只增不减）
+function petLevelSum() {
+  let sum = 0;
+  for (const p of Object.values(S.pets || {})) sum += (p && p.level) || 0;
+  return sum;
+}
+// 进度累加器：gain/spend/buy 三张全局面板；petlv 走等级快照（无累加器）
+function resAcc(p) {
+  if (p.metric === 'gain') return S._gainRes;
+  if (p.metric === 'spend') return S._spentRes;
+  if (p.metric === 'petlv') return null;
+  return S._buyRes;
+}
+
 export function spawnProject() {
   lastSpawnAt = Date.now();
   const now = Date.now();
@@ -145,8 +162,8 @@ export function spawnProject() {
   //   gain 类仍按产出速率估（连续蒸馏产出稳定）。其它资源 spend 语义不变。
   const rate = resRatePerSec(pick.key, pick.metric);
   let goal;
-  if (pick.metric === 'buy') {
-    goal = 1 + Math.floor(Math.random() * 2); // 相关升级：1-2 次购买
+  if (pick.metric === 'buy' || pick.metric === 'petlv') {
+    goal = 1 + Math.floor(Math.random() * 2); // 相关升级：1-2 次购买 / 1-2 级升级
   } else if (pick.key === 'rp' && pick.metric === 'spend') {
     goal = Math.max(MIN_GOAL.rp, Math.round(rpCap() * (0.35 + Math.random() * 0.2)));
   } else {
@@ -155,8 +172,13 @@ export function spawnProject() {
   }
 
   // 记录进度基准快照：窗口内「增量」= 当前累加器 − 基准
-  const acc = pick.metric === 'gain' ? S._gainRes : pick.metric === 'spend' ? S._spentRes : S._buyRes;
-  const base = (acc && acc[pick.key]) || 0;
+  const acc = resAcc(pick);
+  const base = pick.metric === 'petlv' ? petLevelSum() : ((acc && acc[pick.key]) || 0);
+  // v2.8.0 反馈⑥：一次性 kind 刷出即记账，避免过期后再次出现
+  if (pick.once) {
+    if (!S._projOnce) S._projOnce = {};
+    S._projOnce[`${pick.key}.${pick.metric}`] = true;
+  }
 
   const reward = rollReward(now);
   S.projects.push({
@@ -196,8 +218,8 @@ export function tickProjects() {
       p.progress = S.totalClicks - (p.clicksAt || 0);
     } else if (p.type === 'res') {
       // v3.12.13：进度 = 窗口内累加器增量（获取/消耗/购买）
-      const acc = p.metric === 'gain' ? S._gainRes : p.metric === 'spend' ? S._spentRes : S._buyRes;
-      const cur = (acc && acc[p.resKey]) || 0;
+      const acc = resAcc(p);
+      const cur = p.metric === 'petlv' ? petLevelSum() : ((acc && acc[p.resKey]) || 0);
       p.progress = Math.max(0, cur - (p.base || 0));
     } else if (p.type === 'earn_ep') {
       // v3.12.13：旧档/测试兼容——earn_ep 进度按 earnedFull 口径（达上限后冻结）

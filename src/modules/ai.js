@@ -5,6 +5,8 @@
 // 规范（设计 §5）：
 //   - 各开关默认全关，独立可关；关闭后无新动作
 //   - 自动升级：每决策周期买「回本最短」产出项（payback = 成本 ÷ 边际 CPS 含全局乘数），EP ≥ 预留线才买
+//   - v2.8.0 效用购买：回本模型只对「直接产 EP」的卡成立，载具（产 DM）与净化器（压腐化）永远算不出回本，
+//     于是自动玩家从不买它们 → 早局 EP 攒着也不出 DM。这里加一层「有明确下一步价值」的直购规则（仍受预留线约束）。
 //   - 自动招募：staffNetPerSec() > 0 且 EP ≥ staffCost×2（net<0 自然停）
 //   - 自动领取：任务 pending 即领（EP 类奖励走 addEp 上限口径，由 claimProject 内部处理）
 //   - 自动购建 / 自动研究：各自需额外解锁，开启后需 AI 助手编制
@@ -18,13 +20,14 @@ import { UPGRADES } from '../data/upgrades.js';
 import {
   hasTech, computeCps, globalMult, epStorageCap, staffCost, staffNetPerSec,
   fmt, unitCost, costMult, addEp, techCostOf, researchMult, elv, spendRes, // v2.8.22 ②：自动研究按多资源成本购买；v3.10.5：「拟我协议」rp_ai 提升助手性价比（摊薄购买价）；v3.12.12 ⑥：永恒拟我缩短决策间隔
+  buyRes, // v2.8.0 ⑦：效用购买（净化节点）计入 DM 购买计数，与手动购买同口径
 } from './economy.js';
 import { claimProject } from './projects.js';
 // v2.5.5：AI 自动购建（全部资源点解锁后可激活，大量 EP 激活，可调速率，严格限速防竞争）
 import { V21_BUILDINGS, v21Level, v21Maxed, capOf } from '../data/buildings.js';
 import { policyMult } from '../data/policies.js';
 import { v21BuildingCost } from './economy.js';
-import { relicLevel } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔
+import { relicLevel, PURIFIER_DEFS } from '../data/relics.js'; // v2.7.0：混沌触须——AI 决策间隔 // v2.8.0：净化节点价目（效用购买层）
 import { accessCheck } from '../core/access.js'; // v2.3.0：AI 助手购买走访问层（ai_core 科技）
 import { rollProfession, aiSuggestedProfession } from './threadBinding.js'; // v3.3.0 ⑤：AI 招募与线程职业联动
 import { getTechs } from '../core/provider.js'; // v2.8.4：自动研究（科技树 RP 购买）
@@ -185,6 +188,32 @@ function bestPaybackItem() {
   return best ? { u: best, cost: unitCost(best, 0), payback: bestPayback } : null;
 }
 
+// v2.8.0 反馈⑦：效用购买层——两类「算不出 CPS 回本但明显该买」的东西：
+//   ① 探采基础载具：一辆都没有 + 裂隙已触发 → 先出 DM 出口（DM 是遗物/净化节点/深渊商店的唯一来源）；
+//   ② 净化节点：腐化 ≥20% 且 DM 够 → 买得起的最便宜一档（腐化直接压 CPS）。
+// 两者都走访问层判定（vehicle.buy / purifier.buy），与手动购买同一真源。
+const AI_PURIFY_CORRUPTION = 20;
+function aiUtilityPick(ctx) {
+  const vehOwned = VEHICLE_IDS.reduce((a, id) => a + (S.upgrades[id] || 0), 0);
+  if (!vehOwned && accessCheck('vehicle.buy', S).ok) {
+    const scooter = UPGRADES.find(u => u.id === 'scooter');
+    if (scooter) {
+      const cost = unitCost(scooter, 0);
+      if (S.ep >= cost && S.ep - cost >= ctx.line) return { kind: 'vehicle', u: scooter, cost };
+    }
+  }
+  if ((S.corruption || 0) >= AI_PURIFY_CORRUPTION && accessCheck('purifier.buy', S).ok) {
+    for (const [id, nm, base] of PURIFIER_DEFS) {
+      const lv = S.upgrades[id] || 0;
+      if (lv >= 3) continue;
+      const cost = Math.ceil(base * Math.pow(1.8, lv));
+      if ((S.dm || 0) >= cost) return { kind: 'purifier', id, name: nm, cost };
+      break; // 一档买不起就先不买更贵的
+    }
+  }
+  return null;
+}
+
 function aiHireOne() {
   // 与 main.js hireCultist 同构的最小招募（[AI] 日志口径独立，避免循环依赖）
   S.ep -= staffCost();
@@ -223,6 +252,23 @@ const EXECUTORS = {
   upgrade(ctx, workers) {
     let count = 0; const messages = [];
     for (let i = 0; i < workers; i++) {
+      // v2.8.0 反馈⑦：效用购买优先（载具 / 净化节点），买不起或不需要时回落回本排序
+      const util = aiUtilityPick(ctx);
+      if (util) {
+        if (util.kind === 'vehicle') {
+          S.ep -= util.cost; spendRes('ep', util.cost);
+          S.upgrades[util.u.id] = (S.upgrades[util.u.id] || 0) + 1;
+          S.totalBuys++;
+          aiUiRefresh({ kind: 'upgrade', u: util.u });
+          messages.push({ text: `自动探采：购入 ${util.u.name}（-${fmt(util.cost)} EP）`, cls: 'good' });
+        } else {
+          S.dm -= util.cost; spendRes('dm', util.cost); buyRes('dm');
+          S.upgrades[util.id] = (S.upgrades[util.id] || 0) + 1;
+          messages.push({ text: `自动净化：${util.name} 升至 Lv.${S.upgrades[util.id]}（-${fmt(util.cost)} DM）`, cls: 'good' });
+        }
+        count++;
+        continue;
+      }
       const pick = bestPaybackItem();
       if (!(pick && S.ep - pick.cost >= ctx.line && S.ep >= pick.cost)) break;
       S.ep -= pick.cost;

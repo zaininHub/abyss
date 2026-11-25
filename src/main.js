@@ -1449,7 +1449,8 @@ function switchTab(id) {
     renderDmShop(document.getElementById('dm-shop'));
     // v4.2.5 反馈①：「深渊商店」「深渊遗物」纯类目 h3 接入折叠（探采平台带数据行保持页级观感）；
     // 遗物标题同时是深渊商店的折叠边界（foldSiblings 到 h3 即停），防越界收起遗物面板
-    for (const tid of ['dm-shop-title', 'relic-title']) {
+    // v2.8.0 反馈②：深渊遗物不再折叠（去下拉框）——遗物是纯类目，收起再展开只是多一次点击
+    for (const tid of ['dm-shop-title']) {
       const t = document.getElementById(tid);
       if (t && !t.dataset.foldBound) { t.dataset.foldBound = '1'; bindFoldToggle(t); }
     }

@@ -83,17 +83,19 @@ test('R3a 手动蒸馏基准 30000→10000（rp_distill/罗盘/效率三档口�
   assert.ok(/Math\.pow\(1\.12, lv\)/.test(eco), '蒸馏塔级减免应保留');
 });
 
-test('R3b 孵化口径统一到实扣 15000×lv×绑定（顶栏+卡面+升级日志三处）', () => {
+test('R3b 孵化口径统一到实扣 12000×lv×绑定（顶栏+卡面同源 BALANCE.hatch）', () => {
+  // v2.8.0 反馈④：单价从硬编码 15000 改为 BALANCE.hatch.epPerSec = 12000（EP 便宜 20%，
+  //   产出 0.1 PT/s 不变），四处（实扣流 / 顶栏消耗 / 卡面 / 升级日志）必须同源。
   const eco = stripComments(read('src/modules/economy.js'));
-  const m = eco.match(/return 15000 \* \(S\.ptHatchLv \|\| 1\) \* converterThreadBoost\('hatch'\);/);
-  assert.ok(m, 'ptHatchEpPerSec 应对齐实扣 15000×lv×绑定');
+  const m = eco.match(/return \(BALANCE\.hatch\?\.epPerSec \|\| 12000\) \* \(S\.ptHatchLv \|\| 1\) \* converterThreadBoost\('hatch'\);/);
+  assert.ok(m, 'ptHatchEpPerSec 应对齐实扣 BALANCE.hatch.epPerSec×lv×绑定');
+  assert.ok(!/return 15000 \* \(S\.ptHatchLv/.test(eco), '硬编码 15000 应删除');
   assert.ok(!/5000 \* \(S\.ptHatchLv \|\| 1\) \* \(S\.ptHatchLv \|\| 1\)/.test(eco), '旧式 5000×lv² 应删除');
   const shop = stripComments(read('src/modules/shop.js'));
-  // 注意：fmt(15000 * lv) 中「* lv」在右括号前（非「15000 * lv)」），正则直接锚定格式串
-  assert.ok(/15000 \* lv\)\} EP\/s → \+\$\{fmt\(0\.1 \* lv\)\} PT\/s/.test(shop), '孵化工坊卡面应对齐 15000/0.1');
+  assert.ok(/const hEp = BALANCE\.hatch\?\.epPerSec \|\| 12000;/.test(shop), '卡面速率应读 BALANCE.hatch');
+  assert.ok(!/自动孵化：/.test(shop), '卡面不应再有「自动孵化：」前缀');
   assert.ok(!/5000 \* lv\)\} EP\/s → \+\$\{fmt\(0\.15 \* lv\)\} PT\/s/.test(shop), '旧卡面 5000×lv→0.15×lv 应删除');
-  assert.ok(!/5000 \* S\.ptHatchLv \* S\.ptHatchLv/.test(shop), '升级日志旧式 5000×lv² 应删除');
-  // 实扣真源不动（pt:hatch 流 15000×lv×boost 本来就是实扣）
+  // 实扣真源不动（pt:hatch 流读 BALANCE.hatch，本来就是实扣）
   const rf = stripComments(read('src/systems/resourceFlows.js'));
   assert.ok(/hatchCfg\.epPerSec \* hatchLv \* boost \* dt/.test(rf), 'pt:hatch 实扣真源应保持不变');
 });

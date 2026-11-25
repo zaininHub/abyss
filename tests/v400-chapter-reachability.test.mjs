@@ -45,6 +45,11 @@ test('C. 终章在「默认容量 + 已建终焉圣殿」下真实可达（线�
     tech: { true_end: true }, buildings: { end_shrine: 1 },
     upgrades: {}, religion: {}, resonance: { layers: 24, focus: 'rp' },
     unlockedBuildings: Object.fromEntries(Array.from({ length: 50 }, (_, i) => ['b' + i, 1])),
+    // v2.8.0 反馈⑧：第 8~12 章改为「上一章动作」门槛——这条用例代表「把该做的动作都做了」的玩家，
+    // 因此夹具里带上集市成交 / 镜像契约 / 算力战争 / 议席 / 深潜这些动作产物。
+    bazaar: { unlocked: true, trades: 50 }, delve: { up: {}, xp: 120, cycleT: 0 },
+    mirror: { merit: 1e6, techs: { recycle: 1 }, seen: { output: true }, allSeen: true },
+    mirrorRun: { contract: 'conqueror', base: 0, council: 'output', meritBasis: 0 },
   };
   // v4.1.0 F5：一次调用只推进一章（连跳防护）。真实游戏中 frameSystems 每次推进后
   // 重置 chapterEnteredAt，驻留计时重新起算——这里按同一节奏逐章模拟 40 步，
@@ -56,6 +61,19 @@ test('C. 终章在「默认容量 + 已建终焉圣殿」下真实可达（线�
     cur = currentChapter(S, CHAPTERS);
   }
   assert.ok(cur.id >= 18, `应推进到终章或之后，实际停在第 ${cur.id} 章（${cur.name}）`);
+});
+
+test('E. 第 8~12 章是「上一章动作」门槛，纯晋升/纯远征不再放行', () => {
+  const byId = id => CHAPTERS.find(c => c.id === id);
+  const strong = { prestige: 1e6, prestigePoints: 1e6, expeditionsDone: 1e6, es: 1e9, tech: {} };
+  for (const [id, hint] of [[8, '集市成交 / 镜像契约'], [9, '算力战争 / 永恒矩阵'], [10, '三方议会'], [12, '深潜轮次']]) {
+    assert.equal(byId(id).cond(strong), false, `第 ${id} 章不该被纯资源放行（应看${hint}）`);
+  }
+  assert.equal(byId(8).cond({ ...strong, mirrorRun: { contract: 'scholar' } }), true, '签约后第 8 章放行');
+  assert.equal(byId(8).cond({ ...strong, bazaar: { trades: 5 } }), true, '集市成交 5 笔也可放行第 8 章');
+  assert.equal(byId(9).cond({ ...strong, mirror: { techs: { recycle: 1 } } }), true, '算力战争 Lv1 放行第 9 章');
+  assert.equal(byId(10).cond({ ...strong, mirrorRun: { council: 'merit' } }), true, '坐过议席放行第 10 章');
+  assert.equal(byId(12).cond({ ...strong, delve: { xp: 1 } }), true, '深潜过一轮放行第 12 章');
 });
 
 test('D. 源码不得再出现旧的超容量阈值', () => {

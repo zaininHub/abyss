@@ -28,7 +28,10 @@ export const RES_PROJECTS = {
     kinds: {
       gain:  { name: '宠物亲和', desc: '限时内累计获得 PT',          metric: 'gain' },
       spend: { name: '饲育投入', desc: '限时内消耗 PT（招募异兽）',  metric: 'spend' },
-      buy:   { name: '异兽扩充', desc: '限时内招募异兽',             metric: 'buy' },
+      // v2.8.0 反馈⑥：扩充（招募）整局只刷一次——异兽总量有限，反复要求「招募」会变成死任务；
+      //   升级可以无限刷（等级无上限），所以拆成两个 kind。
+      buy:   { name: '异兽扩充', desc: '限时内招募异兽',             metric: 'buy', once: true },
+      petup: { name: '异兽升级', desc: '限时内提升异兽等级',         metric: 'petlv' },
     },
   },
   dm: {

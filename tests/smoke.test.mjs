@@ -542,8 +542,8 @@ t('B：建筑效果改写四态生效值（数值）', () => {
   // 建筑成本与满级判定
   S.buildings = {};
   const canteen = BUILDINGS.find(b => b.id === 'canteen');
-  assert.equal(buildingCost(canteen, S, 1), 2e4, '食堂首级 2e4');
-  assert.equal(buildingCost(canteen, { buildings: { canteen: 1 } }, 1), 16e4, '食堂次级 ×8');
+  assert.equal(buildingCost(canteen, S, 1), 2e5, '食堂首级 2e5（v2.8.0 反馈⑤ ×10）');
+  assert.equal(buildingCost(canteen, { buildings: { canteen: 1 } }, 1), 16e5, '食堂次级 ×8');
   assert.equal(buildingLevel(canteen, { buildings: { canteen: 2 } }), 2);
   assert.equal(buildingMaxed(canteen, { buildings: { canteen: 3 } }), true);
   S.buildings = {}; S.cultists = [];

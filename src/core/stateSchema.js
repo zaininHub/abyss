@@ -47,13 +47,13 @@ export const COMPAT_KEYS = Object.freeze([
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
   '_purifierSeen',
   // v3.12.13：资源增减 / 升级购买统计（与 RUN_RUNTIME_KEYS 同源，旧档兜底补齐）
-  '_gainRes', '_spentRes', '_buyRes',
+  '_gainRes', '_spentRes', '_buyRes', '_projOnce',
   'galaxyDone', // v3.12.7 ⑦：按星系的探索回数（与 colonies 同寿命，跨本局保留）
   'mirrorRun', // v2.5.0：镜像本局层（契约 / 议席 / 战功基准），旧档兜底补齐
 ]);
 
 // ③ 深兜底：嵌套对象字段部分缺失时逐键补齐（不覆盖已有值）
-export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance', 'moduleUnlocks', 'mirror', 'mirrorRun']);
+export const NESTED_DEFAULT_KEYS = Object.freeze(['wageState', 'ai', 'resDiscovered', 'resonance', 'moduleUnlocks', 'mirror', 'mirrorRun', '_projOnce']);
 
 // ④ 绝对时间戳：弹框暂停恢复时整体顺延，否则 Date.now() 型计时会在弹框期间暗中流逝。
 //    支持 'a.b' 路径；只对有限正数生效（与原 `if (S.x > 0)` 口径一致，且更安全）。
@@ -97,7 +97,7 @@ export const RUN_RUNTIME_KEYS = Object.freeze([
   '_rpOverflowSeen', '_epCapBasisCps', '_epCapBasisSig', '_atriumTrickle', '_ptTrickle',
   '_purifierSeen',
   // v3.12.13：资源增减 / 升级购买统计（任务进度口径）；晋升 / 轮回清零，避免跨局累计偏差
-  '_gainRes', '_spentRes', '_buyRes',
+  '_gainRes', '_spentRes', '_buyRes', '_projOnce',
 ]);
 
 // ⑥ 资源发现：顶栏统计条 id ↔ 锚点 key ↔ toast 文案，三处此前各自手写一份。

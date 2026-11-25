@@ -1094,7 +1094,8 @@ export function totalDrainPerSec() {
 //   与 v4.3.8 修过的工坊 ×n² 同病（孵化漏修）。真值零变化：实扣本来就是这个数，只是显示对齐。
 export function ptHatchEpPerSec() {
   if (S.ptAutoHatch !== true || S.ptDistillOn !== true) return 0;
-  return 15000 * (S.ptHatchLv || 1) * converterThreadBoost('hatch');
+  // v2.8.0 反馈④：单价改读 BALANCE.hatch（此前硬编码 15000，与 balance 两份漂移）
+  return (BALANCE.hatch?.epPerSec || 12000) * (S.ptHatchLv || 1) * converterThreadBoost('hatch');
 }
 
 // ========== EP 存储上限 ==========

@@ -161,12 +161,12 @@ t('解锁门控档位：minMile 显式优先，其余按 6e5→m5、1.5e6→m6�
   const bs = V21_BUILDINGS.find(x => x.id === 'bargain_shop');
   assert.equal(unlockMilestoneV21(bs), 5);
 });
-t('DC 重标定：base 8e4、growth 4、3 档 = 8e4 / 3.2e5 / 1.28e6（≤ 各期上限）', () => {
+t('DC 重标定：base 8e5、growth 4、3 档 = 8e5 / 3.2e6 / 1.28e7（v2.8.0 反馈⑤ 大幅涨价 ×10）', () => {
   const dc = BALANCE.buildings.datacenter;
-  assert.equal(dc.base, 8e4); assert.equal(dc.growth, 4); assert.equal(dc.levels, 3);
-  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 0)), 8e4);
-  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 1)), 3.2e5);
-  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 2)), 1.28e6);
+  assert.equal(dc.base, 8e5); assert.equal(dc.growth, 4); assert.equal(dc.levels, 3);
+  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 0)), 8e5);
+  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 1)), 3.2e6);
+  assert.equal(Math.ceil(dc.base * Math.pow(dc.growth, 2)), 1.28e7);
 });
 
 console.log('[4] 效果引擎聚合语义');

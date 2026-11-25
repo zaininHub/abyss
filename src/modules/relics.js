@@ -2,8 +2,8 @@
 import { S, save } from '../state.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { fmt } from './economy.js';
-import { RELICS, relicLevel, relicCost, relicMult, relicsUnlocked } from '../data/relics.js';
-import { accessCheck } from '../core/access.js'; // v2.3.0：购买权限唯一出口
+import { RELICS, PURIFIER_DEFS, relicLevel, relicCost, relicMult, relicsUnlocked } from '../data/relics.js'; // v2.8.0：净化节点定义下沉 data 层（AI 也要读价）
+import { accessCheck } from '../core/access.js';
 import { relicsTabOpen } from '../core/unlocks.js'; // v2.4.0：tab 可见性（章节 ∧ 裂隙）与购买权限分离
 
 let logFn = null;
@@ -32,12 +32,7 @@ export function buyRelic(id) {
   return { ok: true, level: lv + 1 };
 }
 
-// v2.8.22 ⑥：净化节点购买（DM，限 3 级）——与遗物同曲线 ×1.8/级
-const PURIFIER_DEFS = [
-  ['purifier1', '净化节点 I', 50, 0.5],
-  ['purifier2', '净化节点 II', 500, 2],
-  ['purifier3', '净化节点 III', 5000, 5],
-];
+// v2.8.22 ⑥：净化节点购买（DM，限 3 级）——定义已下沉 data 层（v2.8.0）
 export function buyPurifier(id) {
   // v2.3.0 补齐缺口：净化节点此前只靠渲染层拦（遗物面板隐藏），console/AI 可直调绕过。
   const gate = accessCheck('purifier.buy', S);
@@ -88,8 +83,8 @@ export function renderRelics(container) {
     return;
   }
   // v2.5.0 反馈②：去掉副标题与说明段——遗物卡本身写着等级/费用/效果，顶部两行复述只是噪音
-  let html = `<div class="panel" style="padding:14px">
-    <h3 style="margin-top:0;color:var(--purple)">🌀 深渊遗物</h3>`;
+  // v2.8.0 反馈②：去掉面板内重复的「🌀 深渊遗物」分类标题（页级 h3 已表达），也不再折叠
+  let html = `<div class="panel" style="padding:14px">`;
   // v2.8.22 ⑥：净化节点移入遗物（DM 区）——熵减协议解锁后显示，DM 购买、限购 3 级
   // v3.12.6 ⑤：熵减协议是「本局科技」，晋升/轮回会重置，但净化节点是 DM 计价、跨转生保留的资产。
   //   原判定只看 tech → 一晋升整块消失（用户实报「遗物的净化节点等升级还是没有」）。

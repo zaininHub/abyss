@@ -51,7 +51,8 @@ export const BALANCE = {
   // 产出与消耗口径易漂移（线程加成只乘产出、不乘消耗 → 线程越多单位 PT 越便宜）。
   // 新口径：15000 EP/s/级 ÷ 15 万 EP/PT = 0.10 PT/s/级（boost 1）；原 5000 EP/s → 0.15 PT/s（3.3 万 EP/PT）。
   // 即：PT 产出 -33%，单位 PT 的 EP 成本 ×4.5；线程加成同时乘「消耗」与「产出」，EP/PT 恒定。
-  hatch: { epPerSec: 15000, epPerPt: 150000 },
+  // v2.8.0 反馈④：孵化工坊更贵、但持续 EP 消耗下调 20%（产出 0.1 PT/s 不变）
+  hatch: { epPerSec: 12000, epPerPt: 120000 },
   oracle: { base: 5e11, rate: 2 },
   thread: {
     firstCost: 360, baseOutput: 1.0, baseOutputJitter: 1.0, salaryBase: 1.12, salaryPerThreadCap: 1.8, // v2.8.27：线程成本 ×3、基础产出 ×0.5（首轮 7-10 天） // v2.8.24 ③：线程薪资大幅上调（1.04→1.12 指数增长、单线程封顶 0.9→1.8/s）——EP 一天爆仓根因是持续消耗占比过低（产出 329K/s 时消耗仅 200/s）
@@ -126,10 +127,10 @@ export const BALANCE = {
   // v2.1：数据中心随 RESCALE 重标定——原 base 1e6 growth 10 在终局上限（≈3.7e11）下远期失衡，
   // 重标为 base 8e4 growth 4（三档 8e4 / 3.2e5 / 1.28e6），并纳入 30% 防死锁钳制（组长硬性要求：DC 三档成本随 cap 曲线重标定）
   buildings: {
-    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e4, growth: 8,  desc: ['欠薪产出系数 +0.10（0.7 → 0.8）', '欠薪产出系数 +0.10（0.8 → 0.9）', '欠薪产出系数 +0.05（0.9 → 0.95）'] },
+    canteen:    { id: 'canteen', name: '能量食堂', levels: 3, base: 2e5, growth: 8,  desc: ['欠薪产出系数 +0.10（0.7 → 0.8）', '欠薪产出系数 +0.10（0.8 → 0.9）', '欠薪产出系数 +0.05（0.9 → 0.95）'] },
     dorm:       { id: 'dorm', name: '休眠舱', levels: 1, base: 5e4, growth: 1,  desc: ['休眠期保命成本 -50%（0.3 → 0.15）'] },
-    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e5, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
-    datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e4, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 存储上限 +10,000', '每 10 线程全局产出 +10%，EP 存储上限 +25,000', '每 10 线程全局产出 +15%，EP 存储上限 +50,000'] },
+    dock:       { id: 'dock', name: '维修坞', levels: 1, base: 2e6, growth: 1,  desc: ['线程维护：流失概率 -50%'] }, // v2.8.19：效果实装、描述明确
+    datacenter: { id: 'datacenter', name: '数据中心', levels: 3, base: 8e5, growth: 4, desc: ['每 10 线程全局产出 +5%，EP 存储上限 +10,000', '每 10 线程全局产出 +10%，EP 存储上限 +25,000', '每 10 线程全局产出 +15%，EP 存储上限 +50,000'] },
     abyss_fishbowl: { id: 'abyss_fishbowl', name: '深渊鱼缸', levels: 3, base: 5e5, growth: 1, desc: ['DM 采集效率 +20%', 'DM 采集效率 +40%', 'DM 采集效率 +60%；裂隙封印奖励 +5 DM'] },
     wish_well: { id: 'wish_well', name: '许愿池', levels: 1, base: 1e5, growth: 1, desc: ['万一呢？'] }, // v3.2.3 反馈②：文案回归「万一呢？」（原长说明过详）；v3.0.3：从研究升级移入通用设施
   },

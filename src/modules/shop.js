@@ -526,9 +526,12 @@ export function renderHatchUpgrade(container) {
   const afford = (S.ep || 0) >= cost;
   // v4.3.20 反馈③：卡面口径对齐实扣（15000×lv EP/s → 0.1×lv×绑定 PT/s，与 pt:hatch 流同式）——
   //   旧式 5000×lv → 0.15×lv（EP/PT=33333）与实扣 EP/PT=150000 矛盾 4.5 倍
+  // v2.8.0 反馈④：文案去掉「自动孵化」字样，速率与实扣同源（BALANCE.hatch）
+  const hEp = BALANCE.hatch?.epPerSec || 12000;
+  const hPt = (hEp / Math.max(BALANCE.hatch?.epPerPt || 120000, 1));
   const desc = unlocked
-    ? `自动孵化：-${fmt(15000 * lv)} EP/s → +${fmt(0.1 * lv)} PT/s`
-    : `自动孵化：-${fmt(15000)} EP/s → +${fmt(0.1)} PT/s`;
+    ? `-${fmt(hEp * lv)} EP/s → +${fmt(hPt * lv)} PT/s`
+    : `-${fmt(hEp)} EP/s → +${fmt(hPt)} PT/s`;
   if (!el) {
     el = document.createElement('div');
     el.className = 'hatch-upg item';
@@ -557,7 +560,7 @@ export function renderHatchUpgrade(container) {
   el.innerHTML = `<div class="name"><span>异兽孵化工坊</span>${unlocked ? `<span class="count mono">×${lv}</span>` : ''}</div>
     <div class="desc">${desc}</div>
     <div class="cost mono">${fmt(cost)} EP</div>`;
-  el.title = unlocked ? '点击升级孵化工坊' : '点击购入并解锁自动孵化';
+  el.title = unlocked ? '点击升级孵化工坊' : '点击购入并解锁孵化';
   el.classList.toggle('cant', !afford);
 }
 let rpFamilyItemEls = new Map();
@@ -842,7 +845,8 @@ function updateVehicleCollectHeader() {
     let reason = '';
     if (flow.dmFull) reason = '（DM 已满，暂停采集）';
     else if (flow.epEmpty) reason = '（EP 已耗尽，停止采集）';
-    info = `探采 -${fmt(flow.epPerSec)} EP/s → +${fmtDmPerSec(dmShown)} DM/s${reason}`;
+    // v2.8.0 反馈①：统一成「消耗在前、产出在后」的两段式（与已购卡两行同口径）
+    info = `-${fmt(flow.epPerSec)} EP/s  +${fmtDmPerSec(dmShown)} DM/s${reason}`;
     tip = `探采消耗 EP 换取深渊物质（当前每 1 DM 消耗 ${fmt(flow.epPerDm)} EP，随总载具数逐辆 ×${BALANCE.vehicles.epPerDmGrowth} 递增）\n`
       + `每辆摩托队/车队/轨道器/潜航器 6/12/30/60 DM/min；深渊鱼缸/集市/研究点可提升采集效率（不吃班组加成）\n`
       + `理论产能 ${fmtDmPerSec(flow.nominalDmPerSec)} DM/s = 基础 ${fmtDmPerSec(vehicleDmPerMin() / 60 / Math.max(1e-9, vehicleRateMult()))} × 加成 ${vehicleRateMult().toFixed(2)}×（研究/鱼缸/集市）\n`
@@ -1023,7 +1027,7 @@ function makeVehicleItem(u) {
   }
   const lines = owned
     ? `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`
-    : `<div class="veh-line" style="color:var(--text-3)">购入后按 ${fmt(probeEp)} EP/s 换 ${fmtDmPerSec(dmRate * vehMult / 60)} DM/s 持续采集</div>`;
+    : `<div class="veh-line" style="color:var(--bad)">−${fmt(probeEp)} EP/s</div><div class="veh-line" style="color:var(--good)">+${fmtDmPerSec(dmRate * vehMult / 60)} DM/s</div>`;
   div.innerHTML = `<div class="name"><span>${u.name}</span><span class="count">×${owned}</span></div>
     <div class="desc">${lines}</div>
     <div class="cost mono">${fmt(cost)}</div>`;

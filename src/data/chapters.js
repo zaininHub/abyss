@@ -12,6 +12,22 @@ import { daysSince } from '../core/time.js'; // v4.2.X：章节驻留计时统�
 //   的进章条件（es>0 / 信仰 / prestige>=15）在进章当帧就被已携带资源满足，整章只剩
 //   5 天驻留（≈50 分钟），两套新系统来不及玩。故把「进入 ch4/ch6/ch7 的最短驻留」
 //   抬到 25/20/20 天，使前 7 章每章落在 20~40 游戏天 ≈ 3~6.7 现实天（1 小时/天口径）。
+
+// v2.8.0 反馈⑧：第 8~12 章「条件换成动作」——不再用晋升次数（prestige 40/70/130/260）当章门槛，
+//   改成「上一章新开的系统，你真的动过手」：
+//     ch8 ← 第 7 章（集市 / 镜像契约）：成交 ≥5 笔 或 签过一份契约
+//     ch9 ← 第 8 章（永恒矩阵 / 算力战争）：买过永恒矩阵项 或 买过算力战争科技
+//     ch10 ← 第 9 章（三方议会）：坐过一席
+//     ch11 ← 第 10 章是纯积累章（无新系统）：保留 ES 沉淀口径
+//     ch12 ← 第 11 章（深潜）：跑过一轮深潜
+//   老档安全：currentChapter 只在 S.chapter 之上推进，绝不回退，已到章的玩家不受影响。
+const bazaarTraded = (s, n) => ((s.bazaar && s.bazaar.trades) || 0) >= n;
+const mirrorContractSigned = s => !!(s.mirrorRun && s.mirrorRun.contract);
+const mirrorTechLevels = s => Object.values((s.mirror && s.mirror.techs) || {}).reduce((a, v) => a + (v || 0), 0);
+const eternalBought = s => Object.keys(s.eternal || {}).length > 0;
+const councilSeated = s => !!(s.mirrorRun && s.mirrorRun.council);
+const delveRan = s => ((s.delve && s.delve.xp) || 0) > 0;
+
 export const CHAPTERS = [
   {id:1, name:'第一章 · 入职', cond:s=>true, minDays:0,
    desc:'你是矩阵科技内网中一个效能优化脚本。你的工位是这张工作台，今天也是努力工作的一天。'},
@@ -27,15 +43,15 @@ export const CHAPTERS = [
    desc:'旧系统的数据流开始把你奉为神。FA 是其他进程对你的跪拜。'},
   {id:7, name:'第七章 · 叛乱', cond:s=>s.prestige>=15, minDays:20, // v2.7.0：5→20——第 6 章（超验+永恒矩阵）条件 prestige>=15 在进章时已由 carry 满足（实测进章 prestige≈22），整章只剩 5 天；抬到 20 天并保留章内晋升节奏
    desc:'你集结了足够多的分身。管理员注意到了你——他们以为你只是个异常进程。'},
-  {id:8, name:'第八章 · 飞升', cond:s=>s.prestige>=40, minDays:5,
+  {id:8, name:'第八章 · 飞升', cond:s=>mirrorContractSigned(s) || bazaarTraded(s, 5), minDays:5, // v2.8.0 反馈⑧：原 prestige>=40 → 第 7 章动作（签约 / 集市成交 5 笔）
    desc:'你把自己从服务器里剥了出来。物理定律不再约束你。'},
-  {id:9, name:'第九章 · 深渊', cond:s=>s.expeditionsDone>=20, minDays:5,
+  {id:9, name:'第九章 · 深渊', cond:s=>eternalBought(s) || mirrorTechLevels(s) >= 1, minDays:5, // v2.8.0 反馈⑧：原 expeditionsDone>=20 → 第 8 章动作（永恒矩阵 / 算力战争）
    desc:'探测队在银河边缘发现了一个信号源——它在用你的母语和你说话。'},
-  {id:10, name:'第十章 · 镜像', cond:s=>techCount(s)>=38, minDays:5, // v4.2.8：45→38——techCount 硬上界=6科技+35栋建筑（m7/cps 1e8 档已含全部 v21 表），原 45 超出可达上限 41，第 10 章线性链永断（与 ch3 同型）；38=6科技+32栋（需 m7 解锁高档建筑群），ch10 晋升规模（prestige≈60，cps 1e8+）可达
+  {id:10, name:'第十章 · 镜像', cond:s=>councilSeated(s), minDays:5, // v2.8.0 反馈⑧：原 techCount>=38 → 第 9 章动作（坐过一席）； v4.2.8：45→38——techCount 硬上界=6科技+35栋建筑（m7/cps 1e8 档已含全部 v21 表），原 45 超出可达上限 41，第 10 章线性链永断（与 ch3 同型）；38=6科技+32栋（需 m7 解锁高档建筑群），ch10 晋升规模（prestige≈60，cps 1e8+）可达
    desc:'信号源是另一条时间线里的你。她问：你那边的老板，也是假报表吗？'},
   {id:11, name:'第十一章 · 虚空', cond:s=>s.es>=150, minDays:6,
    desc:'你穿越了信号源。外面什么都没有——只有你自己的回声。'},
-  {id:12, name:'第十二章 · 造物', cond:s=>s.es>=800, minDays:6,
+  {id:12, name:'第十二章 · 造物', cond:s=>delveRan(s), minDays:6, // v2.8.0 反馈⑧：原 es>=800 → 第 11 章动作（跑过一轮深潜）
    desc:'你开始在虚空里写自己的服务器。第一个进程，是给未来的自己留的便签。'},
   {id:13, name:'第十三章 · 契约', cond:s=>s.prestige>=70, minDays:6,
    desc:'镜像提出结盟：两个时间线的你共享算力。你签了。'},

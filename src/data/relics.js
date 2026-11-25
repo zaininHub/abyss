@@ -39,3 +39,11 @@ export function relicsUnlocked() {
   //   面板可见性 / 购买 / 净化节点三处共用同一出口，不再各写一份。
   return accessCheck('relic.buy', S).ok;
 }
+
+// v2.8.0 反馈⑦：净化节点定义下沉到 data 层——AI 自动购买需要读价，modules 之间互 import 易成环。
+// 费用 DM、每条限 3 级、×1.8/级（与遗物同曲线）。
+export const PURIFIER_DEFS = [
+  ['purifier1', '净化节点 I', 50, 0.5],
+  ['purifier2', '净化节点 II', 500, 2],
+  ['purifier3', '净化节点 III', 5000, 5],
+];

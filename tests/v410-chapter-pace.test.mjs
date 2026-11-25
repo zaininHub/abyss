@@ -24,6 +24,11 @@ function rich(chapter, daysAgo) {
     expeditionsDone: 999, riftsSealed: 999, riftEmber: 1e9, dm: 1e9,
     allTimeEp: 1e21, projectsDone: 999, buildings: { end_shrine: 1 }, upgrades: {}, religion: {},
     wageState: { state: 'ok' }, storyline: 'default',
+    // v2.8.0 反馈⑧：第 8~12 章改为动作门槛，富资产夹具也要带上这些动作产物，
+    // 否则「只推进一章」的用例会被动作门槛挡住，测不到连跳防护本身。
+    bazaar: { unlocked: true, trades: 50 }, delve: { up: {}, xp: 120, cycleT: 0 },
+    mirror: { merit: 1e6, techs: { recycle: 1 }, seen: { output: true }, allSeen: true },
+    mirrorRun: { contract: 'conqueror', base: 0, council: 'output', meritBasis: 0 },
   };
 }
 

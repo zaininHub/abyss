@@ -286,15 +286,16 @@ export function renderPetGrid(container) {
   html += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-2);margin-bottom:4px">出战位 ${actives.length}/3：出战异兽获得经验并生效${starving ? ' —— <b style="color:var(--bad)">PT 不足，全部休战中</b>' : ''}</div>`;
   for (const id of ownedIds) html += petCardHtml(id, S.pets[id], actives, starving);
 
-  const hatchCfg = BALANCE.hatch || { epPerSec: 15000, epPerPt: 150000 };
+  const hatchCfg = BALANCE.hatch || { epPerSec: 12000, epPerPt: 120000 };
   const hatchBoost = converterThreadBoost('hatch');
   const hatchPtPerSec = (hatchCfg.epPerSec / Math.max(hatchCfg.epPerPt, 1)) * hatchLv * hatchBoost;
   const hatchEpPerSec = hatchCfg.epPerSec * hatchLv * hatchBoost;
+  // v2.8.0 反馈③：未解锁时不再显示「孵化未解锁——到商店购买」提示（纯噪音，商店里自然看得到）
   const hatchCtl = autoHatch
     ? `<span style="font-size:12px;color:var(--text-2)" title="消耗 ${fmt(hatchEpPerSec)} EP/s（${fmt(hatchCfg.epPerPt)} EP/PT）">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(hatchPtPerSec)} PT/s</b>${ptFull ? ' <b style="color:var(--warn)">· PT 已满，暂停产出与消耗</b>' : ''}</span>
-      ${switchHtml({ on: ptOn, attrs: 'data-pt-distill-toggle="1" style="margin-left:auto"', label: ptOn ? '孵化开' : '孵化关', aria: '自动孵化开关' })}`
-    : `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「商店 · 设施」购买孵化升级</span>`;
-  html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
+      ${switchHtml({ on: ptOn, attrs: 'data-pt-distill-toggle="1" style="margin-left:auto"', label: ptOn ? '孵化开' : '孵化关', aria: '孵化开关' })}`
+    : '';
+  if (hatchCtl) html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
   const upkeep = petUpkeepTotalPerSec();
   if (upkeep > 0) {
     html += `<div style="grid-column:1/-1;font-size:11px;color:${starving ? 'var(--bad)' : 'var(--text-3)'};margin:-2px 0 4px">出战维持：-${fmt(upkeep)} PT/s（随等级/世代增长）${starving ? ' · <b>PT 不足，异兽已回家休战（加成失效、不获经验、停扣维持）——PT 回升后自动重新出战</b>' : ''}</div>`;
@@ -414,5 +415,7 @@ export function refreshPetsAffordability() {
 
 // v3.0.3 第四批③：异兽孵化升级成本——EP 指数曲线（参考其他升级项），消耗大幅增多
 export function ptHatchUpgCost(lv) {
-  return Math.ceil(20000 * Math.pow(2.2, lv - 1));
+  // v2.8.0 反馈④：参考灵感工坊（BALANCE.atrium.base 5e4）并更贵 → 首级 8e4，growth 仍 2.2。
+  //   购买价抬高、运行 EP 单价下调（BALANCE.hatch.epPerSec 12000），让「先投入、后便宜跑」成立。
+  return Math.ceil(80000 * Math.pow(2.2, lv - 1));
 }

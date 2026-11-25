@@ -204,7 +204,7 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'res_pt', name: '🍪 PT 异兽饼干', unlock: null, body: () => `
     <h4>从哪来</h4>
-    <p>异兽孵化：消耗 EP 转化出 PT。首次购买「孵化升级」后解锁自动孵化；「伊甸花园」提供额外 PT 产出。</p>
+    <p>异兽孵化：消耗 EP 转化出 PT。首次购买「孵化升级」后即可开启孵化；「伊甸花园」提供额外 PT 产出。</p>
     <h4>花到哪</h4>
     <ul>
       <li>购买与升级异兽——异兽提供全局或定向加成。</li>
@@ -523,7 +523,7 @@ export const WIKI_SECTIONS = [
       <tr><td>研究升级</td><td>同科技树（研究点页）</td><td>分六组共 ${D.researchUpgs.length} 项：产能研究 / 储备扩容 / 深渊协议 / 深渊扩展 / AI 助手 / 星际，见「研究与科技」</td></tr>
       <tr><td>晋升 RP 加成</td><td>完成首次晋升</td><td>研究点页「晋升 RP 加成」分区</td></tr>
       <tr><td>族升级</td><td>里程碑 9 达成</td><td>研究点页底部，RP + 里程碑双门控</td></tr>
-      <tr><td>异兽（PT）</td><td>购入饵料仓库 / PT 金库，或首次持有 PT</td><td>本局制；自动孵化需先买「孵化升级」；星图在异兽之后</td></tr>
+      <tr><td>异兽（PT）</td><td>购入饵料仓库 / PT 金库，或首次持有 PT</td><td>本局制；孵化需先买「孵化升级」；星图在异兽之后</td></tr>
       <tr><td>灵感工坊</td><td>EP 或累计产出 ≥15,000 后商店摆出首购卡</td><td>首购 50K EP，自动蒸馏 RP</td></tr>
       <tr><td>探采平台（基础）</td><td>首次触发深渊裂隙</td><td>外勤摩托队即可开张；载具只消耗 EP 换 DM，不产 EP</td></tr>
       <tr><td>探采高级 / 深渊商店</td><td>第 ${CHAPTER_GATES.starchart} 章（星图接入）</td><td>后三档载具与 4 项深渊升级随星图放开</td></tr>
