@@ -13,7 +13,7 @@ import {
 } from '../data/religions.js';
 import { policyMult } from '../data/policies.js';
 import { dirty } from '../core/runtime.js'; // v3.5.0：FP 越界钳回后需要立刻重渲染面板
-import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：宗教绑第 4 章（EP 出口时序）
+import { gateOpen } from '../core/chapterGates.js'; // v4.2.0：宗教绑章节门禁（v4.3.36 起第 3 章）
 
 let logFn = null;
 let toastFn = null;
@@ -27,12 +27,12 @@ function rlog(msg, cls) { if (logFn) logFn(`[宗教] ${msg}`, cls); }
 //   ③ RP 已觉醒（首次溢出过——已触及效能外溢，进入研究阶段）
 // v2.8.7：解锁前置条件保留（存储≥3 + RP 觉醒），但「唤醒信仰」需消耗 EP（当前上限的 20%），而非达标自动解锁
 // v4.2.0：超验/隐密圣学绑第 6 章「神格」（赞颂→虔诚→超验→成神；消耗 FP/虔诚不抢 EP 出口）。
-//   老玩家 S.chapter 已过 6 章恒放行；宗教本体（唤醒/圣所/分支）不受此限，第 4 章起完整可用。
+//   老玩家 S.chapter 已过 6 章恒放行；宗教本体（唤醒/圣所/分支）不受此限，第 3 章起完整可用。
 export function transcendUnlocked() { return gateOpen('transcend', S); }
 
 export function canUnlockReligion() {
-  // v4.2.0 章节门禁：宗教绑第 4 章「永恒」（信仰是跨越时间线的永恒；保住前中期 EP 出口时序）。
-  //   老玩家 S.chapter 已过 4 章则恒放行（跨转生不回退），零回退。
+  // v4.2.0 章节门禁：宗教绑「矩阵」章（v4.3.36 起第 3 章——星图/信仰/政策同章接入）。
+  //   老玩家 S.chapter 已过 3 章则恒放行（跨转生不回退），零回退。
   if (!gateOpen('religion', S)) return false;
   // v3.4.6 反馈⑫：存储节点曲线对调后改「备用粮仓 ≥3 级」（前期防死锁关键件，节奏不变）；
   // 旧档按存储节点 ≥3 兼容

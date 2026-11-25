@@ -1,8 +1,12 @@
 // v3.12.0 反馈⑬：集市在「第一次晋升后」作为独立大模块，用职级点购买开启。
 // v4.2.X：轮回已移除（回响/遗物传承并入晋升），MODULE_UNLOCKS 只剩集市一项。
+// v4.3.36 反馈①：集市不再挂在「首次晋升」上——章节门禁改为第 7 章（CHAPTER_GATES.bazaar）。
+//   旧口径只看 prestige≥1，玩家在第 2 章就看到集市卡片，而那时只攒到 1~2 PP、买断价 5 PP，
+//   卡片永远灰（用户反馈：第二章 PP 不足无法解锁集市，且集市不像第二章的内容）。
 // 这是「模块解锁」的唯一真源：价格表、可见性谓词、购买状态、购买动作四处不再各写一份。
-// 跨局保留（S.bazaar.unlocked 在 CROSS_RUN_KEYS），买断后晋升不重复收费。
+// 跨局保留（S.bazaar.unlocked 在 CROSS_RUN_KEYS），买断后晋升不重复收费；已买断的老玩家不回退。
 import { S, save } from '../state.js';
+import { gateOpen, CHAPTER_GATES } from '../core/chapterGates.js';
 
 export const MODULE_UNLOCKS = Object.freeze([
   { key: 'bazaar', name: '深渊集市', cost: 5, desc: '富余资源兑换稀缺资源，汇率随时间波动，成交笔数抬高集市等级。' },
@@ -18,9 +22,15 @@ export function moduleUnlocked(key) {
   return !!(S.moduleUnlocks && S.moduleUnlocks[key]);
 }
 
-/** 首次晋升后大模块入口常驻（未买断时点进去看购买卡，而不是 ??? 锁死）。 */
+/**
+ * 大模块入口可见：章节门禁到点（集市=第 7 章）且已完成首次晋升。
+ * v4.3.36：已买断的模块恒可见——章节门禁只负责「什么时候能买」，不能把老玩家已付款的模块再锁回去。
+ */
 export function moduleVisible(key) {
-  return moduleUnlockDef(key) !== null && (S.prestige || 0) >= 1;
+  if (moduleUnlockDef(key) === null) return false;
+  if (moduleUnlocked(key)) return true;
+  if (!gateOpen(key, S)) return false;
+  return (S.prestige || 0) >= 1;
 }
 
 /** 面板购买卡的单一状态源：按钮文案 / 灰态 / 点击结果全部读它。 */
@@ -28,6 +38,10 @@ export function moduleBuyState(key) {
   const m = moduleUnlockDef(key);
   if (!m) return { ok: false, reason: '未知模块' };
   if (moduleUnlocked(key)) return { ok: false, reason: '已开启', opened: true };
+  if (!gateOpen(key, S)) {
+    const ch = CHAPTER_GATES[key];
+    return { ok: false, reason: `需推进到第 ${ch} 章` };
+  }
   if (!moduleVisible(key)) return { ok: false, reason: '需先完成 1 次晋升' };
   // v4.0.5：职级点是整数资源——判定与展示都先取整，旧档残留小数不会出现「需 3 PP（当前 2.71）」
   const pp = Math.max(0, Math.round(S.prestigePoints || 0));

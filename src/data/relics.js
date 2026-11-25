@@ -33,7 +33,7 @@ export function relicMult(id) {
   if (!r) return 1;
   return 1 + r.effect * relicLevel(id);
 }
-// 遗物入口解锁：第 3 章起（v4.3.1 从 ch9 提前）∧ 裂隙已触发 ∧ DM 已发现（资产双条件保留）。
+// 遗物入口解锁：第 1 章起（v4.3.1 9→3，v4.3.36 3→1：与裂隙同章）∧ 裂隙已触发 ∧ DM 已发现（资产双条件保留）。
 export function relicsUnlocked() {
   if (!gateOpen('relics', S)) return false;
   if (!(S.resDiscovered && S.resDiscovered.dm)) return false;

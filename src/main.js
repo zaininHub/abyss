@@ -1520,7 +1520,7 @@ function refreshTabVisibility() {
   // 星图：v3.12.9 起唯一判定源 = starChartUnlocked(S)（宠物/PT 锚点 → RP 锚点 → 深空探测或远征记录）。
   //   未解锁仍是「???」锁定态；不再在此处另抄一份条件，避免顶栏 / tab / 研究分组口径分叉。
   setTabLocked(document.getElementById('btn-expedition'), !starChartUnlocked(S));
-  // v4.2.0 宗教：章节门禁（第 4 章）+ 真实解锁态。
+  // v4.2.0 宗教：章节门禁（v4.3.36 起第 3 章）+ 真实解锁态。
   //   旧实现的 _religionHintSeen 持久标记会在首章就放行 tab（用户反馈①：宗教第一章就解锁），
   //   且 v4.2 load() 已一次性清除该标记；此处不再重写，避免脏标记复活。
   setTabLocked(document.getElementById('btn-religion'), !(religionUnlocked() || canUnlockReligion()));
@@ -1543,7 +1543,8 @@ function refreshTabVisibility() {
     const pending = !policyBtn.dataset.locked && hasPendingPolicy();
     if (pending) policyBtn.setAttribute('data-pending', '1'); else policyBtn.removeAttribute('data-pending');
   }
-  // v3.12.0 反馈⑬：集市 / 轮回在首次晋升后常驻入口；未买断也可点进去看「职级点开启」卡。
+  // v3.12.0 反馈⑬：未买断也可点进去看「职级点开启」卡。
+  // v4.3.36 反馈①：集市入口改由章节门禁决定（第 7 章）——第 2 章不再出现一个买不起的集市 tab。
   setTabLocked(document.getElementById('btn-bazaar'), !moduleVisible('bazaar'));
 }
 
@@ -2074,10 +2075,10 @@ function bindEvents() {
     body.scrollTop = 0;
   }
   function hintFor(key) {
-    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 3 章后商店开放「饵料仓库」，购入即解锁 PT',
+    const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:'第 2 章后商店开放「饵料仓库」，购入即解锁 PT',
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
       prestige:'完成首次晋升', policy:'开放任一政策组（晋升/深潜/信仰）',
-      bazaar:'职级 ≥1 且已发现研究点（RP）' }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链
+      bazaar:'第 7 章后，职级 ≥1 时用 5 PP 买断' }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链 // v4.3.36：集市提示同步章节门禁
     return m[key] || '推进主线解锁';
   }
   function renderStorylineAppendix() {
@@ -3308,9 +3309,25 @@ if (typeof window !== 'undefined') {
   window.__abyssCheat = {
     fillChapter(n) {
       const r = fillChapterResources(S, n);
+      // v4.3.36 反馈①：console 推章必须「真的站在目标章」。
+      //   只补资源时 minDays 门控会让玩家停在原章节（章节推进一次一章、每次落章重置驻留计时），
+      //   于是日志说着「已补齐第 7 章」、顶栏还停在第 2~3 章，集市 tab 仍是 ???——正是本轮反馈的观感。
+      const cur = parseInt(S.chapter, 10) || 1;
+      if (r.chapter > cur) {
+        S.chapter = String(r.chapter);
+        S.chapterEnteredAt = Date.now(); // 落章即重新计驻留，避免下一帧被顺势连推
+        S.chaptersUnlocked = S.chaptersUnlocked || {};
+        const slId = S.storyline && S.storyline !== 'default' ? S.storyline : 'line_order';
+        const seen = S.chaptersUnlocked[slId] || (S.chaptersUnlocked[slId] = []);
+        for (let i = 1; i <= r.chapter; i += 1) {
+          const code = chapterCode(String(i));
+          if (!seen.includes(code)) seen.push(code);
+        }
+        r.entered = S.chapter;
+      }
       save(S);
-      dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = true;
-      log(`[测试] 已补齐第 ${r.chapter} 章标准资源（驻留天数 ${r.days} 天）`, 'good');
+      dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = dirty.story = true;
+      log(`[测试] 已补齐第 ${r.chapter} 章标准资源（驻留天数 ${r.days} 天）${r.entered ? '，并把章节推进到该章' : ''}`, 'good');
       return r;
     },
   };

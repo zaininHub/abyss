@@ -81,6 +81,14 @@ const NUMERIC_FIELDS = [
   'riftsSealed', 'riftEmber', 'allTimeEp', 'es', 'faith', 'dm',
 ];
 
+// v4.3.36 反馈①：章节门禁模块的买断价 → 需要在目标章补足的职级点（真实价格 + 1 余量）。
+//   旧实现只按章节 cond 抬字段，第 2 章补到 2 PP 而集市要 5 PP，购买卡永远灰
+//   （用户反馈：console 进第二章，PP 不足无法解锁集市）。集市改第 7 章后，
+//   console 推到第 7 章同样必须先拿得到 5 PP，否则「推到章却玩不了本章内容」。
+//   价格真源仍是 src/modules/moduleUnlocks.js 的 MODULE_UNLOCKS[].cost；
+//   tests/v420-chapter-modules.test.mjs 断言本表与之同步，防两处漂移。
+export const MODULE_PP_BY_CHAPTER = Object.freeze({ 7: 6 }); // 第 7 章集市：5 PP + 1 余量
+
 // 真实 id 清单（只读 data，不造假 id）：6 个科技 + 34 个可解锁建筑 = 40 个键位，够覆盖 ch10 的 38。
 const TECH_IDS = TECHS.map(t => t && t.id).filter(Boolean);
 const BUILDING_IDS = V21_BUILDINGS
@@ -157,6 +165,11 @@ export function fillChapterResources(S, targetChapter) {
   }
 
   // 1) 顶层数值字段（只抬不降，天然兼容已有进度）
+  //    先并入「本章才开放的模块买断价」——否则推到第 7 章也买不起集市（见 MODULE_PP_BY_CHAPTER）。
+  for (const [ch, pp] of Object.entries(MODULE_PP_BY_CHAPTER)) {
+    if (Number(ch) > chapter) continue;
+    need.prestigePoints = Math.max(need.prestigePoints || 0, pp);
+  }
   for (const key of NUMERIC_FIELDS) {
     if (!(key in need)) continue;
     const target = bump(need[key]);

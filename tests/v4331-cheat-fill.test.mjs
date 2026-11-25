@@ -119,3 +119,13 @@ test('非法 targetChapter 钳制到 [1, CHAPTERS.length]，返回 fields 非空
   const high = fillChapterResources(defaultState(), 999);
   assert.ok(Object.keys(high.fields).length > 0, '钳制到末章后 fields 应非空');
 });
+
+test('console 推章后本章模块买得起：fillChapter(7) 的职级点 ≥ 集市买断价', () => {
+  const S = defaultState();
+  fillChapterResources(S, 7);
+  assert.ok(S.prestigePoints >= 5, `第 7 章应至少补到 5 PP（集市 5 PP 买断），实际 ${S.prestigePoints}`);
+  // 第 2 章不再需要为集市补 PP：当年 fillChapter(2) 只给 2 PP、集市要 5 PP 才点不动
+  const s2 = defaultState();
+  fillChapterResources(s2, 2);
+  assert.ok(s2.prestige >= 2 || s2.prestigePoints >= 1, 'ch2 条件仍成立');
+});
