@@ -92,10 +92,15 @@ test('v3.6.0 ③ 剧情进度受最短驻留天数(minDays)约束——不超前
   // 不回退：已到第 5 章但时间不足 → 仍保持 5（权威下限）
   assert.equal(currentChapter(chS(5, 0)).id, 5, '已抵达章节不回退');
 });
-test('v3.6.0 ③ 章节 minDays 全表 ≥5（节奏 5-7 天/章；v4.1.0 F5）', () => {
+test('v3.6.0 ③ 章节 minDays 全表 ≥5（v2.7.0 后上限放宽到 25）', () => {
   const mins = CHAPTERS.map(c => c.minDays);
   assert.ok(mins.slice(1).every(d => d >= 5), '所有推进章节最短驻留 ≥5 天');
-  assert.ok(Math.max(...mins) <= 7, '最长驻留 ≤7 天');
+  // v2.7.0 前 7 章体验校准：第 4/6/7 章驻留门控 5→25/20/20（第 3/5/6 章真的停留这么久），
+  //   原「≤7 天」的旧节奏口径作废，改为「≤25 天」并允许这三章单独抬高。
+  assert.ok(Math.max(...mins) <= 25, '最长驻留 ≤25 天');
+  assert.deepEqual(
+    CHAPTERS.filter(c => c.minDays > 7).map(c => c.id), [4, 6, 7],
+    '仅第 4/6/7 章可超 7 天（v2.7.0 校准）');
 });
 
 // ===== T4 星际探索：M 量级消耗 + 殖民降一数量级/时间转小时 =====

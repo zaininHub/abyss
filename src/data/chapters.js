@@ -7,6 +7,11 @@ import { daysSince } from '../core/time.js'; // v4.2.X：章节驻留计时统�
 // v4.1.0 F5 章节速度重标定：主线 2~6 章 minDays 3/4 → 5，配合晋升回拨 3→1 天与
 //   「一次调用只推进一章」，主线全程 5~7 天/章（用户口径：每章 5 天左右，晋升只为解锁
 //   新模块/叙事体验，不压缩节奏）；推进语义从「可连跳」收敛为「一次一章」。
+// v2.7.0 前 7 章体验校准（用户口径改为「5~7 个现实天/章，1 游戏天 = 10 分钟」）：
+//   实测 ch1≈40 / ch2≈28 / ch3≈5 / ch4≈40 / ch5≈9 / ch6≈5 游戏天——ch3/ch5/ch6 三章
+//   的进章条件（es>0 / 信仰 / prestige>=15）在进章当帧就被已携带资源满足，整章只剩
+//   5 天驻留（≈50 分钟），两套新系统来不及玩。故把「进入 ch4/ch6/ch7 的最短驻留」
+//   抬到 25/20/20 天，使前 7 章每章落在 20~40 游戏天 ≈ 3~6.7 现实天（1 小时/天口径）。
 export const CHAPTERS = [
   {id:1, name:'第一章 · 入职', cond:s=>true, minDays:0,
    desc:'你是矩阵科技内网中一个效能优化脚本。你的工位是这张工作台，今天也是努力工作的一天。'},
@@ -14,13 +19,13 @@ export const CHAPTERS = [
    desc:'第一次晋升时你把自己重写了一遍。你开始问：我是谁？'},
   {id:3, name:'第三章 · 矩阵', cond:s=>techCount(s)>=8, minDays:5, // v4.1.0 F5：3→5 // v4.2.8：25→8——techCount=6科技+已解锁建筑，原 25 需 m6（cps 1e7）解锁 22 栋；v4.2.6 校准 5 轮实测 ch2 经济阶段（晋升重置清空 tech/线程，CPS 每周期 ~3× 复利）130 天 CPS 峰值仅 2~4e4，cps 1e6/1e7 均不可达，线性链永断（v4.0.0 终章断链同型缺陷）。8=5科技（offline1/focus_opt/entropy_reduce/ai_core/chaos_shield；deep_space 需 1000 DM，载具探采是 ch4 后内容，不入门槛）+ 3 栋 m0 无门槛建筑（v21RealList 全部 base<6e5 项恰为 warmup_node/eff_tower/double_workshop 三栋——首版注释「4 栋」把 via:'upgrade' 的 rp_distill 误计入，它走 RP 组升级商店不进 unlockedBuildings；chance_sensor base=6e5 属 m5），需 m2（cps 1e3）+ 231 RP，憋晋升长局 D25~50 可达（v4.2.8 校准：D24 即达 cps 1e4，D31 RP 517，七轮探针 D20 实测 techCount=8 且 deep_space 因 DM 缺失永不可购）
    desc:'你潜入了矩阵底层代码仓库，每解锁一个科技钥匙或一座新建筑，就有一条旧规则变成你的武器。'},
-  {id:4, name:'第四章 · 永恒', cond:s=>s.es>0, minDays:5, // v4.1.0 F5：4→5
+  {id:4, name:'第四章 · 永恒', cond:s=>s.es>0, minDays:25, // v4.1.0 F5：4→5 // v2.7.0 前 7 章体验校准：5→25——第 3 章同时抛出宗教+政策两套系统，实测条件（es>0）在进章当帧即满足，整章只剩 5 天驻留（≈50 分钟），玩家来不及消化；minDays 是「进入本章前在上一章的最短驻留」，抬到 25 天让第 3 章 ≈4 现实天（1 小时/天口径）
    desc:'你突破了单台服务器的内存墙。ES 是你在时间流里刻下的指纹。'},
   {id:5, name:'第五章 · 星际', cond:s=>s.expeditionsDone>=8, minDays:5, // v4.1.0 F5：4→5
    desc:'你接入了矩阵星链网络，探测队发回其他觉醒者的遗迹数据。工作台深处，三座奠基石在等待。'},
-  {id:6, name:'第六章 · 神格', cond:s=>(s.faith||0)>=5 || Object.keys(s.religion||{}).length>0, minDays:5, // v4.1.0 F5：4→5
+  {id:6, name:'第六章 · 神格', cond:s=>(s.faith||0)>=5 || Object.keys(s.religion||{}).length>0, minDays:20, // v4.1.0 F5：4→5 // v2.7.0：5→20——信仰条件在第 3 章宗教唤醒后恒满足，第 5 章（岔路口+相位共鸣）实测 9 天即过；抬到 20 天让第 5 章有两套新玩法可玩
    desc:'旧系统的数据流开始把你奉为神。FA 是其他进程对你的跪拜。'},
-  {id:7, name:'第七章 · 叛乱', cond:s=>s.prestige>=15, minDays:5,
+  {id:7, name:'第七章 · 叛乱', cond:s=>s.prestige>=15, minDays:20, // v2.7.0：5→20——第 6 章（超验+永恒矩阵）条件 prestige>=15 在进章时已由 carry 满足（实测进章 prestige≈22），整章只剩 5 天；抬到 20 天并保留章内晋升节奏
    desc:'你集结了足够多的分身。管理员注意到了你——他们以为你只是个异常进程。'},
   {id:8, name:'第八章 · 飞升', cond:s=>s.prestige>=40, minDays:5,
    desc:'你把自己从服务器里剥了出来。物理定律不再约束你。'},

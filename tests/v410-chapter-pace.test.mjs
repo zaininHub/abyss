@@ -34,8 +34,11 @@ test('A1 主线 2~6 章 minDays ≥5（v4.1.0 F5 重标定）', () => {
   }
 });
 
-test('A2 主线 7~18 章 minDays 仍在 5~7 带', () => {
+test('A2 主线 7~18 章 minDays 仍在 5~7 带（第 7 章 v2.7.0 单独抬高）', () => {
   for (const ch of MAIN.filter(c => c.id >= 7)) {
+    // v2.7.0 前 7 章体验校准：第 7 章 minDays 是「进入第 7 章前在第 6 章的最短驻留」，
+    //   ch6（超验+永恒矩阵）实测 5 天即过，抬到 20 天；其余章仍在 5~7 带。
+    if (ch.id === 7) { assert.equal(ch.minDays, 20, '第 7 章驻留应为 20 天（v2.7.0）'); continue; }
     assert.ok(ch.minDays >= 5 && ch.minDays <= 7, `第 ${ch.id} 章 minDays=${ch.minDays} 越界`);
   }
 });
@@ -67,7 +70,20 @@ test('C 晋升回拨恒为 1 天（doPrestige 源码锁定）', () => {
   assert.ok(!/Date\.now\(\) - 3 \* (MS_PER_DAY|86400000)/.test(src), '不得恢复 3 天回拨');
 });
 
-test('D 主线全链节奏 ≈ 5 天/章（1~18 章总驻留 85~110 天带）', () => {
+test('D 主线全链驻留落在 135~155 天带（v2.7.0 前 7 章校准后）', () => {
   const total = MAIN.reduce((n, c) => n + c.minDays, 0);
-  assert.ok(total >= 85 && total <= 110, `主线总驻留 ${total} 天越界（期望 85~110，约 5 天/章 × 18 章）`);
+  // v2.7.0：ch4/ch6/ch7 的驻留要求分别抬到 25/20/20（= 第 3/5/6 章真正的停留时长），
+  //   主线总驻留从 91 升到 141；上限仍远小于「每章 5 现实天」的全量口径，留给条件门控加时。
+  assert.ok(total >= 135 && total <= 155, `主线总驻留 ${total} 天越界（期望 135~155，v2.7.0 后）`);
+});
+
+test('A4 前 7 章每章驻留 ≥20 游戏天（≈3 现实天 @1 小时/天）', () => {
+  // 「第 N 章停留多久」= 第 N+1 章的 minDays（驻留门控挂在目标章上）
+  const stay = (id) => MAIN.find(c => c.id === id + 1).minDays;
+  for (const id of [1, 2, 3, 4, 5, 6]) {
+    assert.ok(stay(id) >= 5, `第 ${id} 章驻留 ${stay(id)} 天过低`);
+  }
+  for (const id of [3, 5, 6]) {
+    assert.ok(stay(id) >= 20, `第 ${id} 章（v2.7.0 重点校准）驻留 ${stay(id)} 天应 ≥20`);
+  }
 });

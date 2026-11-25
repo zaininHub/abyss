@@ -90,10 +90,11 @@ test('E3 新增章节均有 minDays / 文案 / 可安全求值的 cond', () => {
   // 主线表自带 minDays；变体表未声明时由 currentChapter 统一按 3 天下限，属既有设计而非缺陷
   for (const c of CHAPTERS) {
     assert.equal(typeof c.minDays, 'number', `主线第 ${c.id} 章缺 minDays`);
-    assert.ok(c.minDays >= 0 && c.minDays <= 10, `主线第 ${c.id} 章 minDays 异常`);
+    // v2.7.0：第 4/6/7 章的驻留门控（= 上一章停留天数）抬到 25/20/20，上限从 10 放宽到 25。
+    assert.ok(c.minDays >= 0 && c.minDays <= 25, `主线第 ${c.id} 章 minDays 异常`);
   }
   for (const c of [...CHAPTERS, ...LINE_PKGS.flatMap(p => p.data.chapters.append)]) {
-    if (typeof c.minDays === 'number') assert.ok(c.minDays >= 0 && c.minDays <= 10, `第 ${c.id} 章 minDays 异常`);
+    if (typeof c.minDays === 'number') assert.ok(c.minDays >= 0 && c.minDays <= 25, `第 ${c.id} 章 minDays 异常`);
     assert.ok(c.name && c.desc, `第 ${c.id} 章缺文案`);
     assert.doesNotThrow(() => !!c.cond(rich), `第 ${c.id} 章 cond 抛错`);
   }
