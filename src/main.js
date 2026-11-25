@@ -1986,8 +1986,8 @@ function bindEvents() {
       refreshTabVisibility();
     } else if (r.reason !== '已开启' && toast) toast(r.reason);
   });
-  // v2.9.0：Wiki 重构为侧栏分章 + 内容区；v3.1.1 反馈⑥：全部章节无条件展示（不管是否解锁——
-  // wiki 同时是研发手册，未解锁章节直接可见解锁条件，不再灰显锁定）
+  // v2.1.0：Wiki 重做为「导览 / 资源 / 章节 / 系统 / 查阅」五卷（参照 KG wiki 的资源 + 章节组织）。
+  //   全部章节无条件展示：wiki 是玩家手册，未解锁内容直接写清条件，不做锁定灰显。
   const wikiBtn = document.getElementById('btn-wiki');
   const wikiModal = document.getElementById('wiki-modal');
   let wikiActiveId = 'intro';
@@ -2049,13 +2049,15 @@ function bindEvents() {
     if (!body) return;
     const s = WIKI_SECTIONS.find(x => x.id === wikiActiveId) || WIKI_SECTIONS[0];
     let html = `<h4 class="wiki-title">${s.name}</h4><div class="wiki-content">${s.body()}</div>`;
-    // 故事线/章节讲解并入对应章节（intro/ach 已含；此处保留故事线图鉴入口在 ach 章末）
-    if (s.id === 'ach') html += renderStorylineAppendix();
-    // v4.3.22 反馈③（kg 化）：章尾「相关章节」互链——按卷级 related 关系跳转（跨卷迷路兜底）。
-    //   同卷章节走左栏导航即可，只列其他卷的关联章节；点击复用 data-wiki 跳转逻辑。
+    // 故事线图鉴并入「章节」卷末页（ch_extra = 番外与故事线）
+    if (s.id === 'ch_extra') html += renderStorylineAppendix();
+    // v4.3.22 反馈③（kg 化）：章尾「相关章节」互链——卷级 related 兜底，章节可自带 related 精确指路。
+    //   v2.1.0：章节级 related 优先合并（系统卷内相关页不再依赖跨卷），去重且排除自身；点击复用 data-wiki 跳转。
     const grp = WIKI_GROUPS.find(g => g.ids.includes(s.id));
-    if (grp && Array.isArray(grp.related) && grp.related.length) {
-      const links = grp.related
+    const relIds = [...new Set([...(Array.isArray(s.related) ? s.related : []), ...(grp && Array.isArray(grp.related) ? grp.related : [])])]
+      .filter(id => id !== s.id);
+    if (relIds.length) {
+      const links = relIds
         .map(id => WIKI_SECTIONS.find(x => x.id === id))
         .filter(Boolean)
         .map(x => `<button class="btn wiki-related-btn" data-wiki="${x.id}">${x.name}</button>`)

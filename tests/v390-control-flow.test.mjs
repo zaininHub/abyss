@@ -399,10 +399,10 @@ test('E2 v3.10.0 新增 17 条成就全部注册（判定只读已持久化字�
   assert.equal(new Set(ACHIEVEMENT_IDS).size, ACHIEVEMENT_IDS.length, '成就 id 唯一');
 });
 
-test('E3 新增 4 章 Wiki 与 2 档里程碑渲染 / 数值合法', async () => {
+test('E3 章节卷 5 页 Wiki 与 2 档里程碑渲染 / 数值合法', async () => {
   const { WIKI_SECTIONS } = await import('../src/data/wiki.js');
   const { BALANCE } = await import('../src/data/balance.js');
-  for (const id of ['schedule', 'watch', 'chronicle2', 'resonance', 'chronicle3', 'longline']) {
+  for (const id of ['ch1_5', 'ch6_10', 'ch11_15', 'ch16_18', 'ch_extra']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec, `缺百科章节 ${id}`);
     const html = sec.body();

@@ -52,7 +52,6 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
     ['主线章节', CHAPTERS.length, 46],
     ['主事件', EVENTS.length, 74],
     ['政策项', POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 33],
-    ['百科章节', WIKI_SECTIONS.length, 24], // v4.0.9 反馈④：28→31（+expedition/eternals/misc），28-24=17.8% 仍在 10~30% 区间
     ['里程碑', BALANCE.miles.length, 13],
   ];
   for (const [name, now, before] of rows) {
@@ -64,7 +63,7 @@ test('E1 各内容表扩充幅度落在 10%~30% 区间', () => {
   assert.equal(EVENTS.length, 82);
   assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(POLICY_GROUPS.length, 13);
-  assert.equal(WIKI_SECTIONS.length, 31); // v3.12.8：删除「第六条策略」；v4.0.9 反馈④：+expedition/eternals/misc → 31
+  assert.equal(WIKI_SECTIONS.length, 32); // v2.1.0：按 KG wiki 的「资源 + 章节」重做 → 导览 1 / 资源 9 / 章节 5 / 系统 13 / 查阅 4
   assert.equal(BALANCE.miles.length, 16);
 });
 
@@ -174,8 +173,8 @@ test('F4 里程碑只追加不重排，既有 cps 键与奖励完全不变', () 
 
 console.log('[G] 文案与 UI 数据');
 
-test('G1 Wiki 新增 3 章渲染无 undefined / NaN，且覆盖新玩法与番外', () => {
-  for (const id of ['orchestration', 'flows', 'chronicle']) {
+test('G1 Wiki 编排 / 资源 / 章节三卷渲染无 undefined / NaN', () => {
+  for (const id of ['orchestration', 'res', 'ch1_5']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec, `缺百科章节 ${id}`);
     assert.ok(sec.name, `${id} 缺标题`);

@@ -143,7 +143,7 @@ test('D9 Wiki 不再引用不存在的 BALANCE 键，且新章节已注册', () 
   const wiki = readFileSync(join(srcRoot, 'data', 'wiki.js'), 'utf8');
   assert.ok(!wiki.includes('delveCorruptPerLevel'), '旧键会渲染成 undefined');
   assert.ok(wiki.includes('delveCorruptPerRun'), '应改读真实键');
-  assert.ok(wiki.includes("id: 'line'"), '应新增「故事线特色」章节');
+  assert.ok(wiki.includes("id: 'ch_extra'"), '故事线内容应归入「番外与故事线」章节');
   assert.ok(!wiki.includes('分三批次'), '研究分组描述已过时（现为 4 组）');
 });
 

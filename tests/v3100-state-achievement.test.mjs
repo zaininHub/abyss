@@ -420,7 +420,7 @@ test('E4 内容扩充数量与 UI 分组一一对应（无死数据）', () => {
   assert.equal(EVENTS.length, 82);    // v3.12.9：74→82 事件
   assert.equal(BALANCE.researchUpgs.length, 22); // v3.12.11 反馈②：68→21；v3.12.12 ⑧：+rp_ai_unit → 22
   assert.equal(BALANCE.miles.length, 16);
-  assert.equal(WIKI_SECTIONS.length, 31); // v3.12.8：删除「第六条策略」；v4.0.9 反馈④：+expedition/eternals/misc → 31
+  assert.equal(WIKI_SECTIONS.length, 32); // v2.1.0：按 KG wiki 的「资源 + 章节」重做 → 32 节五卷
   assert.equal(POLICY_GROUPS.length, 13);
   assert.equal(POLICY_GROUPS.reduce((n, g) => n + g.policies.length, 0), 39);
   assert.equal(orch.ORCHESTRATION_MODES.length, 4); // v3.12.8：值守/级联已移除
@@ -442,7 +442,7 @@ test('E5 新增事件 / 章节 / 政策条件全部可执行且类型合法', ()
     assert.equal(typeof g.unlock, 'function');
     assert.equal(typeof g.unlock({ resonance: { enabled: true }, projectsDone: 200, prestige: 9 }), 'boolean');
   }
-  for (const id of ['resonance', 'chronicle3', 'longline']) {
+  for (const id of ['res', 'ch_extra', 'prestige']) {
     const sec = WIKI_SECTIONS.find(s => s.id === id);
     assert.ok(sec && typeof sec.body === 'function', `百科 ${id} 缺正文`);
     assert.ok(sec.body().length > 20);
