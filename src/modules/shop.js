@@ -10,7 +10,7 @@ import { computeCps, costMult, globalMult, fmt, unitCost, bulkCostCalc, vehicleD
 import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
-import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
+import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW, BADGE_ICON_HOARD } from './disclosure.js'; // v2.0.0：囤囤鼠认证徽章图形 // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { gateOpen } from '../core/chapterGates.js'; // v4.3.35 反馈①：研究项章节门禁（政策研究绑第 7 章）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
@@ -20,7 +20,7 @@ import { autoBuildUnlocked, autoBuildActivateCost, autoBuildActivable, activateA
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
 import { getStorylinePackage } from '../core/storylineManager.js';
-import { museumStationProgress } from './progression.js'; // v4.3.25 反馈①：馆藏认证按当前工位实时复核
+import { museumStationProgress, hoarderStorageProgress } from './progression.js'; // v2.0.0：囤囤鼠认证实时进度 // v4.3.25 反馈①：馆藏认证按当前工位实时复核
 
 // v2.3.1 ⑥（rev18 9.4）：倍率交互整节移除——bulkN / setBulk / getBulk 删除，
 // 所有购买固定按 ×1 执行；bulkCostCalc 签名保留，n 固定传 1（最小化改动）。
@@ -244,10 +244,18 @@ export function renderShop(container) {
   const museumDone = !!((S._specialTasksDone || {}).sp1_museum);
   const museumNow = museumStationProgress(S);
   const museumCertified = museumDone && museumNow.kinds >= 3 && museumNow.sum >= 50;
+  // v2.0.0：仓储区「囤囤鼠认证」——与馆藏认证同构：已完成 + **当前仍达标**才佩戴（晋升清零 upgrades 自动隐藏）
+  const hoarderDone = !!((S._specialTasksDone || {}).sp4_hoarder);
+  const hoarderNow = hoarderStorageProgress(S);
+  const hoarderCertified = hoarderDone && hoarderNow.kinds >= 4 && hoarderNow.sum >= 30;
   renderChainedGroups(container, split, [
     { title: '工位', test: u => u.cps > 0 && !u.produces && !u.cat, badge: museumCertified ? '馆藏认证' : '', badgeTip: `当前工位 ${museumNow.kinds} 种 / 等级和 ${museumNow.sum}，需同时拥有 3 种工位且等级之和 ≥50（达成期间佩戴）` },
     { title: '集市', test: u => u.cat === 'bazaar' }, // v3.12.3 反馈②：回响账簿单独成组
-    { title: '仓储区', test: () => true }, // 兜底组：存储节点/资源建筑/净化节点族
+    { title: '仓储区', test: () => true, // 兜底组：存储节点/资源建筑/净化节点族
+      badge: hoarderCertified ? '囤囤鼠认证' : '',
+      badgeIcon: BADGE_ICON_HOARD,
+      badgeClass: 'hoard',
+      badgeTip: `当前仓储 ${hoarderNow.kinds} 种 / 等级和 ${hoarderNow.sum}，需同时拥有 4 种仓储建筑且等级之和 ≥30（达成期间佩戴）` },
   ], makeShopItem, (u, el) => shopItemEls.set(u.id, el), { verb: '升级' });
   // v4.2.3 反馈④：三个分类标题（工位 / 集市 / 仓储区）此前是纯文本小标题，
   //   与线程区「产出强化」的 ▸ 折叠标题风格不一致。统一接入 applyGroupFold——

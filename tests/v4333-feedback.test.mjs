@@ -69,7 +69,8 @@ test('③-1 徽章 = 内联 SVG 星章 + 文字（不引外部资源）', () => 
   assert.match(DISC, /export const BADGE_ICON = '<svg class="g-badge-ico"/, '徽章图形以内联 SVG 常量产出');
   assert.match(DISC, /class="g-badge-ico"[^>]*aria-hidden="true"/, '图形对读屏隐藏（语义由文字承担）');
   assert.match(DISC, /fill="currentColor"/, '图形跟随文字色，主题自动换色');
-  assert.match(DISC, /b\.innerHTML = BADGE_ICON \+ g\.badge;/, '徽章 = 图形 + 文字');
+  // v2.0.0：组可指定徽章图形（馆藏=星章默认 / 囤囤鼠=粮罐），无指定时仍用 BADGE_ICON
+  assert.match(DISC, /b\.innerHTML = \(g\.badgeIcon \|\| BADGE_ICON\) \+ g\.badge;/, '徽章 = 图形 + 文字');
   assert.doesNotMatch(DISC, /<img|\.png|\.svg['"]/, '不引外部图片');
 });
 

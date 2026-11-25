@@ -139,6 +139,9 @@ export function defaultState() {
     //   不在 RUN_RESET_KEYS（= 跨晋升保留），避免晋升后剧情重播。
     _museumInvited: false,
     _museumHintAt: 0,
+    // v2.0.0：囤囤鼠认证「仓管员来信」节奏落档（与馆藏认证同构，晋升不重播）
+    _hoarderInvited: false,
+    _hoarderHintAt: 0,
     // v2.0 线A 秩序重构者
     orderRewrites: {},             // 协议编辑器重写记录 {upgradeId: count}
     orderCompileProgress: 0,       // 编译进度

@@ -665,11 +665,12 @@ t('Progressive：P0 始终解锁，P9 需游玩 4.5 天（按天数而非章节�
   S.startedAt = saved;
 });
 
-t('Special Tasks：定义含 6 个任务（3通用+3线专属）', () => {
-  assert.equal(SPECIAL_TASKS.length, 6, `应含 6 个特殊任务，实际 ${SPECIAL_TASKS.length}`);
+t('Special Tasks：定义含 7 个任务（4通用+3线专属）', () => {
+  assert.equal(SPECIAL_TASKS.length, 7, `应含 7 个特殊任务，实际 ${SPECIAL_TASKS.length}`);
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp1_museum'), '应含 sp1_museum');
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp2_last_thread'), '应含 sp2_last_thread');
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp3_farewell'), '应含 sp3_farewell');
+  assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp4_hoarder'), '应含 sp4_hoarder（v2.0.0 囤囤鼠认证）');
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp_order_protocol'), '应含 sp_order_protocol');
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp_abyss_gaze'), '应含 sp_abyss_gaze');
   assert.ok(SPECIAL_TASKS.find(t => t.id === 'sp_faith_mission'), '应含 sp_faith_mission');

@@ -136,6 +136,13 @@ export const BADGE_ICON = '<svg class="g-badge-ico" viewBox="0 0 16 16" width="1
   + '<circle cx="8" cy="9.9" r="4.35" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".95"/>'
   + '<path d="M8 7.15l.86 1.74 1.92.28-1.39 1.36.33 1.91L8 11.54l-1.72.9.33-1.91-1.39-1.36 1.92-.28Z" fill="currentColor"/>'
   + '</svg>';
+// v2.0.0：囤囤鼠认证的图形——一只塞满粮袋的陶罐（内联 SVG，currentColor，无外部资源）。
+//   与馆藏认证的「绶带星章」区分：徽章图形不同，玩家一眼能分「认证种类」。
+export const BADGE_ICON_HOARD = '<svg class="g-badge-ico" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">'
+  + '<path d="M6.2 2h3.6l.5 1.6H5.7Z" fill="currentColor" opacity=".75"/>'
+  + '<path d="M5.2 3.9h5.6c1.7 1 2.5 2.3 2.5 4.2 0 3-2.4 5.4-5.3 5.4S2.7 11.1 2.7 8.1c0-1.9.8-3.2 2.5-4.2Z" fill="none" stroke="currentColor" stroke-width="1.25" opacity=".95"/>'
+  + '<path d="M5.4 8.1h5.2M5.7 10.1h4.6" stroke="currentColor" stroke-width="1.05" opacity=".8"/>'
+  + '</svg>';
 export function renderChainedGroups(container, split, groups, makeItem, onItem, ownedOpts) {
   const buckets = groups.map(() => []);
   split.visible.forEach((it, i) => {
@@ -163,10 +170,10 @@ export function renderChainedGroups(container, split, groups, makeItem, onItem, 
     const canBadge = g.badge && typeof document.createTextNode === 'function';
     if (canBadge) {
       const b = document.createElement('span');
-      b.className = 'group-title-badge';
+      b.className = 'group-title-badge' + (g.badgeClass ? ` ${g.badgeClass}` : ''); // v2.0.0：按认证种类加配色类
       // v4.3.31 反馈③：徽章不只文字——左侧加一枚小徽章图形（纯内联 SVG，随文字色 currentColor，
       //   无外部资源、无额外请求）。图形对读屏隐藏（aria-hidden），语义仍由右侧文字承担。
-      b.innerHTML = BADGE_ICON + g.badge;
+      b.innerHTML = (g.badgeIcon || BADGE_ICON) + g.badge; // v2.0.0：组可指定徽章图形（馆藏=星章 / 囤囤鼠=粮罐）
       b.title = g.badgeTip || g.badge;
       h.appendChild(document.createTextNode(g.title));
       h.appendChild(b);

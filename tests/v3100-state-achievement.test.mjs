@@ -47,7 +47,7 @@ test('A1 清单内无孤儿键，defaultState 字段全集稳定', () => {
   assert.ok(keys.includes('resonance'), 'v3.10.0 新字段必须在默认状态里');
   // v4.2.X：v2.2 即废弃的 _forkTriggered 已删除（141→140）；v4.3.1 keepAwake（→141）；v4.3.2 achievementTimes（→142）；
   // v4.3.32 馆藏认证「馆长来信」节奏两键 `_museumInvited` / `_museumHintAt`（→144）。
-  assert.equal(keys.length, 144, 'v3.10.2 的 129 + v3.12.0 ⑬ moduleUnlocks + v3.12.6 ⑤ _purifierSeen + v3.12.13 _gainRes/_spentRes/_buyRes + v4.0.9 ⑫ 自动转化开关七键 + v4.3.1 keepAwake + v4.3.2 achievementTimes + v4.3.32 馆藏认证节奏两键（删 _forkTriggered 后净 144）');
+  assert.equal(keys.length, 146, 'v3.10.2 的 129 + v3.12.0 ⑬ moduleUnlocks + v3.12.6 ⑤ _purifierSeen + v3.12.13 _gainRes/_spentRes/_buyRes + v4.0.9 ⑫ 自动转化开关七键 + v4.3.1 keepAwake + v4.3.2 achievementTimes + v4.3.32 馆藏认证节奏两键 + v2.0.0 囤囤鼠认证节奏两键（删 _forkTriggered 后净 146）');
   // v4.2.X：轮回移除，大模块买断只剩集市一项。
   assert.deepEqual(d.moduleUnlocks, { bazaar: false }, '新档集市未开启（轮回已移除）');
 });

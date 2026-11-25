@@ -21,6 +21,24 @@ export function museumStationProgress(state) {
   return { kinds, sum };
 }
 
+// v2.0.0：仓储区「囤囤鼠认证」——与馆藏认证同构的第二枚分类徽章。
+//   仓储区 = 主商店第三组（存储节点 / 备用粮仓 / 深井仓储 / 四座资源仓库），
+//   共 7 个 id（curated 而非 cat 派生：`storage` 无 cat、`atrium` 是转化器、`garden/oracle/temple`
+//   是宗教产出、`cpu/gpu` 是线程强化、载具/DM 系是采集器，都不算「囤货」）。
+//   条件：同时拥有 4 种仓储建筑，且等级之和 ≥30（比馆藏宽松：仓储条数少、单条上限更深）。
+export const HOARDER_STORAGE_IDS = Object.freeze([
+  'reserve_bin', 'storage', 'rp_vault', 'pt_vault', 'dm_vault', 'faith_vault', 'deep_bin',
+]);
+export function hoarderStorageProgress(state) {
+  let kinds = 0, sum = 0;
+  for (const u of HOARDER_STORAGE_IDS) {
+    const lv = Number((state.upgrades || {})[u]) || 0;
+    if (lv > 0) kinds++;
+    sum += lv;
+  }
+  return { kinds, sum };
+}
+
 // ========== 特殊任务定义（6个：3通用 + 3线专属） ==========
 export const SPECIAL_TASKS = [
   // 通用特殊任务
@@ -40,6 +58,20 @@ export const SPECIAL_TASKS = [
     triggered: false,
     line: 'any',
     // v4.3.31 反馈②（重做）：日志节奏改由 checkSpecialTasks 统一处理（邀请一次 + 每 2 小时关注 + 完成会晤）。
+  },
+  {
+    id: 'sp4_hoarder',
+    name: '囤囤鼠',
+    // v2.0.0：仓储区认证——奖励为「仓储区」分类标题挂「囤囤鼠认证」徽章（shop.js 消费 _specialTasksDone）；
+    //   与馆藏认证同口径：徽章按**当前**条件实时佩戴（晋升清零 upgrades 后自动隐藏）。
+    desc: '无时间限制；同时拥有 4 种仓储建筑，且仓储等级之和达到 30 级',
+    condition: (S) => {
+      const { kinds, sum } = hoarderStorageProgress(S);
+      return kinds >= 4 && sum >= 30;
+    },
+    reward: { type: 'hoarder_mode', msg: '仓储区获得「囤囤鼠认证」——仓储分类达标期间佩戴徽章（未达 4 种或等级和不足 30 时自动隐藏）' },
+    triggered: false,
+    line: 'any',
   },
   {
     id: 'sp2_last_thread',
@@ -173,6 +205,8 @@ let _abandonCooldownUntil = 0;
 // ========== 特殊任务检查 ==========
 // v4.3.25 反馈①：上一次的工位达标态——翻转时置脏商店，让认证徽章即时出现/隐藏
 let _museumQualified = null;
+// v2.0.0：仓储区达标态 watcher（与馆藏认证同构）
+let _hoarderQualified = null;
 // v4.3.31 反馈②（重做）：馆藏认证的剧情日志节奏。
 //   完成前每 2 小时一封「馆长在关注您...」——时间戳落档（S._museumHintAt），刷新/重开不重置节奏。
 export const MUSEUM_HINT_INTERVAL_MS = 2 * 60 * 60 * 1000;
@@ -213,6 +247,30 @@ export function checkSpecialTasks(S, log, toast) {
         }
       }
     }
+    // v2.0.0：囤囤鼠认证——与馆藏认证同构的「仓管员来信」三段式（邀请一次 / 每 2 小时 / 完成钢印）
+    if (task.id === 'sp4_hoarder') {
+      const qualified = task.condition(S);
+      const doneNow = !!S._specialTasksDone[task.id];
+      if (_hoarderQualified !== qualified) {
+        _hoarderQualified = qualified;
+        dirty.shop = true;
+      }
+      if (!doneNow) {
+        const { kinds } = hoarderStorageProgress(S);
+        const now = Date.now();
+        const persist = () => { try { save(S); } catch { /* 无 localStorage 的测试环境 */ } };
+        if (kinds >= 4 && !S._hoarderInvited) {
+          S._hoarderInvited = true;
+          S._hoarderHintAt = now;
+          persist();
+          if (log) log('仓管员递来一张清单：4 种仓储、等级合计 30，攒齐就给你盖「囤囤鼠认证」。', '');
+        } else if (S._hoarderInvited && now - (Number(S._hoarderHintAt) || 0) >= MUSEUM_HINT_INTERVAL_MS) {
+          S._hoarderHintAt = now;
+          persist();
+          if (log) log('仓管员又来看了一眼你的库房...', '');
+        }
+      }
+    }
     if (S._specialTasksDone[task.id]) continue;
     if (task.line !== 'any' && task.line !== S.storyline) continue;
     try {
@@ -238,6 +296,7 @@ export function checkSpecialTasks(S, log, toast) {
           const requirement = semi >= 0 ? task.desc.slice(semi + 1) : '';
           if (log) {
             if (task.id === 'sp1_museum') log('馆长十分满意与您的会晤，期待下次会面', 'good');
+            else if (task.id === 'sp4_hoarder') log('仓管员盖下钢印：囤囤鼠认证——仓廪充实，一粒不落。', 'good');
             else log(`特殊任务：${task.name} - ${timeLimit}${requirement ? `\n${requirement}` : ''}`, 'good');
           }
           if (toast) toast(`✓ ${task.name}`);
@@ -247,6 +306,7 @@ export function checkSpecialTasks(S, log, toast) {
           //   fileProtocolCompat 判定「产物含模块语法」而跳过 script/crossorigin 降级，
           //   结果双击 dist/index.html（file://）时脚本与 style.css 双双被 CORS 拦截 —— 即「CSS 失效」。
           if (task.id === 'sp1_museum') dirty.shop = true;
+          if (task.id === 'sp4_hoarder') dirty.shop = true; // v2.0.0：囤囤鼠认证徽章同帧上店
         }
         // v4.3.11 反馈③：sp3 首次完成点亮成就「临别赠礼」（首购离职礼盒）
         //   _specialTasksDone 在晋升时保留（不在 RUN_RESET_KEYS），成就判定双路径兜底：点亮过就不再熄灭
