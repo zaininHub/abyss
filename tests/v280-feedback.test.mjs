@@ -134,3 +134,12 @@ test('⑧第 8~12 章门槛不再依赖升降次数（源码级）', () => {
   assert.ok(/id:12[\s\S]{0,120}delveRan\(s\)/.test(src), '第 12 章 = 跑过深潜');
   assert.ok(!/cond:s=>s\.prestige>=40/.test(src), '旧的晋升 40 门槛应删除');
 });
+
+test('②补充 净化节点区不再输出「DM 购买 · 深入辅助（限 3 级）」与其上方的分隔横线（v2.8.1）', () => {
+  const relics = stripComments(read('src/modules/relics.js'));
+  assert.ok(!/DM 购买 · 深入辅助/.test(relics), '该行文案应删除');
+  assert.ok(!/净化节点 <span/.test(relics), '不应再有「净化节点」标题行');
+  // 该块不应再带 border-top 分隔线
+  const block = relics.split('purifierFamilySeen()')[1] || '';
+  assert.ok(!/border-top/.test(block.slice(0, 600)), '净化节点块不应再有上方横线');
+});

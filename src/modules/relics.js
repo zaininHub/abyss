@@ -90,8 +90,9 @@ export function renderRelics(container) {
   //   原判定只看 tech → 一晋升整块消失（用户实报「遗物的净化节点等升级还是没有」）。
   //   现改为「见过一次就永久可见」：_purifierSeen 跨局保留，旧档靠 tech / 已购节点兜底。
   if (purifierFamilySeen()) {
-    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
-      <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">净化节点 <span style="color:var(--text-3)">DM 购买 · 深入辅助（限 3 级）</span></div>`;
+    // v2.8.1 反馈：去掉「净化节点 DM 购买 · 深入辅助（限 3 级）」这一行文案与其上方的分隔横线。
+    //   节点卡自己写着 Lv.x/3 与「每秒清除 n% 腐化」，顶部再复述一遍只是噪音。
+    html += `<div style="margin-top:10px">`;
     for (const [id, nm, base, rate] of PURIFIER_DEFS) {
       const lv = (S.upgrades && S.upgrades[id]) || 0;
       const cost = Math.ceil(base * Math.pow(1.8, lv));
