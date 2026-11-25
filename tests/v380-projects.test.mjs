@@ -104,9 +104,13 @@ test('P4 内容可达性：章节 25 / 两条政策在累计完成数达门槛�
   const probe = (n) => ({ projectsDone: n, delve: { unlocked: false }, prestige: 0 });
   assert.equal(ch25.cond(probe(40)), true, '40 任务应解锁番外章节');
   assert.equal(ch25.cond(probe(39)), false, '39 任务不应提前解锁');
-  assert.equal(observe.unlock(probe(20)), true);
-  assert.equal(orchestration.unlock(probe(10)), true);
-  assert.equal(orchestration.unlock({ ...probe(0), prestige: 3 }), true, '晋升路径同样可达');
+  // v2.9.0：两条组的资产门槛重排——观测纪律跟深潜（第 11 章）走、编排律令改 20 任务，
+  //   且不再保留「晋升 ≥3」的第二条路径（晋升是高频计数器，那条路径在第 3 章就已为真）。
+  assert.equal(observe.unlock({ ...probe(20), delve: { unlocked: true } }), true, '深潜已解锁时观测纪律可达');
+  assert.equal(observe.unlock(probe(20)), false, '深潜未解锁时观测纪律不给加成');
+  assert.equal(orchestration.unlock(probe(20)), true, '20 任务解锁编排律令');
+  assert.equal(orchestration.unlock(probe(19)), false, '19 任务差一步');
+  assert.equal(orchestration.unlock({ ...probe(0), prestige: 99 }), false, '职级不再能绕过任务门槛');
   // 成就 projects50 的门槛必须保持（防止被误改成不可达常量）；v3.10.0 表已下沉到数据层
   const ACH_SRC = readFileSync(new URL('../src/data/achievements.js', import.meta.url), 'utf8');
   assert.match(ACH_SRC, /projects50[\s\S]{0,160}projectsDone\s*\|\|\s*0\)\s*>=\s*50/);

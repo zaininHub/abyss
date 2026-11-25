@@ -7,7 +7,7 @@ import { S } from '../state.js';
 import { BALANCE, FP_BALANCE } from './balance.js';
 import { MOOD_MULT } from './threads.js';
 import { PRAISE, SECRET_SANCTUMS, RELIGIONS, faithCap } from './religions.js';
-import { POLICY_GROUPS } from './policies.js';
+import { POLICY_GROUPS, policyGroupAvailable } from './policies.js'; // v2.9.0：组章节下限参与可见性判定
 import { BAZAAR, QUALITY, RES_LABEL } from './bazaar.js';
 import { DELVE } from './delve.js';
 import { fmt, corruptionCap } from '../modules/economy.js';
@@ -34,7 +34,7 @@ function unlocked(key) {
     case 'rift': return !!S._riftSeen || (S.riftsSealed || 0) > 0;
     case 'delve': return !!(S.delve && S.delve.unlocked);
     case 'prestige': return (S.prestige || 0) >= 1;
-    case 'policy': return POLICY_GROUPS.some(g => { try { return g.unlock(S); } catch { return false; } });
+    case 'policy': return POLICY_GROUPS.some(g => policyGroupAvailable(g, S));
     case 'bazaar': return !!(S.bazaar && S.bazaar.unlocked);
     default: return true;
   }
@@ -418,8 +418,8 @@ export const WIKI_SECTIONS = [
   ` },
   { id: 'policy', name: '周期政策', unlock: 'policy', body: () => `
     <h4>组内互斥，每轮重选</h4>
-    <p>每局（晋升后）按跨周期资产开放政策组，共 ${POLICY_GROUPS.length} 组；组内互斥，每组 2~3 选一，选 A 锁同组其余项。效果正负成对（±10~30%）：拿一头强，必吃另一头弱。改选消耗回响/虔诚 ×2^n；立誓流派改选成本翻倍，中立流派半价。</p>
-    ${POLICY_GROUPS.map(g => `<p><b>${g.name}组</b>：${g.policies.map(p => `${p.name}（${p.desc}）`).join(' / ')}</p>`).join('')}
+    <p>第 3 章开放（与宗教同章），此后随主线章节 + 跨周期资产逐组解锁，共 ${POLICY_GROUPS.length} 组：第 3 章先给「路线 / 信仰」两组，第 5 章起星图与共鸣并入，第 11 章深潜组收尾。组内互斥，每组 2~4 选一，选 A 锁同组其余项。效果正负成对（±5~30%）：拿一头强，必吃另一头弱；只对本局已解锁的资源生效（未解锁资源在卡片上标「暂不生效」）。每局（晋升后）清空重选，改选消耗回响/虔诚 ×2^n；立誓流派改选成本翻倍，中立流派半价。</p>
+    ${POLICY_GROUPS.map(g => `<p><b>${g.name}组</b>（第 ${g.chapter} 章起 · ${g.hint.replace(/^第 \d+ 章起 · /, '')}）：${g.policies.map(p => `${p.name}（${p.desc}）`).join(' / ')}</p>`).join('')}
     <p class="wiki-hint">立誓（岔路口买定向建筑）→ 本局政策幅度 +5%；中立 → 改选成本半价。有可选未定的政策时，政策页签会挂感叹号。</p>
   ` },
   { id: 'delve', name: '深潜', unlock: 'delve', body: () => `

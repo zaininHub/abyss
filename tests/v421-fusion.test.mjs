@@ -75,6 +75,9 @@ test('F5 政策链解锁：选完路线不立即整组解锁深化（旧链已�
   assert.ok(!ids().includes('deepen'));
   S.policies.route = { id: 'order_route', lv: 1 };
   assert.ok(!ids().includes('deepen'), '选完 A 不解锁 B/C');
-  S.prestige = 3;
-  assert.ok(ids().includes('deepen'), '资产达标才开放');
+  // v2.9.0：深化组门槛从「职级 ≥3」改为「完成 10 个任务」（晋升是高频计数器，职级不是资产）
+  S.prestige = 99;
+  assert.ok(!ids().includes('deepen'), '职级不再放行深化组');
+  S.projectsDone = 10;
+  assert.ok(ids().includes('deepen'), '资产达标（10 个任务）才开放');
 });

@@ -2103,7 +2103,7 @@ function bindEvents() {
   function hintFor(key) {
     const m = { rp:'EP 溢出一次后，把存储上限抬到矩阵存储库售价即可购入解锁', es:'完成首次晋升', faith:'信奉宗教分支', pt:`第 ${CHAPTER_GATES.pets} 章后商店开放「饵料仓库」，购入即解锁 PT`,
       dm:'触发首次深渊裂隙', rift:'触发首次深渊裂隙', delve:'ES≥3 + DM 已发现 + 宗教已信奉',
-      prestige:'完成首次晋升', policy:'开放任一政策组（晋升/深潜/信仰）',
+      prestige:'完成首次晋升', policy:`第 ${CHAPTER_GATES.policy} 章后，按章节 + 跨周期资产开放政策组（第 3 章先给路线 / 信仰）`,
       bazaar:`第 ${CHAPTER_GATES.bazaar} 章后，职级 ≥1 时用 5 PP 买断` }; // v3.0.0 // v3.1.1 反馈⑦：pt 提示同步仓库解锁链 // v4.3.36：集市提示同步章节门禁
     return m[key] || '推进主线解锁';
   }

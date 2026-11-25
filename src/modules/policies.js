@@ -4,6 +4,7 @@ import { fmt, computeCps } from './economy.js';
 import {
   POLICY_GROUPS, groupByName, groupPolicyId, selectedPolicy,
   policyOpenGroups, policyLv, nextPolicyInGroup,
+  policyDeadKeys, policyLockedHint, POLICY_KEY_LABEL, // v2.9.0：死键标注 + 空态提示（不再硬编码三条）
 } from '../data/policies.js';
 
 let logFn = null; let toastFn = null;
@@ -51,11 +52,23 @@ export function renderPolicyPanel(container) {
   if (!container) return;
   const groups = policyOpenGroups();
   if (groups.length === 0) {
+    // v2.9.0：空态不再硬编码「路线/信仰/集市」——政策第 3 章开门、且各组章节下限不同，
+    //   这里按 chapterGates 实时算「差资产」与「还没到章」两批，避免文案随版本漂移。
+    const { chapter, ready, next, nextChapter } = policyLockedHint();
+    const readyHtml = ready.length
+      ? `<br>· 章节已到、待满足：${ready.map(g => `${g.name}（${g.hint}）`).join('；')}`
+      : '';
+    const nextHtml = next.length
+      ? `<br>· 第 ${nextChapter} 章起：${next.filter(g => g.chapter === nextChapter).map(g => g.name).join('、')}`
+      : '';
+    const head = chapter < 3
+      ? `政策第 3 章开放（当前第 ${chapter} 章）。`
+      : '本章暂无可开放政策组。';
     container.innerHTML = `<div class="religion-desc">周期政策：每轮（晋升后）按跨周期资产开放政策槽位，组内互斥单选——让每次游戏周期走向不同。</div>
-      <div style="font-size:12px;color:var(--text-2);line-height:1.9">本轮暂无开放政策组：<br>· 路线抉择（需职级 ≥1）<br>· 信仰组（需信仰解锁）<br>· 集市组（需集市开张）</div>`;
+      <div style="font-size:12px;color:var(--text-2);line-height:1.9">${head}${readyHtml}${nextHtml}</div>`;
     return;
   }
-  let html = `<div class="religion-desc">周期政策：每轮（晋升后）重选；一次只开放一个政策组，选定后自动解锁下一组。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
+  let html = `<div class="religion-desc">周期政策：每轮（晋升后）重选；本局已开放 ${groups.length} 组，逐组选定（选完一组自动展开下一组）。<span style="color:var(--text-2)">${S.vowPolicyBoost ? '已立誓：政策正向幅度 +5%' : '中立'}</span></div>`;
   const stateBadge = (kind) => {
     const M = {
       on:   ['policy-state-on', '✓ 当前生效'],
@@ -66,14 +79,22 @@ export function renderPolicyPanel(container) {
     const [cls, label] = M[kind];
     return `<span class="policy-state ${cls}">${label}</span>`;
   };
+  // v2.9.0：本局还没有的资源（如未触发裂隙时的余烬、深潜未开时的深潜）不再静默挂零——
+  //   卡片直接标「未解锁，暂不生效」，省得玩家以为数值面板算错了。
+  const deadNote = (p) => {
+    const dead = policyDeadKeys(p);
+    if (dead.length === 0) return '';
+    const names = dead.map(k => POLICY_KEY_LABEL[k] || k).join('、');
+    return `<span class="policy-dead" style="color:var(--text-3)">（${names}未解锁，暂不生效）</span>`;
+  };
   const card = (g, p, kind) => {
     const foot = kind === 'on' ? '已选定 · 本周期不可改选'
       : kind === 'done' ? '本组已选定其它政策'
-      : kind === 'lock' ? (g.id === 'deepen' ? '需先选定对应路线（深渊/秩序）' : '未满足前置')
-      : '点击选定（选定后解锁下一组）';
+      : kind === 'lock' ? (p.lockText || '未满足前置')
+      : '点击选定（本局锁定，晋升后重选）';
     return `<div class="item ${kind === 'on' ? 'policy-on' : kind === 'lock' ? 'cant' : ''}" data-policy-group="${g.id}" data-policy="${p.id}" data-tip="${p.name}：${p.desc}" style="cursor:pointer;${kind === 'on' ? 'border-color:var(--green,#2ea043);opacity:1' : ''}">
       <div class="name"><span>${kind === 'on' ? '✓ ' : ''}${p.name}</span><span class="count">${stateBadge(kind)}</span></div>
-      <div class="desc">${p.desc}</div>
+      <div class="desc">${p.desc}${kind === 'lock' ? '' : deadNote(p)}</div>
       <div class="cost mono policy-foot">${foot}</div>
     </div>`;
   };

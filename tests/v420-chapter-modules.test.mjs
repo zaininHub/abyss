@@ -99,18 +99,23 @@ test('C1 宗教：第 1~2 章不满足（即便粮仓≥3+RP），第 3 章才�
   S.chapter = '3';
   assert.equal(canUnlockReligion(), true);
 });
-test('C2 政策：第 1~2 章无开放组；第 3 章按资产开放；待选提示存在', () => {
+test('C2 政策：第 1~2 章无开放组；第 3 章只开「路线 / 信仰」；集市随第 7 章', () => {
   Object.assign(S, { chapter: '1', prestige: 2, religion: { unlocked: true }, bazaar: { unlocked: true } });
   assert.equal(policyOpenGroups().length, 0);
   assert.equal(hasPendingPolicy(), false);
   S.chapter = '2';
   assert.equal(policyOpenGroups().length, 0, '第二章不给政策');
   S.chapter = '3';
-  assert.ok(policyOpenGroups().length >= 1);
+  // v2.9.0：政策第 3 章开门后，组门槛改成「章 + 资产」两条轴——资产全满也只有前两组，
+  //   集市资产（bazaar.unlocked）虽然满足，但它的组章节是第 7 章，必须等。
+  assert.deepEqual(policyOpenGroups().map(g => g.id), ['route', 'faith'],
+    '第 3 章只放「路线 / 信仰」，集市/深化等按各自章节后置');
   assert.equal(hasPendingPolicy(), true);
   S.policies = { route: { id: 'order_route', lv: 1 } };
-  // 仍有其它未选组（信仰/集市），提示保留
+  // 仍有其它未选组（信仰），提示保留
   assert.equal(hasPendingPolicy(), true);
+  S.chapter = '7';
+  assert.ok(policyOpenGroups().some(g => g.id === 'market'), '集市第 7 章开张后政策组随之开放');
 });
 test('C3 共鸣/深潜/殖民：章节未到恒 false；遗物第 1 章起只看裂隙+DM 资产', () => {
   Object.assign(S, { chapter: '1', projectsDone: 50, prestige: 5, es: 10,
