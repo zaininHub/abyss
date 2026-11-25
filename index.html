@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>深渊效能工作台 v2.4.0</title>
+<title>深渊效能工作台 v2.4.1</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/src/style.css">
 </head>
@@ -212,19 +212,20 @@
     <!-- 中列：标签页 -->
     <div class="right-col">
       <div class="tabs">
-        <!-- v4.2.8 反馈：大模块 tab 按解锁顺序从左往右排列（解锁章序 = CHAPTER_UNLOCKS / 真实门控链）：
-             商店/科技树/研究点 ch1 → 裂隙 ch5（v4.3.15 反馈④：解锁早，移到研究点右侧）→ 集市 首晋升常驻 →
-             异兽 ch2 → 星图 ch3 → 宗教 ch4 → 政策 ch7 → 遗物 ch9 → 深潜 ch11 -->
+        <!-- 大模块 tab 按解锁顺序从左往右排列（= CHAPTER_GATES 的真实门控章序；tests/v240-tab-order 锁定）：
+             商店/科技树（开局）→ 研究点 ch1 → 裂隙 ch1 → 遗物 ch1 → 异兽 ch2
+             → 宗教 ch3 → 政策 ch3 → 星图 ch4 → 集市 ch7 → 深潜 ch11。
+             v2.4.1：按重排后的门禁重新排序（遗物随裂隙回到第 1 章、星图第 4 章、集市第 7 章）。 -->
         <button class="btn on" id="btn-shop">商店</button>
         <button class="btn" id="btn-tech">科技树</button>
         <button class="btn" id="btn-rp">研究点</button>
         <button class="btn" id="btn-rift-tab">裂隙</button>
-        <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
+        <button class="btn" id="btn-relics">遗物</button>
         <button class="btn" id="btn-pets">异兽</button>
-        <button class="btn" id="btn-expedition">星图</button>
         <button class="btn" id="btn-religion">宗教</button>
         <button class="btn" id="btn-policy">政策</button>
-        <button class="btn" id="btn-relics">遗物</button>
+        <button class="btn" id="btn-expedition">星图</button>
+        <button class="btn" id="btn-bazaar" title="深渊集市：富余资源换稀缺资源，汇率每 45 秒波动一次">集市</button>
         <button class="btn" id="btn-delve">深潜</button>
         <!-- v4.2.X：轮回 tab 已移除，回响商店并入晋升面板 -->
         <!-- v3.2.1 反馈④：晋升/成就/离线/故事线移出标签栏——晋升/成就/故事线常驻右列，离线并入暂停界面。
