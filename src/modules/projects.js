@@ -73,6 +73,20 @@ export function availableResKinds() { // v2.8.0：导出供反馈测试断言「
   return out;
 }
 
+// v2.8.2 反馈：任务避免「同类型同时间多次触发」。
+//   同一 (资源, 类型) 在列表里已有一条（进行中 active 或 已完成未领取 pending）时，不再刷第二条。
+//   理由：同名任务并排出现时玩家分不清在推哪一条，进度条各走各的累加器基准，
+//   面板上还会出现两张一模一样的卡；而「不同类型同时进行」是刻意的（获取/消耗/升级并行）。
+function activeKindKeys() {
+  const keys = new Set();
+  for (const p of S.projects || []) {
+    if (p.status !== 'active' && p.status !== 'pending') continue;
+    if (p.type === 'click') { keys.add('click.tutorial'); continue; }
+    if (p.type === 'res' && p.resKey) keys.add(`${p.resKey}.${p.metric}`);
+  }
+  return keys;
+}
+
 // v2.0：tickProjects 返回本帧是否有状态变化（changed），
 // 由 main.js 主循环消费：changed === true 时置 dirty.projects 触发任务面板重绘。
 function rollReward(now) {
@@ -142,15 +156,16 @@ export function spawnProject() {
       reward, status: 'active', pendingAt: 0,
       clicksAt: S.totalClicks,
     });
-    return;
+    return true;
   }
 
   // v3.12.13：资源驱动任务——只在已解锁资源里随机挑一个（资源, 类型）组合
-  const avail = availableResKinds();
-  // ep 恒解锁，avail 至少含 ep 的三种类型，不会为空；兜底仍处理
-  const pick = avail.length
-    ? avail[Math.floor(Math.random() * avail.length)]
-    : { key: 'ep', metric: 'gain', name: RES_PROJECTS.ep.kinds.gain.name, desc: RES_PROJECTS.ep.kinds.gain.desc, resLabel: 'EP' };
+  // v2.8.2 反馈：把「已经在列表里」的同类型剔掉（active / pending 都算占位），
+  //   于是同一时刻每种任务最多一条；全都占满时不刷，等既有任务领走或过期再补。
+  const occupied = activeKindKeys();
+  const avail = availableResKinds().filter(k => !occupied.has(`${k.key}.${k.metric}`));
+  if (!avail.length) return false;
+  const pick = avail[Math.floor(Math.random() * avail.length)];
 
   const durationMs = (2 + Math.random() * 28) * 60000; // v3.12.13：限时 2-30 分钟（短窗更易在单局内完成，展示也紧凑）
   const windowSec = Math.min(durationMs / 1000, 600);
@@ -195,6 +210,7 @@ export function spawnProject() {
     S.buffMult = reward.buffMult;
     S.buffUntil = now + durationMs;
   }
+  return true;
 }
 
 // v3.10.2 ①：任务终结单一真源——累计完成数 + 终止状态。
@@ -266,8 +282,7 @@ export function tickProjects() {
   const occupiedCount = S.projects.length;
   // v2.4.2：任务发放减速——冷却 10 分钟 + 1% 概率（原 120s + 2%，反馈「任务发放速率减缓」）
   if (occupiedCount < maxProjects() && now - lastSpawnAt > PROJECT_SPAWN_COOLDOWN && Math.random() < 0.01) {
-    spawnProject();
-    changed = true;
+    if (spawnProject()) changed = true; // v2.8.2：同类型已占位时不刷，也不触发重绘
   }
   return changed;
 }

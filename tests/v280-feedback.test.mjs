@@ -143,3 +143,38 @@ test('②补充 净化节点区不再输出「DM 购买 · 深入辅助（限 3 
   const block = relics.split('purifierFamilySeen()')[1] || '';
   assert.ok(!/border-top/.test(block.slice(0, 600)), '净化节点块不应再有上方横线');
 });
+
+test('⑨同类型任务不会同时存在两条（v2.8.2 反馈）', () => {
+  resetState();
+  S.resDiscovered = { ...(S.resDiscovered || {}), pt: true, rp: true, dm: true };
+  S._clickTutorialDone = true;
+  S.projects = [];
+  let spawned = 0;
+  for (let i = 0; i < 40; i++) if (spawnProject()) spawned++;
+  const keys = S.projects.map(p => `${p.resKey}.${p.metric}`);
+  assert.equal(new Set(keys).size, keys.length, `同类型重复：${keys.join(',')}`);
+  assert.ok(spawned > 0, '至少刷出一条');
+});
+
+test('⑨补充 已进入 pending（完成未领取）的同类型也占位，不再刷第二条', () => {
+  resetState();
+  S._clickTutorialDone = true;
+  S.resDiscovered = { ...(S.resDiscovered || {}), ep: true };
+  S.projects = [{ type: 'res', resKey: 'ep', metric: 'gain', name: '产能冲刺', status: 'pending', pendingAt: Date.now(), goal: 1, progress: 1, base: 0, deadline: Date.now() + 600000, reward: { kind: 'ep', amount: 1 } }];
+  for (let i = 0; i < 20; i++) spawnProject();
+  const epGain = S.projects.filter(p => p.resKey === 'ep' && p.metric === 'gain');
+  assert.equal(epGain.length, 1, 'ep.gain 应始终只有一条');
+});
+
+test('⑨补充 候选池被同类型占满时 spawnProject 返回 false（不硬刷重复）', () => {
+  resetState();
+  S._clickTutorialDone = true;
+  // 只暴露一种资源一种类型
+  S.resDiscovered = { ...(S.resDiscovered || {}), ep: true };
+  S.projects = [{ type: 'res', resKey: 'ep', metric: 'gain', name: 'x', status: 'active', goal: 1, progress: 0, base: 0, deadline: Date.now() + 6e5, reward: { kind: 'ep', amount: 1 } }];
+  // 占满所有 ep 类型
+  for (const metric of ['spend', 'buy']) S.projects.push({ type: 'res', resKey: 'ep', metric, name: 'x', status: 'active', goal: 1, progress: 0, base: 0, deadline: Date.now() + 6e5, reward: { kind: 'ep', amount: 1 } });
+  const before = S.projects.length;
+  assert.equal(spawnProject(), false, '全部占满时应返回 false');
+  assert.equal(S.projects.length, before, '不应新增任务');
+});
