@@ -105,7 +105,9 @@ export const ACCESS = Object.freeze({
     label: '深渊商店',
     chapter: null,
     stageChapter: 'starchart',
-    requires: [rules.rift('需先触发裂隙'), rules.starChart('深渊商店需先开启星图')],
+    // v2.6.1：再叠一层「这个资源到手了没有」——星图开了但 DM 一次没见过时，商店里没有任何
+    //   东西买得起（深渊升级全用 DM 计价），三态应停在 gated 而不是 open。
+    requires: [rules.rift('需先触发裂隙'), rules.starChart('深渊商店需先开启星图'), rules.resource('dm', '需先获得深渊物质（DM）')],
   },
   // 遗物 tab 自身的可见性：章节 + 裂隙，**不要 DM**（v2.4.0 拆掉「先有 DM 才看得到探采平台」的死锁）。
   'relic.tab': { label: '遗物 / 探采入口', chapter: 'relics', requires: [rules.rift('需先触发裂隙')] },
@@ -208,6 +210,9 @@ export function accessCheck(id, s, ctx) {
 //   · hidden ：本章根本不可能解锁（章节门禁还没走到）→ 整项不显示（不留占位）。
 // 判据只看策略自带的章节门禁（policy.chapter / policy.stageChapter）：
 //   无章节门禁的动作（锚点 / 资源 / 科技）永远只可能是 open 或 gated——它们任何章节都可能达成。
+// 边界：**余额买不买得起不进这里**。三态答的是「这个模块此刻该不该露脸、能不能开始用」；
+//   具体某一件的价签与灰按钮由卡片自己渲染（`disabled` + 价格 + 「还差多少」）。
+//   但「计价资源本身还没到手」属于「开始用不了」，要写进 requires（如 dm.shop 的 resource('dm')）。
 export function accessStage(id, s, ctx) {
   const policy = Object.prototype.hasOwnProperty.call(ACCESS, id) ? ACCESS[id] : null;
   if (!policy) return 'hidden';

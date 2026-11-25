@@ -9,13 +9,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { S } from '../src/state.js';
-import { accessStage } from '../src/core/access.js';
+import { accessStage, accessReason } from '../src/core/access.js';
 import { CHAPTER_GATES } from '../src/core/chapterGates.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const src = (p) => readFileSync(ROOT + p, 'utf8');
 
 const BASE = JSON.parse(JSON.stringify(S));
+const accessReasonOf = (id) => accessReason(id, S);
 function reset(over) {
   for (const k of Object.keys(S)) delete S[k];
   Object.assign(S, JSON.parse(JSON.stringify(BASE)), over || {});
@@ -48,7 +49,7 @@ test('A2 章节到了但前置未达 → gated（??? 灰显）', () => {
 test('A3 条件满足 → open', () => {
   reset({
     chapter: String(CHAPTER_GATES.starchart), tech: { deep_space: true }, _riftSeen: true,
-    upgrades: { rp_vault: 1, pt_vault: 1 }, resDiscovered: { rp: true, pt: true }, pt: 3,
+    upgrades: { rp_vault: 1, pt_vault: 1 }, resDiscovered: { rp: true, pt: true, dm: true }, pt: 3,
   });
   assert.equal(accessStage('dm.shop', S), 'open');
   assert.equal(accessStage('vehicle.advanced', S), 'open');
@@ -66,6 +67,18 @@ test('A4 无章节门禁的动作永远只有 open / gated（不会因为章数�
   reset({ chapter: '1', _riftSeen: true });
   assert.equal(accessStage('relic.tab', S), 'open');
   assert.equal(accessStage('rift.tech', S), 'open');
+});
+
+test('A7 章节到了、前置也过了，但计价资源还没到手 → 仍 gated（不是 open）', () => {
+  // 星图开了、裂隙触发过，但 DM 一次没见过 → 深渊商店里没有任何东西买得起，不该装成 open
+  reset({
+    chapter: String(CHAPTER_GATES.starchart), tech: { deep_space: true }, _riftSeen: true,
+    upgrades: { rp_vault: 1, pt_vault: 1 }, resDiscovered: { rp: true, pt: true }, pt: 3, dm: 0,
+  });
+  assert.equal(accessStage('dm.shop', S), 'gated', 'DM 未发现 → 深渊商店只能灰显');
+  assert.match(accessReasonOf('dm.shop'), /深渊物质|DM/, 'reason 要说清缺的是 DM');
+  S.resDiscovered.dm = true;
+  assert.equal(accessStage('dm.shop', S), 'open', 'DM 到手后同一套条件即 open');
 });
 
 test('A5 未注册动作 → hidden（fail-closed，不摆假占位）', () => {

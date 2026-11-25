@@ -217,7 +217,7 @@ test('E1 launchExpedition 是导出函数（不再藏在 DOM 监听器里），�
 
 // ---------- F 探采分级（v2.4.0：基础随裂隙、高级随星图） ----------
 test('F1 探采：基础载具随裂隙（第 1 章即可），高级载具与深渊商店随星图（第 4 章）', () => {
-  const keep = { chapter: S.chapter, _riftSeen: S._riftSeen, tech: S.tech, upgrades: S.upgrades, expeditionsDone: S.expeditionsDone, expeditions: S.expeditions };
+  const keep = { chapter: S.chapter, _riftSeen: S._riftSeen, tech: S.tech, upgrades: S.upgrades, expeditionsDone: S.expeditionsDone, expeditions: S.expeditions, resDiscovered: S.resDiscovered };
   try {
     Object.assign(S, { chapter: '1', _riftSeen: false, tech: {}, upgrades: {}, expeditionsDone: 0, expeditions: [] });
     assert.equal(accessCheck('vehicle.buy', S).ok, false, '没裂隙时探采平台不该能买');
@@ -228,6 +228,9 @@ test('F1 探采：基础载具随裂隙（第 1 章即可），高级载具与�
     assert.equal(accessCheck('dm.shop', S).ok, false, '深渊商店属于探采高级');
     Object.assign(S, { chapter: '4', tech: { deep_space: true }, upgrades: { rp_vault: 1, pt_vault: 1 } });
     assert.equal(accessCheck('vehicle.advanced', S).ok, true);
+    // v2.6.1：深渊商店还要「DM 已经到手」——星图开了但 DM 没见过时仍是灰显
+    assert.equal(accessCheck('dm.shop', S).ok, false, 'DM 未发现时深渊商店不可用');
+    S.resDiscovered = { ...(S.resDiscovered || {}), dm: true };
     assert.equal(accessCheck('dm.shop', S).ok, true);
   } finally {
     Object.assign(S, keep);

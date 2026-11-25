@@ -69,7 +69,8 @@ test('shop.buyVehicle：载具购买成功（合成 u）', () => {
 
 test('shop.buyDmUpgrade：DM 消耗升级成功（dmsight）', () => {
   // v2.4.0：深渊商店 = 探采高级，要求 裂隙 ∧ 星图（星图 = PT 锚点 + RP 锚点 + 第 4 章 + 深空探测）
-  baseState({ _riftSeen: true, chapter: '4', upgrades: { rp_vault: 1, pt_vault: 1 }, tech: { deep_space: 1 } });
+  // v2.6.1：还需 DM 已发现（深渊商店的计价资源本身没到手时不算可用）
+  baseState({ _riftSeen: true, chapter: '4', upgrades: { rp_vault: 1, pt_vault: 1 }, tech: { deep_space: 1 }, resDiscovered: { dm: true } });
   const dm0 = S.dm;
   const r = shop.buyDmUpgrade({ id: 'dmsight', dmCost: 5 });
   assert.equal(r, true, `DM 升级应成功，实际 ${r}`);
