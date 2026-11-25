@@ -13,7 +13,8 @@ import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml,
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
-import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js'; // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v4.3.7 反馈③：探采页头开关加载具解锁门
+import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js';
+import { switchHtml } from '../core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块 // v3.3.1：蒸馏开关与班组/快捷开关同口径 // v4.3.7 反馈③：探采页头开关加载具解锁门
 import { autoBuildUnlocked, autoBuildActivateCost, autoBuildActivable, activateAutoBuild, allResDiscovered } from './ai.js'; // v4.0.9 反馈⑧：自动购建激活入口迁入研究点「AI 助手」类目
 // v2.3.2 反馈②：命名彩蛋移除后 checkEasterEggs 在本模块零调用，import 一并清理
 import { loadStoryline, lockStorylineSwitch } from '../core/storylineManager.js';
@@ -443,7 +444,9 @@ export function renderAtriumSwitch(host) {
   if (n < 1) {
     // v4.3.7 反馈④：工坊未购时蒸馏按钮仍需可用（原独立行承载；现并入本渲染，单独成行不隐藏）
     host.style.display = '';
-    host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+    // v4.3.30 反馈②：去掉内层卡面——研究点页外层 .panel 已经是卡片（边框/底色/内距），
+    //   再套一层带边框的 div 就是「卡中卡」，用户看到两层套住。整行改为裸 flex 行。
+    host.innerHTML = `<div class="atrium-row">
       <span style="font-size:12px;color:var(--text-3)">灵感工坊未购入</span>${distillBtn()}
     </div>`;
     return;
@@ -466,12 +469,14 @@ export function renderAtriumSwitch(host) {
   // 保留 id=rp-distill-btn（main.js 委托在 #rp-panel 容器级，click 冒泡可达，事件不需迁移）
   // v4.3.29 反馈②：蒸馏按钮移到自动开关左侧、与开关紧邻成组右靠（原先夹在标题后、与开关隔着一整段速率文案）；
   //   自动开关改用「异兽孵化」同款红/绿按钮（开=绿、关=红），不再是滑块。
-  host.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">
+  // v4.3.30 反馈②：去掉内层卡面（外层 .panel 已是卡片，双层边框是「卡中卡」）；
+  //   反馈①：自动蒸馏开关改用全站统一滑块（原来是红绿实心按钮，与 ⚡转化弹层的文字开关、集市的胶囊滑块三套长相）。
+  host.innerHTML = `<div class="atrium-row">
     <span style="font-size:12px;color:var(--text-2)">灵感工坊 ×${n}</span>
     <span style="font-size:11px;color:var(--text-3)">${atFull && on ? 'RP 已满仓：每 5s 涓流 -5万 EP' : `总计  -${fmt(epS)} EP/s  +${fmt(rpS)} RP/s`}</span>
-    <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+    <span class="atrium-row-act">
       ${distillBtn()}
-      <button class="atrium-auto-switch${on ? ' on' : ''}" data-atrium-switch role="switch" aria-checked="${on}" aria-label="自动蒸馏">${on ? '自动开' : '自动关'}</button>
+      ${switchHtml({ on, attrs: 'data-atrium-switch="1"', label: on ? '自动开' : '自动关', aria: '自动蒸馏' })}
     </span>
   </div>`;
   const btn = host.querySelector('[data-atrium-switch]');
@@ -836,7 +841,7 @@ function updateVehicleCollectHeader() {
   if (!infoEl) {
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span class="probe-info"></span><b class="probe-warn" style="color:var(--warn);display:none">DM 已满，采集暂停（星尘金库扩容可提升上限）</b>
-        <button class="btn probe-toggle" data-probe-toggle="1" style="padding:2px 10px;font-size:11px"></button>
+        ${switchHtml({ on: enabled, attrs: 'data-probe-toggle="1" class="probe-toggle"', label: enabled ? '探采中' : '已暂停', aria: '探采开关' })}
       </div>`;
     infoEl = el.querySelector('.probe-info');
     const btn = el.querySelector('[data-probe-toggle]');
@@ -857,6 +862,18 @@ function updateVehicleCollectHeader() {
   const probeAllowed = converterUnlocked('vehicles');
   const probeBtn = el.querySelector('[data-probe-toggle]');
   if (probeBtn) probeBtn.style.display = probeAllowed ? '' : 'none';
+  // v4.3.30 反馈①：滑块同步抽成一处——原实现在「未解锁」分支直接 return，
+  //   开关文案/aria 会停在建 DOM 那一刻的旧值，与真实状态（converterOn）脱节。
+  const syncProbeSwitch = () => {
+    const tb2 = el.querySelector('[data-probe-toggle]');
+    if (!tb2) return;
+    const stateText = enabled ? '探采中' : '已暂停';
+    const lbl2 = tb2.querySelector('.ui-switch-label');
+    if (lbl2 && lbl2.textContent !== stateText) lbl2.textContent = stateText;
+    tb2.classList.toggle('on', enabled);
+    tb2.setAttribute('aria-checked', enabled ? 'true' : 'false');
+  };
+  syncProbeSwitch();
   if (!probeAllowed) {
     if (infoEl.textContent !== info) { infoEl.textContent = info; el.title = tip; }
     const warnEl2 = el.querySelector('.probe-warn');
@@ -867,11 +884,7 @@ function updateVehicleCollectHeader() {
   const warnEl = el.querySelector('.probe-warn');
   if (warnEl) warnEl.style.display = dmFull ? '' : 'none';
   const tb = el.querySelector('[data-probe-toggle]');
-  if (tb) {
-    const stateText = enabled ? '探采中' : '已暂停';
-    if (tb.textContent !== stateText) tb.textContent = stateText;
-    tb.classList.toggle('off', !enabled);
-  }
+  if (tb) tb.classList.remove('off'); // 旧「关闭态」类，滑块用 .on 表达，留一行兜底清掉
 }
 
 export function renderVehicles(container) {

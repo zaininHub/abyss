@@ -127,13 +127,14 @@ test('R7b 蒸馏在自动开关左侧、成组右靠（v4.3.29：开关样式对
   const m = src.match(/灵感工坊 ×\$\{n\}[\s\S]{0,700}?<\/div>`/);
   assert.ok(m, '开关行模板缺失');
   const seg = m[0];
-  const groupStart = seg.indexOf('margin-left:auto;display:flex;align-items:center;gap:8px');
+  // v4.3.30 反馈①：右靠组改由 .atrium-row-act 承载，开关本体换成统一滑块组件
+  const groupStart = seg.indexOf('atrium-row-act');
   const distillPos = seg.indexOf('${distillBtn()}');
   const autoPos = seg.indexOf('data-atrium-switch');
   assert.ok(groupStart >= 0, '缺少右靠的操作组容器（蒸馏 + 自动开关）');
   assert.ok(distillPos > groupStart, '蒸馏按钮未与自动开关同组右靠');
   assert.ok(distillPos >= 0 && autoPos > distillPos, '蒸馏未排在自动开关左侧');
-  assert.ok(/class="atrium-auto-switch\$\{on \? ' on' : ''\}"/.test(seg), '自动开关样式类缺失');
-  assert.ok(/role="switch"[\s\S]*aria-checked="\$\{on\}"/.test(seg), '自动开关缺失无障碍状态');
-  assert.ok(/\$\{on \? '自动开' : '自动关'\}/.test(seg), '自动开关文案应为「自动开 / 自动关」（对齐孵化开关）');
+  assert.ok(seg.includes('switchHtml({'), '自动开关应使用全站统一滑块组件');
+  assert.ok(/attrs: 'data-atrium-switch="1"'/.test(seg), '自动开关缺少 data-atrium-switch 钩子');
+  assert.ok(/label: on \? '自动开' : '自动关'/.test(seg), '自动开关文案应为「自动开 / 自动关」');
 });

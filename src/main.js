@@ -2,6 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import { daysSince } from './core/time.js';
+import { switchInline } from './core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块（行内版）
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, displayedDrainBreakdown, displayedDrainPerSec, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
   prestigeNeed, prestigeGain, bulkCostCalc, // v3.6.4 ④：两条购买路径同口径 QA 钩子（unitCost 已在下方导入）
@@ -1550,8 +1551,10 @@ function refreshTabVisibility() {
 // 与原位置开关读写同一状态字段（atriumOn / _probeEnabled / ptDistillOn），功能完全一致；
 // EP 不足时各系统自动暂停消耗，回升后自动恢复（v3.2.2：去除「需手动恢复」的自动关闭）
 // v4.3.2 反馈③：开关改整行下拉列表项（与存档/皮肤弹层同观感）——保留 data-qs 与「开/关」文案供事件委托与测试。
+// v4.3.30 反馈①：状态表达统一为滑块——整行仍是按钮（data-qs 委托不变），右侧画统一滑块 + 开/关文案，
+//   与蒸馏/探采/孵化/圣所/裂隙自动等原位置开关同款（此前这里是文字「开/关」，别处是红绿按钮）。
 function qsOption(key, label, on, title) {
-  return `<button class="btn qs-opt ${on ? 'on' : ''}" data-qs="${key}" title="${title}"><span>${label}</span><span class="qs-state">${on ? '开' : '关'}</span></button>`;
+  return `<button class="btn qs-opt ${on ? 'on' : ''}" data-qs="${key}" role="switch" aria-checked="${on ? 'true' : 'false'}" aria-label="${label}自动开关" title="${title}"><span>${label}</span><span class="qs-right">${switchInline(on)}<span class="ui-switch-label">${on ? '开' : '关'}</span></span></button>`;
 }
 // v3.7.3 反馈②：未解锁的自动转化不再灰显占位——解锁后才出现（与 Wiki「各系统解锁后出现」一致）。
 // 六枚开关各自用唯一解锁判定源（四枚转化器 + 两枚裂隙科技）；全部未解锁时整块面板隐藏，不留空壳。

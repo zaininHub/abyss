@@ -1,5 +1,6 @@
 // v2.5.7：宗教系统模块——解锁（仓库有库存）/ 分支选择 / 圣印升级 / 圣所产出 / 面板渲染
 import { S, save } from '../state.js';
+import { switchHtml } from '../core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比
 import { epStorageCap, fmt, echoLv, faithTechMult, researchMult, spendRes, gainRes, buyRes } from './economy.js';
 import { converterEnabled, converterThreadBoost, setConverterEnabled, leaderGlobalMult } from './threadBinding.js'; // v3.3.3 反馈⑦：圣所接入线程绑定（统一开关口径） // v4.3.20 反馈②：圣所关闭线程下岗 // v4.3.25 反馈④：领导全局加成接入 FP
@@ -407,9 +408,13 @@ export function renderReligionPanel(container) {
       <span>Lv.${templeLv}</span>
       <button class="btn ${S.ep < tCost ? 'disabled' : ''}" data-religion-temple="1"
         title="EP 购买，持续产出信仰；等级不设上限，消耗随等级递增">${`建造 / 升级（${fmt(tCost)} EP）`}</button>
-      ${templeLv >= 1 ? `<button class="btn ${(S.religion && S.religion.templeOff) ? '' : 'warn'}" data-religion-toggle="1"
-        title="${(S.religion && S.religion.templeOff) ? '重启：恢复 FP 产出（无代价）' : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）'}"
-        style="margin-left:6px;padding:2px 10px;font-size:11px">${(S.religion && S.religion.templeOff) ? '重启圣所' : '关闭圣所'}</button>` : ''}
+      ${templeLv >= 1 ? switchHtml({
+        on: !(S.religion && S.religion.templeOff),
+        attrs: 'data-religion-toggle="1" style="margin-left:6px"',
+        label: (S.religion && S.religion.templeOff) ? '已关闭' : '运行中',
+        aria: '信仰圣所开关',
+        title: (S.religion && S.religion.templeOff) ? '重启：恢复 FP 产出（无代价）' : '关闭：停止 FP 产出与 EP 消耗，但损失 30% FP + 15% 虔诚（冷启动代价）',
+      }) : ''}
     </div>
     ${seal >= 1 && !transcendUnlocked() ? `
     <div class="religion-sec-head"><span>赞颂与超验</span><span class="religion-gated">第 6 章「神格」解锁</span></div>` : ''}

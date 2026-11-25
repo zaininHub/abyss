@@ -10,6 +10,7 @@
 //   · 二次确认改为独立拨动开关；
 //   · 交付的资源未解锁时该摊位灰显并标「未解锁」，不可购买。
 import { S, save } from '../state.js';
+import { switchInline } from '../core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块
 import { fmt, epStorageCap, addRp, addDm, addPt, researchMult, spendRes as trackSpendRes, gainRes as trackGainRes } from './economy.js';
 import { fmtMultDelta } from '../core/format.js'; // v3.12.0 反馈⑮：汇率倍率 → 带符号百分比
 import { policyMult } from '../data/policies.js';
@@ -302,7 +303,7 @@ export function renderBazaarPanel(container) {
       <span class="bz-bar-num">${trades}${need === null ? '' : `/${need}`}</span>
       <button class="btn bz-btn-ep ${epOk ? '' : 'disabled'}" data-bazaar-refresh="1" ${epOk ? '' : 'disabled'} title="重掷摊位与汇率，库存补满">刷新 ${fmt(refreshCost)} EP</button>
       ${echoOn ? `<button class="btn bz-btn-echo ${echoOk ? '' : 'disabled'}" data-bazaar-refresh-echo="1" ${echoOk ? '' : 'disabled'} title="用 1 点深渊回响刷新（不消耗 EP）">✨ 回响刷新 ${BAZAAR.echoRefresh}</button>` : ''}
-      <button class="btn bz-btn-confirm" data-bazaar-confirm-toggle="1" role="switch" aria-checked="${S.bazaar.skipConfirm !== true}" title="开启后购买需再点一次确认">二次确认<span class="bz-switch ${S.bazaar.skipConfirm === true ? '' : 'on'}"><i></i></span></button>
+      <button class="btn bz-btn-confirm" data-bazaar-confirm-toggle="1" role="switch" aria-checked="${S.bazaar.skipConfirm !== true}" title="开启后购买需再点一次确认">二次确认${switchInline(S.bazaar.skipConfirm !== true)}</button>
     </div>`;
   html += `<div class="shop-grid bz-grid" style="margin-top:4px">`;
   for (const d of bazaarLineup()) {

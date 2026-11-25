@@ -1,4 +1,5 @@
 import { S, save } from '../state.js';
+import { switchHtml } from '../core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块
 import { petBaseMult, petLevelMilestoneMult, petsStarving as _petsStarving } from '../data/pets.js';
 import { getStorylinePets } from '../core/storylineContent.js'; // v3.7.0：异兽表按当前故事线动态合并
 import { elv, fmt, ptCap, spendRes, buyRes } from './economy.js'; // v3.3.9 反馈⑦：PT 上限（满仓即停）
@@ -289,7 +290,7 @@ export function renderPetGrid(container) {
   const hatchEpPerSec = hatchCfg.epPerSec * hatchLv * hatchBoost;
   const hatchCtl = autoHatch
     ? `<span style="font-size:12px;color:var(--text-2)" title="消耗 ${fmt(hatchEpPerSec)} EP/s（${fmt(hatchCfg.epPerPt)} EP/PT）">异兽孵化 ×${hatchLv}：<b style="color:var(--pink)">+${fmt(hatchPtPerSec)} PT/s</b>${ptFull ? ' <b style="color:var(--warn)">· PT 已满，暂停产出与消耗</b>' : ''}</span>
-      <button data-pt-distill-toggle style="margin-left:auto;cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:6px 16px;font-size:12.5px;background:${ptOn ? 'var(--good,#3fb950)' : 'var(--red,#f85149)'};color:#fff">${ptOn ? '孵化开' : '孵化关'}</button>`
+      ${switchHtml({ on: ptOn, attrs: 'data-pt-distill-toggle="1" style="margin-left:auto"', label: ptOn ? '孵化开' : '孵化关', aria: '自动孵化开关' })}`
     : `<span style="font-size:11.5px;color:var(--text-3)">自动孵化未解锁——到「商店 · 设施」购买孵化升级</span>`;
   html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:4px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-2,#141821)">${hatchCtl}</div>`;
   const upkeep = petUpkeepTotalPerSec();

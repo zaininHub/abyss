@@ -651,7 +651,7 @@ html.theme-autumn .group-title-badge { color: #7a5200; }
 .bz-bar .btn { min-height: 24px; padding: 2px 7px; font-size: 11px; flex: 0 0 auto; white-space: nowrap; }
 .bz-btn-echo { border-color: rgba(168,85,247,.65) !important; color: #d8b4fe !important; background: rgba(168,85,247,.12) !important; }
 .bz-btn-echo:hover:not(.disabled) { background: rgba(168,85,247,.2) !important; }
-/* 二次确认：与刷新同一行的紧凑拨动开关（不再独占一行） */
+/* 二次确认：与刷新同一行的紧凑开关行（v4.3.30：滑块本体改用全站统一 .ui-switch） */
 .bz-btn-confirm {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 2px 8px; font-size: 11px; color: var(--text-2);
@@ -659,16 +659,6 @@ html.theme-autumn .group-title-badge { color: #7a5200; }
   cursor: pointer; user-select: none; flex: 0 0 auto;
 }
 .bz-btn-confirm:hover { border-color: var(--accent); }
-.bz-switch {
-  position: relative; width: 26px; height: 14px; border-radius: 999px;
-  background: rgba(255,255,255,.12); transition: background .15s; flex: 0 0 auto;
-}
-.bz-switch i {
-  position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
-  border-radius: 50%; background: var(--text-3); transition: transform .15s, background .15s;
-}
-.bz-switch.on { background: rgba(63,185,80,.35); }
-.bz-switch.on i { transform: translateX(12px); background: var(--good, #3fb950); }
 /* 商品品质 6 档：卡面短标签 + 紧凑网格（1080px 标签在窄卡里必然折出「EP」孤行） */
 .bz-quality { font-size: 10.5px !important; font-weight: 600; letter-spacing: .2px; }
 .bz-grid { grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
@@ -1436,38 +1426,38 @@ body.paused .pet-grid .pet-card {
 .ai-build-box .ai-build-title { font-size: 11.5px; color: var(--accent); margin-bottom: 3px; }
 .ai-build-locked { opacity: 0.85; }
 .ai-build-box .btn.disabled { opacity: 0.45; cursor: not-allowed; }
-/* 研究点页：自动蒸馏使用真正的滑块开关，手动蒸馏按钮保持在它的左侧。 */
-/* v4.3.29 反馈②：自动蒸馏开关改为「孵化」同款红/绿按钮（开=绿底、关=红底），
-   与异兽孵化的「孵化开/孵化关」保持一致的手感与视觉；不再使用滑块形态。 */
-.atrium-auto-switch {
-  cursor: pointer; border: 1px solid var(--border); border-radius: 4px;
-  padding: 6px 16px; font-size: 12.5px; color: #fff; line-height: 1.2;
-  background: var(--red, #f85149);
-  transition: background .15s, border-color .15s, filter .15s;
+/* v4.3.30 反馈①：全站自动开关统一为滑块。
+   一处定义、七处复用（⚡转化快捷开关 / 研究点蒸馏 / 探采页头 / 异兽孵化 / 信仰圣所 /
+   裂隙自动动作 / 集市二次确认）——此前红绿实心按钮、文字按钮、胶囊滑块三种长相混排，
+   同一功能三种心智模型。现在只有一种：26×14 轨道 + 10px 圆点，开=绿、关=灰。 */
+.ui-switch {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: var(--text-2); line-height: 1; flex: 0 0 auto;
 }
-.atrium-auto-switch:hover { filter: brightness(1.08); }
-.atrium-auto-switch.on { background: var(--good, #3fb950); }
-
-.ai-switch {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 8px; margin-bottom: 4px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 8px;
-  cursor: pointer; user-select: none;
-  font-size: 12px;
-  transition: border-color .15s, background .15s;
+.ui-switch-inline { pointer-events: none; }
+.ui-switch-track {
+  position: relative; display: inline-block; width: 26px; height: 14px;
+  border-radius: 999px; background: rgba(255,255,255,.12);
+  transition: background .15s; flex: 0 0 auto;
 }
-.ai-switch:hover { background: rgba(255,255,255,.06); }
-.ai-switch-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--text-3); flex-shrink: 0;
-  transition: background .15s, box-shadow .15s;
+.ui-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--text-3);
+  transition: transform .15s, background .15s;
 }
-.ai-switch.on { border-color: rgba(80,220,140,.4); }
-.ai-switch.on .ai-switch-dot { background: var(--good); box-shadow: 0 0 8px rgba(80,220,140,.6); }
-.ai-switch-state { margin-left: auto; font-size: 11px; color: var(--text-3); font-family: monospace; }
-.ai-switch.on .ai-switch-state { color: var(--good); }
+.ui-switch.on .ui-switch-track { background: rgba(63,185,80,.35); }
+.ui-switch.on .ui-switch-thumb { transform: translateX(12px); background: var(--good, #3fb950); }
+.ui-switch-label {
+  font-size: 11px; font-family: monospace; color: var(--text-3); white-space: nowrap;
+}
+.ui-switch.on .ui-switch-label { color: var(--good, #3fb950); }
+.ui-switch:hover .ui-switch-track { background: rgba(255,255,255,.2); }
+.ui-switch.on:hover .ui-switch-track { background: rgba(63,185,80,.5); }
+.ui-switch:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: 999px; }
+/* v4.3.30 反馈②：研究点「灵感工坊」行——外层 .panel 已是卡片，这里只排一行，不再套第二层边框 */
+.atrium-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.atrium-row-act { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
 .ai-reserve-row {
   display: flex; align-items: center; gap: 6px;
   font-size: 11.5px; color: var(--text-2); margin-top: 8px; flex-wrap: wrap;
@@ -2216,6 +2206,8 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
 /* v4.3.2 反馈③：转化开关改竖排下拉列表项（对齐皮肤/存档弹层观感）——整行按钮 + 状态右对齐 + 开启态语义色 */
 #quick-switches.qs-list { display: flex; flex-direction: column; gap: 4px; }
 #quick-switches .qs-opt { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; font-size: 12px; }
+/* v4.3.30 反馈①：右侧状态位 = 统一滑块 + 开/关文案 */
+#quick-switches .qs-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 #quick-switches .qs-opt.on { border-color: var(--good, #3fb950); color: var(--good, #3fb950); }
 /* v4.3.5 反馈⑫：未开启态从 --text-3（暗 #6e7681）提到 --text-2（#8b949e）——
    用户反馈「字体颜色太模糊」，深浅主题下 var(--text-2) 都比 --text-3 高约一档对比度。 */

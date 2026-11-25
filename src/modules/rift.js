@@ -6,6 +6,7 @@
 //       ④ 第三选项「深入裂隙」：持续 60s 探索（产出递增 + 腐化累积），结算时腐化超阈值损失 EP，可提前脱出。
 // 既有 sealDmReward / embraceDurMs / 封印与拥抱行为保持（v2.1/v2.4 断言依赖）。
 import { S, save } from '../state.js';
+import { switchHtml } from '../core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块
 import { computeCps, fmt, epStorageCap, sealDmReward, embraceDurMs, vehicleTier, echoLv, corruptionCap } from './economy.js';
 // v2.7.3 ⑤：回响·裂隙共鸣（余烬 ×2/级）
 function emberMul() { return (1 + (echoLv('echo_rift') || 0)) * policyMult('ember') * researchMult('rift') * (1 + 0.12 * riftUpgradeLevel('wellspring')) * ((S.religion && S.religion.abyss) ? 2 : 1); } // v3.6.0：余烬井喷 + 深渊崇拜分支 // v2.8.6 B2a：虚无主义 + v2.8.25 ②：裂隙数学（此前未接线）
@@ -676,7 +677,7 @@ export function renderRiftPanel(container) {
       const isAuto = (id === 'auto_seal' || id === 'auto_embrace' || id === 'auto_descent');
       const autoOn = S.riftAuto === id;
       const autoToggle = isAuto && lv > 0
-        ? `<button class="btn-mini rift-auto-toggle" data-rift-auto="${id}" aria-pressed="${autoOn ? 'true' : 'false'}" style="${autoOn ? 'color:var(--good);border-color:var(--good)' : 'color:var(--text-3)'}">${autoOn ? '已开启' : '开启'}</button>`
+        ? switchHtml({ on: autoOn, attrs: `data-rift-auto="${id}" class="rift-auto-toggle"`, label: autoOn ? '已开启' : '开启', aria: `${u.name}开关` })
         : '';
       // v3.12.6 ⑥：未购入「无限深入」时整张卡不出现（原来是一张带「需先购入…」的锁定卡，
       //   玩家嫌这是把解锁条件写在面板上）。买入无限深入后自动解锁，无需任何提示文案。

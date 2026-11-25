@@ -113,11 +113,14 @@ test('问题4⑥：每次关闭都损失（可重复关闭-重启-再关闭）',
   assert.equal(S.devotion, 723, '第二次关闭再损 15% 虔诚');
 });
 
-test('问题4⑦：圣所面板含关闭/重启按钮 + templeOff 状态展示', () => {
+test('问题4⑦：圣所面板含开关滑块 + templeOff 状态展示', () => {
   const src = readFileSync(new URL('../src/modules/religions.js', import.meta.url), 'utf8');
   assert.ok(src.includes('data-religion-toggle'), '面板含 data-religion-toggle 按钮');
-  assert.ok(src.includes('关闭圣所'), '按钮文案"关闭圣所"');
-  assert.ok(src.includes('重启圣所'), '按钮文案"重启圣所"');
+  // v4.3.30 反馈①：面板开关统一为滑块（switchHtml），状态走 .on/aria-checked + 「运行中/已关闭」文案；
+  //   「关闭/重启」的动作与代价说明保留在 title（不再是按钮正文）。
+  assert.ok(/switchHtml\(\{[\s\S]{0,400}?'data-religion-toggle="1"/.test(src), '圣所开关应使用统一滑块组件');
+  assert.ok(src.includes("? '已关闭' : '运行中'"), '开关文案应为「已关闭 / 运行中」');
+  assert.ok(src.includes('损失 30% FP + 15% 虔诚'), '关闭代价仍写在 title 中');
   assert.ok(src.includes('已关闭（停止产出'), 'templeOff 时显示"已关闭"状态');
   // bindReligionPanel 绑定 toggle
   assert.ok(/data-religion-toggle[\s\S]*?toggleTemple/.test(src), 'bindReligionPanel 绑定 toggle→toggleTemple');
