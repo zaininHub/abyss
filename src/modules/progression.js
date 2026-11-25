@@ -177,6 +177,8 @@ let _abandonCooldownUntil = 0;
 let _lastMuseumHint = 0;
 // v4.3.25 反馈①：上一次的工位达标态——翻转时置脏商店，让认证徽章即时出现/隐藏
 let _museumQualified = null;
+// v4.3.31 反馈②：「触发」只打一次——本局首次拥有工位（访客上门）时留痕
+let _museumTriggered = false;
 export function checkSpecialTasks(S, log, toast) {
   if (!S._specialTasksDone) S._specialTasksDone = {};
 
@@ -187,9 +189,30 @@ export function checkSpecialTasks(S, log, toast) {
     //   翻转时置脏商店；徽章渲染处（shop.js）同样用 museumStationProgress 实时复核。
     if (task.id === 'sp1_museum') {
       const qualified = task.condition(S);
+      const done = !!S._specialTasksDone[task.id];
       if (_museumQualified !== qualified) {
+        const prev = _museumQualified;
         _museumQualified = qualified;
         dirty.shop = true;
+        // v4.3.31 反馈②：徽章的「获取 / 失效」都要留痕。
+        //   首次完成（qualified 且未 done）由下方完成日志统一播报，这里只补
+        //   「已颁过证的老档重新达标 / 达标被打破」两类静默切换。
+        if (log && qualified && done) {
+          const { kinds, sum } = museumStationProgress(S);
+          log(`馆藏认证：已达标（工位 ${kinds} 种 / 等级和 ${sum}）——商店「工位」分类标题佩戴徽章`, 'good');
+        } else if (log && !qualified && prev === true && done) {
+          const { kinds, sum } = museumStationProgress(S);
+          log(`馆藏认证：当前未达标（工位 ${kinds} 种 / 等级和 ${sum}，需 3 种 / 50）——徽章已隐藏`, 'bad');
+        }
+      }
+      // v4.3.31 反馈②：任务「触发」日志——本局首次拥有工位（访客上门），此时给出目标与当前进度
+      if (!done && !_museumTriggered) {
+        const { kinds, sum } = museumStationProgress(S);
+        if (kinds > 0) {
+          _museumTriggered = true;
+          dirty.shop = true;
+          if (log) log(`特殊任务触发：博物馆的访客 —— 工位 3 种且等级和 ≥50 即获颁「馆藏认证」徽章（当前 ${kinds} 种 / 等级和 ${sum}）`, '');
+        }
       }
     }
     if (S._specialTasksDone[task.id]) continue;

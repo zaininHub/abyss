@@ -1573,7 +1573,12 @@ export function renderV21Buildings(container) {
   // 可购区：已解锁未满级按当前级成本升序置前；未解锁按解锁 RP 价升序殿后
   const avail = real.filter(b => !v21Maxed(b, S));
   const open = avail.filter(v21UnlockedMark);
-  const locked = avail.filter(b => !v21UnlockedMark(b));
+  // v4.3.31 反馈③：里程碑未达的项**不进入链序**——第一章买完 3 栋 m0 建筑后，
+  //   链条原本会把「下一项」机会感知器（里程碑 5 / cps 1e6）露出来，造成「第一章就解锁了
+  //   里程碑 5 的内容」。里程碑达成数按 milesDone 计（与 unlockMilestoneV21 同源）；
+  //   已解锁/已拥有项走 open 分支不受影响（老档不回退），达成里程碑后该卡自然回到链条里。
+  const milesAchieved = Object.keys(S.milesDone || {}).length;
+  const locked = avail.filter(b => !v21UnlockedMark(b) && milesAchieved >= unlockMilestoneV21(b));
   open.sort((a, b) => v21BuildingCost(a) - v21BuildingCost(b));
   locked.sort((a, b) => v21BuildingCost(a) - v21BuildingCost(b)); // v2.8.8：纯 EP 成本排序
   // v2.3.1 ⑤（rev18 9.3）：链序 = 可购区既有序（open 前 locked 后）；窗口 K = p + 1，

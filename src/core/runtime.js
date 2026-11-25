@@ -10,9 +10,10 @@ import { createDirty } from './panelKeys.js';
 export const dirty = createDirty();
 
 // ========== 日志系统 ==========
-// v3.10.4 ②：改为「最近 1 小时」时间窗口保留 + localStorage 缓存（刷新后恢复，即"缓存 1 小时"）。
-//   旧实现为内存数组上限 40、无持久化，刷新即丢。每条记 { t: 时间戳, h: HTML }，渲染时按 1h 过滤。
-const LOG_TTL = 3600 * 1000; // 1 小时
+// v4.3.31 反馈①：保留口径改为「最近 20 条」+ localStorage 缓存（刷新后仍在）。
+//   旧实现（v3.10.4 ②）为「最近 1 小时」时间窗口：慢节奏会话里整批日志会因过期而消失，
+//   与「刷新也保留」的预期冲突。现按条数截断（与时间无关），每条记 { t: 时间戳, h: HTML }。
+export const LOG_MAX = 20;
 const LOG_KEY = 'abyss_idle_v2_logcache';
 let logs = [];
 function loadLogCache() {
@@ -21,8 +22,7 @@ function loadLogCache() {
     const raw = localStorage.getItem(LOG_KEY);
     const arr = raw ? JSON.parse(raw) : [];
     if (Array.isArray(arr)) {
-      const now = Date.now();
-      logs = arr.filter(e => e && typeof e.t === 'number' && now - e.t < LOG_TTL);
+      logs = arr.filter(e => e && typeof e.t === 'number' && typeof e.h === 'string').slice(0, LOG_MAX);
     }
   } catch { /* 坏档忽略 */ }
 }
@@ -36,11 +36,15 @@ export function log(msg, cls) {
   const hh = String(t.getHours()).padStart(2, '0'), mm = String(t.getMinutes()).padStart(2, '0');
   const clsHtml = cls === 'good' ? ' class="ev-good"' : cls === 'bad' ? ' class="ev-bad"' : '';
   logs.unshift({ t: t.getTime(), h: `<div><span class="t mono">${hh}:${mm}</span><span${clsHtml}>${msg}</span></div>` });
-  // 时间窗口裁剪（1 小时）+ 安全硬上限（防止异常高频日志无限增长）
-  const cutoff = t.getTime() - LOG_TTL;
-  while (logs.length && logs[logs.length - 1].t < cutoff) logs.pop();
-  if (logs.length > 500) logs.length = 500;
+  // v4.3.31 反馈①：只保留最近 LOG_MAX（20）条——无时间窗口，刷新/隔天回来仍是这 20 条。
+  if (logs.length > LOG_MAX) logs.length = LOG_MAX;
   saveLogCache();
+  paintLogs();
+}
+
+// v4.3.31 反馈①：把缓存（localStorage 恢复的 20 条）画到日志面板。
+//   启动时调用一次，否则刷新后要等「下一条日志」才把历史补画出来。
+export function paintLogs() {
   const el = (typeof document !== 'undefined') ? document.getElementById('log-content') : null;
   if (el) el.innerHTML = logs.map(e => e.h).join('');
 }

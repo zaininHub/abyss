@@ -2,6 +2,7 @@ import { S, save, reset, SAVE_KEY, SAVE_VERSION } from './state.js'; // v2.5 ⑤
 import { fxBest } from './core/effectEngine.js'; // v2.1 建筑驱动：点击暴击掷骰参数
 import { fmtDepletionEta, epDepletionSec, fmtMultDelta } from './core/format.js'; // v3.12.0 反馈⑮：倍率 → 带符号百分比 // v3.10.2 ②：顶栏 EP 耗尽预估（纯函数）
 import { daysSince } from './core/time.js';
+import { fillChapterResources } from './core/devCheat.js'; // v4.3.31 隐藏测试命令（控制台一键补齐章节资源）
 import { switchInline } from './core/uiSwitch.js'; // v4.3.30 反馈①：自动开关统一滑块（行内版）
 import {computeCps, staffSalaryPerSec, staffOutputPerSec, staffNetPerSec, cpsBreakdown, displayedDrainBreakdown, displayedDrainPerSec, totalDrainPerSec,
   fmt, fmtTime, epStorageCap, clickMult, globalMult, setCollapseHooks, esDiscovered, collapseRemainMs,
@@ -35,7 +36,7 @@ import { EXPAND_KEY, anchorShown, anchorDone, riftShown, petsModuleUnlocked, sta
 import { rollProfession, aiSuggestedProfession, tickThreads, autoAssignThreads, leaderCount, leaderGlobalMult, leaderLvOf, canBind, bindThread, unbindThread, releaseAllThreads, converterThreadBoost, threadLevelFromXp, converterEnabled, converterUnlocked, unlockedConverterIds, threadBindOutputFactor, threadBindSalaryFactor, setConverterEnabled, converterCapacity, converterLoad } from './modules/threadBinding.js'; // v3.6.5 ①~③：岗位容量 QA 钩子 // v3.3.0 线程绑定系统 // v3.3.1：转化器开关统一口径 // v3.6.3 ③：岗位解锁唯一判定源 // v4.3.23 反馈①：levelUpLeader/leaderSalaryPerSec 下线
 // v3.0.0 测试性解耦：侧效工具（日志/toast/脏检查/确认框）下沉到 DOM 无关的 core 模块，
 // 使 shop/expedition/echoShop/rift/tech 可在纯 Node 下单测，浏览器行为不变。
-import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons } from './core/runtime.js';
+import { dirty, log, toast, askConfirm, registerConfirmHooks, bindConfirmButtons, paintLogs } from './core/runtime.js';
 import { gateOpen, chapterAtLeast } from './core/chapterGates.js'; // v4.2.0：章节门禁（一章一新模块）
 import { renderTech, refreshTechState, renderEternal, buyTech, buyEternal } from './modules/tech.js';
 import { ETERNALS } from './data/eternals.js'; // v4.2.6：分章节推演自动玩家购买永恒矩阵（QA 钩子；esCost 走 economy 包装版）
@@ -3248,6 +3249,7 @@ function startApp() {
   bindEvents();
   // 这里 DOM 已完成解析；绑定通用确认框，确保紧急脱出等二次确认动作能真正执行。
   bindConfirmButtons();
+  paintLogs(); // v4.3.31 反馈①：刷新后先把 localStorage 里最近 20 条日志画出来
   render();
   // v2.9.0：旧档兼容——已崩溃/待抉择的存档重开时直接弹出命运抉择（不再走「转生脱离」旧路径）；
   // 已过期的 _collapseAt 由首帧 tickCollapse 触发抉择，无需在此处理
@@ -3290,6 +3292,17 @@ if (typeof window !== 'undefined') {
   // v3.0.0 QA：自动化加速回放钩子（不改变正常玩法，仅暴露句柄供测试驱动时间加速与转生）
   window.__tick = tick;
   window.__advance = (sec) => { const n = Math.max(1, Math.ceil(sec / 10)); let t = performance.now(); for (let i = 0; i < n; i++) { t += 10000; tick(t); } };
+  // v4.3.31 隐藏测试钩子：仅供开发者在控制台快速补齐到指定章节所需资源，不在 UI 暴露。
+  // 用法：__abyssCheat.fillChapter(5) —— 补齐第 1~5 章条件并回拨驻留计时，方便测试后续章节内容。
+  window.__abyssCheat = {
+    fillChapter(n) {
+      const r = fillChapterResources(S, n);
+      save(S);
+      dirty.top = dirty.shop = dirty.rp = dirty.tech = dirty.rift = dirty.religion = true;
+      log(`[测试] 已补齐第 ${r.chapter} 章标准资源（驻留天数 ${r.days} 天）`, 'good');
+      return r;
+    },
+  };
   window.__qa = { doPrestige, canPrestige, computeCps, cpsBreakdown, epStorageCap, prestigeNeed, prestigeGain, totalDrainPerSec, staffSalaryPerSec, staffOutputPerSec,
     rpCap, dmCap, ptCap, // v3.4.4 反馈①：三仓库上限（逐级扩容）测试钩子
     faithCap, // v3.5.0 ②：FP 上限（已从圣所搬到誓约圣龛）测试钩子
