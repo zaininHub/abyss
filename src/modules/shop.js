@@ -11,6 +11,7 @@ import { BALANCE } from '../data/balance.js';
 import { signedDesc } from '../core/format.js'; // v3.12.0 反馈⑮：效果文案正负号兜底单一真源
 import { buildOwnedSection, pushBoughtOrder, scheduleMoveToOwned, ownedItemHtml, boughtOrderIndex } from './listkit.js';
 import { chainSplit, renderChainedGroups, anchorShown, anchorDone, riftShown, starChartUnlocked, CHAIN_PREVIEW } from './disclosure.js'; // v2.5 ①：裂隙门控（riftShown）接管探采平台/深渊商店
+import { gateOpen } from '../core/chapterGates.js'; // v4.3.35 反馈①：研究项章节门禁（政策研究绑第 7 章）
 import { dirty, log } from '../core/runtime.js'; // v3.0.0 测试性解耦：侧效工具下沉到 DOM 无关的 core
 import { ptHatchUpgCost } from './pets.js'; // v3.3.1 反馈②：孵化升级卡移入设施区（成本口径与异兽页一致）
 import { converterEnabled, setConverterEnabled, converterThreadBoost, converterUnlocked } from './threadBinding.js';
@@ -1844,6 +1845,12 @@ const RESEARCH_MODULE_GATES = {
   rp_offline:    (s) => !!(s.tech && s.tech.offline1),                  // 离线协议：科技树「远程协作」
   rp_delve:      (s) => !!(s.delve && s.delve.unlocked),                // 深渊观测：深潜已解锁
   rp_rift:       (s) => riftShown(s),                                   // 裂隙数学：裂隙已触发（_riftSeen 粘性）
+  // v4.3.35 反馈①：律令演绎（政策效果 +6%/级）改挂「周期政策」章节门禁——
+  //   深渊协议组由「产能研究累计 4 级」解锁，第 1~3 章就够；而政策本体第 7 章才开放，
+  //   此前研究项提前摆出（用户实测「政策未解锁，深渊协议就解锁了政策效果加强」）。
+  //   门禁与 policies.js:policyOpenGroups() 同源（同一 gateOpen('policy')），
+  //   章节推进当帧由 frameSystems 置 dirty.rp 立即重建；老玩家已买等级照常生效（不回收）。
+  rp_policy:     (s) => gateOpen('policy', s),                          // 律令演绎：周期政策（第 7 章）开放后
 };
 export function researchResourceUnlocked(u, state = S) {
   const key = RESEARCH_RES_ANCHORS[u && u.fx ? u.fx.key : ''];

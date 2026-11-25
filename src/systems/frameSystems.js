@@ -248,6 +248,9 @@ export function registerFrameSystems(deps = {}) {
         for (const u of unlocksAtChapter(nNow)) {
           log('深渊里透出一道光...', 'good');
         }
+        // v4.3.35 反馈①：章节推进可能是「研究项门禁」的放行时刻（如第 7 章政策 → 律令演绎），
+        //   研究面板按 dirty.rp 重建，这里一并置位，避免该项要等下一次 RP 变动才出现。
+        ctx.dirty.rp = true;
         ctx.dirty.top = true;
       }
     },
