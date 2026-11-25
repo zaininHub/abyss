@@ -1557,8 +1557,11 @@ function refreshTabVisibility() {
 // v4.3.31 反馈①：**点击目标收敛到滑块本身**。此前整行是 <button>（行上带 role/aria + 行内装饰滑块），
 //   点在标签文字上也会切换——悬停展开的弹层里很容易误触。现在行退化为 <div>（只承载外观与 title），
 //   真正的 <button role="switch"> 由 switchHtml 产出并只包住滑块；事件委托仍走 [data-qs]。
+// v4.3.33 反馈①：行**不再复用 .btn 外观**。上一版行还带 btn 的边框 + 底色，看着仍像「一整块按钮」，
+//   但点空白处没反应（用户原话）。现在行是纯文本标签 + 右侧滑块，没有边框/卡片底色，
+//   相邻行之间只用一条发丝分隔线区分；弹层标题右侧补一句「点右侧滑块切换」提示操作位置。
 function qsOption(key, label, on, title) {
-  return `<div class="btn qs-opt ${on ? 'on' : ''}" title="${title}">`
+  return `<div class="qs-opt ${on ? 'on' : ''}" title="${title}">`
     + `<span class="qs-name">${label}</span>`
     + `<span class="qs-right">${switchHtml({ on, attrs: `data-qs="${key}"`, label: on ? '开' : '关', aria: `${label}自动开关` })}</span>`
     + `</div>`;

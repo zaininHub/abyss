@@ -2206,23 +2206,31 @@ h3.foldable-h3 .rp-fold-arrow { display: inline-block; width: 14px; text-align: 
    弹层用基类 .save-menu-pop 定位（position:absolute; right:0; top:calc(100%+6px)），仅收窄到内容宽度。 */
 .qs-fab { position: relative; display: inline-block; }
 .qs-fab-pop { min-width: 200px; max-height: none; }
-/* v4.3.2 反馈③：转化开关改竖排下拉列表项（对齐皮肤/存档弹层观感）——整行按钮 + 状态右对齐 + 开启态语义色 */
-#quick-switches.qs-list { display: flex; flex-direction: column; gap: 4px; }
-#quick-switches .qs-opt { display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 6px 10px; font-size: 12px; }
-/* v4.3.30 反馈①：右侧状态位 = 统一滑块 + 开/关文案 */
+/* v4.3.2 ③：转化开关竖排列表（对齐皮肤/存档弹层观感）
+   v4.3.30 ①：状态位统一为滑块 + 开/关文案
+   v4.3.31 ①：点击目标收敛到滑块本身（行不再可点）
+   v4.3.33 ①：**行不再套 .btn 外观**——上一版行仍带边框 + 卡片底色，看着还是「一整块按钮」，
+   但点空白处没有任何反应（用户反馈）。现在行 = 纯文本标签 + 右侧滑块：
+   无边框、无底色、无 hover 高亮（不给「整行可点」的错误暗示），相邻行之间只用 1px 发丝线分隔；
+   标签只在开启态染语义绿，开关自身保留 pointer 与 hover。 */
+#quick-switches.qs-list { display: flex; flex-direction: column; gap: 0; }
+#quick-switches .qs-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 6px 4px; font-size: 12px; text-align: left;
+  border: 0; background: transparent; box-shadow: none; cursor: default;
+}
+#quick-switches .qs-opt + .qs-opt { box-shadow: inset 0 1px 0 rgba(127, 127, 127, .16); }
+#quick-switches .qs-opt:first-child { padding-top: 2px; }
+#quick-switches .qs-opt:last-child { padding-bottom: 2px; }
+#quick-switches .qs-opt .qs-name { pointer-events: none; letter-spacing: .02em; }
+/* v4.3.5 ⑫：未开启态用 --text-2（比 --text-3 高一档对比度）；开启态染语义绿 */
+#quick-switches .qs-opt.on .qs-name { color: var(--good, #3fb950); }
+#quick-switches .qs-opt:not(.on) .qs-name { color: var(--text-2, #8b949e); }
 #quick-switches .qs-right { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
-#quick-switches .qs-opt.on { border-color: var(--good, #3fb950); color: var(--good, #3fb950); }
-/* v4.3.5 反馈⑫：未开启态从 --text-3（暗 #6e7681）提到 --text-2（#8b949e）——
-   用户反馈「字体颜色太模糊」，深浅主题下 var(--text-2) 都比 --text-3 高约一档对比度。 */
-#quick-switches .qs-opt:not(.on) { color: var(--text-2, #8b949e); }
-#quick-switches .qs-opt:hover { border-color: var(--accent); }
-/* v4.3.31 反馈①：行只承载外观（标签 + 状态），**点击目标只有右侧滑块**——
-   此前整行是 <button>，点标签文字也会切换，弹层里容易误触。
-   行沿用 .btn 的边框/底色，但光标恢复默认；滑块自身保留 pointer。 */
-#quick-switches .qs-opt { cursor: default; }
-#quick-switches .qs-opt .qs-name { pointer-events: none; }
 #quick-switches .qs-opt .ui-switch { cursor: pointer; }
-#quick-switches .qs-state { font-size: 10.5px; opacity: .85; }
+/* 弹层标题右侧的操作提示：行本身不可点，把「点哪里」写清楚 */
+.qs-fab-pop .qs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.qs-hint { font-size: 10px; font-weight: 400; color: var(--text-3); white-space: nowrap; }
 /* 透明桥接伪元素：盖住「按钮 → 下拉」6px 断档，鼠标下移平滑进入弹层（与 .save-menu::after 同款思路） */
 .qs-fab::after {
   content: ''; position: absolute; right: 0; top: 100%;
